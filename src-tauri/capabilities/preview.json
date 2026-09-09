@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "preview",
+  "description": "Minimal capabilities for the Live Preview webview. The preview renders sanitized documents and must not be able to reach app commands, the window controls, or the deep-link plugin.",
+  "windows": ["preview"],
+  "permissions": [
+    "core:event:default"
+  ]
+}

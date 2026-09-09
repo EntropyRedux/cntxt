@@ -1,0 +1,25 @@
+node_modules/
+.vite/
+.cache/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+*.local
+*.pem
+*.sqlite
+*.db
+*.bak
+.DS_Store
+.env*
+!.env.example
+
+# Tauri / Rust build artifacts
+src-tauri/target/
+src-tauri/gen/
+
+# Design-source / working scratch (not shipped to the production repo)
+contextpad_replica_ai-studio/
+generated_documents/
+assets/

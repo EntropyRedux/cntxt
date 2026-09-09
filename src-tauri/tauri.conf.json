@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CNTXT",
+  "version": "0.1.0",
+  "identifier": "com.cntxt.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "CNTXT",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 700,
+        "minHeight": 500,
+        "decorations": true,
+        "transparent": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: asset: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ipc: http://ipc.localhost http://localhost:5173 ws://localhost:* https://generativelanguage.googleapis.com https://api.anthropic.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
+}

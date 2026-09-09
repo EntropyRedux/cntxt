@@ -1,0 +1,6 @@
+{
+  "name": "ContextPad",
+  "description": "Desktop-first, keyboard-friendly workspace for structured writing, prompt engineering, technical drafting, and workflow automation with multi-tab editor, formula engine, live preview, and sandboxed action scripts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

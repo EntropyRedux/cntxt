@@ -1,0 +1,39 @@
+import { LucideIcon } from 'lucide-react';
+
+export interface UiActionItem {
+  id: string;
+  name: string;
+  description: string;
+  category?: string;
+  shortcut?: string;
+  icon?: LucideIcon | string;
+  action: () => void | Promise<void>;
+  isAccent?: boolean;
+  disabled?: boolean;
+}
+
+export interface UiMenuGroup {
+  label: string;
+  icon?: LucideIcon;
+  items: {
+    label: string;
+    shortcut?: string;
+    action: () => void | Promise<void>;
+    isDivider?: boolean;
+    disabled?: boolean;
+  }[];
+}
+
+export interface AppUiEvents {
+  onOpenFile: () => void | Promise<void>;
+  onSaveFile: () => void | Promise<void>;
+  onSaveAs: () => void | Promise<void>;
+  onNewWindow: () => void | Promise<void>;
+  onExportWorkspace: () => void | Promise<void>;
+  onImportWorkspace: () => void | Promise<void>;
+  onOpenCommandPalette: () => void;
+  onOpenShortcuts: () => void;
+  onOpenVariableModal: () => void;
+  onOpenActionEditor: (actionId?: string) => void;
+  onToggleEditorMode: () => void;
+}

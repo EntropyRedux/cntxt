@@ -1,0 +1,41 @@
+import { create } from 'zustand';
+import { NotificationItem } from '../types';
+
+interface NotificationState {
+  notifications: NotificationItem[];
+  addNotification: (title: string, message?: string, type?: NotificationItem['type']) => string;
+  removeNotification: (id: string) => void;
+  clearAll: () => void;
+}
+
+export const useNotificationStore = create<NotificationState>((set, get) => ({
+  notifications: [],
+
+  addNotification: (title, message, type = 'info') => {
+    const id = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    const newItem: NotificationItem = {
+      id,
+      title,
+      message,
+      type,
+      timestamp: Date.now()
+    };
+
+    set({ notifications: [newItem, ...get().notifications.slice(0, 4)] });
+
+    // Auto dismiss after 4.5 seconds
+    setTimeout(() => {
+      get().removeNotification(id);
+    }, 4500);
+
+    return id;
+  },
+
+  removeNotification: (id) => {
+    set({ notifications: get().notifications.filter(n => n.id !== id) });
+  },
+
+  clearAll: () => {
+    set({ notifications: [] });
+  }
+}));

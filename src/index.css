@@ -1,0 +1,1061 @@
+@import "tailwindcss";
+
+/* =========================================================================
+   Universal Theme Variables Engine (Dark & Material 3 Light Support)
+   ========================================================================= */
+
+:root,
+[data-theme="contextpad-dark"] {
+  --app-bg: #18181B;
+  --titlebar-bg: #1F1F24;
+  --titlebar-fg: #D4D4D8;
+  --titlebar-border: #2B2B33;
+  --tabbar-bg: #18181B;
+  --tab-active-bg: #1E1E1E;
+  --tab-active-fg: #FFFFFF;
+  --tab-active-border: #007ACC;
+  --tab-inactive-bg: #141417;
+  --tab-inactive-fg: #90909A;
+  --tab-hover-bg: #222228;
+  --tab-border: #2B2B33;
+  --editor-bg: #1E1E1E;
+  --editor-fg: #D4D4D4;
+  --activitybar-bg: #18181B;
+  --activitybar-fg: #71717A;
+  --activitybar-active-bg: #27272F;
+  --activitybar-active-fg: #FFFFFF;
+  --activitybar-hover-bg: #202024;
+  --activitybar-border: #27272F;
+  --sidebar-bg: #1F1F24;
+  --sidebar-fg: #D4D4D4;
+  --sidebar-header-bg: #18181B;
+  --sidebar-border: #2B2B30;
+  --statusbar-bg: #18181B;
+  --statusbar-fg: #A1A1AA;
+  --statusbar-border: #27272F;
+  --card-bg: #25252A;
+  --card-fg: #D4D4D4;
+  --card-hover-bg: #2E2E36;
+  --card-border: #2B2B33;
+  --card-secondary-bg: #1E1E22;
+  --input-bg: #18181C;
+  --input-fg: #D4D4D4;
+  --input-border: #3C3C44;
+  --input-focus-border: #007ACC;
+  --input-placeholder: #71717A;
+  --modal-bg: #1F1F24;
+  --modal-fg: #D4D4D8;
+  --modal-border: #33333D;
+  --modal-header-bg: #18181B;
+  --modal-overlay: rgba(0, 0, 0, 0.75);
+  --dropdown-bg: #1F1F24;
+  --dropdown-fg: #D4D4D8;
+  --dropdown-hover-bg: #007ACC;
+  --dropdown-border: #33333D;
+  --accent-primary: #007ACC;
+  --accent-primary-hover: #0066A6;
+  --accent-container: rgba(0, 122, 204, 0.15);
+  --on-accent-container: #38BDF8;
+  --accent-ring: rgba(0, 122, 204, 0.35);
+  --border-primary: #2B2B33;
+  --border-subtle: #222228;
+  --text-primary: #EDEDED;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --text-accent: #38BDF8;
+  --codeblock-container-bg: #141418;
+  --codeblock-container-border: #2E2E38;
+  --codeblock-header-bg: #18181E;
+  --codeblock-header-border: #272732;
+  --scrollbar-thumb: #33333A;
+  --scrollbar-thumb-hover: #4F4F5A;
+  --status-success: #10B981;
+  --status-warning: #F59E0B;
+  --status-error: #EF4444;
+  --status-info: #38BDF8;
+}
+
+/* =========================================================================
+   Google Material 3 Light Theme (M3 Design System Tokens)
+   ========================================================================= */
+
+[data-theme="google-material-3"],
+[data-theme="github-light"],
+[data-theme="material-light"] {
+  --app-bg: #F8F9FA;
+  --titlebar-bg: #F0F4F9;
+  --titlebar-fg: #1F1F1F;
+  --titlebar-border: #E1E3E1;
+  --tabbar-bg: #E9EEF6;
+  --tab-active-bg: #FFFFFF;
+  --tab-active-fg: #0B57D0;
+  --tab-active-border: #0B57D0;
+  --tab-inactive-bg: #E9EEF6;
+  --tab-inactive-fg: #444746;
+  --tab-hover-bg: #DFE4EC;
+  --tab-border: #E1E3E1;
+  --editor-bg: #FFFFFF;
+  --editor-fg: #1F1F1F;
+  --activitybar-bg: #E9EEF6;
+  --activitybar-fg: #444746;
+  --activitybar-active-bg: #D3E3FD;
+  --activitybar-active-fg: #041E49;
+  --activitybar-hover-bg: #DFE4EC;
+  --activitybar-border: #E1E3E1;
+  --sidebar-bg: #F0F4F9;
+  --sidebar-fg: #1F1F1F;
+  --sidebar-header-bg: #E9EEF6;
+  --sidebar-border: #E1E3E1;
+  --statusbar-bg: #F0F4F9;
+  --statusbar-fg: #444746;
+  --statusbar-border: #E1E3E1;
+  --card-bg: #FFFFFF;
+  --card-fg: #1F1F1F;
+  --card-hover-bg: #F5F8FC;
+  --card-border: #E1E3E1;
+  --card-secondary-bg: #F2F5F9;
+  --input-bg: #FFFFFF;
+  --input-fg: #1F1F1F;
+  --input-border: #C4C7C5;
+  --input-focus-border: #0B57D0;
+  --input-placeholder: #747775;
+  --modal-bg: #FFFFFF;
+  --modal-fg: #1F1F1F;
+  --modal-border: #C4C7C5;
+  --modal-header-bg: #F0F4F9;
+  --modal-overlay: rgba(0, 0, 0, 0.4);
+  --dropdown-bg: #FFFFFF;
+  --dropdown-fg: #1F1F1F;
+  --dropdown-hover-bg: #D3E3FD;
+  --dropdown-border: #C4C7C5;
+  --accent-primary: #0B57D0;
+  --accent-primary-hover: #0842A0;
+  --accent-container: #D3E3FD;
+  --on-accent-container: #041E49;
+  --accent-ring: rgba(11, 87, 208, 0.25);
+  --border-primary: #E1E3E1;
+  --border-subtle: #EEF0F2;
+  --text-primary: #1F1F1F;
+  --text-secondary: #444746;
+  --text-muted: #747775;
+  --text-accent: #0B57D0;
+  --codeblock-container-bg: #F0F4F9;
+  --codeblock-container-border: #D8DCE3;
+  --codeblock-header-bg: #E3E8EF;
+  --codeblock-header-border: #D8DCE3;
+  --scrollbar-thumb: #C4C7C5;
+  --scrollbar-thumb-hover: #9CA3AF;
+  --status-success: #146C2E;
+  --status-warning: #B06000;
+  --status-error: #BA1A1A;
+  --status-info: #00639B;
+}
+
+/* =========================================================================
+   One Dark Theme
+   ========================================================================= */
+
+[data-theme="one-dark"] {
+  --app-bg: #21252B;
+  --titlebar-bg: #282C34;
+  --titlebar-fg: #ABB2BF;
+  --titlebar-border: #181A1F;
+  --tabbar-bg: #21252B;
+  --tab-active-bg: #282C34;
+  --tab-active-fg: #61AFEF;
+  --tab-active-border: #61AFEF;
+  --tab-inactive-bg: #1E2227;
+  --tab-inactive-fg: #5C6370;
+  --tab-hover-bg: #2C313C;
+  --tab-border: #181A1F;
+  --editor-bg: #282C34;
+  --editor-fg: #ABB2BF;
+  --activitybar-bg: #21252B;
+  --activitybar-fg: #5C6370;
+  --activitybar-active-bg: #2C313C;
+  --activitybar-active-fg: #61AFEF;
+  --activitybar-hover-bg: #282C34;
+  --activitybar-border: #181A1F;
+  --sidebar-bg: #21252B;
+  --sidebar-fg: #ABB2BF;
+  --sidebar-header-bg: #1E2227;
+  --sidebar-border: #181A1F;
+  --statusbar-bg: #21252B;
+  --statusbar-fg: #5C6370;
+  --statusbar-border: #181A1F;
+  --card-bg: #282C34;
+  --card-fg: #ABB2BF;
+  --card-hover-bg: #2C313C;
+  --card-border: #181A1F;
+  --card-secondary-bg: #1E2227;
+  --input-bg: #1E2227;
+  --input-fg: #ABB2BF;
+  --input-border: #3E4451;
+  --input-focus-border: #61AFEF;
+  --input-placeholder: #5C6370;
+  --modal-bg: #282C34;
+  --modal-fg: #ABB2BF;
+  --modal-border: #3E4451;
+  --modal-header-bg: #21252B;
+  --modal-overlay: rgba(0, 0, 0, 0.75);
+  --dropdown-bg: #282C34;
+  --dropdown-fg: #ABB2BF;
+  --dropdown-hover-bg: #3E4451;
+  --dropdown-border: #181A1F;
+  --accent-primary: #61AFEF;
+  --accent-primary-hover: #4D9FE6;
+  --accent-container: rgba(97, 175, 239, 0.15);
+  --on-accent-container: #61AFEF;
+  --accent-ring: rgba(97, 175, 239, 0.35);
+  --border-primary: #181A1F;
+  --border-subtle: #21252B;
+  --text-primary: #ABB2BF;
+  --text-secondary: #828997;
+  --text-muted: #5C6370;
+  --text-accent: #61AFEF;
+  --codeblock-container-bg: #1E2227;
+  --codeblock-container-border: #3E4451;
+  --codeblock-header-bg: #21252B;
+  --codeblock-header-border: #3E4451;
+  --scrollbar-thumb: #3E4451;
+  --scrollbar-thumb-hover: #4B5263;
+  --status-success: #98C379;
+  --status-warning: #E5C07B;
+  --status-error: #E06C75;
+  --status-info: #61AFEF;
+}
+
+/* =========================================================================
+   Dracula Theme
+   ========================================================================= */
+
+[data-theme="dracula"] {
+  --app-bg: #21222C;
+  --titlebar-bg: #282A36;
+  --titlebar-fg: #F8F8F2;
+  --titlebar-border: #191A21;
+  --tabbar-bg: #21222C;
+  --tab-active-bg: #282A36;
+  --tab-active-fg: #BD93F9;
+  --tab-active-border: #BD93F9;
+  --tab-inactive-bg: #191A21;
+  --tab-inactive-fg: #6272A4;
+  --tab-hover-bg: #343746;
+  --tab-border: #191A21;
+  --editor-bg: #282A36;
+  --editor-fg: #F8F8F2;
+  --activitybar-bg: #21222C;
+  --activitybar-fg: #6272A4;
+  --activitybar-active-bg: #343746;
+  --activitybar-active-fg: #FF79C6;
+  --activitybar-hover-bg: #282A36;
+  --activitybar-border: #191A21;
+  --sidebar-bg: #21222C;
+  --sidebar-fg: #F8F8F2;
+  --sidebar-header-bg: #191A21;
+  --sidebar-border: #191A21;
+  --statusbar-bg: #191A21;
+  --statusbar-fg: #6272A4;
+  --statusbar-border: #191A21;
+  --card-bg: #282A36;
+  --card-fg: #F8F8F2;
+  --card-hover-bg: #343746;
+  --card-border: #44475A;
+  --card-secondary-bg: #191A21;
+  --input-bg: #191A21;
+  --input-fg: #F8F8F2;
+  --input-border: #44475A;
+  --input-focus-border: #BD93F9;
+  --input-placeholder: #6272A4;
+  --modal-bg: #282A36;
+  --modal-fg: #F8F8F2;
+  --modal-border: #44475A;
+  --modal-header-bg: #21222C;
+  --modal-overlay: rgba(0, 0, 0, 0.75);
+  --dropdown-bg: #282A36;
+  --dropdown-fg: #F8F8F2;
+  --dropdown-hover-bg: #44475A;
+  --dropdown-border: #44475A;
+  --accent-primary: #BD93F9;
+  --accent-primary-hover: #A775F4;
+  --accent-container: rgba(189, 147, 249, 0.18);
+  --on-accent-container: #FF79C6;
+  --accent-ring: rgba(189, 147, 249, 0.35);
+  --border-primary: #44475A;
+  --border-subtle: #2E303E;
+  --text-primary: #F8F8F2;
+  --text-secondary: #BD93F9;
+  --text-muted: #6272A4;
+  --text-accent: #FF79C6;
+  --codeblock-container-bg: #191A21;
+  --codeblock-container-border: #44475A;
+  --codeblock-header-bg: #21222C;
+  --codeblock-header-border: #44475A;
+  --scrollbar-thumb: #44475A;
+  --scrollbar-thumb-hover: #6272A4;
+  --status-success: #50FA7B;
+  --status-warning: #FFB86C;
+  --status-error: #FF5555;
+  --status-info: #8BE9FD;
+}
+
+/* =========================================================================
+   Nord Theme
+   ========================================================================= */
+
+[data-theme="nord"] {
+  --app-bg: #242933;
+  --titlebar-bg: #2E3440;
+  --titlebar-fg: #ECEFF4;
+  --titlebar-border: #1E222A;
+  --tabbar-bg: #242933;
+  --tab-active-bg: #2E3440;
+  --tab-active-fg: #88C0D0;
+  --tab-active-border: #88C0D0;
+  --tab-inactive-bg: #1E222A;
+  --tab-inactive-fg: #4C566A;
+  --tab-hover-bg: #3B4252;
+  --tab-border: #1E222A;
+  --editor-bg: #2E3440;
+  --editor-fg: #D8DEE9;
+  --activitybar-bg: #242933;
+  --activitybar-fg: #4C566A;
+  --activitybar-active-bg: #3B4252;
+  --activitybar-active-fg: #88C0D0;
+  --activitybar-hover-bg: #2E3440;
+  --activitybar-border: #1E222A;
+  --sidebar-bg: #242933;
+  --sidebar-fg: #D8DEE9;
+  --sidebar-header-bg: #1E222A;
+  --sidebar-border: #1E222A;
+  --statusbar-bg: #1E222A;
+  --statusbar-fg: #4C566A;
+  --statusbar-border: #1E222A;
+  --card-bg: #2E3440;
+  --card-fg: #D8DEE9;
+  --card-hover-bg: #3B4252;
+  --card-border: #3B4252;
+  --card-secondary-bg: #1E222A;
+  --input-bg: #1E222A;
+  --input-fg: #D8DEE9;
+  --input-border: #434C5E;
+  --input-focus-border: #88C0D0;
+  --input-placeholder: #4C566A;
+  --modal-bg: #2E3440;
+  --modal-fg: #ECEFF4;
+  --modal-border: #434C5E;
+  --modal-header-bg: #242933;
+  --modal-overlay: rgba(0, 0, 0, 0.75);
+  --dropdown-bg: #2E3440;
+  --dropdown-fg: #ECEFF4;
+  --dropdown-hover-bg: #3B4252;
+  --dropdown-border: #434C5E;
+  --accent-primary: #88C0D0;
+  --accent-primary-hover: #81A1C1;
+  --accent-container: rgba(136, 192, 208, 0.15);
+  --on-accent-container: #88C0D0;
+  --accent-ring: rgba(136, 192, 208, 0.35);
+  --border-primary: #3B4252;
+  --border-subtle: #2E3440;
+  --text-primary: #ECEFF4;
+  --text-secondary: #D8DEE9;
+  --text-muted: #4C566A;
+  --text-accent: #88C0D0;
+  --codeblock-container-bg: #1E222A;
+  --codeblock-container-border: #3B4252;
+  --codeblock-header-bg: #242933;
+  --codeblock-header-border: #3B4252;
+  --scrollbar-thumb: #3B4252;
+  --scrollbar-thumb-hover: #4C566A;
+  --status-success: #A3BE8C;
+  --status-warning: #EBCB8B;
+  --status-error: #BF616A;
+  --status-info: #81A1C1;
+}
+
+/* =========================================================================
+   Monokai Pro Theme
+   ========================================================================= */
+
+[data-theme="monokai"] {
+  --app-bg: #222222;
+  --titlebar-bg: #2D2A2E;
+  --titlebar-fg: #FCFCFA;
+  --titlebar-border: #19181A;
+  --tabbar-bg: #222222;
+  --tab-active-bg: #2D2A2E;
+  --tab-active-fg: #FFD866;
+  --tab-active-border: #FFD866;
+  --tab-inactive-bg: #19181A;
+  --tab-inactive-fg: #727072;
+  --tab-hover-bg: #403E41;
+  --tab-border: #19181A;
+  --editor-bg: #2D2A2E;
+  --editor-fg: #FCFCFA;
+  --activitybar-bg: #222222;
+  --activitybar-fg: #727072;
+  --activitybar-active-bg: #403E41;
+  --activitybar-active-fg: #FF6188;
+  --activitybar-hover-bg: #2D2A2E;
+  --activitybar-border: #19181A;
+  --sidebar-bg: #222222;
+  --sidebar-fg: #FCFCFA;
+  --sidebar-header-bg: #19181A;
+  --sidebar-border: #19181A;
+  --statusbar-bg: #19181A;
+  --statusbar-fg: #727072;
+  --statusbar-border: #19181A;
+  --card-bg: #2D2A2E;
+  --card-fg: #FCFCFA;
+  --card-hover-bg: #403E41;
+  --card-border: #403E41;
+  --card-secondary-bg: #19181A;
+  --input-bg: #19181A;
+  --input-fg: #FCFCFA;
+  --input-border: #403E41;
+  --input-focus-border: #FFD866;
+  --input-placeholder: #727072;
+  --modal-bg: #2D2A2E;
+  --modal-fg: #FCFCFA;
+  --modal-border: #403E41;
+  --modal-header-bg: #222222;
+  --modal-overlay: rgba(0, 0, 0, 0.75);
+  --dropdown-bg: #2D2A2E;
+  --dropdown-fg: #FCFCFA;
+  --dropdown-hover-bg: #403E41;
+  --dropdown-border: #403E41;
+  --accent-primary: #FFD866;
+  --accent-primary-hover: #F0C950;
+  --accent-container: rgba(255, 216, 102, 0.15);
+  --on-accent-container: #FFD866;
+  --accent-ring: rgba(255, 216, 102, 0.35);
+  --border-primary: #403E41;
+  --border-subtle: #2D2A2E;
+  --text-primary: #FCFCFA;
+  --text-secondary: #A9DC76;
+  --text-muted: #727072;
+  --text-accent: #FF6188;
+  --codeblock-container-bg: #19181A;
+  --codeblock-container-border: #403E41;
+  --codeblock-header-bg: #222222;
+  --codeblock-header-border: #403E41;
+  --scrollbar-thumb: #403E41;
+  --scrollbar-thumb-hover: #727072;
+  --status-success: #A9DC76;
+  --status-warning: #FC9867;
+  --status-error: #FF6188;
+  --status-info: #78DCE8;
+}
+
+/* =========================================================================
+   GitHub Dark Theme
+   ========================================================================= */
+
+[data-theme="github-dark"] {
+  --app-bg: #090D13;
+  --titlebar-bg: #0D1117;
+  --titlebar-fg: #E6EDF3;
+  --titlebar-border: #30363D;
+  --tabbar-bg: #010409;
+  --tab-active-bg: #0D1117;
+  --tab-active-fg: #58A6FF;
+  --tab-active-border: #58A6FF;
+  --tab-inactive-bg: #010409;
+  --tab-inactive-fg: #7D8590;
+  --tab-hover-bg: #161B22;
+  --tab-border: #30363D;
+  --editor-bg: #0D1117;
+  --editor-fg: #E6EDF3;
+  --activitybar-bg: #010409;
+  --activitybar-fg: #7D8590;
+  --activitybar-active-bg: #161B22;
+  --activitybar-active-fg: #58A6FF;
+  --activitybar-hover-bg: #0D1117;
+  --activitybar-border: #30363D;
+  --sidebar-bg: #010409;
+  --sidebar-fg: #E6EDF3;
+  --sidebar-header-bg: #090D13;
+  --sidebar-border: #30363D;
+  --statusbar-bg: #090D13;
+  --statusbar-fg: #7D8590;
+  --statusbar-border: #30363D;
+  --card-bg: #161B22;
+  --card-fg: #E6EDF3;
+  --card-hover-bg: #21262D;
+  --card-border: #30363D;
+  --card-secondary-bg: #0D1117;
+  --input-bg: #0D1117;
+  --input-fg: #E6EDF3;
+  --input-border: #30363D;
+  --input-focus-border: #58A6FF;
+  --input-placeholder: #7D8590;
+  --modal-bg: #161B22;
+  --modal-fg: #E6EDF3;
+  --modal-border: #30363D;
+  --modal-header-bg: #0D1117;
+  --modal-overlay: rgba(0, 0, 0, 0.75);
+  --dropdown-bg: #161B22;
+  --dropdown-fg: #E6EDF3;
+  --dropdown-hover-bg: #1F6FEB;
+  --dropdown-border: #30363D;
+  --accent-primary: #1F6FEB;
+  --accent-primary-hover: #388BFD;
+  --accent-container: rgba(31, 111, 235, 0.15);
+  --on-accent-container: #58A6FF;
+  --accent-ring: rgba(31, 111, 235, 0.35);
+  --border-primary: #30363D;
+  --border-subtle: #21262D;
+  --text-primary: #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-muted: #6E7681;
+  --text-accent: #58A6FF;
+  --codeblock-container-bg: #0D1117;
+  --codeblock-container-border: #30363D;
+  --codeblock-header-bg: #161B22;
+  --codeblock-header-border: #30363D;
+  --scrollbar-thumb: #30363D;
+  --scrollbar-thumb-hover: #484F58;
+  --status-success: #3FB950;
+  --status-warning: #D29922;
+  --status-error: #F85149;
+  --status-info: #58A6FF;
+}
+
+/* =========================================================================
+   Solarized Dark Theme
+   ========================================================================= */
+
+[data-theme="solarized-dark"] {
+  --app-bg: #001E26;
+  --titlebar-bg: #002B36;
+  --titlebar-fg: #839496;
+  --titlebar-border: #073642;
+  --tabbar-bg: #001E26;
+  --tab-active-bg: #002B36;
+  --tab-active-fg: #268BD2;
+  --tab-active-border: #268BD2;
+  --tab-inactive-bg: #00141A;
+  --tab-inactive-fg: #586E75;
+  --tab-hover-bg: #073642;
+  --tab-border: #073642;
+  --editor-bg: #002B36;
+  --editor-fg: #839496;
+  --activitybar-bg: #001E26;
+  --activitybar-fg: #586E75;
+  --activitybar-active-bg: #073642;
+  --activitybar-active-fg: #2AA198;
+  --activitybar-hover-bg: #002B36;
+  --activitybar-border: #073642;
+  --sidebar-bg: #001E26;
+  --sidebar-fg: #839496;
+  --sidebar-header-bg: #00141A;
+  --sidebar-border: #073642;
+  --statusbar-bg: #00141A;
+  --statusbar-fg: #586E75;
+  --statusbar-border: #073642;
+  --card-bg: #002B36;
+  --card-fg: #839496;
+  --card-hover-bg: #073642;
+  --card-border: #073642;
+  --card-secondary-bg: #00141A;
+  --input-bg: #00141A;
+  --input-fg: #839496;
+  --input-border: #073642;
+  --input-focus-border: #268BD2;
+  --input-placeholder: #586E75;
+  --modal-bg: #002B36;
+  --modal-fg: #839496;
+  --modal-border: #073642;
+  --modal-header-bg: #001E26;
+  --modal-overlay: rgba(0, 0, 0, 0.75);
+  --dropdown-bg: #002B36;
+  --dropdown-fg: #839496;
+  --dropdown-hover-bg: #073642;
+  --dropdown-border: #073642;
+  --accent-primary: #268BD2;
+  --accent-primary-hover: #1F76B4;
+  --accent-container: rgba(38, 139, 210, 0.18);
+  --on-accent-container: #2AA198;
+  --accent-ring: rgba(38, 139, 210, 0.35);
+  --border-primary: #073642;
+  --border-subtle: #00212B;
+  --text-primary: #93A1A1;
+  --text-secondary: #839496;
+  --text-muted: #586E75;
+  --text-accent: #2AA198;
+  --codeblock-container-bg: #00141A;
+  --codeblock-container-border: #073642;
+  --codeblock-header-bg: #001E26;
+  --codeblock-header-border: #073642;
+  --scrollbar-thumb: #073642;
+  --scrollbar-thumb-hover: #586E75;
+  --status-success: #859900;
+  --status-warning: #B58900;
+  --status-error: #DC322F;
+  --status-info: #268BD2;
+}
+
+/* =========================================================================
+   Base Rules & Scrollbars
+   ========================================================================= */
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    background-color: var(--app-bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    user-select: none;
+    overflow: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    touch-action: manipulation;
+  }
+
+  /* Touch Mode Enhancements */
+  [data-touch="true"],
+  [data-density="touch"] {
+    --touch-target-min: 44px;
+  }
+
+  [data-touch="true"] button,
+  [data-density="touch"] button {
+    touch-action: manipulation;
+  }
+
+  /* Custom Themed Desktop Scrollbar */
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+/* =========================================================================
+   Universal Semantic Utility Classes for Themed Components
+   ========================================================================= */
+
+.theme-app {
+  background-color: var(--app-bg);
+  color: var(--text-primary);
+}
+
+.theme-titlebar {
+  background-color: var(--titlebar-bg);
+  color: var(--titlebar-fg);
+  border-bottom: 1px solid var(--titlebar-border);
+}
+
+.theme-tabbar {
+  background-color: var(--tabbar-bg);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.theme-tab-active {
+  background-color: var(--tab-active-bg) !important;
+  color: var(--tab-active-fg) !important;
+  border-bottom: 2px solid var(--tab-active-border) !important;
+}
+
+.theme-tab-inactive {
+  background-color: var(--tab-inactive-bg);
+  color: var(--tab-inactive-fg);
+}
+
+.theme-tab-inactive:hover {
+  background-color: var(--tab-hover-bg);
+  color: var(--text-primary);
+}
+
+.theme-sidebar {
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+  border-left: 1px solid var(--sidebar-border);
+}
+
+.theme-sidebar-header {
+  background-color: var(--sidebar-header-bg);
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.theme-activitybar {
+  background-color: var(--activitybar-bg);
+  border-left: 1px solid var(--activitybar-border);
+}
+
+.theme-statusbar {
+  background-color: var(--statusbar-bg);
+  color: var(--statusbar-fg);
+  border-top: 1px solid var(--statusbar-border);
+}
+
+.theme-card {
+  background-color: var(--card-bg);
+  color: var(--card-fg);
+  border: 1px solid var(--card-border);
+}
+
+.theme-card:hover {
+  background-color: var(--card-hover-bg);
+}
+
+.theme-card-secondary {
+  background-color: var(--card-secondary-bg);
+  border: 1px solid var(--border-subtle);
+}
+
+.theme-input {
+  background-color: var(--input-bg);
+  color: var(--input-fg);
+  border: 1px solid var(--input-border);
+}
+
+.theme-input:focus {
+  border-color: var(--input-focus-border);
+  outline: 2px solid var(--accent-ring);
+}
+
+.theme-modal {
+  background-color: var(--modal-bg);
+  color: var(--modal-fg);
+  border: 1px solid var(--modal-border);
+}
+
+.theme-modal-overlay {
+  background-color: var(--modal-overlay);
+}
+
+.theme-dropdown {
+  background-color: var(--dropdown-bg);
+  color: var(--dropdown-fg);
+  border: 1px solid var(--dropdown-border);
+}
+
+/* =========================================================
+   Markdown Prose Engine Styles
+   ========================================================= */
+
+.prose {
+  color: var(--text-primary);
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-primary);
+  padding-bottom: 0.3em;
+  margin-top: 1.4em;
+  margin-bottom: 0.6em;
+}
+
+.prose h1 { font-size: 1.65em; color: var(--accent-primary); }
+.prose h2 { font-size: 1.35em; }
+.prose h3 { font-size: 1.15em; }
+
+.prose p {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+  line-height: 1.7;
+}
+
+.prose code:not(pre code) {
+  background-color: var(--card-secondary-bg);
+  color: var(--accent-primary);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-size: 0.88em;
+  font-family: 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace;
+  border: 1px solid var(--border-subtle);
+}
+
+.prose pre {
+  background-color: var(--codeblock-container-bg) !important;
+  border: 1px solid var(--codeblock-container-border);
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1em 0;
+  color: var(--text-primary);
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--accent-primary);
+  padding-left: 1rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 1em 0;
+  background: var(--accent-container);
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+  border-radius: 0 4px 4px 0;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2em 0;
+  font-size: 0.9em;
+}
+
+.prose th, .prose td {
+  border: 1px solid var(--border-primary);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.prose th {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.prose tr:nth-child(even) {
+  background-color: var(--card-secondary-bg);
+}
+
+.prose ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.8em 0;
+}
+
+.prose ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.8em 0;
+}
+
+.prose li {
+  margin: 0.3em 0;
+}
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--border-primary);
+  margin: 1.8em 0;
+}
+
+.prose input[type="checkbox"] {
+  margin-right: 0.5rem;
+  accent-color: var(--accent-primary);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* =========================================================
+   Live Interactive Markdown Rendering Styles (CodeMirror 6)
+   ========================================================= */
+
+.cm-live-heading {
+  font-family: inherit;
+  margin-top: 0.2em;
+  margin-bottom: 0.1em;
+}
+
+.cm-live-h1 {
+  font-size: 1.45em !important;
+  font-weight: 700 !important;
+  color: var(--accent-primary) !important;
+  line-height: 1.35;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 2px;
+}
+
+.cm-live-h2 {
+  font-size: 1.28em !important;
+  font-weight: 700 !important;
+  color: var(--status-success) !important;
+  line-height: 1.35;
+}
+
+.cm-live-h3 {
+  font-size: 1.15em !important;
+  font-weight: 600 !important;
+  color: var(--status-info) !important;
+  line-height: 1.35;
+}
+
+.cm-live-h4 {
+  font-size: 1.05em !important;
+  font-weight: 600 !important;
+  color: var(--status-warning) !important;
+}
+
+.cm-live-h5 {
+  font-size: 1.0em !important;
+  font-weight: 600 !important;
+  color: var(--status-warning) !important;
+}
+
+.cm-live-h6 {
+  font-size: 0.95em !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+}
+
+.cm-live-heading-marker {
+  color: var(--text-muted) !important;
+  font-size: 0.85em;
+  opacity: 0.45;
+  margin-right: 2px;
+}
+
+.cm-live-blockquote {
+  border-left: 3px solid var(--accent-primary) !important;
+  padding-left: 10px !important;
+  background: var(--accent-container) !important;
+  font-style: italic;
+  color: var(--text-secondary) !important;
+  border-radius: 0 4px 4px 0;
+}
+
+.cm-live-quote-marker {
+  color: var(--accent-primary);
+  font-weight: bold;
+  opacity: 0.6;
+}
+
+.cm-live-task-done {
+  text-decoration: line-through;
+  opacity: 0.6;
+  color: var(--text-muted) !important;
+}
+
+.cm-live-task-item {
+  color: var(--text-primary);
+}
+
+.cm-live-bold {
+  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+}
+
+.cm-live-italic {
+  font-style: italic !important;
+  color: var(--text-secondary) !important;
+}
+
+.cm-live-strikethrough {
+  text-decoration: line-through !important;
+  color: var(--text-muted) !important;
+}
+
+.cm-live-code-pill {
+  background-color: var(--card-secondary-bg) !important;
+  color: var(--accent-primary) !important;
+  padding: 1px 5px !important;
+  border-radius: 4px !important;
+  border: 1px solid var(--border-subtle) !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  font-size: 0.9em !important;
+}
+
+.cm-live-tag {
+  background-color: var(--accent-container) !important;
+  color: var(--on-accent-container) !important;
+  padding: 1px 6px !important;
+  border-radius: 9999px !important;
+  font-weight: 500 !important;
+  font-size: 0.88em !important;
+}
+
+.cm-live-active-row {
+  background-color: var(--card-secondary-bg);
+}
+
+/* =========================================================
+   Fenced Code Block Container Boxes (Live Render Mode)
+   ========================================================= */
+
+.cm-live-codeblock-start {
+  background-color: var(--codeblock-container-bg) !important;
+  border-top: 1px solid var(--codeblock-container-border) !important;
+  border-left: 1px solid var(--codeblock-container-border) !important;
+  border-right: 1px solid var(--codeblock-container-border) !important;
+  border-top-left-radius: 8px !important;
+  border-top-right-radius: 8px !important;
+  margin-top: 0.85em !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.cm-live-codeblock-start.cm-live-active-row {
+  font-family: 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace !important;
+  font-size: 0.9em !important;
+  color: var(--accent-primary) !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+.cm-live-codeblock-mid {
+  background-color: var(--codeblock-container-bg) !important;
+  border-left: 1px solid var(--codeblock-container-border) !important;
+  border-right: 1px solid var(--codeblock-container-border) !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace !important;
+  font-size: 0.92em !important;
+  line-height: 1.6 !important;
+}
+
+.cm-live-codeblock-end {
+  background-color: var(--codeblock-container-bg) !important;
+  border-left: 1px solid var(--codeblock-container-border) !important;
+  border-right: 1px solid var(--codeblock-container-border) !important;
+  border-bottom: 1px solid var(--codeblock-container-border) !important;
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+  margin-bottom: 0.9em !important;
+  padding-bottom: 4px !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+
+.cm-live-codeblock-end.cm-live-active-row {
+  font-family: 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace !important;
+  font-size: 0.9em !important;
+  color: var(--text-muted) !important;
+  padding-bottom: 6px !important;
+}
+
+.cm-live-codeblock-single {
+  background-color: var(--codeblock-container-bg) !important;
+  border: 1px solid var(--codeblock-container-border) !important;
+  border-radius: 8px !important;
+  margin-top: 0.85em !important;
+  margin-bottom: 0.9em !important;
+  padding: 6px 14px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+}
+
+.cm-live-codeblock-header {
+  background-color: var(--codeblock-header-bg) !important;
+  border-bottom: 1px solid var(--codeblock-header-border) !important;
+  border-top-left-radius: 7px !important;
+  border-top-right-radius: 7px !important;
+  color: var(--text-secondary);
+}
+
+.cm-live-codeblock-footer {
+  height: 6px;
+}
