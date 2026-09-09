@@ -20,8 +20,10 @@ import { templateVariablesExtension } from '../../extensions/templateVariables';
 import { inlineFormulasExtension } from '../../extensions/inlineFormulas';
 import { liveMarkdownExtension } from '../../extensions/liveMarkdown';
 import { lineCounterSelectionExtension } from '../../extensions/lineNumberSelection';
+import { imageDropPasteExtension } from '../../extensions/imageDropPasteExtension';
 import { SupportedLanguage } from '../../types';
 import { editorRegistry } from '../../services/editor/editorRegistry';
+import { useRuntimeBridge } from '../../adapters';
 
 interface EditorProps {
   tabId: string;
@@ -30,10 +32,12 @@ interface EditorProps {
 }
 
 export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
+  const bridge = useRuntimeBridge();
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const liveMarkdownCompartmentRef = useRef<Compartment>(new Compartment());
   const updatingFromStoreRef = useRef(false);
+  const isFirstRenderRef = useRef(true);
 
   const { updateTabContent, updateTabMetadata } = useTabStore();
   const { settings } = useSettingsStore();
@@ -91,8 +95,9 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       slashCommandExtension(),
       templateVariablesExtension(),
       inlineFormulasExtension(),
+      imageDropPasteExtension(),
       liveMarkdownCompartmentRef.current.of(
-        liveMarkdownExtension(isRenderedMode && (language === 'markdown' || language === 'text'))
+        liveMarkdownExtension(isRenderedMode && (language === 'markdown' || language === 'text'), bridge)
       ),
 
       // Custom font size and line height styling
@@ -147,18 +152,31 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       editorRegistry.unregister(tabId);
       view.destroy();
       viewRef.current = null;
+      isFirstRenderRef.current = true;
     };
   }, [tabId, language, settings.theme, settings.fontSize, settings.showLineNumbers]);
 
   // Dynamically reconfigure live markdown mode without recreating editor
   useEffect(() => {
-    if (!viewRef.current) return;
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
+    const view = viewRef.current;
+    if (!view) return;
     const isRenderedMode = (settings.editorMode || 'rendered') === 'rendered';
-    viewRef.current.dispatch({
-      effects: liveMarkdownCompartmentRef.current.reconfigure(
-        liveMarkdownExtension(isRenderedMode && (language === 'markdown' || language === 'text'))
-      )
-    });
+    const effect = liveMarkdownCompartmentRef.current.reconfigure(
+      liveMarkdownExtension(isRenderedMode && (language === 'markdown' || language === 'text'), bridge)
+    );
+    if ((view as any).updating) {
+      queueMicrotask(() => {
+        if (viewRef.current) {
+          viewRef.current.dispatch({ effects: effect });
+        }
+      });
+    } else {
+      view.dispatch({ effects: effect });
+    }
   }, [settings.editorMode, language]);
 
   // Keep editor content synchronized with external updates without losing cursor
@@ -166,17 +184,27 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     const view = viewRef.current;
     if (!view) return;
 
-    const currentDoc = view.state.doc.toString();
-    if (content !== currentDoc) {
-      updatingFromStoreRef.current = true;
-      view.dispatch({
-        changes: {
-          from: 0,
-          to: currentDoc.length,
-          insert: content
-        }
-      });
-      updatingFromStoreRef.current = false;
+    const syncContent = () => {
+      const activeView = viewRef.current;
+      if (!activeView) return;
+      const currentDoc = activeView.state.doc.toString();
+      if (content !== currentDoc) {
+        updatingFromStoreRef.current = true;
+        activeView.dispatch({
+          changes: {
+            from: 0,
+            to: currentDoc.length,
+            insert: content
+          }
+        });
+        updatingFromStoreRef.current = false;
+      }
+    };
+
+    if ((view as any).updating) {
+      queueMicrotask(syncContent);
+    } else {
+      syncContent();
     }
   }, [content]);
 

@@ -1,8 +1,11 @@
 import { create } from 'zustand';
 import { Tab, SupportedLanguage } from '../types';
 import { WELCOME_DOCUMENT } from '../constants/defaultData';
-import { dbStorage } from '../services/storage/IndexedDBStorage';
 import { editorRegistry } from '../services/editor/editorRegistry';
+import { IStorageBridge } from '../ui-contract/bridgeContract';
+import { STORAGE_KEYS } from '../adapters/storageKeys';
+
+let activeStorage: IStorageBridge | null = null;
 
 interface TabState {
   tabs: Tab[];
@@ -23,29 +26,48 @@ interface TabState {
   saveTabAs: (tabId: string, newTitle: string, newPath?: string) => Promise<void>;
   duplicateTab: (tabId: string) => string;
   togglePinTab: (tabId: string) => void;
-  initializeTabs: () => Promise<void>;
+  initializeTabs: (storage?: IStorageBridge) => Promise<void>;
 }
-
-const STORAGE_KEY_META = 'contextpad_tabs_meta';
-const STORAGE_KEY_ACTIVE = 'contextpad_active_tab_id';
 
 export const useTabStore = create<TabState>((set, get) => ({
   tabs: [],
   activeTabId: '',
   isSaving: false,
 
-  initializeTabs: async () => {
+  initializeTabs: async (storage?: IStorageBridge) => {
+    if (storage) {
+      activeStorage = storage;
+    }
+
+    const initialTabId = 'welcome-doc';
+    const defaultWelcomeTab: Tab = {
+      id: initialTabId,
+      title: 'Welcome.md',
+      content: WELCOME_DOCUMENT,
+      filePath: null,
+      folderPath: null,
+      isDirty: false,
+      language: 'markdown',
+      lastModifiedTime: Date.now(),
+      isPinned: true
+    };
+
+    if (!activeStorage) {
+      set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId });
+      return;
+    }
+
     try {
-      const storedMeta = localStorage.getItem(STORAGE_KEY_META);
-      const storedActiveId = localStorage.getItem(STORAGE_KEY_ACTIVE);
+      const storedMeta = await activeStorage.getItem(STORAGE_KEYS.TABS_META);
+      const storedActiveId = await activeStorage.getItem(STORAGE_KEYS.ACTIVE_TAB_ID);
 
       if (storedMeta) {
         const metaList: Tab[] = JSON.parse(storedMeta);
         if (metaList.length > 0) {
-          // Load content from IndexedDB for each tab
+          // Load content from storage bridge for each tab
           const fullTabs: Tab[] = await Promise.all(
             metaList.map(async (meta) => {
-              const content = await dbStorage.getTabContent(meta.id);
+              const content = await activeStorage!.getItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${meta.id}`);
               return {
                 ...meta,
                 content: content !== null ? content : meta.content || ''
@@ -63,29 +85,17 @@ export const useTabStore = create<TabState>((set, get) => ({
       }
 
       // First run: Create Welcome Document
-      const initialTabId = 'welcome-doc';
-      const initialTab: Tab = {
-        id: initialTabId,
-        title: 'Welcome.md',
-        content: WELCOME_DOCUMENT,
-        filePath: null,
-        folderPath: null,
-        isDirty: false,
-        language: 'markdown',
-        lastModifiedTime: Date.now(),
-        isPinned: true
-      };
-
-      await dbStorage.setTabContent(initialTabId, WELCOME_DOCUMENT);
-      localStorage.setItem(STORAGE_KEY_META, JSON.stringify([initialTab]));
-      localStorage.setItem(STORAGE_KEY_ACTIVE, initialTabId);
+      await activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${initialTabId}`, WELCOME_DOCUMENT);
+      await activeStorage.setItem(STORAGE_KEYS.TABS_META, JSON.stringify([defaultWelcomeTab]));
+      await activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, initialTabId);
 
       set({
-        tabs: [initialTab],
+        tabs: [defaultWelcomeTab],
         activeTabId: initialTabId
       });
     } catch (e) {
       console.error('Error initializing tabs:', e);
+      set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId });
     }
   },
 
@@ -107,8 +117,10 @@ export const useTabStore = create<TabState>((set, get) => ({
     const newTabs = [...get().tabs, newTab];
     set({ tabs: newTabs, activeTabId: id });
 
-    // Save to IndexedDB & meta
-    dbStorage.setTabContent(id, content);
+    // Save to bridge storage & meta
+    if (activeStorage) {
+      activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${id}`, content).catch(() => {});
+    }
     saveTabsMeta(newTabs, id);
 
     return id;
@@ -121,7 +133,9 @@ export const useTabStore = create<TabState>((set, get) => ({
       const newId = get().createTab('Untitled.md', '', 'markdown');
       const filtered = get().tabs.filter(t => t.id !== tabId);
       set({ tabs: filtered, activeTabId: newId });
-      dbStorage.deleteTabContent(tabId);
+      if (activeStorage) {
+        activeStorage.removeItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`).catch(() => {});
+      }
       saveTabsMeta(filtered, newId);
       return;
     }
@@ -136,7 +150,9 @@ export const useTabStore = create<TabState>((set, get) => ({
     }
 
     set({ tabs: newTabs, activeTabId: nextActiveId });
-    dbStorage.deleteTabContent(tabId);
+    if (activeStorage) {
+      activeStorage.removeItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`).catch(() => {});
+    }
     saveTabsMeta(newTabs, nextActiveId);
   },
 
@@ -145,14 +161,18 @@ export const useTabStore = create<TabState>((set, get) => ({
     const toDelete = tabs.filter(t => t.id !== keepTabId);
     const remaining = tabs.filter(t => t.id === keepTabId);
 
-    toDelete.forEach(t => dbStorage.deleteTabContent(t.id));
+    if (activeStorage) {
+      toDelete.forEach(t => activeStorage!.removeItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`).catch(() => {}));
+    }
     set({ tabs: remaining, activeTabId: keepTabId });
     saveTabsMeta(remaining, keepTabId);
   },
 
   closeAllTabs: () => {
     const { tabs } = get();
-    tabs.forEach(t => dbStorage.deleteTabContent(t.id));
+    if (activeStorage) {
+      tabs.forEach(t => activeStorage!.removeItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`).catch(() => {}));
+    }
     
     const newId = `tab_${Date.now()}`;
     const freshTab: Tab = {
@@ -165,14 +185,18 @@ export const useTabStore = create<TabState>((set, get) => ({
       language: 'markdown',
       lastModifiedTime: Date.now()
     };
-    dbStorage.setTabContent(newId, '');
+    if (activeStorage) {
+      activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${newId}`, '').catch(() => {});
+    }
     set({ tabs: [freshTab], activeTabId: newId });
     saveTabsMeta([freshTab], newId);
   },
 
   setActiveTabId: (tabId: string) => {
     set({ activeTabId: tabId });
-    localStorage.setItem(STORAGE_KEY_ACTIVE, tabId);
+    if (activeStorage) {
+      activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, tabId).catch(() => {});
+    }
   },
 
   updateTabContent: (tabId: string, content: string) => {
@@ -191,7 +215,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
     set({ tabs: updated });
 
-    // Debounced persist to storage
+    // Debounced persist to bridge storage
     debouncedContentSave(tabId, content);
   },
 
@@ -258,7 +282,9 @@ export const useTabStore = create<TabState>((set, get) => ({
     if (!tab) return;
 
     set({ isSaving: true });
-    await dbStorage.setTabContent(tab.id, tab.content);
+    if (activeStorage) {
+      await activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tab.id}`, tab.content);
+    }
 
     const updated = tabs.map(t => t.id === activeTabId ? { ...t, isDirty: false, lastModifiedTime: Date.now() } : t);
     set({ tabs: updated, isSaving: false });
@@ -305,6 +331,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
 // Helper functions for metadata persistence and debounced saves
 function saveTabsMeta(tabs: Tab[], activeTabId: string) {
+  if (!activeStorage) return;
   try {
     const metaOnly = tabs.map(({ id, title, filePath, folderPath, isDirty, language, lastModifiedTime, isPinned }) => ({
       id,
@@ -316,8 +343,8 @@ function saveTabsMeta(tabs: Tab[], activeTabId: string) {
       lastModifiedTime,
       isPinned
     }));
-    localStorage.setItem(STORAGE_KEY_META, JSON.stringify(metaOnly));
-    localStorage.setItem(STORAGE_KEY_ACTIVE, activeTabId);
+    activeStorage.setItem(STORAGE_KEYS.TABS_META, JSON.stringify(metaOnly)).catch(() => {});
+    activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, activeTabId).catch(() => {});
   } catch (e) {
     console.error('Failed to save tab metadata', e);
   }
@@ -329,7 +356,9 @@ function debouncedContentSave(tabId: string, content: string) {
     clearTimeout(saveTimers[tabId]);
   }
   saveTimers[tabId] = setTimeout(() => {
-    dbStorage.setTabContent(tabId, content);
+    if (activeStorage) {
+      activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, content).catch(() => {});
+    }
     delete saveTimers[tabId];
   }, 1000);
 }

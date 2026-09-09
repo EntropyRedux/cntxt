@@ -43,19 +43,20 @@ export const MobileBottomNav: React.FC = () => {
         return (
           <button
             key={item.id}
+            type="button"
             onClick={() => handleTabClick(item.id)}
+            title={item.label}
             aria-label={item.label}
             aria-pressed={isActive}
-            className={`flex-1 flex flex-col items-center justify-center gap-1 py-1 transition-all rounded-lg active:scale-95 ${
+            className={`flex-1 flex items-center justify-center py-1 transition-all rounded-lg active:scale-95 ${
               isActive 
                 ? 'text-[var(--accent-primary)] font-semibold' 
                 : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
             }`}
           >
-            <div className={`p-1 rounded-md transition-colors ${isActive ? 'bg-[var(--accent-container)]' : ''}`}>
+            <div className={`p-2 rounded-md transition-colors ${isActive ? 'bg-[var(--accent-container)]' : ''}`}>
               <Icon className="w-5 h-5" />
             </div>
-            <span className="text-[10px] tracking-tight">{item.label}</span>
           </button>
         );
       })}

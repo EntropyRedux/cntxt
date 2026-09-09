@@ -9,12 +9,15 @@ import {
   ArrowUpRight, 
   Variable, 
   Download,
-  Upload
+  Upload,
+  Save,
+  X
 } from 'lucide-react';
 import { useTemplateStore } from '../../store/templateStore';
 import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { Template } from '../../types';
+import { triggerFileDownload, triggerFileInput } from '../../adapters';
 
 export const TemplateManager: React.FC = () => {
   const { 
@@ -88,33 +91,20 @@ export const TemplateManager: React.FC = () => {
 
   const handleExport = () => {
     const json = exportTemplates();
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `contextpad-templates-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    triggerFileDownload(`contextpad-templates-${Date.now()}.json`, json);
     addNotification('Export Complete', 'Templates JSON downloaded', 'success');
   };
 
   const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e: any) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+    triggerFileInput('.json', (text) => {
       try {
-        const text = await file.text();
         const json = JSON.parse(text);
         const count = importTemplates(json);
         addNotification('Templates Imported', `Successfully imported ${count} template(s)`, 'success');
       } catch (err: any) {
         addNotification('Import Error', 'Invalid JSON file', 'error');
       }
-    };
-    input.click();
+    });
   };
 
   return (
@@ -127,25 +117,31 @@ export const TemplateManager: React.FC = () => {
           </span>
           <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={handleImport}
               title="Import Templates JSON"
-              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors"
+              aria-label="Import Templates JSON"
+              className="w-6 h-6 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors"
             >
               <Upload className="w-3.5 h-3.5" />
             </button>
             <button
+              type="button"
               onClick={handleExport}
               title="Export Templates JSON"
-              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors"
+              aria-label="Export Templates JSON"
+              className="w-6 h-6 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
             </button>
             <button
+              type="button"
               onClick={() => setIsCreating(true)}
-              className="px-2 py-0.5 theme-btn-primary rounded font-medium flex items-center gap-1 transition-colors text-[11px]"
+              title="New Template"
+              aria-label="New Template"
+              className="w-6 h-6 theme-btn-primary rounded flex items-center justify-center transition-colors"
             >
-              <Plus className="w-3 h-3" />
-              <span>New</span>
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -229,15 +225,19 @@ export const TemplateManager: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="px-2.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded"
+              title="Cancel"
+              aria-label="Cancel"
+              className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded hover:bg-[var(--card-hover-bg)]"
             >
-              Cancel
+              <X className="w-4 h-4" />
             </button>
             <button
               type="submit"
-              className="px-3 py-1 theme-btn-primary rounded font-medium"
+              title="Save Template"
+              aria-label="Save Template"
+              className="w-7 h-7 flex items-center justify-center theme-btn-primary rounded font-medium"
             >
-              Save Template
+              <Save className="w-4 h-4" />
             </button>
           </div>
         </form>
@@ -290,44 +290,52 @@ export const TemplateManager: React.FC = () => {
               <div className="flex items-center justify-between pt-1 border-t border-[var(--border-primary)] text-[11px]">
                 <div className="flex items-center gap-1">
                   <button
+                    type="button"
                     onClick={() => openVariableModal(tmpl)}
-                    title="Fill Variables & Insert"
-                    className="px-2 py-0.5 bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] text-[var(--text-primary)] border border-[var(--border-primary)] rounded font-medium flex items-center gap-1 transition-colors"
+                    title={`Fill Variables & Insert ${tmpl.name}`}
+                    aria-label={`Fill Variables & Insert ${tmpl.name}`}
+                    className="w-6 h-6 bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] text-[var(--text-primary)] border border-[var(--border-primary)] rounded flex items-center justify-center transition-colors"
                   >
-                    <Variable className="w-3 h-3" />
-                    <span>Fill & Insert</span>
+                    <Variable className="w-3.5 h-3.5" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleInsertTemplate(tmpl)}
-                    title="Quick Insert Raw Template"
-                    className="px-2 py-0.5 bg-[var(--accent-container)] text-[var(--accent-primary)] rounded font-medium flex items-center gap-1 transition-colors"
+                    title={`Quick Insert ${tmpl.name}`}
+                    aria-label={`Quick Insert ${tmpl.name}`}
+                    className="w-6 h-6 bg-[var(--accent-container)] text-[var(--accent-primary)] rounded flex items-center justify-center transition-colors"
                   >
-                    <ArrowUpRight className="w-3 h-3" />
-                    <span>Insert</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                   <button
+                    type="button"
                     onClick={() => duplicateTemplate(tmpl.id)}
-                    title="Duplicate Template"
+                    title={`Duplicate ${tmpl.name}`}
+                    aria-label={`Duplicate ${tmpl.name}`}
                     className="p-1 hover:text-[var(--text-primary)] rounded"
                   >
-                    <Copy className="w-3 h-3 text-[var(--text-muted)]" />
+                    <Copy className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => togglePinTemplate(tmpl.id)}
-                    title={tmpl.isPinned ? 'Unpin' : 'Pin to top'}
+                    title={tmpl.isPinned ? `Unpin ${tmpl.name}` : `Pin ${tmpl.name} to top`}
+                    aria-label={tmpl.isPinned ? `Unpin ${tmpl.name}` : `Pin ${tmpl.name} to top`}
                     className="p-1 hover:text-[var(--status-warning)] rounded"
                   >
-                    <Pin className={`w-3 h-3 ${tmpl.isPinned ? 'text-[var(--status-warning)] fill-[var(--status-warning)]' : 'text-[var(--text-muted)]'}`} />
+                    <Pin className={`w-3.5 h-3.5 ${tmpl.isPinned ? 'text-[var(--status-warning)] fill-[var(--status-warning)]' : 'text-[var(--text-muted)]'}`} />
                   </button>
                   <button
+                    type="button"
                     onClick={() => deleteTemplate(tmpl.id)}
-                    title="Delete Template"
+                    title={`Delete ${tmpl.name}`}
+                    aria-label={`Delete ${tmpl.name}`}
                     className="p-1 hover:text-[var(--status-error)] rounded"
                   >
-                    <Trash2 className="w-3 h-3 text-[var(--text-muted)] hover:text-[var(--status-error)]" />
+                    <Trash2 className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--status-error)]" />
                   </button>
                 </div>
               </div>

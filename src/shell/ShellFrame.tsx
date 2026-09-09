@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShellMode } from '../ui-contract/appShellContract';
 import { ClassicShell } from './ClassicShell';
-import { PrototypeShell } from './PrototypeShell';
-import { WorkbenchShell } from './WorkbenchShell';
 import { ShellModalLayer } from './ShellModalLayer';
 import { ShellNotificationLayer } from './ShellNotificationLayer';
 import { createUiEventDispatcher } from '../adapters/eventDispatcher';
@@ -12,9 +9,12 @@ import { useTabStore } from '../store/tabStore';
 import { useTemplateStore } from '../store/templateStore';
 import { useActionStore } from '../store/actionStore';
 import { useWorkflowStore } from '../store/workflowStore';
+import { useRibbonStore } from '../store/ribbonStore';
+import { useFormattingStore } from '../store/formattingStore';
+import { useNotificationStore } from '../store/notificationStore';
+import { compressAndConvertToDataUrl, generateImageAlt } from '../services/imageService';
 
 export const ShellFrame: React.FC = () => {
-  const [shellMode, setShellMode] = useState<ShellMode>('prototype');
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 
@@ -29,27 +29,34 @@ export const ShellFrame: React.FC = () => {
     createTab,
     saveCurrentTab,
     closeTab,
+    insertTextAtCursor,
   } = useTabStore();
+
+  const { addNotification } = useNotificationStore();
 
   const { initializeTemplates, openVariableModal } = useTemplateStore();
   const { initializeActions } = useActionStore();
   const { initializeWorkflows } = useWorkflowStore();
-  const { toggleSidebar, toggleActivityBar, toggleEditorMode } = useSettingsStore();
+  const { initializeRibbon } = useRibbonStore();
+  const { initializeFormattingStore } = useFormattingStore();
+  const { toggleActivityBar, toggleEditorMode, initializeSettings } = useSettingsStore();
 
-  // Initialize data stores on mount
+  // Initialize data stores on mount with bridge
   useEffect(() => {
-    initializeTabs();
-    initializeTemplates();
-    initializeActions();
-    initializeWorkflows();
-  }, [initializeTabs, initializeTemplates, initializeActions, initializeWorkflows]);
+    initializeSettings(bridge.storage, bridge.platform);
+    initializeTabs(bridge.storage);
+    initializeTemplates(bridge.storage);
+    initializeActions(bridge.storage);
+    initializeWorkflows(bridge.storage);
+    initializeRibbon(bridge.storage);
+    initializeFormattingStore(bridge.storage);
+  }, [bridge, initializeSettings, initializeTabs, initializeTemplates, initializeActions, initializeWorkflows, initializeRibbon, initializeFormattingStore]);
 
-  // Sync data-theme attribute on root HTML
+  // Sync theme via bridge
   useEffect(() => {
     const currentTheme = settings.theme || 'contextpad-dark';
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    document.body.setAttribute('data-theme', currentTheme);
-  }, [settings.theme]);
+    bridge.theme.applyTheme(currentTheme);
+  }, [settings.theme, bridge.theme]);
 
   // Create event dispatcher adapter
   const events = React.useMemo(() => {
@@ -61,7 +68,7 @@ export const ShellFrame: React.FC = () => {
 
   // Global Keyboard Shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const isMac = bridge.platform.isMac;
     const modifier = isMac ? e.metaKey : e.ctrlKey;
 
     if (modifier && e.key.toLowerCase() === 'k') {
@@ -76,7 +83,7 @@ export const ShellFrame: React.FC = () => {
       }
     } else if (modifier && e.key.toLowerCase() === 'b') {
       e.preventDefault();
-      toggleSidebar();
+      toggleActivityBar();
     } else if (modifier && e.shiftKey && e.key.toLowerCase() === 'o') {
       e.preventDefault();
       useSettingsStore.getState().setActiveSidebarTab('outline');
@@ -114,7 +121,7 @@ export const ShellFrame: React.FC = () => {
         setActiveTabId(tabs[prevIndex].id);
       }
     }
-  }, [tabs, activeTabId, setActiveTabId, closeTab, toggleSidebar, toggleEditorMode, createTab, events, openVariableModal]);
+  }, [tabs, activeTabId, setActiveTabId, closeTab, toggleActivityBar, toggleEditorMode, createTab, events, openVariableModal]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -131,6 +138,24 @@ export const ShellFrame: React.FC = () => {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       for (let i = 0; i < e.dataTransfer.files.length; i++) {
         const file = e.dataTransfer.files[i];
+
+        if (file.type.startsWith('image/')) {
+          try {
+            const res = await compressAndConvertToDataUrl(file);
+            const alt = generateImageAlt(file);
+            const md = `\n![${alt}](${res.dataUrl})\n`;
+            if (activeTabId) {
+              insertTextAtCursor(activeTabId, md);
+            } else {
+              createTab(file.name, `# ${alt}\n${md}`, 'markdown');
+            }
+            addNotification('Image Added', `Loaded ${file.name} into document`, 'success');
+          } catch (err) {
+            console.error('Failed to load dropped image', err);
+          }
+          continue;
+        }
+
         const content = await file.text();
         const ext = file.name.split('.').pop()?.toLowerCase();
         const lang = ext === 'json' ? 'json' : ext === 'js' ? 'javascript' : ext === 'py' ? 'python' : 'markdown';
@@ -148,30 +173,8 @@ export const ShellFrame: React.FC = () => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {/* Dynamic Shell Selection */}
-      {shellMode === 'classic' && (
-        <ClassicShell 
-          events={events}
-          shellMode={shellMode}
-          onShellModeChange={setShellMode}
-        />
-      )}
-
-      {shellMode === 'prototype' && (
-        <PrototypeShell 
-          events={events}
-          shellMode={shellMode}
-          onShellModeChange={setShellMode}
-        />
-      )}
-
-      {shellMode === 'workbench' && (
-        <WorkbenchShell 
-          events={events}
-          shellMode={shellMode}
-          onShellModeChange={setShellMode}
-        />
-      )}
+      {/* Primary Workspace Shell */}
+      <ClassicShell events={events} />
 
       {/* Global Modals Layer */}
       <ShellModalLayer 

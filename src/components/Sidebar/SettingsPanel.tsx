@@ -9,16 +9,26 @@ import {
   Moon,
   Smartphone,
   Laptop,
-  Touchpad
+  Touchpad,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
-import { dbStorage } from '../../services/storage/IndexedDBStorage';
+import { useFormattingStore } from '../../store/formattingStore';
+import { useRuntimeBridge } from '../../adapters';
 import { ThemeName } from '../../types';
 
 export const SettingsPanel: React.FC = () => {
+  const bridge = useRuntimeBridge();
   const { settings, updateSettings, resetSettings } = useSettingsStore();
   const { addNotification } = useNotificationStore();
+  const { 
+    isMultiRowExpanded, 
+    setIsMultiRowExpanded, 
+    openCustomizer,
+    buttonSize,
+    setButtonSize 
+  } = useFormattingStore();
 
   const themes: { id: ThemeName; name: string; mode: 'light' | 'dark'; bg: string; accent: string; badge?: string }[] = [
     { 
@@ -82,39 +92,28 @@ export const SettingsPanel: React.FC = () => {
 
   const handleExportBackup = async () => {
     try {
-      const data = await dbStorage.exportAllData();
-      const blob = new Blob([data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contextpad-backup-${Date.now()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await bridge.fs.exportWorkspace();
       addNotification('Backup Exported', 'Full workspace JSON downloaded', 'success');
     } catch (e: any) {
       addNotification('Export Failed', e.message, 'error');
     }
   };
 
-  const handleImportBackup = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e: any) => {
-      const file = e.target.files?.[0];
+  const handleImportBackup = async () => {
+    try {
+      const file = await bridge.fs.openFile();
       if (!file) return;
-      try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        if (json.settings) {
-          updateSettings(json.settings);
-          addNotification('Settings Restored', 'Configuration restored from backup', 'success');
-        }
-      } catch (err: any) {
-        addNotification('Import Error', 'Invalid backup format', 'error');
+      const json = JSON.parse(file.content);
+      if (json.data && json.data.contextpad_settings) {
+        updateSettings(json.data.contextpad_settings);
+      } else if (json.settings) {
+        updateSettings(json.settings);
       }
-    };
-    input.click();
+      await bridge.fs.importWorkspace(file.content);
+      addNotification('Settings Restored', 'Configuration restored from backup', 'success');
+    } catch (err: any) {
+      addNotification('Import Error', 'Invalid backup format', 'error');
+    }
   };
 
   return (
@@ -148,7 +147,10 @@ export const SettingsPanel: React.FC = () => {
             return (
               <button
                 key={t.id}
+                type="button"
                 onClick={() => updateSettings({ theme: t.id })}
+                title={`Theme: ${t.name}`}
+                aria-label={`Select ${t.name} theme`}
                 className={`p-2 rounded-lg border text-left transition-all relative flex flex-col justify-between ${
                   isSelected 
                     ? 'border-[var(--accent-primary)] bg-[var(--accent-container)]/30 ring-2 ring-[var(--accent-primary)]/40 shadow-xs' 
@@ -251,17 +253,67 @@ export const SettingsPanel: React.FC = () => {
           </div>
 
           {/* Mobile Markdown Accessory Bar */}
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[var(--text-primary)] block">Mobile Virtual Keyboard Bar</span>
-              <span className="text-[10px] text-[var(--text-muted)]">One-tap Markdown & prompt symbols</span>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[var(--text-primary)] block">Mobile Virtual Keyboard Bar</span>
+                <span className="text-[10px] text-[var(--text-muted)]">One-tap Markdown & prompt symbols</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.showMobileAccessoryBar}
+                onChange={(e) => updateSettings({ showMobileAccessoryBar: e.target.checked })}
+                className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
+              />
             </div>
-            <input
-              type="checkbox"
-              checked={settings.showMobileAccessoryBar}
-              onChange={(e) => updateSettings({ showMobileAccessoryBar: e.target.checked })}
-              className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
-            />
+            {settings.showMobileAccessoryBar && (
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between pl-2 border-l-2 border-[var(--accent-primary)]/40">
+                  <div>
+                    <span className="text-xs text-[var(--text-primary)] block">Multi-row on narrow screens</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">Show all buttons without horizontal scrolling</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isMultiRowExpanded}
+                    onChange={(e) => setIsMultiRowExpanded(e.target.checked)}
+                    className="accent-[var(--accent-primary)] rounded w-3.5 h-3.5 cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pl-2 border-l-2 border-[var(--accent-primary)]/40 pt-0.5">
+                  <div>
+                    <span className="text-xs text-[var(--text-primary)] block">Toolbar Button Size</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">Compact, standard, or touch-friendly</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-[var(--card-bg)] p-0.5 rounded border border-[var(--border-subtle)]">
+                    {(['small', 'medium', 'large'] as const).map((sz) => (
+                      <button
+                        key={sz}
+                        type="button"
+                        onClick={() => setButtonSize(sz)}
+                        className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                          buttonSize === sz
+                            ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-2xs'
+                            : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                        }`}
+                      >
+                        {sz === 'small' ? 'Sm' : sz === 'medium' ? 'Med' : 'Lrg'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={openCustomizer}
+                  className="w-full mt-1 py-1.5 px-2.5 rounded-md text-xs font-medium bg-[var(--card-bg)] hover:bg-[var(--card-hover-bg)] text-[var(--accent-primary)] border border-[var(--border-subtle)] flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>Customize Formatting Buttons</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -422,32 +474,38 @@ export const SettingsPanel: React.FC = () => {
 
         <div className="grid grid-cols-2 gap-2">
           <button
+            type="button"
             onClick={handleExportBackup}
-            className="p-1.5 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center gap-1.5 transition-colors font-medium"
+            title="Export Backup"
+            aria-label="Export Backup"
+            className="h-8 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center transition-colors font-medium"
           >
-            <Download className="w-3 h-3 text-[var(--accent-primary)]" />
-            <span>Export Backup</span>
+            <Download className="w-4 h-4 text-[var(--accent-primary)]" />
           </button>
           <button
+            type="button"
             onClick={handleImportBackup}
-            className="p-1.5 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center gap-1.5 transition-colors font-medium"
+            title="Import Backup"
+            aria-label="Import Backup"
+            className="h-8 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center transition-colors font-medium"
           >
-            <Upload className="w-3 h-3 text-[var(--accent-primary)]" />
-            <span>Import Backup</span>
+            <Upload className="w-4 h-4 text-[var(--accent-primary)]" />
           </button>
         </div>
 
         <button
+          type="button"
           onClick={() => {
             if (confirm('Reset all settings to default values?')) {
               resetSettings();
               addNotification('Settings Reset', 'Default settings restored', 'info');
             }
           }}
-          className="w-full p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-md flex items-center justify-center gap-1.5 transition-colors font-medium"
+          title="Reset Settings to Default"
+          aria-label="Reset Settings to Default"
+          className="w-full h-8 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-md flex items-center justify-center transition-colors font-medium"
         >
-          <RotateCcw className="w-3 h-3" />
-          <span>Reset Settings to Default</span>
+          <RotateCcw className="w-4 h-4" />
         </button>
       </div>
     </div>

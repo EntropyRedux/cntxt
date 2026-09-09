@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sparkles, 
   Search, 
-  PanelRight, 
+  PanelLeft,
   HelpCircle,
   FileText,
   Edit3,
@@ -18,7 +18,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
-import { dbStorage } from '../../services/storage/IndexedDBStorage';
+import { useRuntimeBridge, execUndo, execRedo, querySelector } from '../../adapters';
 
 interface TitleBarProps {
   onOpenCommandPalette: () => void;
@@ -35,6 +35,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onSaveAs,
   onNewWindow
 }) => {
+  const bridge = useRuntimeBridge();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -56,61 +57,41 @@ export const TitleBar: React.FC<TitleBarProps> = ({
     return () => window.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleNewWindow = () => {
+  const handleNewWindow = async () => {
     if (onNewWindow) {
       onNewWindow();
       return;
     }
-    // Placeholder handler for New Window - cleanly ready for electron / web multi-window
     try {
-      const opened = window.open(window.location.href, '_blank', 'noopener,noreferrer');
-      if (opened) {
-        addNotification('New Window', 'Opened new ContextPad window', 'info');
-      } else {
-        addNotification('New Window', 'New window action triggered (ready to wire with window manager / desktop runtime)', 'info');
-      }
+      await bridge.window.newWindow();
+      addNotification('New Window', 'Opened new ContextPad window', 'info');
     } catch {
-      addNotification('New Window', 'New window action triggered (ready to wire with window manager / desktop runtime)', 'info');
+      addNotification('New Window', 'New window requested', 'info');
     }
   };
 
   const handleExportWorkspace = async () => {
     try {
-      const data = await dbStorage.exportAllData();
-      const blob = new Blob([data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contextpad-backup-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await bridge.fs.exportWorkspace();
       addNotification('Backup Exported', 'Workspace data exported successfully', 'success');
     } catch (e: any) {
       addNotification('Export Failed', e.message, 'error');
     }
   };
 
-  const handleImportBackup = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e: any) => {
-      const file = e.target.files?.[0];
+  const handleImportBackup = async () => {
+    try {
+      const file = await bridge.fs.openFile();
       if (!file) return;
-      try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        if (json.templates) localStorage.setItem('contextpad_templates', JSON.stringify(json.templates));
-        if (json.actions) localStorage.setItem('contextpad_actions', JSON.stringify(json.actions));
-        if (json.workflows) localStorage.setItem('contextpad_workflows', JSON.stringify(json.workflows));
-        if (json.settings) localStorage.setItem('contextpad_settings', JSON.stringify(json.settings));
-        addNotification('Backup Restored', 'Please reload workspace to apply', 'success');
-        setTimeout(() => window.location.reload(), 1000);
-      } catch (err: any) {
-        addNotification('Import Error', 'Invalid backup JSON file', 'error');
+      const ok = await bridge.fs.importWorkspace(file.content);
+      if (ok) {
+        addNotification('Backup Restored', 'Workspace restored successfully', 'success');
+      } else {
+        addNotification('Import Error', 'Failed to restore backup', 'error');
       }
-    };
-    input.click();
+    } catch (err: any) {
+      addNotification('Import Error', 'Invalid backup JSON file', 'error');
+    }
   };
 
   const menuSections: { 
@@ -144,11 +125,11 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       ariaLabel: 'Edit menu (Undo, Redo, Variables, Find)',
       icon: Edit3,
       items: [
-        { label: 'Undo', shortcut: 'Ctrl+Z', action: () => document.execCommand('undo') },
-        { label: 'Redo', shortcut: 'Ctrl+Y', action: () => document.execCommand('redo'), divider: true },
+        { label: 'Undo', shortcut: 'Ctrl+Z', action: () => execUndo() },
+        { label: 'Redo', shortcut: 'Ctrl+Y', action: () => execRedo(), divider: true },
         { label: 'Fill Template Variables...', shortcut: 'Ctrl+Alt+V', action: () => openVariableModal() },
         { label: 'Find & Replace in Editor', shortcut: 'Ctrl+F', action: () => {
-          const cm = document.querySelector('.cm-editor') as HTMLElement;
+          const cm = querySelector('.cm-editor');
           cm?.focus();
         }}
       ]
@@ -164,8 +145,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           shortcut: 'Ctrl+M', 
           action: toggleEditorMode 
         },
-        { label: 'Toggle Right Rail (Icons)', shortcut: 'Ctrl+B', action: toggleActivityBar },
-        { label: 'Toggle Sidebar Panel', action: toggleSidebar },
+        { label: 'Toggle Activity Rail (Icons)', shortcut: 'Ctrl+B', action: toggleActivityBar },
         { label: 'Toggle Status Bar', action: toggleStatusBar, divider: true },
         { label: 'Show File Explorer', action: () => setActiveSidebarTab('explorer') },
         { label: 'Show Document Outline', action: () => setActiveSidebarTab('outline') },
@@ -311,24 +291,9 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           onClick={onOpenCommandPalette}
           title="Search or Command Palette (Ctrl+K)"
           aria-label="Search commands or files"
-          className="h-7 w-7 md:w-auto md:px-2.5 theme-input hover:bg-[var(--card-hover-bg)] rounded-md md:rounded-full flex items-center justify-center md:justify-between text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all group shadow-inner"
+          className="w-7 h-7 flex items-center justify-center theme-input hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all group shadow-inner"
         >
-          <div className="flex items-center gap-1.5 truncate">
-            <Search className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors shrink-0" />
-            <span className="hidden md:inline truncate text-[11px] max-w-[140px] lg:max-w-[200px]">
-              {activeTab ? (
-                <span>
-                  <strong className="text-[var(--text-primary)] font-medium">{activeTab.title}</strong>
-                  {activeTab.isDirty && <span className="text-[var(--status-warning)] ml-1.5 text-xs">●</span>}
-                </span>
-              ) : (
-                'Search or type command...'
-              )}
-            </span>
-          </div>
-          <kbd className="hidden md:inline text-[10px] font-mono bg-[var(--card-secondary-bg)] px-1 py-0.2 rounded border border-[var(--border-primary)] text-[var(--text-muted)] group-hover:text-[var(--text-primary)] shrink-0 ml-1.5">
-            ⌘K
-          </kbd>
+          <Search className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors shrink-0" />
         </button>
       </div>
 
@@ -340,22 +305,16 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           title={settings.touchOptimized ? 'Switch to Compact Desktop Mode' : 'Switch to Touchscreen & Tablet Mode (44px+ touch targets)'}
           aria-label={settings.touchOptimized ? 'Touchscreen mode active' : 'Desktop mode active'}
           aria-pressed={settings.touchOptimized}
-          className={`h-7 px-2 flex items-center gap-1.5 rounded-md transition-all text-[11px] font-medium border ${
+          className={`w-7 h-7 flex items-center justify-center rounded-md transition-all border ${
             settings.touchOptimized 
               ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 shadow-xs' 
               : 'hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border-transparent'
           }`}
         >
           {settings.touchOptimized ? (
-            <>
-              <Smartphone className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-              <span className="hidden xl:inline">Touch UI</span>
-            </>
+            <Smartphone className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
           ) : (
-            <>
-              <Laptop className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">Desktop</span>
-            </>
+            <Laptop className="w-3.5 h-3.5" />
           )}
         </button>
 
@@ -369,39 +328,32 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           }
           aria-label={`Editor mode: currently in ${(settings.editorMode || 'rendered') === 'rendered' ? 'Rendered' : 'Raw'} mode. Click to switch.`}
           aria-pressed={(settings.editorMode || 'rendered') === 'rendered'}
-          className={`h-7 px-2.5 flex items-center gap-1.5 rounded-md transition-all text-[11px] font-semibold border ${
+          className={`w-7 h-7 flex items-center justify-center rounded-md transition-all border ${
             (settings.editorMode || 'rendered') === 'rendered'
               ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80'
               : 'bg-[var(--card-secondary-bg)] text-[var(--status-warning)] border-[var(--status-warning)]/40 hover:bg-[var(--card-hover-bg)]'
           }`}
         >
           {(settings.editorMode || 'rendered') === 'rendered' ? (
-            <>
-              <Eye className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-              <span className="hidden sm:inline">Rendered</span>
-            </>
+            <Eye className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
           ) : (
-            <>
-              <Code2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Raw</span>
-            </>
+            <Code2 className="w-3.5 h-3.5" />
           )}
         </button>
 
-        {/* Hide / Show Right Rail Button */}
+        {/* Hide / Show Activity Rail Button */}
         <button
           onClick={toggleActivityBar}
-          title={settings.showActivityBar ? 'Hide Right Rail (Ctrl+B)' : 'Show Right Rail (Ctrl+B)'}
-          aria-label={settings.showActivityBar ? 'Hide Right Rail' : 'Show Right Rail'}
+          title={settings.showActivityBar ? 'Hide Activity Rail (Ctrl+B)' : 'Show Activity Rail (Ctrl+B)'}
+          aria-label={settings.showActivityBar ? 'Hide Activity Rail' : 'Show Activity Rail'}
           aria-pressed={settings.showActivityBar}
-          className={`h-7 px-2.5 hidden md:flex items-center gap-1.5 rounded-md transition-all text-[11px] font-medium ${
+          className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${
             settings.showActivityBar 
               ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border border-[var(--accent-primary)]/30 hover:bg-[var(--accent-container)]/80' 
               : 'hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'
           }`}
         >
-          <PanelRight className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{settings.showActivityBar ? 'Hide Rail' : 'Show Rail'}</span>
+          <PanelLeft className="w-3.5 h-3.5" />
         </button>
 
         {/* Shortcuts / Help */}

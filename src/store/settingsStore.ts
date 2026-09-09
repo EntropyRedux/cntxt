@@ -1,12 +1,19 @@
 import { create } from 'zustand';
 import { ViewSettings } from '../types';
 import { DEFAULT_MODEL_ID } from '../constants/models';
+import { IStorageBridge, IPlatformBridge } from '../ui-contract/bridgeContract';
+import { STORAGE_KEYS } from '../adapters/storageKeys';
+
+let activeStorage: IStorageBridge | null = null;
 
 interface SettingsState {
   settings: ViewSettings;
+  initializeSettings: (storage?: IStorageBridge, platform?: IPlatformBridge) => Promise<void>;
   updateSettings: (updates: Partial<ViewSettings>) => void;
   toggleSidebar: () => void;
   toggleActivityBar: () => void;
+  toggleRibbon: () => void;
+  setRibbonVisible: (visible: boolean) => void;
   togglePreview: () => void;
   toggleEditorMode: () => void;
   setEditorMode: (mode: 'raw' | 'rendered') => void;
@@ -18,10 +25,6 @@ interface SettingsState {
   setModel: (modelId: string) => void;
   resetSettings: () => void;
 }
-
-const isTouchDevice = typeof window !== 'undefined' 
-  ? (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.innerWidth < 768)
-  : false;
 
 const DEFAULT_SETTINGS: ViewSettings = {
   showStatusBar: true,
@@ -59,9 +62,10 @@ const DEFAULT_SETTINGS: ViewSettings = {
   indexingScope: 'thorough',
   selectedModelId: DEFAULT_MODEL_ID,
   budgetThreshold: 32000,
-  uiDensity: isTouchDevice ? 'touch' : 'comfortable',
-  touchOptimized: isTouchDevice,
+  uiDensity: 'comfortable',
+  touchOptimized: false,
   showMobileAccessoryBar: true,
+  showRibbon: true,
   autocompleteConfig: {
     enableKeywords: true,
     enableTemplates: true,
@@ -81,25 +85,40 @@ const DEFAULT_SETTINGS: ViewSettings = {
   }
 };
 
-const STORAGE_KEY = 'contextpad_settings';
-
 export const useSettingsStore = create<SettingsState>((set, get) => ({
-  settings: (() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+  settings: DEFAULT_SETTINGS,
+
+  initializeSettings: async (storage?: IStorageBridge, platform?: IPlatformBridge) => {
+    if (storage) {
+      activeStorage = storage;
+    }
+
+    let initialSettings = { ...DEFAULT_SETTINGS };
+    if (platform?.isTouch) {
+      initialSettings.uiDensity = 'touch';
+      initialSettings.touchOptimized = true;
+    }
+
+    if (activeStorage) {
+      try {
+        const stored = await activeStorage.getItem(STORAGE_KEYS.SETTINGS);
+        if (stored) {
+          initialSettings = { ...initialSettings, ...JSON.parse(stored) };
+        }
+      } catch (e) {
+        console.warn('Failed to load stored settings:', e);
       }
-    } catch (e) {}
-    return DEFAULT_SETTINGS;
-  })(),
+    }
+
+    set({ settings: initialSettings });
+  },
 
   updateSettings: (updates) => {
     const updated = { ...get().settings, ...updates };
     set({ settings: updated });
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    } catch (e) {}
+    if (activeStorage) {
+      activeStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated)).catch(() => {});
+    }
   },
 
   toggleSidebar: () => {
@@ -109,11 +128,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   toggleActivityBar: () => {
     const showActivityBar = !get().settings.showActivityBar;
-    if (!showActivityBar) {
-      get().updateSettings({ showActivityBar: false, showSidebar: false });
-    } else {
-      get().updateSettings({ showActivityBar: true });
-    }
+    get().updateSettings({ showActivityBar });
+  },
+
+  toggleRibbon: () => {
+    const showRibbon = !get().settings.showRibbon;
+    get().updateSettings({ showRibbon });
+  },
+
+  setRibbonVisible: (showRibbon: boolean) => {
+    get().updateSettings({ showRibbon });
   },
 
   togglePreview: () => {
@@ -122,12 +146,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   toggleEditorMode: () => {
-    const current = get().settings.editorMode || 'rendered';
-    const next = current === 'raw' ? 'rendered' : 'raw';
-    get().updateSettings({ editorMode: next });
+    const nextMode = get().settings.editorMode === 'rendered' ? 'raw' : 'rendered';
+    get().updateSettings({ editorMode: nextMode });
   },
 
-  setEditorMode: (mode) => {
+  setEditorMode: (mode: 'raw' | 'rendered') => {
     get().updateSettings({ editorMode: mode });
   },
 
@@ -137,8 +160,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   toggleTouchMode: () => {
-    const current = get().settings.touchOptimized;
-    const next = !current;
+    const next = !get().settings.touchOptimized;
     get().updateSettings({ 
       touchOptimized: next, 
       uiDensity: next ? 'touch' : 'comfortable' 
@@ -164,8 +186,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   resetSettings: () => {
     set({ settings: DEFAULT_SETTINGS });
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_SETTINGS));
-    } catch (e) {}
+    if (activeStorage) {
+      activeStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS)).catch(() => {});
+    }
   }
 }));

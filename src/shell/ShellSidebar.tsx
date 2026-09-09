@@ -7,9 +7,5 @@ export const ShellSidebar: React.FC = () => {
 
   if (!settings.showSidebar) return null;
 
-  return (
-    <aside className="shrink-0 flex h-full z-20">
-      <Sidebar />
-    </aside>
-  );
+  return <Sidebar />;
 };

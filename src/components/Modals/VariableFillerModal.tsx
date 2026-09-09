@@ -10,6 +10,7 @@ import { useTemplateStore } from '../../store/templateStore';
 import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import confetti from 'canvas-confetti';
+import { useRuntimeBridge } from '../../adapters';
 
 interface ParsedVar {
   raw: string; // e.g. "role:AI Architect"
@@ -18,6 +19,7 @@ interface ParsedVar {
 }
 
 export const VariableFillerModal: React.FC = () => {
+  const bridge = useRuntimeBridge();
   const { 
     isVariableModalOpen, 
     closeVariableModal, 
@@ -95,7 +97,7 @@ export const VariableFillerModal: React.FC = () => {
   };
 
   const handleCopyResult = async () => {
-    await navigator.clipboard.writeText(interpolatedResult);
+    await bridge.clipboard.writeText(interpolatedResult);
     addNotification('Copied', 'Interpolated prompt copied to clipboard', 'success');
   };
 
@@ -119,7 +121,10 @@ export const VariableFillerModal: React.FC = () => {
           </div>
 
           <button
+            type="button"
             onClick={closeVariableModal}
+            title="Close"
+            aria-label="Close"
             className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors"
           >
             <X className="w-4 h-4" />
@@ -186,32 +191,38 @@ export const VariableFillerModal: React.FC = () => {
         {/* Modal Footer */}
         <div className="p-3 border-t border-[var(--border-primary)] bg-[var(--sidebar-header-bg)] flex items-center justify-between text-xs">
           <button
+            type="button"
             onClick={() => {
               const resetObj: Record<string, string> = {};
               parsedVariables.forEach(v => { resetObj[v.name] = v.defaultValue || ''; });
               setValues(resetObj);
             }}
-            className="px-3 py-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1.5 transition-colors"
+            title="Reset Defaults"
+            aria-label="Reset Defaults"
+            className="w-8 h-8 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset Defaults</span>
+            <RotateCcw className="w-4 h-4" />
           </button>
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={handleCopyResult}
-              className="px-3 py-1.5 bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] border border-[var(--border-primary)] text-[var(--text-primary)] rounded font-medium flex items-center gap-1.5 transition-colors"
+              title="Copy Output"
+              aria-label="Copy Output"
+              className="w-8 h-8 bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] border border-[var(--border-primary)] text-[var(--text-primary)] rounded flex items-center justify-center transition-colors"
             >
-              <Copy className="w-3.5 h-3.5" />
-              <span>Copy Output</span>
+              <Copy className="w-4 h-4" />
             </button>
 
             <button
+              type="button"
               onClick={handleApplyToEditor}
-              className="px-4 py-1.5 theme-btn-primary font-medium rounded flex items-center gap-1.5 transition-colors shadow-xs"
+              title={activeTemplateForModal ? 'Insert Template' : 'Apply to Document'}
+              aria-label={activeTemplateForModal ? 'Insert Template' : 'Apply to Document'}
+              className="w-8 h-8 theme-btn-primary rounded flex items-center justify-center transition-colors shadow-xs"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{activeTemplateForModal ? 'Insert Template' : 'Apply to Document'}</span>
+              <Sparkles className="w-4 h-4" />
             </button>
           </div>
         </div>

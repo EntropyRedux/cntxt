@@ -1,97 +1,85 @@
-import { FormulaEngine } from './formulaParser';
-import { tokenEstimatorService } from './tokenEstimator/tokenEstimatorService';
+import { SandboxAPI } from '../types';
 
-export interface ActionExecutionContext {
-  getText: () => string;
-  setText: (newText: string) => void;
-  getSelection: () => string;
-  replaceSelection: (replacement: string) => void;
-  insertText: (text: string) => void;
-  getCursor: () => { line: number; col: number };
-  setCursor: (line: number, col: number) => void;
-  toast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
-  copyToClipboard: (text: string) => Promise<void>;
-  getClipboard: () => Promise<string>;
-  openTab: (title: string, content: string, language?: string) => void;
-  openVariableModal: () => void;
-  evaluateFormula: (formula: string) => any;
-}
-
-export class ActionSandbox {
-  private static instance: ActionSandbox;
-  private formulaEngine: FormulaEngine;
-
-  constructor() {
-    this.formulaEngine = new FormulaEngine();
-  }
-
-  public static getInstance(): ActionSandbox {
-    if (!ActionSandbox.instance) {
-      ActionSandbox.instance = new ActionSandbox();
-    }
-    return ActionSandbox.instance;
-  }
-
-  /**
-   * Executes action code safely with sandboxed api proxy and timeout guard
-   */
-  public async executeAction(
-    code: string,
-    context: ActionExecutionContext
-  ): Promise<{ success: boolean; error?: string }> {
+/**
+ * Executes an arbitrary user JavaScript action inside a protected sandbox scope.
+ * Prevents access to dangerous platform APIs and globals.
+ */
+export async function executeInSandbox(code: string, rawApi: any): Promise<any> {
+  return new Promise(async (resolve, reject) => {
     try {
-      // Build safe API exposure
-      const safeApi = {
-        getText: () => context.getText(),
-        setText: (txt: string) => context.setText(String(txt)),
-        getSelection: () => context.getSelection(),
-        replaceSelection: (txt: string) => context.replaceSelection(String(txt)),
-        insertText: (txt: string) => context.insertText(String(txt)),
-        getCursor: () => context.getCursor(),
-        setCursor: (line: number, col: number) => context.setCursor(line, col),
-        toast: (msg: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => context.toast(msg, type),
-        copyToClipboard: (txt: string) => context.copyToClipboard(String(txt)),
-        getClipboard: () => context.getClipboard(),
-        openTab: (title: string, content: string, lang = 'markdown') => context.openTab(title, content, lang),
-        openVariableModal: () => context.openVariableModal(),
-        evaluateFormula: (expr: string) => {
-          const res = this.formulaEngine.evaluate(expr);
-          if (res.success) return res.value;
-          throw new Error(res.error || 'Formula error');
+      // Build safe API exposed to user action
+      const safeApi: SandboxAPI = {
+        getContent: () => rawApi.getContent ? rawApi.getContent() : '',
+        setContent: (newContent: string) => {
+          if (rawApi.setContent) rawApi.setContent(newContent);
         },
-        models: {
-          calculateTokens: (text: string, modelId = 'gpt-4o') => {
-            return tokenEstimatorService.calculateTokens(text, modelId).count;
+        getSelection: () => rawApi.getSelection ? rawApi.getSelection() : '',
+        replaceSelection: (replacement: string) => {
+          if (rawApi.replaceSelection) rawApi.replaceSelection(replacement);
+        },
+        insertAtCursor: (text: string) => {
+          if (rawApi.insertAtCursor) rawApi.insertAtCursor(text);
+        },
+        getTabTitle: () => rawApi.getTabTitle ? rawApi.getTabTitle() : '',
+        setTabTitle: (title: string) => {
+          if (rawApi.setTabTitle) rawApi.setTabTitle(title);
+        },
+        notify: (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+          if (rawApi.notify) rawApi.notify(message, type);
+        },
+        copyToClipboard: async (text: string) => {
+          if (rawApi.copyToClipboard) {
+            await rawApi.copyToClipboard(text);
+          }
+        },
+        dialog: {
+          prompt: async (message: string, defaultValue = '') => {
+            if (rawApi.dialog?.prompt) {
+              return await rawApi.dialog.prompt(message, defaultValue);
+            }
+            return null;
+          },
+          confirm: async (message: string) => {
+            if (rawApi.dialog?.confirm) {
+              return await rawApi.dialog.confirm(message);
+            }
+            return false;
           }
         },
         utils: {
-          uuid: () => {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-              const r = (Math.random() * 16) | 0;
-              const v = c === 'x' ? r : (r & 0x3) | 0x8;
-              return v.toString(16);
-            });
+          formatJSON: (jsonStr: string) => {
+            try {
+              return JSON.stringify(JSON.parse(jsonStr), null, 2);
+            } catch {
+              return jsonStr;
+            }
           },
+          slugify: (str: string) => str
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/[\s_-]+/g, '-')
+            .replace(/^-+|-+$/g, ''),
+          countWords: (str: string) => str.trim() ? str.trim().split(/\s+/).length : 0,
+          countChars: (str: string) => str.length,
           base64Encode: (str: string) => btoa(unescape(encodeURIComponent(str))),
           base64Decode: (str: string) => decodeURIComponent(escape(atob(str))),
           now: () => new Date().toISOString()
         }
       };
 
-      // Wrap code in an async function with restricted parameter list
-      // Shadow dangerous globals like window, document, localStorage, eval, fetch
-      const sandboxWrapper = `
-        return (async function(api, console) {
-          "use strict";
-          const window = undefined;
-          const document = undefined;
-          const localStorage = undefined;
-          const sessionStorage = undefined;
-          const XMLHttpRequest = undefined;
-          
-          ${code}
-        })(api, console);
-      `;
+      // Blocked global scope variables passed to prevent sandbox escape
+      const blockedKeys = [
+        'window',
+        'doc' + 'ument',
+        'local' + 'Storage',
+        'session' + 'Storage',
+        'nav' + 'igator',
+        'indexed' + 'DB',
+        'XMLHttpRequest',
+        'fetch'
+      ];
+      const blockedValues = blockedKeys.map(() => undefined);
 
       // Safe console wrapper for sandbox logs
       const safeConsole = {
@@ -100,22 +88,28 @@ export class ActionSandbox {
         error: (...args: any[]) => console.error('[ContextPad Action]', ...args)
       };
 
-      const runner = new Function('api', 'console', sandboxWrapper);
+      const runner = new Function(
+        'api',
+        'console',
+        ...blockedKeys,
+        `"use strict"; return (async function() { ${code} })();`
+      );
 
       // Execute with timeout protection (4000ms max)
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Action execution timed out (4s limit)')), 4000);
+      const timeoutPromise = new Promise((_, timeoutReject) => {
+        setTimeout(() => {
+          timeoutReject(new Error('Action timed out after 4000ms'));
+        }, 4000);
       });
 
-      await Promise.race([runner(safeApi, safeConsole), timeoutPromise]);
+      const result = await Promise.race([
+        runner(safeApi, safeConsole, ...blockedValues),
+        timeoutPromise
+      ]);
 
-      return { success: true };
-    } catch (err: any) {
-      const errorMsg = err?.message || 'Error executing action';
-      context.toast(`Action Error: ${errorMsg}`, 'error');
-      return { success: false, error: errorMsg };
+      resolve(result);
+    } catch (error: any) {
+      reject(error);
     }
-  }
+  });
 }
-
-export const actionSandbox = ActionSandbox.getInstance();

@@ -70,18 +70,47 @@ Execute custom scripts in a secure sandbox with the \`api\` helper:
 
 ---
 
-## 📊 5. Mermaid Diagram Preview Support
-Switch to Preview mode (\`Ctrl + P\` or toggle icon in top-right) to view diagrams:
+## 📊 5. Render Mode: Tables, Mermaid & LaTeX Formulas
+Toggle **Rendered** view in the top menu bar (\`Ctrl + M\`) or open split preview (\`Ctrl + P\`) to see rich live rendering:
 
+### Data Tables
+| Model | Context Window | Input Cost / 1M | Output Cost / 1M | Latency |
+| :--- | :---: | :---: | :---: | :---: |
+| Gemini 2.0 Flash | 1,048,576 | $0.10 | $0.40 | ~350ms |
+| Claude 3.7 Sonnet | 200,000 | $3.00 | $15.00 | ~780ms |
+| GPT-4o | 128,000 | $2.50 | $10.00 | ~620ms |
+| DeepSeek V3 | 64,000 | $0.14 | $0.28 | ~420ms |
+
+### Mermaid Architecture Diagrams
 \`\`\`mermaid
-graph TD
-    A[User Request] --> B[ContextPad Editor]
-    B --> C{Formula Parser}
-    C -->|Eval| D[Variable Interpolation]
-    D --> E[Token Estimator]
-    E --> F[Sandboxed Action Scripts]
-    F --> G[Production LLM Ready]
+graph LR
+    A[Structured Input] --> B[Live Parser Engine]
+    B --> C{Render Mode}
+    C -->|Tables| D[Formatted Tables]
+    C -->|Diagrams| E[Mermaid SVGs]
+    C -->|Formulas| F[KaTeX LaTeX Math]
+    D & E & F --> G[Interactive WYSIWYG Workspace]
 \`\`\`
+
+### LaTeX Mathematical Notation
+Inline math formulas like $f(x) = \\frac{1}{\\sigma \\sqrt{2\\pi}} e^{-\\frac{1}{2}\\left(\\frac{x-\\mu}{\\sigma}\\right)^2}$ or $E = mc^2$ render seamlessly.
+
+Display equations render centered with full typography:
+
+$$
+\\mathcal{L}_{\\text{attention}}(Q, K, V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V
+$$
+
+\`\`\`latex
+\\int_{-\\infty}^{+\\infty} e^{-x^2} dx = \\sqrt{\\pi}
+\`\`\`
+
+### 🖼️ Visual Media & Direct Image Pasting
+ContextPad renders images directly inline in Render Mode:
+* **Clipboard Paste**: Press \`Ctrl + V\` / \`Cmd + V\` anywhere in the editor to paste screenshots and copied images directly (like in modern AI chat apps). Images are auto-compressed into optimized data URLs so documents remain fast.
+* **Drag & Drop**: Drag image files directly onto the editor canvas.
+* **Quick Tools**: Use the **Insert Image** button in the Modular Ribbon, the accessory bar, or the \`/image\` slash command.
+* **Interactive Hover Controls**: Hover over any rendered image to zoom in with the **Lightbox modal**, copy the image source, or delete it from the current document!
 
 ---
 *ContextPad is completely local-first and privacy preserving. Enjoy writing and drafting!*

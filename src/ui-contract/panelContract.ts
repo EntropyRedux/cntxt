@@ -1,5 +1,3 @@
-import { LucideIcon } from 'lucide-react';
-
 export type SidebarPanelId = 
   | 'explorer' 
   | 'outline' 
@@ -13,7 +11,7 @@ export type SidebarPanelId =
 export interface UiPanelDescriptor {
   id: SidebarPanelId;
   name: string;
-  icon: LucideIcon;
+  icon: any;
   badgeCount?: number;
   shortcut?: string;
   description?: string;

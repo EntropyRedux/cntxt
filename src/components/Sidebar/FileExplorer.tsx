@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FilePlus, 
   Folder, 
@@ -11,6 +11,7 @@ import {
 import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useTemplateStore } from '../../store/templateStore';
+import { useRuntimeBridge } from '../../adapters';
 
 interface VirtualFile {
   id: string;
@@ -55,10 +56,18 @@ const INITIAL_PROJECT_FILES: VirtualFile[] = [
 ];
 
 export const FileExplorer: React.FC = () => {
-  const [files, setFiles] = useState<VirtualFile[]>(() => {
-    const saved = localStorage.getItem('contextpad_virtual_files');
-    return saved ? JSON.parse(saved) : INITIAL_PROJECT_FILES;
-  });
+  const bridge = useRuntimeBridge();
+  const [files, setFiles] = useState<VirtualFile[]>(INITIAL_PROJECT_FILES);
+
+  useEffect(() => {
+    bridge.storage.getItem('contextpad_virtual_files').then(saved => {
+      if (saved) {
+        try {
+          setFiles(JSON.parse(saved));
+        } catch {}
+      }
+    }).catch(() => {});
+  }, [bridge.storage]);
 
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     'folder-specs': true
@@ -95,34 +104,21 @@ export const FileExplorer: React.FC = () => {
 
     const updated = [...files, newFile];
     setFiles(updated);
-    localStorage.setItem('contextpad_virtual_files', JSON.stringify(updated));
+    bridge.storage.setItem('contextpad_virtual_files', JSON.stringify(updated)).catch(() => {});
     createTab(newFile.name, newFile.content, newFile.language as any);
     addNotification('File Created', name, 'success');
   };
 
   const handleNativeOpenFile = async () => {
     try {
-      if ('showOpenFilePicker' in window) {
-        const [handle] = await (window as any).showOpenFilePicker();
-        const file = await handle.getFile();
-        const content = await file.text();
-        createTab(file.name, content, 'markdown', handle.name);
+      const file = await bridge.fs.openFile();
+      if (file) {
+        createTab(file.name, file.content, (file.language as any) || 'markdown', file.path);
         addNotification('File Opened', file.name, 'success');
-      } else {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.onchange = async (e: any) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          const content = await file.text();
-          createTab(file.name, content, 'markdown');
-          addNotification('File Opened', file.name, 'success');
-        };
-        input.click();
       }
     } catch (e: any) {
-      if (e.name !== 'AbortError') {
-        addNotification('Could not open file', e.message, 'error');
+      if (e?.name !== 'AbortError') {
+        addNotification('Could not open file', e?.message || 'Unknown error', 'error');
       }
     }
   };

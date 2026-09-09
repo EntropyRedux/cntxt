@@ -64,6 +64,7 @@ export interface ViewSettings {
   showBreadcrumb: boolean;
   showActivityBar: boolean;
   showSidebar: boolean;
+  showRibbon?: boolean;
   activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'workflows' | 'tokens' | 'formulas' | 'settings';
   showCodeBlockMarkers: boolean;
   showLivePreview: boolean;
@@ -115,19 +116,58 @@ export interface Template {
   updatedAt: number;
 }
 
+export type ActionCategory = 
+  | 'All' 
+  | 'Text Analysis' 
+  | 'Formatting' 
+  | 'Utility' 
+  | 'Text Processing' 
+  | 'Format & Clean' 
+  | 'Export & Copy' 
+  | 'AI & Prompt' 
+  | 'Utilities' 
+  | 'Custom' 
+  | string;
+
 export interface Action {
   id: string;
   name: string;
   description: string;
-  type: 'button' | 'command';
+  type?: 'button' | 'command';
   code: string; // JavaScript code executed in sandbox
-  category: string;
-  enabled: boolean;
+  category: ActionCategory;
+  enabled?: boolean;
   isDefault?: boolean;
   icon?: string;
+  color?: string;
   shortcut?: string;
-  createdAt: number;
-  updatedAt: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface SandboxAPI {
+  getContent: () => string;
+  setContent: (newContent: string) => void;
+  getSelection: () => string;
+  replaceSelection: (replacement: string) => void;
+  insertAtCursor: (text: string) => void;
+  getTabTitle: () => string;
+  setTabTitle: (title: string) => void;
+  notify: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
+  copyToClipboard: (text: string) => Promise<void>;
+  dialog?: {
+    prompt: (message: string, defaultValue?: string) => Promise<string | null>;
+    confirm: (message: string) => Promise<boolean>;
+  };
+  utils: {
+    formatJSON: (jsonStr: string) => string;
+    slugify: (str: string) => string;
+    countWords: (str: string) => number;
+    countChars: (str: string) => number;
+    base64Encode: (str: string) => string;
+    base64Decode: (str: string) => string;
+    now: () => string;
+  };
 }
 
 export interface PinnedTab {
@@ -205,4 +245,41 @@ export interface FileItem {
   children?: FileItem[];
   size?: number;
   lastModified?: number;
+}
+
+export type RibbonItemType = 'tool' | 'action' | 'workflow' | 'template' | 'command' | 'formatting';
+
+export type MarkdownFormatType = 'wrap' | 'line-prefix' | 'block' | 'insert' | 'command';
+
+export type FormattingButtonSize = 'small' | 'medium' | 'large';
+
+export interface MarkdownFormatButton {
+  id: string;
+  label: string;
+  icon: string;
+  title: string;
+  prefix: string;
+  suffix?: string;
+  type: MarkdownFormatType;
+  commandId?: 'undo' | 'redo' | 'indent' | 'outdent' | 'variable-modal' | 'slash-command' | 'formula';
+  enabled: boolean;
+  isAccent?: boolean;
+  order: number;
+  category?: 'format' | 'heading' | 'block' | 'list' | 'insert' | 'tool' | 'custom';
+  isBuiltIn?: boolean;
+  shortcut?: string;
+}
+
+export interface RibbonItem {
+  id: string;
+  label: string;
+  icon: string;
+  type: RibbonItemType;
+  targetId?: string; // action id, template id, workflow id, tool name, or formatting button id
+  color?: string; // e.g. 'accent' | 'amber' | 'emerald' | 'purple' | 'rose' | 'cyan' | 'blue'
+  shortcut?: string;
+  tooltip?: string;
+  enabled: boolean;
+  order: number;
+  showLabel?: boolean; // if false or omitted on custom items, only icon is rendered
 }

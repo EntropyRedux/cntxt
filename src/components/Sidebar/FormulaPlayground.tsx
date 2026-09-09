@@ -105,18 +105,22 @@ export const FormulaPlayground: React.FC = () => {
 
           <div className="flex justify-between items-center pt-0.5">
             <button
+              type="button"
               onClick={handleEvaluate}
-              className="px-2.5 py-0.5 theme-btn-primary rounded font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Evaluate Formula"
+              aria-label="Evaluate Formula"
+              className="w-7 h-7 theme-btn-primary rounded flex items-center justify-center transition-colors cursor-pointer"
             >
-              <Play className="w-3 h-3 fill-current" />
-              <span>Evaluate</span>
+              <Play className="w-3.5 h-3.5 fill-current" />
             </button>
             <button
+              type="button"
               onClick={() => handleInsertToDoc(inputExpr)}
-              className="px-2 py-0.5 bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] border border-[var(--border-primary)] text-[var(--text-primary)] rounded flex items-center gap-1 transition-colors"
+              title="Insert in Editor"
+              aria-label="Insert in Editor"
+              className="w-7 h-7 bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] border border-[var(--border-primary)] text-[var(--text-primary)] rounded flex items-center justify-center transition-colors"
             >
-              <Plus className="w-3 h-3" />
-              <span>Insert in Editor</span>
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -171,12 +175,13 @@ export const FormulaPlayground: React.FC = () => {
                   {item.example}
                 </code>
                 <button
+                  type="button"
                   onClick={() => handleInsertToDoc(item.example)}
-                  title="Insert into document"
-                  className="px-2 py-0.5 bg-[var(--accent-container)] text-[var(--accent-primary)] rounded font-medium flex items-center gap-1 transition-colors"
+                  title={`Insert ${item.name} into document`}
+                  aria-label={`Insert ${item.name} into document`}
+                  className="w-6 h-6 bg-[var(--accent-container)] text-[var(--accent-primary)] rounded flex items-center justify-center transition-colors"
                 >
-                  <Plus className="w-2.5 h-2.5" />
-                  <span>Insert</span>
+                  <Plus className="w-3 h-3" />
                 </button>
               </div>
             </div>

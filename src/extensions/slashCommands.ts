@@ -1,5 +1,6 @@
 import { CompletionContext, CompletionResult, autocompletion } from '@codemirror/autocomplete';
 import { Extension } from '@codemirror/state';
+import { useImageModalStore } from '../store/imageModalStore';
 
 export interface SlashCommandItem {
   label: string;
@@ -10,6 +11,18 @@ export interface SlashCommandItem {
 }
 
 export const SLASH_COMMANDS: SlashCommandItem[] = [
+  {
+    label: '/image',
+    detail: 'Media',
+    info: 'Insert image from device or URL',
+    type: 'media',
+    apply: (view: any, _completion: any, from: number, to: number) => {
+      view.dispatch({
+        changes: { from, to, insert: '' }
+      });
+      useImageModalStore.getState().openImageModal();
+    }
+  },
   {
     label: '/system-prompt',
     detail: 'Prompt Engineering',

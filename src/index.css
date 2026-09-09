@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "katex/dist/katex.min.css";
 
 /* =========================================================================
    Universal Theme Variables Engine (Dark & Material 3 Light Support)
@@ -692,7 +693,7 @@
 
 .theme-activitybar {
   background-color: var(--activitybar-bg);
-  border-left: 1px solid var(--activitybar-border);
+  border-right: 1px solid var(--activitybar-border);
 }
 
 .theme-statusbar {
@@ -1058,4 +1059,220 @@
 
 .cm-live-codeblock-footer {
   height: 6px;
+}
+
+/* =========================================================
+   Live Interactive Tables (Render Mode)
+   ========================================================= */
+
+.cm-live-table-container {
+  margin: 0.85em 0;
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background-color: var(--editor-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.cm-live-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88em;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.cm-live-table th {
+  background-color: var(--card-secondary-bg);
+  color: var(--text-primary);
+  font-weight: 600;
+  padding: 7px 12px;
+  border-bottom: 2px solid var(--border-primary);
+  border-right: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.cm-live-table th:last-child {
+  border-right: none;
+}
+
+.cm-live-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.cm-live-table td:last-child {
+  border-right: none;
+}
+
+.cm-live-table tr:last-child td {
+  border-bottom: none;
+}
+
+.cm-live-table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="google-material-3"] .cm-live-table tbody tr:nth-child(even),
+[data-theme="github-light"] .cm-live-table tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.cm-live-table tbody tr:hover {
+  background-color: var(--card-hover-bg);
+}
+
+/* =========================================================
+   Live Mermaid Diagrams (Render Mode)
+   ========================================================= */
+
+.cm-live-mermaid-container {
+  margin: 0.85em 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background-color: var(--card-bg);
+  overflow: hidden;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cm-live-mermaid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background-color: var(--codeblock-header-bg);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.75em;
+  color: var(--text-secondary);
+}
+
+.cm-live-mermaid-canvas {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  background-color: var(--editor-bg);
+  min-height: 100px;
+  overflow-x: auto;
+}
+
+.cm-live-mermaid-canvas svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* =========================================================
+   Live LaTeX Math Formulas (Render Mode)
+   ========================================================= */
+
+.cm-live-math-block {
+  margin: 0.85em 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background-color: var(--card-secondary-bg);
+  padding: 14px 18px;
+  text-align: center;
+  position: relative;
+  overflow-x: auto;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.cm-live-math-inline {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  margin: 0 1px;
+  border-radius: 4px;
+  background-color: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  font-size: 0.95em;
+  vertical-align: middle;
+}
+
+.katex {
+  font-size: 1.05em;
+}
+
+.katex-display {
+  margin: 0.3em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Live Markdown Rendered Images */
+.cm-live-image-figure {
+  margin: 0.85em 0;
+  display: block;
+}
+
+.cm-live-image-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.cm-live-image-card:hover {
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.18), 0 2px 6px -1px rgba(0, 0, 0, 0.08);
+}
+
+.cm-live-img {
+  image-rendering: auto;
+  user-select: none;
+}
+
+.cm-live-image-toolbar {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Preview Image Styling */
+.theme-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  margin: 1rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease;
+}
+
+.theme-preview img:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+}
+
+/* Preview Table Styling */
+.theme-preview table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.theme-preview th {
+  background-color: var(--card-secondary-bg);
+  color: var(--text-primary);
+  font-weight: 600;
+  padding: 8px 14px;
+  border: 1px solid var(--border-primary);
+}
+
+.theme-preview td {
+  padding: 8px 14px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.theme-preview tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.theme-preview blockquote {
+  border-left: 3px solid var(--accent-primary);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  background-color: var(--accent-container);
+  color: var(--text-secondary);
+  border-radius: 0 6px 6px 0;
 }

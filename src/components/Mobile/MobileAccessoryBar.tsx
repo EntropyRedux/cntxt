@@ -1,266 +1,388 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
-  Heading1, 
-  Heading2, 
-  Bold, 
-  Italic, 
-  Code, 
-  ListTodo, 
-  List, 
-  Quote, 
-  Variable, 
-  Calculator, 
-  Slash, 
-  Undo2, 
-  Redo2, 
-  Indent, 
-  Outdent,
   ChevronUp,
   ChevronDown,
-  Sparkles
+  Variable,
+  SlidersHorizontal,
+  Plus
 } from 'lucide-react';
-import { undo, redo, indentMore, indentLess } from '@codemirror/commands';
 import { useTabStore } from '../../store/tabStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { editorRegistry } from '../../services/editor/editorRegistry';
+import { useFormattingStore } from '../../store/formattingStore';
+import { executeFormatting } from '../../services/editor/formattingService';
+import { RibbonIcon } from '../Ribbon/RibbonIcon';
+import { useRuntimeBridge, isTouchDevice } from '../../adapters';
 
 export const MobileAccessoryBar: React.FC = () => {
+  const bridge = useRuntimeBridge();
   const { activeTabId } = useTabStore();
   const { openVariableModal } = useTemplateStore();
   const { settings } = useSettingsStore();
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [isNarrowOrMobile, setIsNarrowOrMobile] = useState(false);
+  const { 
+    buttons, 
+    openCustomizer, 
+    isMultiRowExpanded, 
+    toggleExpandMultiRow,
+    buttonSize 
+  } = useFormattingStore();
 
-  React.useEffect(() => {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  useEffect(() => {
+    bridge.storage.getItem('contextpad_accessory_bar_expanded').then(stored => {
+      if (stored !== null) {
+        setIsExpanded(stored === 'true');
+      }
+    }).catch(() => {});
+  }, [bridge.storage]);
+
+  const handleToggleExpanded = (expanded: boolean) => {
+    setIsExpanded(expanded);
+    bridge.storage.setItem('contextpad_accessory_bar_expanded', String(expanded)).catch(() => {});
+  };
+
+  const [isNarrowOrMobile, setIsNarrowOrMobile] = useState(false);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isMouseDownRef = useRef(false);
+  const startXRef = useRef(0);
+  const startScrollLeftRef = useRef(0);
+  const hasDraggedRef = useRef(false);
+  const touchStartXRef = useRef(0);
+  const touchHasDraggedRef = useRef(false);
+
+  const activeButtons = buttons.filter(b => b.enabled);
+
+  const checkOverflowAndScroll = useCallback(() => {
+    if (scrollContainerRef.current) {
+      const el = scrollContainerRef.current;
+      const overflowing = el.scrollWidth > el.clientWidth + 2;
+      setHasOverflow(overflowing);
+      setCanScrollLeft(el.scrollLeft > 2);
+      setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+    }
+  }, []);
+
+  useEffect(() => {
     const handleResize = () => {
       const isNarrow = window.innerWidth < 768;
-      const isMobileDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      const isMobileDevice = isTouchDevice();
       setIsNarrowOrMobile(isNarrow || isMobileDevice || settings.touchOptimized);
+      checkOverflowAndScroll();
     };
 
     handleResize();
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [settings.touchOptimized]);
+
+    const el = scrollContainerRef.current;
+    let observer: ResizeObserver | null = null;
+    if (el && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        checkOverflowAndScroll();
+      });
+      observer.observe(el);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (observer) observer.disconnect();
+    };
+  }, [settings.touchOptimized, checkOverflowAndScroll, activeButtons.length, isMultiRowExpanded, buttonSize]);
+
+  // Global mousemove and mouseup listeners for smooth drag-to-scroll even outside the element
+  useEffect(() => {
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      if (!isMouseDownRef.current || !scrollContainerRef.current || isMultiRowExpanded) return;
+      const delta = e.clientX - startXRef.current;
+      if (Math.abs(delta) > 4) {
+        hasDraggedRef.current = true;
+        setIsDragging(true);
+      }
+      if (hasDraggedRef.current) {
+        scrollContainerRef.current.scrollLeft = startScrollLeftRef.current - delta;
+        checkOverflowAndScroll();
+      }
+    };
+
+    const handleWindowMouseUp = () => {
+      if (isMouseDownRef.current) {
+        isMouseDownRef.current = false;
+        setIsDragging(false);
+        if (hasDraggedRef.current) {
+          setTimeout(() => {
+            hasDraggedRef.current = false;
+          }, 80);
+        }
+      }
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [isMultiRowExpanded, checkOverflowAndScroll]);
+
+  // Mouse drag-scroll handlers
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isMultiRowExpanded || !scrollContainerRef.current) return;
+    if (e.button !== 0) return; // Only primary button
+
+    isMouseDownRef.current = true;
+    hasDraggedRef.current = false;
+    startXRef.current = e.clientX;
+    startScrollLeftRef.current = scrollContainerRef.current.scrollLeft;
+  };
+
+  // Touch scroll handlers
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (isMultiRowExpanded) return;
+    touchHasDraggedRef.current = false;
+    if (e.touches.length > 0) {
+      touchStartXRef.current = e.touches[0].clientX;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (isMultiRowExpanded) return;
+    if (e.touches.length > 0) {
+      const delta = Math.abs(e.touches[0].clientX - touchStartXRef.current);
+      if (delta > 6) {
+        touchHasDraggedRef.current = true;
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchHasDraggedRef.current) {
+      setTimeout(() => {
+        touchHasDraggedRef.current = false;
+      }, 100);
+    }
+  };
+
+  // Intercept click on children if user performed a drag gesture
+  const handleClickCapture = (e: React.MouseEvent) => {
+    if (hasDraggedRef.current || touchHasDraggedRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  };
+
+  // Horizontal mouse wheel scrolling for desktop mice
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (isMultiRowExpanded || !scrollContainerRef.current) return;
+    if (e.deltaY !== 0 || e.deltaX !== 0) {
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      scrollContainerRef.current.scrollLeft += delta;
+      checkOverflowAndScroll();
+    }
+  };
 
   if (!settings.showMobileAccessoryBar) return null;
 
-  const insertTextOrWrap = (before: string, after: string = '') => {
-    if (!activeTabId) return;
-    const view = editorRegistry.getView(activeTabId);
-    if (view) {
-      const selection = view.state.selection.main;
-      const selectedText = view.state.sliceDoc(selection.from, selection.to);
-      const replacement = `${before}${selectedText || ''}${after}`;
-      
-      view.dispatch({
-        changes: {
-          from: selection.from,
-          to: selection.to,
-          insert: replacement
-        },
-        selection: {
-          anchor: selectedText ? selection.from + replacement.length : selection.from + before.length
-        }
-      });
-      view.focus();
-    } else {
-      // Fallback
-      useTabStore.getState().insertTextAtCursor(activeTabId, `${before}${after}`);
-    }
-  };
+  if (!isExpanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => handleToggleExpanded(true)}
+        title="Show Quick Markdown & Action Bar"
+        aria-label="Show Quick Markdown & Action Bar"
+        className="absolute bottom-2.5 left-2.5 z-30 w-8 h-8 rounded-full bg-[var(--card-bg)]/95 backdrop-blur-md border border-[var(--border-primary)] text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:border-[var(--accent-primary)]/50 hover:bg-[var(--card-hover-bg)] shadow-md flex items-center justify-center transition-all active:scale-95"
+      >
+        <ChevronUp className="w-4 h-4" />
+      </button>
+    );
+  }
 
-  const handleUndo = () => {
-    if (!activeTabId) return;
-    const view = editorRegistry.getView(activeTabId);
-    if (view) {
-      undo(view);
-      view.focus();
-    }
-  };
+  // Show the up/down expand button if buttons overflow, if on a narrow viewport, or if already expanded
+  const shouldShowExpandButton = hasOverflow || isNarrowOrMobile || isMultiRowExpanded;
 
-  const handleRedo = () => {
-    if (!activeTabId) return;
-    const view = editorRegistry.getView(activeTabId);
-    if (view) {
-      redo(view);
-      view.focus();
+  const sizeStyles = {
+    small: {
+      btn: 'w-7 h-7 rounded-md text-[10px]',
+      icon: 'w-3.5 h-3.5',
+      accessoryBtn: 'w-7 h-7 rounded-md',
+      accessoryIcon: 'w-3.5 h-3.5',
+      addBtn: 'h-7 px-2 text-[10px] rounded-md gap-1',
+      addIcon: 'w-3 h-3',
+      containerPad: 'p-1',
+      gap: 'gap-1',
+      divider: 'h-4'
+    },
+    medium: {
+      btn: 'w-9 h-9 rounded-lg text-xs',
+      icon: 'w-4 h-4',
+      accessoryBtn: 'w-9 h-9 rounded-lg',
+      accessoryIcon: 'w-4 h-4',
+      addBtn: 'h-9 px-3 text-xs rounded-lg gap-1.5',
+      addIcon: 'w-3.5 h-3.5',
+      containerPad: 'p-1.5',
+      gap: 'gap-1.5',
+      divider: 'h-5'
+    },
+    large: {
+      btn: 'w-11 h-11 rounded-xl text-sm',
+      icon: 'w-5 h-5',
+      accessoryBtn: 'w-11 h-11 rounded-xl',
+      accessoryIcon: 'w-5 h-5',
+      addBtn: 'h-11 px-3.5 text-sm rounded-xl gap-2',
+      addIcon: 'w-4 h-4',
+      containerPad: 'p-2',
+      gap: 'gap-2',
+      divider: 'h-6'
     }
-  };
-
-  const handleIndent = () => {
-    if (!activeTabId) return;
-    const view = editorRegistry.getView(activeTabId);
-    if (view) {
-      indentMore(view);
-      view.focus();
-    } else {
-      insertTextOrWrap('  ');
-    }
-  };
-
-  const handleOutdent = () => {
-    if (!activeTabId) return;
-    const view = editorRegistry.getView(activeTabId);
-    if (view) {
-      indentLess(view);
-      view.focus();
-    }
-  };
-
-  const accessoryButtons = [
-    {
-      label: 'H1',
-      icon: Heading1,
-      title: 'Heading 1 (# )',
-      action: () => insertTextOrWrap('# ')
-    },
-    {
-      label: 'H2',
-      icon: Heading2,
-      title: 'Heading 2 (## )',
-      action: () => insertTextOrWrap('## ')
-    },
-    {
-      label: 'Bold',
-      icon: Bold,
-      title: 'Bold (**text**)',
-      action: () => insertTextOrWrap('**', '**')
-    },
-    {
-      label: 'Italic',
-      icon: Italic,
-      title: 'Italic (*text*)',
-      action: () => insertTextOrWrap('*', '*')
-    },
-    {
-      label: 'Code',
-      icon: Code,
-      title: 'Inline Code (`code`)',
-      action: () => insertTextOrWrap('`', '`')
-    },
-    {
-      label: '{{var}}',
-      icon: Variable,
-      title: 'Insert Template Variable',
-      isAccent: true,
-      action: () => insertTextOrWrap('{{', '}}')
-    },
-    {
-      label: '{=}',
-      icon: Calculator,
-      title: 'Insert Inline Formula {=COUNT()}',
-      isAccent: true,
-      action: () => insertTextOrWrap('{=', '}')
-    },
-    {
-      label: '/',
-      icon: Slash,
-      title: 'Trigger Slash Commands Menu',
-      isAccent: true,
-      action: () => insertTextOrWrap('/')
-    },
-    {
-      label: 'Task',
-      icon: ListTodo,
-      title: 'Task Item (- [ ] )',
-      action: () => insertTextOrWrap('- [ ] ')
-    },
-    {
-      label: 'Bullet',
-      icon: List,
-      title: 'Bullet List (- )',
-      action: () => insertTextOrWrap('- ')
-    },
-    {
-      label: 'Quote',
-      icon: Quote,
-      title: 'Blockquote (> )',
-      action: () => insertTextOrWrap('> ')
-    },
-    {
-      label: 'Indent',
-      icon: Indent,
-      title: 'Indent (Tab)',
-      action: handleIndent
-    },
-    {
-      label: 'Outdent',
-      icon: Outdent,
-      title: 'Outdent (Shift+Tab)',
-      action: handleOutdent
-    },
-    {
-      label: 'Undo',
-      icon: Undo2,
-      title: 'Undo',
-      action: handleUndo
-    },
-    {
-      label: 'Redo',
-      icon: Redo2,
-      title: 'Redo',
-      action: handleRedo
-    }
-  ];
+  }[buttonSize || 'medium'];
 
   return (
     <div className="z-20 border-t border-[var(--border-primary)] bg-[var(--titlebar-bg)]/95 backdrop-blur-md shrink-0 select-none shadow-md">
-      {/* Header toggle for compact view on small screens */}
-      <div className="flex items-center justify-between px-2 py-0.5 border-b border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)]">
-        <div className="flex items-center gap-1 font-semibold uppercase tracking-wider text-[9px] text-[var(--text-secondary)]">
-          <Sparkles className="w-3 h-3 text-[var(--accent-primary)]" />
-          <span>Quick Markdown & Prompt Bar</span>
+      <div className="flex items-start justify-between w-full relative">
+        {/* Pinned Left Section: Toolbar collapse & Fill Variables */}
+        <div className={`flex items-center ${sizeStyles.gap} ${sizeStyles.containerPad} shrink-0 self-start`}>
+          {/* Toggle chevron button: hides the entire bar */}
+          <button
+            type="button"
+            onClick={() => handleToggleExpanded(false)}
+            title="Hide toolbar"
+            aria-label="Hide toolbar"
+            aria-expanded={true}
+            className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-[var(--border-subtle)] active:scale-95 shadow-2xs`}
+          >
+            <ChevronDown className={sizeStyles.accessoryIcon} />
+          </button>
+
+          {/* Fill Variables modal trigger */}
+          <button
+            type="button"
+            onClick={() => openVariableModal()}
+            title="Fill Variables"
+            aria-label="Fill Variables"
+            className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-[var(--border-subtle)] active:scale-95 shadow-2xs`}
+          >
+            <Variable className={sizeStyles.accessoryIcon} />
+          </button>
+
+          <div className={`${sizeStyles.divider} w-px bg-[var(--border-subtle)] shrink-0 mx-0.5`} />
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => openVariableModal()}
-            className="text-[var(--accent-primary)] hover:underline font-medium text-[10px]"
+        {/* Center Section: Dynamic Markdown Formatting Buttons (Single-row scrollable OR Multi-row wrapped) */}
+        <div className="relative flex-1 min-w-0 flex items-center">
+          {/* Subtle Left Scroll Indicator: appears when scrolled right */}
+          {!isMultiRowExpanded && canScrollLeft && (
+            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[var(--titlebar-bg)] to-transparent pointer-events-none z-10" />
+          )}
+
+          <div 
+            ref={scrollContainerRef}
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onClickCapture={handleClickCapture}
+            onWheel={handleWheel}
+            onScroll={checkOverflowAndScroll}
+            onDragStart={(e) => e.preventDefault()}
+            className={`flex-1 min-w-0 transition-all ${
+              isMultiRowExpanded 
+                ? `flex flex-wrap items-center ${sizeStyles.gap} ${sizeStyles.containerPad} max-h-56 overflow-y-auto no-scrollbar touch-pan-y` 
+                : `flex items-center ${sizeStyles.gap} py-1.5 px-1 overflow-x-auto no-scrollbar touch-pan-x ${
+                    isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
+                  }`
+            }`}
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehaviorX: 'contain'
+            }}
           >
-            Fill Variables
-          </button>
+            {activeButtons.map((btn) => {
+              return (
+                <button
+                  key={btn.id}
+                  type="button"
+                  draggable={false}
+                  onClick={() => executeFormatting(btn, activeTabId || undefined)}
+                  title={btn.title || btn.label}
+                  aria-label={btn.title || btn.label}
+                  className={`${sizeStyles.btn} flex items-center justify-center font-medium transition-all shrink-0 active:scale-95 shadow-xs border select-none ${
+                    btn.isAccent
+                      ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80'
+                      : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--border-primary)] hover:bg-[var(--card-hover-bg)]'
+                  }`}
+                >
+                  <RibbonIcon name={btn.icon} className={`${sizeStyles.icon} shrink-0 pointer-events-none`} />
+                </button>
+              );
+            })}
+
+            {/* If no buttons are enabled, show an invitation button */}
+            {activeButtons.length === 0 && (
+              <button
+                type="button"
+                onClick={openCustomizer}
+                className={`${sizeStyles.addBtn} flex items-center text-[var(--text-muted)] hover:text-[var(--accent-primary)] bg-[var(--card-bg)] border border-dashed border-[var(--border-primary)] hover:border-[var(--accent-primary)] transition-all shrink-0`}
+              >
+                <Plus className={`${sizeStyles.addIcon} text-[var(--accent-primary)] pointer-events-none`} />
+                <span>Add Markdown Buttons</span>
+              </button>
+            )}
+          </div>
+
+          {/* Subtle Right Scroll Indicator: appears when there are hidden buttons to the right */}
+          {!isMultiRowExpanded && canScrollRight && (
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--titlebar-bg)] to-transparent pointer-events-none z-10" />
+          )}
+        </div>
+
+        {/* Persistent Pinned Right Section: Up/Down Expand/Collapse & Settings Button */}
+        <div className={`flex items-center ${sizeStyles.gap} ${sizeStyles.containerPad} shrink-0 border-l border-[var(--border-subtle)] bg-[var(--titlebar-bg)]/95 backdrop-blur-md shadow-[-6px_0_12px_-3px_rgba(0,0,0,0.08)] self-start z-10`}>
+          {/* Up/Down Button: Appears beside the config button to view hidden buttons / expand toolbar */}
+          {shouldShowExpandButton && (
+            <button
+              type="button"
+              onClick={toggleExpandMultiRow}
+              title={
+                isMultiRowExpanded 
+                  ? "Collapse toolbar to single row" 
+                  : "Expand toolbar to show all hidden formatting buttons"
+              }
+              aria-label={
+                isMultiRowExpanded 
+                  ? "Collapse toolbar to single row" 
+                  : "Expand toolbar to show all hidden formatting buttons"
+              }
+              aria-expanded={isMultiRowExpanded}
+              className={`${sizeStyles.accessoryBtn} flex items-center justify-center shrink-0 transition-all active:scale-95 shadow-2xs border ${
+                isMultiRowExpanded
+                  ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] border-[var(--accent-primary)]/40 font-semibold'
+                  : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border-[var(--border-subtle)]'
+              }`}
+            >
+              {isMultiRowExpanded ? (
+                <ChevronDown className={sizeStyles.accessoryIcon} />
+              ) : (
+                <ChevronUp className={sizeStyles.accessoryIcon} />
+              )}
+            </button>
+          )}
+
+          {/* Settings / Config Button: Persistent at the rightmost location */}
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            title={isExpanded ? 'Collapse toolbar' : 'Expand toolbar'}
-            className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            type="button"
+            onClick={openCustomizer}
+            title="Customize Markdown Formatting Buttons (Add, Remove, Reorder, Layout, Size)"
+            aria-label="Customize Markdown Formatting Buttons"
+            className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-dashed border-[var(--border-primary)] active:scale-95 shadow-2xs group`}
           >
-            {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+            <SlidersHorizontal className={`${sizeStyles.accessoryIcon} transition-transform group-hover:rotate-45`} />
           </button>
         </div>
       </div>
-
-      {/* Touch Action Buttons Ribbon */}
-      {isExpanded && (
-        <div className="flex items-center gap-1.5 px-2 py-1.5 overflow-x-auto no-scrollbar touch-pan-x">
-          {accessoryButtons.map((btn, idx) => {
-            const Icon = btn.icon;
-            return (
-              <button
-                key={idx}
-                onClick={btn.action}
-                title={btn.title}
-                aria-label={btn.title || btn.label}
-                className={`h-9 rounded-lg flex items-center justify-center gap-1.5 text-xs font-medium transition-all shrink-0 active:scale-95 shadow-xs border ${
-                  isNarrowOrMobile ? 'w-9 px-0' : 'px-2.5 min-w-[38px]'
-                } ${
-                  btn.isAccent
-                    ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80'
-                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--border-primary)] hover:bg-[var(--card-hover-bg)]'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                {!isNarrowOrMobile && (
-                  <span className="text-[11px] font-sans font-medium whitespace-nowrap hidden md:inline">
-                    {btn.label}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 };

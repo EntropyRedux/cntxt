@@ -5,7 +5,5 @@ export * from './ShellEditorContainer';
 export * from './ShellStatusBar';
 export * from './ShellNotificationLayer';
 export * from './ShellModalLayer';
-export * from './ShellModeSwitcher';
 export * from './ClassicShell';
 export * from './PrototypeShell';
-export * from './WorkbenchShell';

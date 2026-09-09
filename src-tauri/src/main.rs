@@ -143,6 +143,7 @@ fn main() {
         .setup(|app| {
             app.manage(Mutex::new(preview_server::PreviewServer::new()));
             app.manage(Mutex::new(AppState::default()));
+            app.manage(commands::storage::KvStore(tokio::sync::Mutex::new(std::collections::HashMap::new())));
             app.manage(std::sync::Mutex::new(false));
 
             let args: Vec<String> = std::env::args().collect();
@@ -195,6 +196,12 @@ fn main() {
             commands::secrets::get_api_key,
             commands::secrets::delete_api_key,
             commands::secrets::has_api_key,
+            commands::storage::kv_get,
+            commands::storage::kv_set,
+            commands::storage::kv_remove,
+            commands::storage::kv_has,
+            commands::clipboard::clipboard_read_text,
+            commands::clipboard::clipboard_write_text,
             start_preview_server,
             stop_preview_server,
             update_preview_content,

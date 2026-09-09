@@ -1,12 +1,10 @@
-import { LucideIcon } from 'lucide-react';
-
 export interface UiActionItem {
   id: string;
   name: string;
   description: string;
   category?: string;
   shortcut?: string;
-  icon?: LucideIcon | string;
+  icon?: any;
   action: () => void | Promise<void>;
   isAccent?: boolean;
   disabled?: boolean;
@@ -14,7 +12,7 @@ export interface UiActionItem {
 
 export interface UiMenuGroup {
   label: string;
-  icon?: LucideIcon;
+  icon?: any;
   items: {
     label: string;
     shortcut?: string;

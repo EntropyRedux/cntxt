@@ -199,7 +199,10 @@ export const TokenAnalytics: React.FC = () => {
             return (
               <button
                 key={m.id}
+                type="button"
                 onClick={() => setModel(m.id)}
+                title={`Select model ${m.name}`}
+                aria-label={`Select model ${m.name}`}
                 className={`w-full p-2 rounded border text-left flex items-center justify-between transition-all ${
                   isCurrent 
                     ? 'bg-[var(--accent-container)] border-[var(--accent-primary)]/50 text-[var(--text-primary)] font-semibold' 

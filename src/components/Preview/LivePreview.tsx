@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import { 
   Eye, 
@@ -11,20 +11,25 @@ import {
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { FormulaEngine } from '../../services/formulaParser';
+import { renderLatex } from '../../services/mathRenderer';
+import { renderMermaidDiagram } from '../../services/mermaidRenderer';
+import { useRuntimeBridge, isDarkTheme } from '../../adapters';
 
 interface LivePreviewProps {
   content: string;
   tabTitle: string;
 }
 
-export const LivePreview: React.FC<LivePreviewProps> = ({ content, tabTitle }) => {
+export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
+  const bridge = useRuntimeBridge();
   const { settings, updateSettings } = useSettingsStore();
   const { addNotification } = useNotificationStore();
   const [copied, setCopied] = useState(false);
   const [showToc, setShowToc] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
 
-  // Evaluate inline formulas in real-time for live preview rendering
-  const processedMarkdown = useMemo(() => {
+  // 1. Evaluate custom inline formulas (e.g. {{lineCount}}) in real-time
+  const formulaEvaluated = useMemo(() => {
     try {
       const formulaEngine = new FormulaEngine({
         lineCount: content.split('\n').length,
@@ -37,7 +42,38 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content, tabTitle }) =
     }
   }, [content]);
 
-  // Convert markdown to HTML with marked
+  // 2. Pre-process LaTeX Math & Mermaid blocks before passing to marked
+  const processedMarkdown = useMemo(() => {
+    let md = formulaEvaluated;
+
+    // Convert ```mermaid code blocks to interactive diagram container
+    md = md.replace(/(```+|~~~+)mermaid\s*\n([\s\S]*?)\n\1/gi, (_, _fence, code) => {
+      const encoded = encodeURIComponent(code.trim());
+      return `\n\n<div class="live-preview-mermaid my-4 rounded-lg overflow-hidden border border-[var(--border-primary)] shadow-sm bg-[var(--card-bg)]" data-code="${encoded}"><div class="p-6 text-xs text-[var(--text-muted)] animate-pulse flex items-center justify-center">Rendering Mermaid diagram...</div></div>\n\n`;
+    });
+
+    // Convert ```latex / ```math / ```katex code blocks to display math
+    md = md.replace(/(```+|~~~+)(?:latex|math|katex)\s*\n([\s\S]*?)\n\1/gi, (_, _fence, mathCode) => {
+      const rendered = renderLatex(mathCode.trim(), true);
+      return `\n\n<div class="cm-live-math-block my-4 select-none overflow-x-auto">${rendered.html}</div>\n\n`;
+    });
+
+    // Convert $$...$$ display math
+    md = md.replace(/\$\$([\s\S]+?)\$\$/g, (_, mathCode) => {
+      const rendered = renderLatex(mathCode.trim(), true);
+      return `<div class="cm-live-math-block my-4 select-none overflow-x-auto">${rendered.html}</div>`;
+    });
+
+    // Convert $formula$ inline math (avoiding currency like $5 if spaced, only matching non-empty math)
+    md = md.replace(/(?<!\$)\$(?!\$)([^\$\n]+?)(?<!\$)\$(?!\$)/g, (_, formula) => {
+      const rendered = renderLatex(formula.trim(), false);
+      return `<span class="cm-live-math-inline">${rendered.html}</span>`;
+    });
+
+    return md;
+  }, [formulaEvaluated]);
+
+  // 3. Convert markdown to HTML with marked (GFM tables, breaks enabled)
   const renderedHtml = useMemo(() => {
     try {
       return marked.parse(processedMarkdown, { gfm: true, breaks: true }) as string;
@@ -46,9 +82,45 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content, tabTitle }) =
     }
   }, [processedMarkdown]);
 
+  // 4. Asynchronously render Mermaid diagrams in preview
+  useEffect(() => {
+    if (!previewRef.current) return;
+    const isDark = isDarkTheme();
+    const mermaidContainers = previewRef.current.querySelectorAll<HTMLDivElement>('.live-preview-mermaid');
+
+    mermaidContainers.forEach(async (container) => {
+      const code = container.getAttribute('data-code');
+      if (!code) return;
+      try {
+        const decoded = decodeURIComponent(code);
+        const res = await renderMermaidDiagram(decoded, isDark);
+        if (res.isError) {
+          container.innerHTML = `
+            <div class="p-3 text-xs text-red-400 bg-red-950/20 rounded border border-red-800/40 font-mono">
+              <div class="font-bold mb-1">Mermaid Syntax Warning:</div>
+              <div class="text-[11px] opacity-80">${res.error || 'Check diagram syntax'}</div>
+            </div>`;
+        } else {
+          container.innerHTML = `
+            <div class="flex items-center justify-between px-3 py-1.5 bg-[var(--codeblock-header-bg)] border-b border-[var(--border-subtle)] text-[11px] text-[#EC4899] font-medium">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-[#EC4899] inline-block"></span>
+                <span>Mermaid Diagram</span>
+              </span>
+            </div>
+            <div class="p-4 flex justify-center items-center overflow-x-auto bg-[var(--editor-bg)]">
+              ${res.svg}
+            </div>`;
+        }
+      } catch (err) {
+        console.warn('Failed to render preview mermaid diagram', err);
+      }
+    });
+  }, [renderedHtml]);
+
   // Extract headings for Table of Contents
   const headings = useMemo(() => {
-    const lines = processedMarkdown.split('\n');
+    const lines = formulaEvaluated.split('\n');
     const result: { level: number; text: string; id: string }[] = [];
     for (const line of lines) {
       const match = line.match(/^(#{1,4})\s+(.+)$/);
@@ -60,11 +132,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content, tabTitle }) =
       }
     }
     return result;
-  }, [processedMarkdown]);
+  }, [formulaEvaluated]);
 
   const handleCopyRendered = async () => {
     try {
-      await navigator.clipboard.writeText(processedMarkdown);
+      await bridge.clipboard.writeText(formulaEvaluated);
       setCopied(true);
       addNotification('Copied', 'Evaluated markdown copied to clipboard', 'success');
       setTimeout(() => setCopied(false), 2000);
@@ -125,13 +197,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content, tabTitle }) =
         <div className="h-3 w-px bg-[var(--border-primary)] mx-0.5" />
 
         <button
+          type="button"
           onClick={handleCopyRendered}
-          title="Copy Markdown"
-          aria-label="Copy Rendered Markdown to Clipboard"
-          className="px-2 py-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-md flex items-center gap-1.5 text-xs transition-colors"
+          title={copied ? 'Copied to Clipboard' : 'Copy Markdown'}
+          aria-label={copied ? 'Copied to Clipboard' : 'Copy Rendered Markdown to Clipboard'}
+          className="p-1.5 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-md flex items-center justify-center transition-colors"
         >
-          {copied ? <Check className="w-3 h-3 text-[var(--status-success)]" /> : <Copy className="w-3 h-3 text-[var(--text-muted)]" />}
-          <span className="text-[11px] font-medium">{copied ? 'Copied' : 'Copy'}</span>
+          {copied ? <Check className="w-3.5 h-3.5 text-[var(--status-success)]" /> : <Copy className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
         </button>
       </div>
 
@@ -161,11 +233,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content, tabTitle }) =
 
         {/* Rendered Prose Content */}
         <div 
+          ref={previewRef}
           className="flex-1 overflow-y-auto p-3 sm:p-5"
           style={{ fontSize: `${settings.previewFontScale}%` }}
         >
           <div className={`mx-auto ${getMaxWidthClass()} contextpad-preview-prose`}>
-            {processedMarkdown.trim() ? (
+            {formulaEvaluated.trim() ? (
               <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
             ) : (
               <div className="h-64 flex flex-col items-center justify-center text-[var(--text-muted)] text-xs">

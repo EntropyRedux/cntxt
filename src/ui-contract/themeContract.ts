@@ -1,4 +1,13 @@
-import { ThemeName } from '../types';
+export type ThemeName = 
+  | 'google-material-3'
+  | 'contextpad-dark' 
+  | 'one-dark' 
+  | 'dracula' 
+  | 'nord' 
+  | 'monokai' 
+  | 'github-dark' 
+  | 'github-light' 
+  | 'solarized-dark';
 
 export interface UiThemeDefinition {
   id: ThemeName;

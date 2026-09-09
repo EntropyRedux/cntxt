@@ -1,16 +1,19 @@
 import React from 'react';
 import { TabBar } from '../components/TabBar/TabBar';
 import { Editor } from '../components/Editor/Editor';
+import { MobileAccessoryBar } from '../components/Mobile/MobileAccessoryBar';
 import { useTabStore } from '../store/tabStore';
 import { FileText, Plus } from 'lucide-react';
 import { Button } from '../primitives/Button';
 
 export interface ShellEditorContainerProps {
   className?: string;
+  showAccessoryBar?: boolean;
 }
 
 export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
-  className = ''
+  className = '',
+  showAccessoryBar = true
 }) => {
   const { tabs, activeTabId, createTab } = useTabStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
@@ -45,12 +48,15 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
               size="md"
               icon={Plus}
               onClick={() => createTab()}
-            >
-              Create New Document
-            </Button>
+              aria-label="Create New Document"
+              title="Create New Document"
+            />
           </div>
         )}
       </div>
+
+      {/* Quick Markdown Formatting Toolbar */}
+      {activeTab && showAccessoryBar && <MobileAccessoryBar />}
     </main>
   );
 };

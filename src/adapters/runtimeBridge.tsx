@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { IRuntimeBridge } from '../ui-contract/bridgeContract';
 import { BrowserRuntimeAdapter } from './browserRuntimeAdapter';
-import { TauriRuntimeAdapter, isTauri } from './tauriRuntimeAdapter';
 
 const RuntimeBridgeContext = createContext<IRuntimeBridge | null>(null);
 
@@ -14,20 +13,15 @@ export interface RuntimeBridgeProviderProps {
  * RuntimeBridgeProvider
  * Injects the runtime bridge into the React component tree.
  * 
- * - In Tauri Desktop: automatically detects and uses TauriRuntimeAdapter
  * - In Web / AI Studio: uses default BrowserRuntimeAdapter
- * - Custom bridge override can be passed as a prop
+ * - In CNTXT Desktop: pass `<RuntimeBridgeProvider bridge={new TauriRuntimeBridge()}>`
  */
 export const RuntimeBridgeProvider: React.FC<RuntimeBridgeProviderProps> = ({
   bridge,
   children
 }) => {
   const activeBridge = useMemo(() => {
-    if (bridge) return bridge;
-    if (isTauri()) {
-      return new TauriRuntimeAdapter();
-    }
-    return new BrowserRuntimeAdapter();
+    return bridge || new BrowserRuntimeAdapter();
   }, [bridge]);
 
   return (
@@ -40,9 +34,7 @@ export const RuntimeBridgeProvider: React.FC<RuntimeBridgeProviderProps> = ({
 export const useRuntimeBridge = (): IRuntimeBridge => {
   const bridge = useContext(RuntimeBridgeContext);
   if (!bridge) {
-    if (isTauri()) {
-      return new TauriRuntimeAdapter();
-    }
+    // Fallback if rendered outside provider
     return new BrowserRuntimeAdapter();
   }
   return bridge;

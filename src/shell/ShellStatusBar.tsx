@@ -8,7 +8,7 @@ export const ShellStatusBar: React.FC = () => {
   if (!settings.showStatusBar) return null;
 
   return (
-    <footer className="hidden md:block shrink-0 z-20">
+    <footer className="block shrink-0 z-20">
       <StatusBar />
     </footer>
   );

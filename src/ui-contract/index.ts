@@ -5,3 +5,4 @@ export * from './notificationContract';
 export * from './panelContract';
 export * from './actionContract';
 export * from './bridgeContract';
+export type { SupportedLanguage } from './tabContract';

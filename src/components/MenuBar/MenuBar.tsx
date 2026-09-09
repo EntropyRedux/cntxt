@@ -4,7 +4,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
-import { dbStorage } from '../../services/storage/IndexedDBStorage';
+import { execUndo, execRedo, querySelector, useRuntimeBridge } from '../../adapters';
 
 interface MenuBarProps {
   onOpenFile: () => void;
@@ -19,6 +19,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   onOpenCommandPalette,
   onOpenShortcuts
 }) => {
+  const bridge = useRuntimeBridge();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,41 +41,26 @@ export const MenuBar: React.FC<MenuBarProps> = ({
 
   const handleExportWorkspace = async () => {
     try {
-      const data = await dbStorage.exportAllData();
-      const blob = new Blob([data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contextpad-backup-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await bridge.fs.exportWorkspace();
       addNotification('Backup Exported', 'Workspace data exported successfully', 'success');
     } catch (e: any) {
       addNotification('Export Failed', e.message, 'error');
     }
   };
 
-  const handleImportBackup = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e: any) => {
-      const file = e.target.files?.[0];
+  const handleImportBackup = async () => {
+    try {
+      const file = await bridge.fs.openFile();
       if (!file) return;
-      try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        if (json.templates) localStorage.setItem('contextpad_templates', JSON.stringify(json.templates));
-        if (json.actions) localStorage.setItem('contextpad_actions', JSON.stringify(json.actions));
-        if (json.workflows) localStorage.setItem('contextpad_workflows', JSON.stringify(json.workflows));
-        if (json.settings) localStorage.setItem('contextpad_settings', JSON.stringify(json.settings));
-        addNotification('Backup Restored', 'Please reload workspace to apply', 'success');
-        setTimeout(() => window.location.reload(), 1000);
-      } catch (err: any) {
-        addNotification('Import Error', 'Invalid backup JSON file', 'error');
+      const ok = await bridge.fs.importWorkspace(file.content);
+      if (ok) {
+        addNotification('Backup Restored', 'Workspace restored successfully', 'success');
+      } else {
+        addNotification('Import Error', 'Failed to restore backup', 'error');
       }
-    };
-    input.click();
+    } catch (err: any) {
+      addNotification('Import Error', 'Invalid backup JSON file', 'error');
+    }
   };
 
   const activeTab = tabs.find(t => t.id === activeTabId);
@@ -99,11 +85,11 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       id: 'edit',
       label: 'Edit',
       items: [
-        { label: 'Undo', shortcut: 'Ctrl+Z', action: () => document.execCommand('undo') },
-        { label: 'Redo', shortcut: 'Ctrl+Y', action: () => document.execCommand('redo'), divider: true },
+        { label: 'Undo', shortcut: 'Ctrl+Z', action: () => execUndo() },
+        { label: 'Redo', shortcut: 'Ctrl+Y', action: () => execRedo(), divider: true },
         { label: 'Fill Template Variables...', shortcut: 'Ctrl+Alt+V', action: () => openVariableModal() },
         { label: 'Find & Replace in Editor', shortcut: 'Ctrl+F', action: () => {
-          const cm = document.querySelector('.cm-editor') as HTMLElement;
+          const cm = querySelector('.cm-editor');
           cm?.focus();
         }}
       ]

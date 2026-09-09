@@ -1,4 +1,13 @@
-import { SupportedLanguage } from '../types';
+export type SupportedLanguage = 
+  | 'markdown' 
+  | 'javascript' 
+  | 'typescript' 
+  | 'python' 
+  | 'json' 
+  | 'yaml' 
+  | 'html' 
+  | 'css' 
+  | 'text';
 
 export interface UiTab {
   id: string;

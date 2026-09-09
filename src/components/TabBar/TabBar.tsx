@@ -11,6 +11,7 @@ import {
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Tab } from '../../types';
+import { addDocumentListener } from '../../adapters';
 
 export const TabBar: React.FC = () => {
   const { 
@@ -96,9 +97,8 @@ export const TabBar: React.FC = () => {
       }
     };
     if (showAllTabsDropdown) {
-      document.addEventListener('mousedown', handleOutsideClick);
+      return addDocumentListener('mousedown', handleOutsideClick);
     }
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [showAllTabsDropdown]);
 
   const filteredTabs = tabs.filter(t => 
@@ -194,21 +194,27 @@ export const TabBar: React.FC = () => {
           );
         })}
 
-        {/* New Tab Button */}
+        {/* Tab Items End */}
+      </div>
+
+      {/* Anchored Tab Actions: Static New Tab + Tab Selection Drop-down */}
+      <div className="relative shrink-0 flex items-center h-full border-l border-[var(--border-primary)] bg-[var(--tabbar-bg)] select-none">
+        {/* Static + New Tab Button (compact and anchored) */}
         <button 
           onClick={() => createTab()}
           title="New Tab (Ctrl+N)"
           aria-label="New Document Tab"
-          className={`flex items-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--tab-hover-bg)] cursor-pointer transition-colors shrink-0 ${
-            isTouch ? 'px-4' : 'px-3'
+          className={`h-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--tab-hover-bg)] cursor-pointer transition-colors shrink-0 ${
+            isTouch ? 'w-8' : 'w-7'
           }`}
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
         </button>
-      </div>
 
-      {/* All Tabs Quick-Switcher Dropdown Button */}
-      <div className="relative shrink-0 flex items-center h-full border-l border-[var(--border-primary)] bg-[var(--tabbar-bg)]">
+        {/* Subtle divider between static tab buttons */}
+        <div className="h-3.5 w-px bg-[var(--border-primary)] opacity-70 shrink-0" />
+
+        {/* Tab Selection Drop-down Button */}
         <button
           onClick={() => {
             setShowAllTabsDropdown(!showAllTabsDropdown);
@@ -217,13 +223,12 @@ export const TabBar: React.FC = () => {
           title={`View all ${tabs.length} open tabs`}
           aria-label={`Open tabs list (${tabs.length} tabs)`}
           aria-expanded={showAllTabsDropdown}
-          className={`h-full flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--tab-hover-bg)] transition-colors text-xs ${
-            isTouch ? 'px-3.5' : 'px-2.5'
+          className={`h-full flex items-center justify-center gap-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--tab-hover-bg)] transition-colors text-xs ${
+            isTouch ? 'w-9' : 'w-7.5'
           }`}
         >
-          <Layers className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-          <span className="text-[11px] font-mono text-[var(--text-secondary)]">{tabs.length}</span>
-          <ChevronDown className="w-3 h-3 opacity-60" />
+          <Layers className="w-3 h-3 text-[var(--accent-primary)]" />
+          <ChevronDown className={`w-2.5 h-2.5 text-[var(--text-muted)] transition-transform duration-150 ${showAllTabsDropdown ? 'rotate-180' : ''}`} />
         </button>
 
         {/* All Tabs List Popover */}

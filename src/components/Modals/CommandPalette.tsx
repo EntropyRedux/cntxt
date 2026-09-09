@@ -14,7 +14,8 @@ import {
   X, 
   Eye, 
   Code2,
-  ExternalLink
+  ExternalLink,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useTemplateStore } from '../../store/templateStore';
@@ -22,6 +23,9 @@ import { useActionStore } from '../../store/actionStore';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useFormattingStore } from '../../store/formattingStore';
+import { useRibbonStore } from '../../store/ribbonStore';
+import { useRuntimeBridge } from '../../adapters';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -38,6 +42,7 @@ interface PaletteItem {
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
+  const bridge = useRuntimeBridge();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -89,16 +94,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
       subtitle: 'Open a new ContextPad instance window (Ctrl+Shift+N)',
       category: 'Commands',
       icon: ExternalLink,
-      action: () => {
+      action: async () => {
         try {
-          const opened = window.open(window.location.href, '_blank', 'noopener,noreferrer');
-          if (opened) {
-            addNotification('New Window', 'Opened new ContextPad window', 'info');
-          } else {
-            addNotification('New Window', 'New window requested (placeholder ready for window manager wiring)', 'info');
-          }
+          await bridge.window.newWindow();
+          addNotification('New Window', 'Opened new ContextPad window', 'info');
         } catch {
-          addNotification('New Window', 'New window requested (placeholder ready for window manager wiring)', 'info');
+          addNotification('New Window', 'New window requested', 'info');
         }
       }
     },
@@ -137,6 +138,26 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
       icon: Settings,
       action: () => {
         setActiveSidebarTab('settings');
+      }
+    },
+    {
+      id: 'cmd-customize-formatting',
+      title: 'Customize Markdown Formatting Buttons',
+      subtitle: 'Add, remove, reorder, or create custom syntax formatting buttons',
+      category: 'Commands',
+      icon: SlidersHorizontal,
+      action: () => {
+        useFormattingStore.getState().openCustomizer();
+      }
+    },
+    {
+      id: 'cmd-customize-ribbon',
+      title: 'Customize Modular Ribbon',
+      subtitle: 'Add, remove, and arrange buttons in the top modular action ribbon',
+      category: 'Commands',
+      icon: SlidersHorizontal,
+      action: () => {
+        useRibbonStore.getState().openCustomizer();
       }
     },
     // Tabs list

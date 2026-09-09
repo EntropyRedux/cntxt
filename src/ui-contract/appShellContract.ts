@@ -1,12 +1,12 @@
-import { ThemeName, SupportedLanguage } from '../types';
+import { ThemeName } from './themeContract';
+import { SupportedLanguage } from './tabContract';
 
 /**
- * Shell Mode switcher:
- * - 'classic': Traditional ContextPad desktop UI (TitleBar + TabBar + Editor + Right-docked ActivityBar/Sidebar)
- * - 'prototype': Next-generation modular CNTXT layout with sleek unified topbar, quick command bar, and floating panels
- * - 'workbench': Prompt engineering and AI context builder workbench with split panels, live variable inspector, and token gauge
+ * Shell Mode:
+ * - 'classic': Traditional ContextPad desktop UI (TitleBar + TabBar + Editor + Left ActivityBar + Right Sidebar + Toggleable Modular Ribbon Toolbox)
+ * - 'prototype': (Legacy alias for classic with ribbon active)
  */
-export type ShellMode = 'classic' | 'prototype' | 'workbench';
+export type ShellMode = 'classic' | 'prototype';
 
 export type UiDensity = 'compact' | 'comfortable' | 'touch';
 

@@ -21,6 +21,18 @@
       ]
     },
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "scripts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "contextpad_replica_ai-studio",
+    "generated_documents"
+  ]
 }

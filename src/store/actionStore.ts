@@ -1,53 +1,163 @@
 import { create } from 'zustand';
-import { Action } from '../types';
-import { DEFAULT_ACTIONS } from '../constants/defaultData';
-import { actionSandbox, ActionExecutionContext } from '../services/actionSandbox';
+import { Action, ActionCategory } from '../types';
+import { IStorageBridge } from '../ui-contract/bridgeContract';
+import { STORAGE_KEYS } from '../adapters/storageKeys';
+
+export const DEFAULT_ACTIONS: Action[] = [
+  {
+    id: 'act_summarize',
+    name: 'Summarize Document',
+    description: 'Generates an executive summary of the current note content',
+    category: 'Text Analysis',
+    shortcut: 'Ctrl+Shift+S',
+    code: `
+// Executive Summary Generator
+const text = api.getContent();
+if (!text.trim()) {
+  api.notify("Document is empty", "warning");
+  return;
+}
+api.notify("Analyzing text content...", "info");
+const lines = text.split('\\n').filter(l => l.trim().length > 0);
+const wordCount = text.split(/\\s+/).filter(Boolean).length;
+const charCount = text.length;
+
+const summary = \`## Executive Summary\\n\\n**Key Metrics:**\\n- Total Words: \${wordCount}\\n- Total Characters: \${charCount}\\n- Paragraphs: \${lines.length}\\n\\n**Core Takeaways:**\\n\` + lines.slice(0, 3).map(l => \`- \${l.replace(/^[#*\\-\\s]+/, '')}\`).join('\\n');
+
+api.insertAtCursor('\\n\\n' + summary);
+api.notify("Summary appended successfully!", "success");
+    `,
+    color: 'emerald'
+  },
+  {
+    id: 'act_format_table',
+    name: 'Clean Markdown Table',
+    description: 'Normalizes column widths and whitespace in markdown tables',
+    category: 'Formatting',
+    shortcut: 'Ctrl+Shift+T',
+    code: `
+const text = api.getContent();
+const lines = text.split('\\n');
+let modified = false;
+
+const newLines = lines.map(line => {
+  if (line.includes('|')) {
+    const cells = line.split('|').map(c => c.trim());
+    modified = true;
+    return cells.join(' | ');
+  }
+  return line;
+});
+
+if (modified) {
+  api.setContent(newLines.join('\\n'));
+  api.notify("Normalized markdown tables", "success");
+} else {
+  api.notify("No markdown table found in current document", "info");
+}
+    `,
+    color: 'sky'
+  },
+  {
+    id: 'act_slugify',
+    name: 'Generate URL Slug',
+    description: 'Converts selected text or heading to kebab-case slug',
+    category: 'Utility',
+    code: `
+const sel = api.getSelection();
+const target = sel || api.getContent().split('\\n')[0];
+if (!target) {
+  api.notify("Nothing to slugify", "warning");
+  return;
+}
+const slug = target
+  .toLowerCase()
+  .trim()
+  .replace(/[^\\w\\s-]/g, '')
+  .replace(/[\\s_-]+/g, '-')
+  .replace(/^-+|-+$/g, '');
+
+if (sel) {
+  api.replaceSelection(slug);
+} else {
+  api.insertAtCursor(slug);
+}
+api.notify(\`Generated slug: \${slug}\`, "success");
+    `,
+    color: 'indigo'
+  },
+  {
+    id: 'act_extract_todos',
+    name: 'Extract All Tasks',
+    description: 'Gathers all checkbox tasks (- [ ]) and copies to end of document',
+    category: 'Text Analysis',
+    code: `
+const text = api.getContent();
+const matches = text.match(/^[ \\t]*- \\[([ xX])\\]\\s+(.+)$/gm);
+if (!matches || matches.length === 0) {
+  api.notify("No checklist tasks found (- [ ] ...)", "info");
+  return;
+}
+const header = "\\n\\n### Consolidated Task Checklist\\n";
+const tasks = matches.join('\\n');
+api.insertAtCursor(header + tasks + '\\n');
+api.notify(\`Extracted \${matches.length} tasks\`, "success");
+    `,
+    color: 'amber'
+  }
+];
+
+let activeStorage: IStorageBridge | null = null;
 
 interface ActionState {
   actions: Action[];
   searchQuery: string;
-  selectedCategory: string;
+  selectedCategory: ActionCategory;
   isActionEditorOpen: boolean;
   editingAction: Action | null;
   isRunningAction: boolean;
-
-  // Actions
+  
+  initializeActions: (storage?: IStorageBridge) => Promise<void>;
   setSearchQuery: (query: string) => void;
-  setSelectedCategory: (category: string) => void;
+  setSelectedCategory: (category: ActionCategory) => void;
   openActionEditor: (action?: Action | null) => void;
   closeActionEditor: () => void;
-  createAction: (actionData: Omit<Action, 'id' | 'createdAt' | 'updatedAt'>) => Action;
+  saveAction: (action: Omit<Action, 'id'> & { id?: string }) => void;
+  createAction: (action: Omit<Action, 'id' | 'createdAt' | 'updatedAt'>) => string;
   updateAction: (id: string, updates: Partial<Action>) => void;
-  deleteAction: (id: string) => void;
   duplicateAction: (id: string) => void;
   toggleActionEnabled: (id: string) => void;
-  executeAction: (actionId: string, context: ActionExecutionContext) => Promise<{ success: boolean; error?: string }>;
-  importActions: (imported: Action[]) => number;
+  executeAction: (id: string, context?: any) => Promise<void>;
+  deleteAction: (id: string) => void;
+  runAction: (action: Action, sandboxApi: any) => Promise<void>;
+  importActions: (jsonString: string) => number;
   exportActions: () => string;
   resetToDefaults: () => void;
-  initializeActions: () => void;
 }
 
-const STORAGE_KEY = 'contextpad_actions';
-
 export const useActionStore = create<ActionState>((set, get) => ({
-  actions: [],
+  actions: DEFAULT_ACTIONS,
   searchQuery: '',
   selectedCategory: 'All',
   isActionEditorOpen: false,
   editingAction: null,
   isRunningAction: false,
 
-  initializeActions: () => {
+  initializeActions: async (storage?: IStorageBridge) => {
+    if (storage) {
+      activeStorage = storage;
+    }
+    if (!activeStorage) return;
+
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = await activeStorage.getItem(STORAGE_KEYS.ACTIONS);
       if (stored) {
         set({ actions: JSON.parse(stored) });
       } else {
         set({ actions: DEFAULT_ACTIONS });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_ACTIONS));
+        await activeStorage.setItem(STORAGE_KEYS.ACTIONS, JSON.stringify(DEFAULT_ACTIONS));
       }
-    } catch (e) {
+    } catch {
       set({ actions: DEFAULT_ACTIONS });
     }
   },
@@ -63,6 +173,28 @@ export const useActionStore = create<ActionState>((set, get) => ({
     set({ isActionEditorOpen: false, editingAction: null });
   },
 
+  saveAction: (actionData) => {
+    const current = get().actions;
+    let updated: Action[];
+
+    if (actionData.id) {
+      // Update existing
+      updated = current.map(a => a.id === actionData.id ? { ...a, ...actionData } as Action : a);
+    } else {
+      // Create new
+      const newAction: Action = {
+        ...actionData,
+        id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      updated = [newAction, ...current];
+    }
+
+    set({ actions: updated, isActionEditorOpen: false, editingAction: null });
+    saveActions(updated);
+  },
+
   createAction: (actionData) => {
     const newAction: Action = {
       ...actionData,
@@ -70,49 +202,31 @@ export const useActionStore = create<ActionState>((set, get) => ({
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
-
     const updated = [newAction, ...get().actions];
-    set({ actions: updated });
+    set({ actions: updated, isActionEditorOpen: false, editingAction: null });
     saveActions(updated);
-    return newAction;
+    return newAction.id;
   },
 
   updateAction: (id, updates) => {
-    const updated = get().actions.map(act => {
-      if (act.id === id) {
-        return {
-          ...act,
-          ...updates,
-          updatedAt: Date.now()
-        };
-      }
-      return act;
-    });
-
-    set({ actions: updated });
-    saveActions(updated);
-  },
-
-  deleteAction: (id) => {
-    const updated = get().actions.filter(a => a.id !== id);
-    set({ actions: updated });
+    const updated = get().actions.map(a => a.id === id ? { ...a, ...updates, updatedAt: Date.now() } : a);
+    set({ actions: updated, isActionEditorOpen: false, editingAction: null });
     saveActions(updated);
   },
 
   duplicateAction: (id) => {
-    const source = get().actions.find(a => a.id === id);
-    if (!source) return;
-
-    get().createAction({
-      name: `${source.name} (Copy)`,
-      description: source.description,
-      type: source.type,
-      code: source.code,
-      category: source.category,
-      enabled: source.enabled,
-      icon: source.icon,
-      shortcut: source.shortcut
-    });
+    const target = get().actions.find(a => a.id === id);
+    if (!target) return;
+    const duplicated: Action = {
+      ...target,
+      id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      name: `${target.name} (Copy)`,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    const updated = [duplicated, ...get().actions];
+    set({ actions: updated });
+    saveActions(updated);
   },
 
   toggleActionEnabled: (id) => {
@@ -121,32 +235,43 @@ export const useActionStore = create<ActionState>((set, get) => ({
     saveActions(updated);
   },
 
-  executeAction: async (actionId, context) => {
-    const action = get().actions.find(a => a.id === actionId);
-    if (!action) {
-      context.toast('Action not found', 'error');
-      return { success: false, error: 'Action not found' };
-    }
+  executeAction: async (id: string, context?: any) => {
+    const action = get().actions.find(a => a.id === id);
+    if (!action) return;
+    await get().runAction(action, context);
+  },
 
-    if (!action.enabled) {
-      context.toast(`Action "${action.name}" is disabled`, 'warning');
-      return { success: false, error: 'Action disabled' };
-    }
+  deleteAction: (id) => {
+    const updated = get().actions.filter(a => a.id !== id);
+    set({ actions: updated });
+    saveActions(updated);
+  },
 
+  runAction: async (action, sandboxApi) => {
     set({ isRunningAction: true });
     try {
-      const result = await actionSandbox.executeAction(action.code, context);
-      set({ isRunningAction: false });
-      return result;
+      const { executeInSandbox } = await import('../services/actionSandbox');
+      await executeInSandbox(action.code, sandboxApi);
     } catch (e: any) {
+      console.error('Action execution failed', e);
+      if (sandboxApi && sandboxApi.notify) {
+        sandboxApi.notify(e?.message || 'Error executing action', 'error');
+      }
+    } finally {
       set({ isRunningAction: false });
-      return { success: false, error: e.message };
     }
   },
 
-  importActions: (imported) => {
-    if (!Array.isArray(imported)) return 0;
+  importActions: (jsonString: string) => {
     const current = get().actions;
+    let imported: Action[];
+    try {
+      imported = JSON.parse(jsonString);
+      if (!Array.isArray(imported)) return 0;
+    } catch {
+      return 0;
+    }
+
     const valid = imported.filter(item => item && item.name && item.code);
     const combined = [...valid, ...current];
     const unique = Array.from(new Map(combined.map(item => [item.id || item.name, item])).values());
@@ -167,8 +292,9 @@ export const useActionStore = create<ActionState>((set, get) => ({
 }));
 
 function saveActions(actions: Action[]) {
+  if (!activeStorage) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(actions));
+    activeStorage.setItem(STORAGE_KEYS.ACTIONS, JSON.stringify(actions)).catch(() => {});
   } catch (e) {
     console.error('Failed to save actions', e);
   }

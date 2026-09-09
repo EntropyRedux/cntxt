@@ -7,13 +7,18 @@ import {
   Workflow, 
   Coins, 
   Calculator, 
-  Settings
+  Settings,
+  Sparkles
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { ViewSettings } from '../../types';
 
-export const ActivityBar: React.FC = () => {
-  const { settings, setActiveSidebarTab, toggleSidebar } = useSettingsStore();
+export interface ActivityBarProps {
+  orientation?: 'vertical' | 'bottom';
+}
+
+export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertical' }) => {
+  const { settings, setActiveSidebarTab, toggleSidebar, toggleRibbon } = useSettingsStore();
 
   const navItems: { id: ViewSettings['activeSidebarTab']; label: string; ariaLabel: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'explorer', label: 'File Explorer (Ctrl+Shift+E)', ariaLabel: 'File Explorer', icon: FolderTree },
@@ -33,13 +38,116 @@ export const ActivityBar: React.FC = () => {
     }
   };
 
+  if (orientation === 'bottom') {
+    return (
+      <nav 
+        aria-label="Touch Navigation Bar"
+        className="theme-activitybar w-full border-t border-[var(--border-primary)] bg-[var(--activitybar-bg)] h-12 flex items-center justify-between px-2 sm:px-4 shrink-0 select-none relative z-20 overflow-x-auto no-scrollbar shadow-xs"
+      >
+        <div className="flex items-center justify-around sm:justify-center sm:gap-1.5 w-full max-w-2xl mx-auto">
+          {/* Modular Ribbon Toolbox Toggle */}
+          <button
+            type="button"
+            onClick={toggleRibbon}
+            title={settings.showRibbon ? 'Hide Modular Ribbon Toolbox' : 'Show Modular Ribbon Toolbox'}
+            aria-label={settings.showRibbon ? 'Hide Modular Ribbon Toolbox' : 'Show Modular Ribbon Toolbox'}
+            aria-pressed={settings.showRibbon}
+            className={`min-w-[40px] h-10 px-2 rounded-lg flex items-center justify-center transition-all relative shrink-0 active:scale-95 ${
+              settings.showRibbon 
+                ? 'text-[var(--accent-primary)] bg-[var(--accent-container)] shadow-xs border border-[var(--accent-primary)]/40' 
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+            }`}
+          >
+            <Sparkles className="w-4.5 h-4.5" />
+            {settings.showRibbon && (
+              <div className="absolute top-1 right-1.5 w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]" />
+            )}
+          </button>
+
+          {/* Separator */}
+          <div className="h-5 w-px bg-[var(--border-subtle)] mx-0.5 sm:mx-1 shrink-0" />
+
+          {/* Primary Navigation Items */}
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const isActive = settings.showSidebar && settings.activeSidebarTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleTabClick(item.id)}
+                title={item.label}
+                aria-label={item.ariaLabel}
+                aria-pressed={isActive}
+                className={`min-w-[40px] h-10 px-2 rounded-lg flex items-center justify-center transition-all relative shrink-0 active:scale-95 ${
+                  isActive 
+                    ? 'text-[var(--accent-primary)] bg-[var(--accent-container)] shadow-xs' 
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+                }`}
+              >
+                <Icon className="w-4.5 h-4.5" />
+                {isActive && (
+                  <div className="absolute top-0 w-5 h-0.5 bg-[var(--accent-primary)] rounded-b" />
+                )}
+              </button>
+            );
+          })}
+
+          {/* Separator */}
+          <div className="h-5 w-px bg-[var(--border-subtle)] mx-0.5 sm:mx-1 shrink-0" />
+
+          {/* Preferences / Settings */}
+          <button
+            type="button"
+            onClick={() => handleTabClick('settings')}
+            title="Preferences & Themes"
+            aria-label="Preferences and Themes"
+            aria-pressed={settings.showSidebar && settings.activeSidebarTab === 'settings'}
+            className={`min-w-[40px] h-10 px-2 rounded-lg flex items-center justify-center transition-all relative shrink-0 active:scale-95 ${
+              settings.showSidebar && settings.activeSidebarTab === 'settings' 
+                ? 'text-[var(--accent-primary)] bg-[var(--accent-container)] shadow-xs' 
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+            }`}
+          >
+            <Settings className="w-4.5 h-4.5" />
+            {settings.showSidebar && settings.activeSidebarTab === 'settings' && (
+              <div className="absolute top-0 w-5 h-0.5 bg-[var(--accent-primary)] rounded-b" />
+            )}
+          </button>
+        </div>
+      </nav>
+    );
+  }
+
   return (
     <aside 
       aria-label="Activity Bar"
-      className="theme-activitybar w-12 hidden md:flex flex-col items-center py-2.5 justify-between shrink-0 select-none z-20"
+      className="theme-activitybar w-11 sm:w-12 flex flex-col items-center py-2 justify-between shrink-0 select-none relative z-50 overflow-y-auto no-scrollbar"
     >
-      {/* Top Primary Navigation Items */}
+      {/* Top Section */}
       <div className="flex flex-col items-center space-y-1.5 w-full">
+        {/* Modular Ribbon Toolbox Toggle */}
+        <button
+          onClick={toggleRibbon}
+          title={settings.showRibbon ? 'Hide Modular Ribbon Toolbox' : 'Show Modular Ribbon Toolbox'}
+          aria-label={settings.showRibbon ? 'Hide Modular Ribbon Toolbox' : 'Show Modular Ribbon Toolbox'}
+          aria-pressed={settings.showRibbon}
+          className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all relative ${
+            settings.showRibbon 
+              ? 'text-[var(--accent-primary)] bg-[var(--accent-container)] shadow-xs border border-[var(--accent-primary)]/40' 
+              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          {settings.showRibbon && (
+            <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]" />
+          )}
+        </button>
+
+        {/* Separator */}
+        <div className="w-6 border-b border-[var(--border-subtle)] my-0.5" />
+
+        {/* Primary Navigation Items */}
         {navItems.map(item => {
           const Icon = item.icon;
           const isActive = settings.showSidebar && settings.activeSidebarTab === item.id;
@@ -58,7 +166,7 @@ export const ActivityBar: React.FC = () => {
             >
               <Icon className="w-4 h-4" />
               {isActive && (
-                <div className="absolute right-0 w-0.5 h-4 bg-[var(--accent-primary)] rounded-l" />
+                <div className="absolute left-0 w-0.5 h-4 bg-[var(--accent-primary)] rounded-r" />
               )}
             </button>
           );

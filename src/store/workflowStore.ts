@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { PinnedTab } from '../types';
 import { DEFAULT_PINNED_TABS } from '../constants/defaultData';
+import { IStorageBridge } from '../ui-contract/bridgeContract';
+import { STORAGE_KEYS } from '../adapters/storageKeys';
+
+let activeStorage: IStorageBridge | null = null;
 
 interface WorkflowState {
   workflows: PinnedTab[];
@@ -19,26 +23,29 @@ interface WorkflowState {
   importWorkflows: (imported: PinnedTab[]) => number;
   exportWorkflows: () => string;
   resetToDefaults: () => void;
-  initializeWorkflows: () => void;
+  initializeWorkflows: (storage?: IStorageBridge) => Promise<void>;
 }
 
-const STORAGE_KEY = 'contextpad_workflows';
-
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
-  workflows: [],
+  workflows: DEFAULT_PINNED_TABS,
   searchQuery: '',
   selectedCategory: 'All',
 
-  initializeWorkflows: () => {
+  initializeWorkflows: async (storage?: IStorageBridge) => {
+    if (storage) {
+      activeStorage = storage;
+    }
+    if (!activeStorage) return;
+
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = await activeStorage.getItem(STORAGE_KEYS.WORKFLOWS);
       if (stored) {
         set({ workflows: JSON.parse(stored) });
       } else {
         set({ workflows: DEFAULT_PINNED_TABS });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PINNED_TABS));
+        await activeStorage.setItem(STORAGE_KEYS.WORKFLOWS, JSON.stringify(DEFAULT_PINNED_TABS));
       }
-    } catch (e) {
+    } catch {
       set({ workflows: DEFAULT_PINNED_TABS });
     }
   },
@@ -122,8 +129,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 }));
 
 function saveWorkflows(workflows: PinnedTab[]) {
+  if (!activeStorage) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(workflows));
+    activeStorage.setItem(STORAGE_KEYS.WORKFLOWS, JSON.stringify(workflows)).catch(() => {});
   } catch (e) {
     console.error('Failed to save workflows', e);
   }

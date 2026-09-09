@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useRuntimeBridge, querySelector } from '../../adapters';
 
 interface OutlineItem {
   id: string;
@@ -28,6 +29,7 @@ interface OutlineItem {
 }
 
 export const OutlinePanel: React.FC = () => {
+  const bridge = useRuntimeBridge();
   const { tabs, activeTabId, insertTextAtCursor } = useTabStore();
   const { addNotification } = useNotificationStore();
   
@@ -157,7 +159,7 @@ export const OutlinePanel: React.FC = () => {
   }, [outlineItems]);
 
   const jumpToLine = (lineNumber: number) => {
-    const editor = document.querySelector('.cm-editor') as HTMLElement;
+    const editor = querySelector('.cm-editor');
     if (editor) {
       editor.focus();
       // Scroll smoothly to estimated position
@@ -187,7 +189,7 @@ export const OutlinePanel: React.FC = () => {
       return `${indent}- [${h.text}](#${slug})`;
     }).join('\n');
 
-    navigator.clipboard.writeText(`## Table of Contents\n\n${toc}\n`);
+    bridge.clipboard.writeText(`## Table of Contents\n\n${toc}\n`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     addNotification('TOC Copied', 'Markdown Table of Contents copied to clipboard', 'success');
@@ -290,15 +292,17 @@ export const OutlinePanel: React.FC = () => {
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setFilterType(tab.id)}
-                className={`px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1 transition-colors shrink-0 ${
+                title={tab.label}
+                aria-label={tab.label}
+                className={`w-6 h-6 rounded flex items-center justify-center transition-colors shrink-0 ${
                   isSelected
                     ? 'bg-[var(--accent-primary)] text-white shadow-xs'
                     : 'bg-[var(--card-secondary-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
                 }`}
               >
-                <Icon className="w-2.5 h-2.5" />
-                <span>{tab.label}</span>
+                <Icon className="w-3 h-3" />
               </button>
             );
           })}

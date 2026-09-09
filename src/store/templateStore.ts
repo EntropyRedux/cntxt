@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { Template } from '../types';
 import { DEFAULT_TEMPLATES } from '../constants/defaultData';
+import { IStorageBridge } from '../ui-contract/bridgeContract';
+import { STORAGE_KEYS } from '../adapters/storageKeys';
+
+let activeStorage: IStorageBridge | null = null;
 
 interface TemplateState {
   templates: Template[];
@@ -23,28 +27,31 @@ interface TemplateState {
   importTemplates: (imported: Template[]) => number;
   exportTemplates: () => string;
   resetToDefaults: () => void;
-  initializeTemplates: () => void;
+  initializeTemplates: (storage?: IStorageBridge) => Promise<void>;
 }
 
-const STORAGE_KEY = 'contextpad_templates';
-
 export const useTemplateStore = create<TemplateState>((set, get) => ({
-  templates: [],
+  templates: DEFAULT_TEMPLATES,
   searchQuery: '',
   selectedCategory: 'All',
   isVariableModalOpen: false,
   activeTemplateForModal: null,
 
-  initializeTemplates: () => {
+  initializeTemplates: async (storage?: IStorageBridge) => {
+    if (storage) {
+      activeStorage = storage;
+    }
+    if (!activeStorage) return;
+
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = await activeStorage.getItem(STORAGE_KEYS.TEMPLATES);
       if (stored) {
         set({ templates: JSON.parse(stored) });
       } else {
         set({ templates: DEFAULT_TEMPLATES });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_TEMPLATES));
+        await activeStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(DEFAULT_TEMPLATES));
       }
-    } catch (e) {
+    } catch {
       set({ templates: DEFAULT_TEMPLATES });
     }
   },
@@ -152,8 +159,9 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
 }));
 
 function saveTemplates(templates: Template[]) {
+  if (!activeStorage) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+    activeStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(templates)).catch(() => {});
   } catch (e) {
     console.error('Failed to save templates', e);
   }

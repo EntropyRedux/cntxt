@@ -108,7 +108,10 @@ api.toast('Action executed successfully!', 'success');`);
           </div>
 
           <button
+            type="button"
             onClick={closeActionEditor}
+            title="Close"
+            aria-label="Close"
             className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors"
           >
             <X className="w-4 h-4" />
@@ -196,17 +199,20 @@ api.toast('Action executed successfully!', 'success');`);
               <button
                 type="button"
                 onClick={closeActionEditor}
-                className="px-3 py-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors"
+                title="Cancel"
+                aria-label="Cancel"
+                className="w-8 h-8 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors"
               >
-                Cancel
+                <X className="w-4 h-4" />
               </button>
 
               <button
                 type="submit"
-                className="px-4 py-1.5 theme-btn-primary font-medium rounded flex items-center gap-1.5 transition-colors shadow-xs"
+                title="Save Action"
+                aria-label="Save Action"
+                className="w-8 h-8 theme-btn-primary rounded flex items-center justify-center transition-colors shadow-xs"
               >
-                <Save className="w-3.5 h-3.5" />
-                <span>Save Action</span>
+                <Save className="w-4 h-4" />
               </button>
             </div>
           </div>

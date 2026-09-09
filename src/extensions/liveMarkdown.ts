@@ -1,5 +1,21 @@
-import { Extension, RangeSetBuilder, Text } from '@codemirror/state';
-import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, WidgetType } from '@codemirror/view';
+import { Extension, RangeSetBuilder, Text, StateField, EditorState } from '@codemirror/state';
+import { EditorView, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
+import { renderLatex } from '../services/mathRenderer';
+import { renderMermaidDiagram } from '../services/mermaidRenderer';
+import { 
+  parseMarkdownTableLines, 
+  isTableSeparatorLine, 
+  formatTableCellHtml, 
+  ParsedTable 
+} from '../services/tableParser';
+import { createElement, createTextNode, appendToBody, removeFromBody, isDarkTheme, copyText } from '../adapters';
+import { IRuntimeBridge } from '../ui-contract/bridgeContract';
+
+let activeBridge: IRuntimeBridge | null = null;
+
+export function setLiveMarkdownBridge(bridge?: IRuntimeBridge) {
+  if (bridge) activeBridge = bridge;
+}
 
 // =========================================================================
 // Language Meta Helper for Code Block Badges
@@ -38,6 +54,12 @@ function getLanguageMeta(rawLang: string): { name: string; color: string; bg: st
     case 'md':
     case 'markdown':
       return { name: 'Markdown', color: '#F472B6', bg: 'rgba(244, 114, 182, 0.15)' };
+    case 'mermaid':
+      return { name: 'Mermaid Diagram', color: '#EC4899', bg: 'rgba(236, 72, 153, 0.15)' };
+    case 'latex':
+    case 'math':
+    case 'katex':
+      return { name: 'LaTeX Math', color: '#6366F1', bg: 'rgba(99, 102, 241, 0.15)' };
     case 'rs':
     case 'rust':
       return { name: 'Rust', color: '#FB923C', bg: 'rgba(251, 146, 60, 0.15)' };
@@ -66,7 +88,241 @@ function getLanguageMeta(rawLang: string): { name: string; color: string; bg: st
 }
 
 // =========================================================================
-// Custom Widgets for Live Rendered Markdown Mode
+// Mermaid Diagram Widget
+// =========================================================================
+
+class MermaidBlockWidget extends WidgetType {
+  constructor(
+    readonly code: string,
+    readonly startPos: number,
+    readonly isDark: boolean
+  ) {
+    super();
+  }
+
+  eq(other: MermaidBlockWidget): boolean {
+    return this.code === other.code && this.isDark === other.isDark;
+  }
+
+  toDOM(view: EditorView): HTMLElement {
+    const container = createElement('div', {
+      className: 'cm-live-mermaid-container select-none cursor-pointer'
+    });
+
+    const header = createElement('div', {
+      className: 'cm-live-mermaid-header'
+    });
+
+    const titleDiv = createElement('div', {
+      className: 'flex items-center gap-2 font-medium text-xs text-[#EC4899]'
+    });
+    titleDiv.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#EC4899] inline-block"></span><span>Mermaid Diagram</span>`;
+    header.appendChild(titleDiv);
+
+    const rightDiv = createElement('div', {
+      className: 'flex items-center gap-2.5'
+    });
+
+    const editHint = createElement('span', {
+      className: 'text-[10px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors',
+      textContent: 'Click to edit'
+    });
+    rightDiv.appendChild(editHint);
+
+    const copyBtn = createElement('button', {
+      type: 'button',
+      className: 'text-[10px] px-2 py-0.5 rounded bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] text-[var(--text-secondary)] border border-[var(--border-subtle)] transition-colors cursor-pointer',
+      textContent: 'Copy'
+    });
+    copyBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await copyText(this.code, activeBridge || undefined);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+    });
+    rightDiv.appendChild(copyBtn);
+
+    header.appendChild(rightDiv);
+    container.appendChild(header);
+
+    const canvas = createElement('div', {
+      className: 'cm-live-mermaid-canvas'
+    });
+    canvas.innerHTML = '<span class="text-xs text-[var(--text-muted)] animate-pulse">Rendering diagram...</span>';
+    container.appendChild(canvas);
+
+    renderMermaidDiagram(this.code, this.isDark).then((res) => {
+      if (res.isError) {
+        canvas.innerHTML = `<div class="p-3 text-xs text-red-400 bg-red-950/20 rounded border border-red-800/40 w-full font-mono"><div class="font-bold mb-1">Mermaid Syntax Warning:</div><div class="text-[11px] opacity-80">${res.error || 'Check diagram syntax'}</div></div>`;
+      } else {
+        canvas.innerHTML = res.svg;
+      }
+    });
+
+    container.addEventListener('click', () => {
+      view.dispatch({
+        selection: { anchor: this.startPos }
+      });
+      view.focus();
+    });
+
+    return container;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+// =========================================================================
+// LaTeX Display Math Block Widget
+// =========================================================================
+
+class DisplayMathWidget extends WidgetType {
+  constructor(
+    readonly latex: string,
+    readonly startPos: number
+  ) {
+    super();
+  }
+
+  eq(other: DisplayMathWidget): boolean {
+    return this.latex === other.latex;
+  }
+
+  toDOM(view: EditorView): HTMLElement {
+    const container = createElement('div', {
+      className: 'cm-live-math-block select-none cursor-pointer group',
+      title: 'Click to edit formula'
+    });
+
+    const rendered = renderLatex(this.latex, true);
+    container.innerHTML = rendered.html;
+
+    const copyBtn = createElement('button', {
+      type: 'button',
+      className: 'absolute top-1.5 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] px-1.5 py-0.5 rounded bg-[var(--card-bg)] text-[var(--text-muted)] hover:text-white border border-[var(--border-subtle)] cursor-pointer',
+      textContent: 'Copy LaTeX'
+    });
+    copyBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await copyText(this.latex, activeBridge || undefined);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy LaTeX'; }, 2000);
+    });
+    container.appendChild(copyBtn);
+
+    container.addEventListener('click', () => {
+      view.dispatch({
+        selection: { anchor: this.startPos }
+      });
+      view.focus();
+    });
+
+    return container;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+// =========================================================================
+// LaTeX Inline Math Widget
+// =========================================================================
+
+class InlineMathWidget extends WidgetType {
+  constructor(readonly latex: string) {
+    super();
+  }
+
+  eq(other: InlineMathWidget): boolean {
+    return this.latex === other.latex;
+  }
+
+  toDOM(): HTMLElement {
+    const span = createElement('span', { className: 'cm-live-math-inline' });
+    const rendered = renderLatex(this.latex, false);
+    span.innerHTML = rendered.html;
+    return span;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+// =========================================================================
+// Markdown Table Block Widget
+// =========================================================================
+
+class TableBlockWidget extends WidgetType {
+  constructor(
+    readonly table: ParsedTable,
+    readonly startPos: number
+  ) {
+    super();
+  }
+
+  eq(other: TableBlockWidget): boolean {
+    return this.table.rawMarkdown === other.table.rawMarkdown;
+  }
+
+  toDOM(view: EditorView): HTMLElement {
+    const container = createElement('div', {
+      className: 'cm-live-table-container select-none cursor-pointer group relative',
+      title: 'Click anywhere on table to edit'
+    });
+
+    const table = createElement('table', { className: 'cm-live-table' });
+
+    // thead
+    const thead = createElement('thead');
+    const headerRow = createElement('tr');
+    this.table.headers.forEach((headerText, i) => {
+      const th = createElement('th', {
+        className: `text-${this.table.alignments[i] || 'left'}`
+      });
+      th.innerHTML = formatTableCellHtml(headerText);
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // tbody
+    const tbody = createElement('tbody');
+    this.table.rows.forEach((rowCells) => {
+      const tr = createElement('tr');
+      rowCells.forEach((cellText, i) => {
+        const td = createElement('td', {
+          className: `text-${this.table.alignments[i] || 'left'}`
+        });
+        td.innerHTML = formatTableCellHtml(cellText);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    container.appendChild(table);
+
+    container.addEventListener('click', () => {
+      view.dispatch({
+        selection: { anchor: this.startPos }
+      });
+      view.focus();
+    });
+
+    return container;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+// =========================================================================
+// Custom Standard Code Block Widgets
 // =========================================================================
 
 class CodeBlockHeaderWidget extends WidgetType {
@@ -89,20 +345,23 @@ class CodeBlockHeaderWidget extends WidgetType {
   toDOM(): HTMLElement {
     const meta = getLanguageMeta(this.language);
 
-    const header = document.createElement('div');
-    header.className = 'cm-live-codeblock-header select-none flex items-center justify-between px-3 py-1.5 border-b border-[#2E2E38] bg-[#16161B] text-[#A1A1AA] rounded-t-[7px] w-full';
+    const header = createElement('div', {
+      className: 'cm-live-codeblock-header select-none flex items-center justify-between px-3 py-1.5 border-b border-[#2E2E38] bg-[#16161B] text-[#A1A1AA] rounded-t-[7px] w-full'
+    });
 
-    // Left: Language badge & icon dot
-    const left = document.createElement('div');
-    left.className = 'flex items-center gap-2';
+    const left = createElement('div', {
+      className: 'flex items-center gap-2'
+    });
 
-    const dot = document.createElement('span');
-    dot.className = 'w-2 h-2 rounded-full inline-block shrink-0';
+    const dot = createElement('span', {
+      className: 'w-2 h-2 rounded-full inline-block shrink-0'
+    });
     dot.style.backgroundColor = meta.color;
     left.appendChild(dot);
 
-    const badge = document.createElement('span');
-    badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-semibold tracking-wider uppercase';
+    const badge = createElement('span', {
+      className: 'px-2 py-0.5 rounded text-[10px] font-mono font-semibold tracking-wider uppercase'
+    });
     badge.style.color = meta.color;
     badge.style.backgroundColor = meta.bg;
     badge.textContent = meta.name;
@@ -110,18 +369,18 @@ class CodeBlockHeaderWidget extends WidgetType {
 
     header.appendChild(left);
 
-    // Right: Copy code button
-    const copyBtn = document.createElement('button');
-    copyBtn.type = 'button';
-    copyBtn.className = 'cm-live-copy-code-btn flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium text-[#A1A1AA] hover:text-white hover:bg-[#27272F] transition-all cursor-pointer';
-    copyBtn.title = 'Copy code snippet';
-    copyBtn.setAttribute('aria-label', `Copy ${meta.name} code snippet`);
+    const copyBtn = createElement('button', {
+      type: 'button',
+      className: 'cm-live-copy-code-btn flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium text-[#A1A1AA] hover:text-white hover:bg-[#27272F] transition-all cursor-pointer',
+      title: 'Copy code snippet',
+      'aria-label': `Copy ${meta.name} code snippet`
+    });
 
-    const copyIcon = document.createElement('span');
+    const copyIcon = createElement('span');
     copyIcon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
     copyBtn.appendChild(copyIcon);
 
-    const copyLabel = document.createElement('span');
+    const copyLabel = createElement('span');
     copyLabel.textContent = 'Copy';
     copyBtn.appendChild(copyLabel);
 
@@ -134,7 +393,7 @@ class CodeBlockHeaderWidget extends WidgetType {
       e.preventDefault();
       e.stopPropagation();
       try {
-        await navigator.clipboard.writeText(this.codeContent);
+        await copyText(this.codeContent, activeBridge || undefined);
         copyLabel.textContent = 'Copied!';
         copyBtn.classList.add('text-[#10B981]');
         copyIcon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
@@ -159,9 +418,9 @@ class CodeBlockHeaderWidget extends WidgetType {
 
 class CodeBlockFooterWidget extends WidgetType {
   toDOM(): HTMLElement {
-    const footer = document.createElement('div');
-    footer.className = 'cm-live-codeblock-footer select-none h-1.5 w-full';
-    return footer;
+    return createElement('div', {
+      className: 'cm-live-codeblock-footer select-none h-1.5 w-full'
+    });
   }
   eq(): boolean {
     return true;
@@ -181,14 +440,16 @@ class TaskCheckboxWidget extends WidgetType {
   }
 
   toDOM(view: EditorView): HTMLElement {
-    const wrap = document.createElement('span');
-    wrap.className = 'cm-live-task-wrap inline-flex items-center mr-2 align-middle select-none';
+    const wrap = createElement('span', {
+      className: 'cm-live-task-wrap inline-flex items-center mr-2 align-middle select-none'
+    });
     
-    const input = document.createElement('input');
-    input.type = 'checkbox';
+    const input = createElement('input', {
+      type: 'checkbox',
+      className: 'cm-live-checkbox cursor-pointer w-4 h-4 rounded border border-[#52525B] bg-[#27272F] accent-[#007ACC] transition-transform hover:scale-110',
+      'aria-label': this.isChecked ? 'Completed task item' : 'Incomplete task item'
+    }) as HTMLInputElement;
     input.checked = this.isChecked;
-    input.className = 'cm-live-checkbox cursor-pointer w-4 h-4 rounded border border-[#52525B] bg-[#27272F] accent-[#007ACC] transition-transform hover:scale-110';
-    input.setAttribute('aria-label', this.isChecked ? 'Completed task item' : 'Incomplete task item');
 
     input.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -215,10 +476,10 @@ class TaskCheckboxWidget extends WidgetType {
 
 class BulletWidget extends WidgetType {
   toDOM(): HTMLElement {
-    const dot = document.createElement('span');
-    dot.className = 'cm-live-bullet-dot text-[#007ACC] font-bold mr-2 select-none inline-block text-base leading-none';
-    dot.textContent = '•';
-    return dot;
+    return createElement('span', {
+      className: 'cm-live-bullet-dot text-[#007ACC] font-bold mr-2 select-none inline-block text-base leading-none',
+      textContent: '•'
+    });
   }
   eq(): boolean {
     return true;
@@ -227,10 +488,12 @@ class BulletWidget extends WidgetType {
 
 class HrWidget extends WidgetType {
   toDOM(): HTMLElement {
-    const hrContainer = document.createElement('div');
-    hrContainer.className = 'cm-live-hr-wrap py-3 my-2 select-none w-full';
-    const hr = document.createElement('hr');
-    hr.className = 'border-t border-[#3F3F46] my-0 w-full';
+    const hrContainer = createElement('div', {
+      className: 'cm-live-hr-wrap py-3 my-2 select-none w-full'
+    });
+    const hr = createElement('hr', {
+      className: 'border-t border-[#3F3F46] my-0 w-full'
+    });
     hrContainer.appendChild(hr);
     return hrContainer;
   }
@@ -249,24 +512,214 @@ class LinkWidget extends WidgetType {
   }
 
   toDOM(): HTMLElement {
-    const a = document.createElement('a');
-    a.className = 'cm-live-link text-[#38BDF8] underline underline-offset-2 hover:text-[#7DD3FC] cursor-pointer inline-flex items-center gap-1 font-medium bg-[#38BDF8]/10 px-1.5 py-0.5 rounded text-[0.95em] transition-colors';
-    a.href = this.url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.title = `Open link: ${this.url}`;
-    a.textContent = this.text || this.url;
+    const a = createElement('a', {
+      className: 'cm-live-link text-[#38BDF8] underline underline-offset-2 hover:text-[#7DD3FC] cursor-pointer inline-flex items-center gap-1 font-medium bg-[#38BDF8]/10 px-1.5 py-0.5 rounded text-[0.95em] transition-colors',
+      href: this.url,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      title: `Open link: ${this.url}`,
+      textContent: this.text || this.url
+    }) as HTMLAnchorElement;
     
-    // Add external icon indicator
-    const icon = document.createElement('span');
-    icon.className = 'text-[0.75em] opacity-70';
-    icon.textContent = '↗';
+    const icon = createElement('span', {
+      className: 'text-[0.75em] opacity-70',
+      textContent: '↗'
+    });
     a.appendChild(icon);
 
     a.addEventListener('click', (e) => {
       e.stopPropagation();
     });
     return a;
+  }
+}
+
+class ImageWidget extends WidgetType {
+  constructor(
+    readonly alt: string,
+    readonly src: string,
+    readonly title: string,
+    readonly startPos: number,
+    readonly endPos: number
+  ) {
+    super();
+  }
+
+  eq(other: ImageWidget): boolean {
+    return (
+      this.alt === other.alt &&
+      this.src === other.src &&
+      this.title === other.title &&
+      this.startPos === other.startPos &&
+      this.endPos === other.endPos
+    );
+  }
+
+  toDOM(view: EditorView): HTMLElement {
+    const container = createElement('span', {
+      className: 'cm-live-image-figure block my-2 select-none'
+    });
+
+    const card = createElement('div', {
+      className: 'cm-live-image-card group relative inline-flex flex-col rounded-xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--card-bg)] shadow-xs transition-all hover:shadow-md hover:border-[var(--border-primary)] max-w-full'
+    });
+
+    // Img element
+    const img = createElement('img', {
+      className: 'cm-live-img block max-w-full max-h-[460px] object-contain rounded-t-xl bg-[var(--canvas-bg)] cursor-zoom-in transition-transform duration-200',
+      src: this.src,
+      alt: this.alt || 'Document image',
+      title: this.title || this.alt || 'Click to expand image',
+      loading: 'lazy',
+      referrerpolicy: 'no-referrer'
+    }) as HTMLImageElement;
+
+    // Error fallback
+    img.onerror = () => {
+      card.innerHTML = '';
+      card.className =
+        'inline-flex items-center gap-2 px-3 py-2 text-xs rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 font-sans my-1 max-w-full';
+      card.innerHTML = `
+        <span class="text-sm">⚠️</span>
+        <span class="truncate max-w-xs font-mono text-[11px]">${this.alt || 'Image failed to load'}</span>
+        <span class="text-[10px] text-red-300 opacity-70 truncate max-w-[120px]">${
+          this.src.startsWith('data:') ? '[Embedded Image Data]' : this.src
+        }</span>
+      `;
+    };
+
+    // Quick Action Bar on top right of the card
+    const actionToolbar = createElement('div', {
+      className: 'cm-live-image-toolbar absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-black/75 backdrop-blur-md rounded-lg p-1 text-white text-xs z-10 shadow-lg'
+    });
+
+    // 1. Copy image link / base64
+    const copyBtn = createElement('button', {
+      type: 'button',
+      className: 'p-1 hover:bg-white/20 rounded transition-colors text-white/90 hover:text-white flex items-center justify-center',
+      title: 'Copy Image Source / URL'
+    });
+    copyBtn.innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+      </svg>
+    `;
+    copyBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      await copyText(this.src, activeBridge || undefined);
+      copyBtn.innerHTML = `
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      `;
+      setTimeout(() => {
+        copyBtn.innerHTML = `
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+          </svg>
+        `;
+      }, 1500);
+    });
+    actionToolbar.appendChild(copyBtn);
+
+    // 2. Expand / Lightbox click
+    const zoomInModal = () => {
+      const modal = createElement('div', {
+        className: 'fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150 select-none'
+      });
+
+      const modalImg = createElement('img', {
+        src: this.src,
+        alt: this.alt,
+        className: 'max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl'
+      });
+
+      const closeNotice = createElement('div', {
+        className: 'absolute top-4 right-4 text-white/80 hover:text-white text-xs bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-xs cursor-pointer flex items-center gap-1.5'
+      });
+      closeNotice.innerHTML = `<span>Press ESC or click anywhere to close</span> ✕`;
+
+      modal.appendChild(modalImg);
+      modal.appendChild(closeNotice);
+
+      const closeModal = () => {
+        removeFromBody(modal);
+      };
+
+      modal.addEventListener('click', closeModal);
+      appendToBody(modal);
+    };
+
+    img.addEventListener('click', (e) => {
+      e.stopPropagation();
+      zoomInModal();
+    });
+
+    const zoomBtn = createElement('button', {
+      type: 'button',
+      className: 'p-1 hover:bg-white/20 rounded transition-colors text-white/90 hover:text-white flex items-center justify-center',
+      title: 'Zoom / Lightbox Preview'
+    });
+    zoomBtn.innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 3 21 3 21 9"/>
+        <polyline points="9 21 3 21 3 15"/>
+        <line x1="21" y1="3" x2="14" y2="10"/>
+        <line x1="3" y1="21" x2="10" y2="14"/>
+      </svg>
+    `;
+    zoomBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      zoomInModal();
+    });
+    actionToolbar.appendChild(zoomBtn);
+
+    // 3. Delete image from editor button
+    const deleteBtn = createElement('button', {
+      type: 'button',
+      className: 'p-1 hover:bg-red-500/30 rounded transition-colors text-red-300 hover:text-red-200 flex items-center justify-center',
+      title: 'Remove Image from Document'
+    });
+    deleteBtn.innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+    `;
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (typeof this.startPos === 'number' && typeof this.endPos === 'number') {
+        view.dispatch({
+          changes: { from: this.startPos, to: this.endPos, insert: '' },
+          userEvent: 'delete.image'
+        });
+      }
+    });
+    actionToolbar.appendChild(deleteBtn);
+
+    card.appendChild(img);
+    card.appendChild(actionToolbar);
+
+    // Caption / Alt label
+    if (this.alt && this.alt.trim()) {
+      const caption = createElement('figcaption', {
+        className: 'px-3 py-1.5 text-[11px] text-[var(--text-muted)] border-t border-[var(--border-subtle)] bg-[var(--card-secondary-bg)] text-center italic truncate max-w-full',
+        textContent: this.alt.trim()
+      });
+      card.appendChild(caption);
+    }
+
+    container.appendChild(card);
+    return container;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
   }
 }
 
@@ -302,12 +755,11 @@ function findCodeBlocks(doc: Text): Map<number, CodeBlockLineEntry> {
     if (currentStartLine === -1) {
       if (fenceMatch) {
         currentStartLine = lineNum;
-        currentFence = fenceMatch[2].slice(0, 3); // '```' or '~~~'
+        currentFence = fenceMatch[2].slice(0, 3);
         currentLang = fenceMatch[3].trim();
         codeLines = [];
       }
     } else {
-      // Check if this line closes the current code block
       if (fenceMatch && fenceMatch[2].startsWith(currentFence)) {
         const block: CodeBlockInfo = {
           startLine: currentStartLine,
@@ -337,7 +789,6 @@ function findCodeBlocks(doc: Text): Map<number, CodeBlockLineEntry> {
     }
   }
 
-  // Handle unclosed code block reaching document end
   if (currentStartLine !== -1) {
     const block: CodeBlockInfo = {
       startLine: currentStartLine,
@@ -356,6 +807,130 @@ function findCodeBlocks(doc: Text): Map<number, CodeBlockLineEntry> {
 }
 
 // =========================================================================
+// LaTeX Math Blocks ($$ ... $$) Scanner
+// =========================================================================
+
+interface MathBlockInfo {
+  startLine: number;
+  endLine: number;
+  latex: string;
+}
+
+function findMathBlocks(
+  doc: Text,
+  codeBlocksByLine: Map<number, CodeBlockLineEntry>
+): Map<number, MathBlockInfo> {
+  const mathBlocks = new Map<number, MathBlockInfo>();
+  let currentStartLine = -1;
+  let lines: string[] = [];
+
+  for (let lineNum = 1; lineNum <= doc.lines; lineNum++) {
+    if (codeBlocksByLine.has(lineNum)) continue;
+
+    const line = doc.line(lineNum);
+    const trimmed = line.text.trim();
+
+    // Single-line display math: $$ formula $$
+    if (currentStartLine === -1 && trimmed.startsWith('$$') && trimmed.endsWith('$$') && trimmed.length >= 4) {
+      const latex = trimmed.slice(2, -2).trim();
+      const info: MathBlockInfo = { startLine: lineNum, endLine: lineNum, latex };
+      mathBlocks.set(lineNum, info);
+      continue;
+    }
+
+    // Multi-line display math starting with $$
+    if (currentStartLine === -1) {
+      if (trimmed.startsWith('$$')) {
+        currentStartLine = lineNum;
+        lines = [trimmed.replace(/^\$\$/, '')];
+      }
+    } else {
+      if (trimmed.endsWith('$$') || trimmed === '$$') {
+        lines.push(trimmed.replace(/\$\$$/, ''));
+        const info: MathBlockInfo = {
+          startLine: currentStartLine,
+          endLine: lineNum,
+          latex: lines.join('\n').trim()
+        };
+        for (let l = currentStartLine; l <= lineNum; l++) {
+          mathBlocks.set(l, info);
+        }
+        currentStartLine = -1;
+        lines = [];
+      } else {
+        lines.push(line.text);
+      }
+    }
+  }
+
+  return mathBlocks;
+}
+
+// =========================================================================
+// Markdown Table Scanner
+// =========================================================================
+
+interface TableBlockInfo {
+  startLine: number;
+  endLine: number;
+  table: ParsedTable;
+}
+
+function findTables(
+  doc: Text,
+  codeBlocksByLine: Map<number, CodeBlockLineEntry>,
+  mathBlocksByLine: Map<number, MathBlockInfo>
+): Map<number, TableBlockInfo> {
+  const tables = new Map<number, TableBlockInfo>();
+  let lineNum = 1;
+
+  while (lineNum <= doc.lines) {
+    if (codeBlocksByLine.has(lineNum) || mathBlocksByLine.has(lineNum)) {
+      lineNum++;
+      continue;
+    }
+
+    const line = doc.line(lineNum);
+    const lineText = line.text;
+
+    // A table header must contain '|' and be immediately followed by a separator row
+    if (lineText.includes('|') && lineNum < doc.lines) {
+      if (!codeBlocksByLine.has(lineNum + 1) && !mathBlocksByLine.has(lineNum + 1)) {
+        const nextLine = doc.line(lineNum + 1).text;
+        if (isTableSeparatorLine(nextLine)) {
+          const tableLines = [lineText, nextLine];
+          let endLine = lineNum + 1;
+          for (let l = lineNum + 2; l <= doc.lines; l++) {
+            if (codeBlocksByLine.has(l) || mathBlocksByLine.has(l)) break;
+            const currText = doc.line(l).text;
+            if (!currText.trim() || !currText.includes('|')) break;
+            tableLines.push(currText);
+            endLine = l;
+          }
+
+          const parsed = parseMarkdownTableLines(tableLines);
+          if (parsed) {
+            const info: TableBlockInfo = {
+              startLine: lineNum,
+              endLine,
+              table: parsed
+            };
+            for (let l = lineNum; l <= endLine; l++) {
+              tables.set(l, info);
+            }
+            lineNum = endLine + 1;
+            continue;
+          }
+        }
+      }
+    }
+    lineNum++;
+  }
+
+  return tables;
+}
+
+// =========================================================================
 // Range Deco Item Interface
 // =========================================================================
 interface RangeDecoItem {
@@ -368,43 +943,96 @@ interface RangeDecoItem {
 // Decoration Builder
 // =========================================================================
 
-function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
-  if (!enabled) {
-    return Decoration.none;
-  }
+function buildDecorations(state: EditorState): DecorationSet {
+  try {
+    const builder = new RangeSetBuilder<Decoration>();
+    const doc = state.doc;
 
-  const builder = new RangeSetBuilder<Decoration>();
-  const doc = view.state.doc;
+    // Detect whether current app theme is dark
+    const isDark = isDarkTheme();
 
-  // Scan all fenced code blocks in the document
-  const codeBlocksByLine = findCodeBlocks(doc);
+    // 1. Scan document structures
+    const codeBlocksByLine = findCodeBlocks(doc);
+    const mathBlocksByLine = findMathBlocks(doc, codeBlocksByLine);
+    const tableBlocksByLine = findTables(doc, codeBlocksByLine, mathBlocksByLine);
 
-  // Determine active lines where the cursor / selection currently sits
-  const activeLines = new Set<number>();
-  for (const range of view.state.selection.ranges) {
-    const startLine = doc.lineAt(range.from).number;
-    const endLine = doc.lineAt(range.to).number;
-    for (let l = startLine; l <= endLine; l++) {
-      activeLines.add(l);
+    // 2. Determine active lines where the cursor / selection currently sits
+    const activeLines = new Set<number>();
+    for (const range of state.selection.ranges) {
+      const startLine = doc.lineAt(range.from).number;
+      const endLine = doc.lineAt(range.to).number;
+      for (let l = startLine; l <= endLine; l++) {
+        activeLines.add(l);
+      }
     }
-  }
 
-  // Iterate visible ranges
-  for (const { from, to } of view.visibleRanges) {
-    let pos = from;
-    while (pos <= to) {
+    let pos = 0;
+    const docLen = doc.length;
+    while (pos <= docLen) {
       const line = doc.lineAt(pos);
       const isLineActive = activeLines.has(line.number);
-      const codeBlockEntry = codeBlocksByLine.get(line.number);
 
       // =====================================================================
-      // A. Line is inside a Fenced Code Block Container
+      // A. Fenced Code Block Container (Mermaid, LaTeX, or standard Code)
       // =====================================================================
+      const codeBlockEntry = codeBlocksByLine.get(line.number);
       if (codeBlockEntry) {
         const { role, block } = codeBlockEntry;
+        const lang = block.language.toLowerCase().trim();
 
+        // Check if cursor is anywhere inside this code block
+        let isBlockActive = false;
+        for (let l = block.startLine; l <= block.endLine; l++) {
+          if (activeLines.has(l)) {
+            isBlockActive = true;
+            break;
+          }
+        }
+
+        // --- Mermaid Diagram Full Replacement Widget ---
+        if (lang === 'mermaid' && !isBlockActive && block.isClosed) {
+          if (line.number === block.startLine) {
+            const startLineObj = doc.line(block.startLine);
+            const endLineObj = doc.line(block.endLine);
+            builder.add(
+              startLineObj.from,
+              endLineObj.to,
+              Decoration.replace({
+                widget: new MermaidBlockWidget(block.codeContent, startLineObj.from, isDark),
+                block: true
+              })
+            );
+            pos = endLineObj.to + 1;
+            continue;
+          } else {
+            pos = line.to + 1;
+            continue;
+          }
+        }
+
+        // --- LaTeX Math Code Block Full Replacement Widget ---
+        if ((lang === 'latex' || lang === 'math' || lang === 'katex') && !isBlockActive && block.isClosed) {
+          if (line.number === block.startLine) {
+            const startLineObj = doc.line(block.startLine);
+            const endLineObj = doc.line(block.endLine);
+            builder.add(
+              startLineObj.from,
+              endLineObj.to,
+              Decoration.replace({
+                widget: new DisplayMathWidget(block.codeContent, startLineObj.from),
+                block: true
+              })
+            );
+            pos = endLineObj.to + 1;
+            continue;
+          } else {
+            pos = line.to + 1;
+            continue;
+          }
+        }
+
+        // --- Standard Code Block Rendering ---
         if (isLineActive) {
-          // Line has focus: show raw text for editing, but retain container box styling
           builder.add(
             line.from,
             line.from,
@@ -414,7 +1042,6 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
           continue;
         }
 
-        // Line is rendered inside code block container
         if (role === 'start') {
           builder.add(
             line.from,
@@ -460,19 +1087,96 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
       }
 
       // =====================================================================
-      // B. Line is a regular Markdown line
+      // B. Display LaTeX Math Block ($$ ... $$)
+      // =====================================================================
+      const mathBlock = mathBlocksByLine.get(line.number);
+      if (mathBlock) {
+        let isBlockActive = false;
+        for (let l = mathBlock.startLine; l <= mathBlock.endLine; l++) {
+          if (activeLines.has(l)) {
+            isBlockActive = true;
+            break;
+          }
+        }
+
+        if (!isBlockActive) {
+          if (line.number === mathBlock.startLine) {
+            const startLineObj = doc.line(mathBlock.startLine);
+            const endLineObj = doc.line(mathBlock.endLine);
+            builder.add(
+              startLineObj.from,
+              endLineObj.to,
+              Decoration.replace({
+                widget: new DisplayMathWidget(mathBlock.latex, startLineObj.from),
+                block: true
+              })
+            );
+            pos = endLineObj.to + 1;
+            continue;
+          } else {
+            pos = line.to + 1;
+            continue;
+          }
+        } else {
+          // Block is being edited - show raw markdown for focused lines
+          builder.add(line.from, line.from, Decoration.line({ class: 'cm-live-active-row' }));
+          pos = line.to + 1;
+          continue;
+        }
+      }
+
+      // =====================================================================
+      // C. Markdown Table Block
+      // =====================================================================
+      const tableBlock = tableBlocksByLine.get(line.number);
+      if (tableBlock) {
+        let isTableActive = false;
+        for (let l = tableBlock.startLine; l <= tableBlock.endLine; l++) {
+          if (activeLines.has(l)) {
+            isTableActive = true;
+            break;
+          }
+        }
+
+        if (!isTableActive) {
+          if (line.number === tableBlock.startLine) {
+            const startLineObj = doc.line(tableBlock.startLine);
+            const endLineObj = doc.line(tableBlock.endLine);
+            builder.add(
+              startLineObj.from,
+              endLineObj.to,
+              Decoration.replace({
+                widget: new TableBlockWidget(tableBlock.table, startLineObj.from),
+                block: true
+              })
+            );
+            pos = endLineObj.to + 1;
+            continue;
+          } else {
+            pos = line.to + 1;
+            continue;
+          }
+        } else {
+          // Table row is being edited
+          builder.add(line.from, line.from, Decoration.line({ class: 'cm-live-active-row' }));
+          pos = line.to + 1;
+          continue;
+        }
+      }
+
+      // =====================================================================
+      // D. Regular Markdown Row
       // =====================================================================
 
-      // If the cursor is on this row:
-      // Leave it in raw markdown mode so the user can easily edit with zero jitter
-      if (isLineActive) {
+      // If active row: show raw markdown for smooth typing (unless it has large data:image embedded)
+      const hasEmbeddedDataImage = line.text.includes('data:image/');
+      if (isLineActive && !hasEmbeddedDataImage) {
         builder.add(line.from, line.from, Decoration.line({ class: 'cm-live-active-row' }));
         pos = line.to + 1;
         continue;
       }
 
-      // Cursor is on another line -> render this row visually!
-      let lineDeco: Decoration | null = null;
+      let lineDeco: Decoration | null = isLineActive ? Decoration.line({ class: 'cm-live-active-row' }) : null;
       const rangeDecos: RangeDecoItem[] = [];
       const lineText = line.text;
 
@@ -480,12 +1184,12 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
       const headingMatch = lineText.match(/^(#{1,6})\s+(.*)$/);
       if (headingMatch) {
         const level = headingMatch[1].length;
-        const markerLen = headingMatch[1].length + 1; // includes trailing space
+        const markerLen = headingMatch[1].length + 1;
         lineDeco = Decoration.line({ class: `cm-live-heading cm-live-h${level}` });
         rangeDecos.push({
           from: line.from,
           to: line.from + markerLen,
-          deco: Decoration.replace({}) // Hide the '#' prefix when rendered
+          deco: Decoration.replace({})
         });
       }
 
@@ -497,7 +1201,7 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
         rangeDecos.push({
           from: line.from,
           to: Math.min(line.from + prefixLen, line.to),
-          deco: Decoration.replace({}) // Hide '> '
+          deco: Decoration.replace({})
         });
       }
 
@@ -505,7 +1209,7 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
       const taskMatch = lineText.match(/^(\s*[-*+]\s*\[)([ xX])(\])\s*(.*)$/);
       if (taskMatch) {
         const isChecked = taskMatch[2].toLowerCase() === 'x';
-        const prefixLen = taskMatch[1].length + 2; // e.g. "- [ ] "
+        const prefixLen = taskMatch[1].length + 2;
         lineDeco = Decoration.line({ 
           class: isChecked ? 'cm-live-task-done' : 'cm-live-task-item' 
         });
@@ -540,12 +1244,51 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
         });
       }
 
-      // 6. Inline Formatting (Links, Code, Bold, Italic, Strikethrough, Tags)
+      // 6. Inline Formatting (LaTeX Math, Links, Code, Bold, Italic, Strikethrough, Tags)
       if (!hrMatch) {
         let match: RegExpExecArray | null;
 
-        // Links: [text](url)
-        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+        // Inline LaTeX Math: $formula$ (must not be $$)
+        const inlineMathRegex = /(?<!\$)\$(?!\$)([^\$\n]+?)(?<!\$)\$(?!\$)/g;
+        while ((match = inlineMathRegex.exec(lineText)) !== null) {
+          const start = line.from + match.index;
+          const end = start + match[0].length;
+          rangeDecos.push({
+            from: start,
+            to: end,
+            deco: Decoration.replace({
+              widget: new InlineMathWidget(match[1])
+            })
+          });
+        }
+
+        // Images: ![alt](url "optional title")
+        const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+        while ((match = imageRegex.exec(lineText)) !== null) {
+          const start = line.from + match.index;
+          const end = start + match[0].length;
+          const alt = match[1];
+          let rawTarget = match[2].trim();
+          let src = rawTarget;
+          let title = '';
+
+          const titleMatch = rawTarget.match(/^(\S+)\s+["'](.*)["']$/);
+          if (titleMatch) {
+            src = titleMatch[1];
+            title = titleMatch[2];
+          }
+
+          rangeDecos.push({
+            from: start,
+            to: end,
+            deco: Decoration.replace({
+              widget: new ImageWidget(alt, src, title, start, end)
+            })
+          });
+        }
+
+        // Links: [text](url) - negative lookbehind prevents matching ![alt](url)
+        const linkRegex = /(?<!\!)\[([^\]]+)\]\(([^)]+)\)/g;
         while ((match = linkRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
@@ -563,19 +1306,16 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
         while ((match = codeRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
-          // Hide opening backtick
           rangeDecos.push({
             from: start,
             to: start + 1,
             deco: Decoration.replace({})
           });
-          // Mark code body
           rangeDecos.push({
             from: start + 1,
             to: end - 1,
             deco: Decoration.mark({ class: 'cm-live-code-pill' })
           });
-          // Hide closing backtick
           rangeDecos.push({
             from: end - 1,
             to: end,
@@ -588,19 +1328,16 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
         while ((match = boldRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
-          // Hide start **
           rangeDecos.push({
             from: start,
             to: start + 2,
             deco: Decoration.replace({})
           });
-          // Mark bold text
           rangeDecos.push({
             from: start + 2,
             to: end - 2,
             deco: Decoration.mark({ class: 'cm-live-bold' })
           });
-          // Hide end **
           rangeDecos.push({
             from: end - 2,
             to: end,
@@ -608,24 +1345,21 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
           });
         }
 
-        // Italic: *italic* or _italic_ (not inside bold)
+        // Italic: *italic* or _italic_
         const italicRegex = /(?<!\*)\*([^*\n]+)\*(?!\*)|(?<!_)_([^_\n]+)_(?!_)/g;
         while ((match = italicRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
-          // Hide start *
           rangeDecos.push({
             from: start,
             to: start + 1,
             deco: Decoration.replace({})
           });
-          // Mark italic text
           rangeDecos.push({
             from: start + 1,
             to: end - 1,
             deco: Decoration.mark({ class: 'cm-live-italic' })
           });
-          // Hide end *
           rangeDecos.push({
             from: end - 1,
             to: end,
@@ -638,19 +1372,16 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
         while ((match = strikeRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
-          // Hide start ~~
           rangeDecos.push({
             from: start,
             to: start + 2,
             deco: Decoration.replace({})
           });
-          // Mark strikethrough text
           rangeDecos.push({
             from: start + 2,
             to: end - 2,
             deco: Decoration.mark({ class: 'cm-live-strikethrough' })
           });
-          // Hide end ~~
           rangeDecos.push({
             from: end - 2,
             to: end,
@@ -673,17 +1404,14 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
         }
       }
 
-      // Add line decoration if any
       if (lineDeco) {
         builder.add(line.from, line.from, lineDeco);
       }
 
-      // Sort range decorations by position and eliminate conflicting replace ranges
       rangeDecos.sort((a, b) => a.from - b.from || a.to - b.to);
 
       let lastReplaceEnd = -1;
       for (const item of rangeDecos) {
-        // If this is a replace decoration and overlaps with a previous replace, skip
         const isReplace = !item.deco.spec.class;
         if (isReplace) {
           if (item.from < lastReplaceEnd) continue;
@@ -696,37 +1424,35 @@ function buildDecorations(view: EditorView, enabled: boolean): DecorationSet {
 
       pos = line.to + 1;
     }
+
+    return builder.finish();
+  } catch (err) {
+    console.warn('Live markdown decoration error:', err);
+    return Decoration.none;
   }
-
-  return builder.finish();
 }
 
 // =========================================================================
-// CodeMirror ViewPlugin for Live Rendered Markdown Mode
+// CodeMirror StateField for Live Rendered Markdown Mode
 // =========================================================================
 
-export function liveMarkdownExtension(enabled: boolean): Extension {
-  return ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet;
-
-      constructor(view: EditorView) {
-        this.decorations = buildDecorations(view, enabled);
-      }
-
-      update(update: ViewUpdate) {
-        if (
-          update.docChanged || 
-          update.viewportChanged || 
-          update.selectionSet
-        ) {
-          this.decorations = buildDecorations(update.view, enabled);
-        }
-      }
-    },
-    {
-      decorations: (v) => v.decorations
+export const liveMarkdownField = StateField.define<DecorationSet>({
+  create(state) {
+    return buildDecorations(state);
+  },
+  update(decorations, tr) {
+    if (tr.docChanged || tr.selection) {
+      return buildDecorations(tr.state);
     }
-  );
-}
+    return decorations.map(tr.changes);
+  },
+  provide: (f) => EditorView.decorations.from(f)
+});
 
+export function liveMarkdownExtension(enabled: boolean, bridge?: IRuntimeBridge): Extension {
+  if (bridge) {
+    activeBridge = bridge;
+  }
+  if (!enabled) return [];
+  return [liveMarkdownField];
+}

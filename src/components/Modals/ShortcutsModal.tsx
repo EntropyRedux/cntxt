@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Keyboard } from 'lucide-react';
+import { X, Keyboard, Check } from 'lucide-react';
 
 interface ShortcutsModalProps {
   isOpen: boolean;
@@ -62,7 +62,10 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
           </div>
 
           <button
+            type="button"
             onClick={onClose}
+            title="Close Shortcuts"
+            aria-label="Close Shortcuts"
             className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors"
           >
             <X className="w-4 h-4" />
@@ -97,10 +100,13 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
         <div className="p-3 border-t border-[var(--border-primary)] bg-[var(--sidebar-header-bg)] flex items-center justify-between text-xs text-[var(--text-muted)]">
           <span>ContextPad v1.10.0</span>
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-1.5 theme-btn-primary font-medium rounded transition-colors shadow-xs"
+            title="Done"
+            aria-label="Done"
+            className="w-8 h-8 theme-btn-primary rounded flex items-center justify-center transition-colors shadow-xs"
           >
-            Done
+            <Check className="w-4 h-4" />
           </button>
         </div>
       </div>

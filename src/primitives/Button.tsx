@@ -1,5 +1,26 @@
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import { 
+  LucideIcon, 
+  Check, 
+  X, 
+  Plus, 
+  Trash2, 
+  Edit, 
+  RotateCcw, 
+  Play, 
+  Copy, 
+  Search, 
+  Sparkles, 
+  SlidersHorizontal, 
+  Upload, 
+  ExternalLink, 
+  Zap, 
+  HelpCircle, 
+  Eye, 
+  Variable, 
+  Split, 
+  FileText 
+} from 'lucide-react';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger' | 'accent';
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'touch';
@@ -12,6 +33,33 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   shortcut?: string;
   isLoading?: boolean;
   isActive?: boolean;
+}
+
+function getSmartIcon(icon?: LucideIcon, labelText?: string): LucideIcon {
+  if (icon) return icon;
+  if (!labelText) return Sparkles;
+  
+  const text = labelText.toLowerCase().trim();
+  if (text.includes('done') || text.includes('save') || text.includes('apply') || text.includes('ok') || text.includes('confirm')) return Check;
+  if (text.includes('cancel') || text.includes('close') || text.includes('dismiss')) return X;
+  if (text.includes('add') || text.includes('new') || text.includes('create') || text.includes('pin')) return Plus;
+  if (text.includes('delete') || text.includes('remove') || text.includes('clear')) return Trash2;
+  if (text.includes('reset') || text.includes('restore')) return RotateCcw;
+  if (text.includes('copy') || text.includes('duplicate')) return Copy;
+  if (text.includes('edit') || text.includes('modify')) return Edit;
+  if (text.includes('run') || text.includes('exec') || text.includes('play')) return Play;
+  if (text.includes('search') || text.includes('find')) return Search;
+  if (text.includes('upload') || text.includes('import')) return Upload;
+  if (text.includes('help') || text.includes('info')) return HelpCircle;
+  if (text.includes('view') || text.includes('preview')) return Eye;
+  if (text.includes('var') || text.includes('form')) return Variable;
+  if (text.includes('split')) return Split;
+  if (text.includes('doc') || text.includes('file')) return FileText;
+  if (text.includes('setting') || text.includes('config') || text.includes('custom')) return SlidersHorizontal;
+  if (text.includes('token') || text.includes('budget')) return Zap;
+  if (text.includes('launch') || text.includes('open')) return ExternalLink;
+  
+  return Sparkles;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
@@ -30,11 +78,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   const baseStyles = 'inline-flex items-center justify-center font-medium select-none transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 cursor-pointer';
 
   const sizeStyles: Record<ButtonSize, string> = {
-    xs: 'h-6 px-2 text-[11px] rounded gap-1',
-    sm: 'h-7 px-2.5 text-xs rounded-md gap-1.5',
-    md: 'h-8 px-3 text-xs rounded-md gap-2',
-    lg: 'h-9 px-4 text-sm rounded-lg gap-2',
-    touch: 'h-11 px-4 text-sm rounded-xl gap-2.5 min-w-[44px]',
+    xs: 'w-6 h-6 p-0 text-[11px] rounded',
+    sm: 'w-7 h-7 p-0 text-xs rounded-md',
+    md: 'w-8 h-8 p-0 text-xs rounded-md',
+    lg: 'w-9 h-9 p-0 text-sm rounded-lg',
+    touch: 'w-11 h-11 p-0 text-sm rounded-xl min-w-[44px] min-h-[44px]',
   };
 
   const variantStyles: Record<ButtonVariant, string> = {
@@ -48,30 +96,30 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
 
   const activeStyles = isActive ? 'bg-[var(--card-hover-bg)] text-[var(--accent-primary)] border-[var(--accent-primary)]/50' : '';
 
+  const computedAriaLabel = 
+    (props['aria-label'] as string) || 
+    (typeof children === 'string' ? children : undefined) || 
+    (shortcut ? `Action (${shortcut})` : 'Button');
+  const computedTitle = props.title || (shortcut ? `${computedAriaLabel} (${shortcut})` : computedAriaLabel);
+  const ResolvedIcon = getSmartIcon(Icon, typeof children === 'string' ? children : computedAriaLabel);
+
   return (
     <button
       ref={ref}
       disabled={disabled || isLoading}
+      aria-label={computedAriaLabel}
+      title={computedTitle}
       className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${activeStyles} ${className}`}
       {...props}
     >
       {isLoading ? (
         <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
       ) : (
-        Icon && iconPosition === 'left' && <Icon className="w-3.5 h-3.5 shrink-0" />
-      )}
-      
-      {children && <span>{children}</span>}
-
-      {!isLoading && Icon && iconPosition === 'right' && <Icon className="w-3.5 h-3.5 shrink-0" />}
-
-      {shortcut && (
-        <span className="ml-auto pl-2 text-[10px] font-mono text-[var(--text-muted)] opacity-70">
-          {shortcut}
-        </span>
+        <ResolvedIcon className="w-3.5 h-3.5 shrink-0" />
       )}
     </button>
   );
 });
 
 Button.displayName = 'Button';
+

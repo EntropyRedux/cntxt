@@ -17,8 +17,10 @@ import { useNotificationStore } from '../../store/notificationStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { FormulaEngine } from '../../services/formulaParser';
 import { Action } from '../../types';
+import { useRuntimeBridge, triggerFileDownload, triggerFileInput } from '../../adapters';
 
 export const ActionManager: React.FC = () => {
+  const bridge = useRuntimeBridge();
   const { 
     actions, 
     searchQuery, 
@@ -92,12 +94,12 @@ export const ActionManager: React.FC = () => {
         addNotification(action.name, msg, type);
       },
       copyToClipboard: async (text: string) => {
-        await navigator.clipboard.writeText(text);
+        await bridge.clipboard.writeText(text);
         addNotification('Copied', 'Text copied to clipboard', 'success');
       },
       getClipboard: async () => {
         try {
-          return await navigator.clipboard.readText();
+          return await bridge.clipboard.readText();
         } catch {
           return '';
         }
@@ -119,33 +121,19 @@ export const ActionManager: React.FC = () => {
 
   const handleExport = () => {
     const json = exportActions();
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `contextpad-actions-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    triggerFileDownload(`contextpad-actions-${Date.now()}.json`, json);
     addNotification('Export Complete', 'Actions JSON downloaded', 'success');
   };
 
   const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e: any) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+    triggerFileInput('.json', (text) => {
       try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        const count = importActions(json);
+        const count = importActions(text);
         addNotification('Actions Imported', `Successfully imported ${count} action(s)`, 'success');
       } catch (err: any) {
         addNotification('Import Error', 'Invalid JSON file', 'error');
       }
-    };
-    input.click();
+    });
   };
 
   return (
@@ -158,25 +146,31 @@ export const ActionManager: React.FC = () => {
           </span>
           <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={handleImport}
               title="Import Actions JSON"
-              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors"
+              aria-label="Import Actions JSON"
+              className="w-6 h-6 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors"
             >
               <Upload className="w-3.5 h-3.5" />
             </button>
             <button
+              type="button"
               onClick={handleExport}
               title="Export Actions JSON"
-              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors"
+              aria-label="Export Actions JSON"
+              className="w-6 h-6 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
             </button>
             <button
+              type="button"
               onClick={() => openActionEditor(null)}
-              className="px-2 py-0.5 theme-btn-primary rounded font-medium flex items-center gap-1 transition-colors text-[11px]"
+              title="New Action"
+              aria-label="New Action"
+              className="w-6 h-6 theme-btn-primary rounded flex items-center justify-center transition-colors"
             >
-              <Plus className="w-3 h-3" />
-              <span>New</span>
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -251,36 +245,44 @@ export const ActionManager: React.FC = () => {
               {/* Execution and Editor buttons */}
               <div className="flex items-center justify-between pt-1 border-t border-[var(--border-primary)] text-[11px]">
                 <button
+                  type="button"
                   onClick={() => handleRunAction(action)}
                   disabled={!action.enabled || isRunningAction}
-                  className={`px-2.5 py-0.5 rounded font-medium flex items-center gap-1.5 transition-all shadow-xs ${
+                  title={`Execute ${action.name}`}
+                  aria-label={`Execute ${action.name}`}
+                  className={`w-6 h-6 rounded flex items-center justify-center transition-all shadow-xs ${
                     action.enabled 
                       ? 'theme-btn-primary cursor-pointer active:scale-95' 
                       : 'bg-[var(--card-secondary-bg)] text-[var(--text-muted)] cursor-not-allowed'
                   }`}
                 >
                   <Play className="w-3 h-3 fill-current" />
-                  <span>Execute</span>
                 </button>
 
                 <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                   <button
+                    type="button"
                     onClick={() => openActionEditor(action)}
-                    title="Edit Script Code"
+                    title={`Edit ${action.name}`}
+                    aria-label={`Edit ${action.name}`}
                     className="p-1 hover:text-[var(--text-primary)] rounded"
                   >
                     <Code className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => duplicateAction(action.id)}
-                    title="Duplicate Action"
+                    title={`Duplicate ${action.name}`}
+                    aria-label={`Duplicate ${action.name}`}
                     className="p-1 hover:text-[var(--text-primary)] rounded"
                   >
                     <Copy className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => deleteAction(action.id)}
-                    title="Delete Action"
+                    title={`Delete ${action.name}`}
+                    aria-label={`Delete ${action.name}`}
                     className="p-1 hover:text-[var(--status-error)] rounded"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--status-error)]" />
