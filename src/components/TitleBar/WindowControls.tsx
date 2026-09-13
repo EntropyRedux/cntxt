@@ -82,7 +82,7 @@ export const WindowControls: React.FC<WindowControlsProps> = ({ className = '' }
   return (
     <div 
       className={`flex items-center h-full shrink-0 select-none ${className}`}
-      data-tauri-drag-region="false"
+      onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Minimize Button */}
       <button

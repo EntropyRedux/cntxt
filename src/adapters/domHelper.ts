@@ -211,3 +211,38 @@ export function useWindowDimensions(): { width: number; height: number } {
   return dimensions;
 }
 
+/**
+ * Hook for desktop window dragging.
+ * Allows elements to initiate native window drag on mousedown,
+ * ignoring interactive elements (buttons, inputs, dropdowns).
+ */
+export function useWindowDrag(bridge: IRuntimeBridge) {
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only drag on left mouse button
+    if (e.button !== 0) return;
+
+    // Don't drag if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === 'BUTTON' ||
+      target.tagName === 'INPUT' ||
+      target.tagName === 'A' ||
+      target.tagName === 'SELECT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('a') ||
+      target.closest('select') ||
+      target.closest('textarea') ||
+      target.closest('[data-no-drag]')
+    ) {
+      return;
+    }
+
+    bridge.window.startDragging?.();
+  };
+
+  return { handleMouseDown };
+}
+
+

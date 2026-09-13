@@ -377,6 +377,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     unmaximize: async (): Promise<void> => {},
     toggleMaximize: async (): Promise<void> => {},
     isMaximized: async (): Promise<boolean> => false,
+    startDragging: async (): Promise<void> => {},
     close: async (): Promise<void> => {},
     getPlatform: (): 'web' | 'macos' | 'windows' | 'linux' => {
       const p = navigator.platform.toLowerCase();

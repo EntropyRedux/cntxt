@@ -188,6 +188,8 @@ fn main() {
             commands::window::unmaximize_window,
             commands::window::close_window,
             commands::window::is_maximized,
+            commands::window::start_dragging,
+            commands::window::toggle_maximize,
             commands::file::read_file,
             commands::file::write_file,
             commands::file::open_file_dialog,

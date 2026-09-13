@@ -218,6 +218,18 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         console.error('[TauriRuntimeAdapter] toggleMaximize error:', err);
       }
     },
+    startDragging: async (): Promise<void> => {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().startDragging();
+      } catch {
+        try {
+          await this.invokeTauri('start_dragging');
+        } catch (err) {
+          console.error('[TauriRuntimeAdapter] startDragging error:', err);
+        }
+      }
+    },
     close: async (): Promise<void> => {
       await this.invokeTauri('close_window');
     },

@@ -24,3 +24,17 @@ pub fn close_window(window: Window) {
 pub fn is_maximized(window: Window) -> bool {
     window.is_maximized().unwrap_or(false)
 }
+
+#[tauri::command]
+pub fn start_dragging(window: Window) {
+    let _ = window.start_dragging();
+}
+
+#[tauri::command]
+pub fn toggle_maximize(window: Window) {
+    if window.is_maximized().unwrap_or(false) {
+        let _ = window.unmaximize();
+    } else {
+        let _ = window.maximize();
+    }
+}

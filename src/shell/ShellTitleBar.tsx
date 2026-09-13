@@ -22,7 +22,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { ThemeName } from '../types';
 import { AppUiEvents } from '../ui-contract/actionContract';
-import { addWindowListener, useRuntimeBridge } from '../adapters';
+import { addWindowListener, useRuntimeBridge, useWindowDrag } from '../adapters';
 import { WindowControls } from '../components/TitleBar/WindowControls';
 
 export interface ShellTitleBarProps {
@@ -33,6 +33,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
   events
 }) => {
   const bridge = useRuntimeBridge();
+  const { handleMouseDown: handleWindowDrag } = useWindowDrag(bridge);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -258,13 +259,17 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
     >
       {/* Row 1: Themed Window Title Bar & Centered Quick Tools */}
       <div 
-        data-tauri-drag-region="true"
+        data-tauri-drag-region
+        onMouseDown={handleWindowDrag}
         onDoubleClick={handleTitleBarDoubleClick}
-        className="h-9 bg-[var(--titlebar-bg)] border-b border-[var(--border-primary)] flex items-center justify-between px-2 sm:px-3 shrink-0 gap-2 min-w-0 relative overflow-visible cursor-default"
+        className="h-9 bg-[var(--titlebar-bg)] border-b border-[var(--border-primary)] flex items-center justify-between px-2 sm:px-3 shrink-0 gap-2 min-w-0 relative overflow-visible cursor-default select-none"
       >
         {/* Left: Brand + Left Rail Toggle */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0" data-tauri-drag-region="false">
-          <div className="flex items-center gap-1.5 font-bold text-xs text-[var(--text-primary)] px-1 tracking-wider select-none">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div 
+            className="flex items-center gap-1.5 font-bold text-xs text-[var(--text-primary)] px-1 tracking-wider select-none cursor-default"
+            onMouseDown={handleWindowDrag}
+          >
             <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shrink-0" />
             <span>CNTXT</span>
           </div>
@@ -285,8 +290,16 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           </button>
         </div>
 
+        {/* Drag Spacer Left */}
+        <div 
+          className="flex-1 h-full min-w-3 cursor-default select-none" 
+          data-tauri-drag-region
+          onMouseDown={handleWindowDrag}
+          onDoubleClick={handleTitleBarDoubleClick}
+        />
+
         {/* Center: Search, Render MODE, Command Palette, Touch Mode, Theme Selection */}
-        <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-1 min-w-0" data-tauri-drag-region="false">
+        <div className="flex items-center justify-center gap-1 sm:gap-1.5 shrink-0">
           {/* Quick Search / Command Palette Bar */}
           <button
             type="button"
@@ -404,15 +417,26 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           </div>
         </div>
 
+        {/* Drag Spacer Right */}
+        <div 
+          className="flex-1 h-full min-w-3 cursor-default select-none" 
+          data-tauri-drag-region
+          onMouseDown={handleWindowDrag}
+          onDoubleClick={handleTitleBarDoubleClick}
+        />
+
         {/* Right: Themed Window Controls (Tauri Desktop only; null in Web) */}
-        <div className="flex items-center shrink-0 h-full -mr-2 sm:-mr-3" data-tauri-drag-region="false">
+        <div className="flex items-center shrink-0 h-full -mr-2 sm:-mr-3">
           <WindowControls />
         </div>
       </div>
 
       {/* Row 2: Compact Menu Bar (File, Edit, View, Tools, Help) */}
       <nav 
-        className={`bg-[var(--titlebar-bg)]/85 border-b border-[var(--border-subtle)] flex items-center px-2 sm:px-3 shrink-0 gap-0.5 sm:gap-1 select-none relative z-30 transition-all ${
+        data-tauri-drag-region
+        onMouseDown={handleWindowDrag}
+        onDoubleClick={handleTitleBarDoubleClick}
+        className={`bg-[var(--titlebar-bg)]/85 border-b border-[var(--border-subtle)] flex items-center px-2 sm:px-3 shrink-0 gap-0.5 sm:gap-1 select-none relative z-30 transition-all cursor-default ${
           settings.touchOptimized ? 'h-8.5' : 'h-7'
         }`}
         aria-label="Menu bar"
@@ -478,6 +502,14 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
             </div>
           );
         })}
+
+        {/* Trailing Drag Region for Menu Bar */}
+        <div 
+          className="flex-1 h-full cursor-default select-none" 
+          data-tauri-drag-region
+          onMouseDown={handleWindowDrag}
+          onDoubleClick={handleTitleBarDoubleClick}
+        />
       </nav>
     </header>
   );
