@@ -1,19 +1,99 @@
 use tauri::Window;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-/// Canonicalize and validate a path.
-/// Returns an error if the path contains traversal sequences after resolution.
-fn validate_path(path: &str) -> Result<PathBuf, String> {
-    let path_buf = PathBuf::from(path);
-    let path_str = path_buf.to_string_lossy();
+/// Check if a canonical path points to a system root or protected directory.
+fn is_system_root(canonical: &Path) -> bool {
+    let canonical_str = canonical.to_string_lossy();
+    let lower = canonical_str.to_lowercase();
+    let stripped = if lower.starts_with(r"\\?\") {
+        &lower[4..]
+    } else {
+        &lower
+    };
 
-    if path_str.contains("..") {
-        if let Ok(canonical) = std::fs::canonicalize(&path_buf) {
-            return Ok(canonical);
+    #[cfg(target_os = "windows")]
+    {
+        // Drive root check (e.g. "c:\" or "c:")
+        if stripped.len() <= 3 && stripped.contains(':') {
+            return true;
         }
-        return Err("Path traversal detected".to_string());
+
+        // Protected system directories across any drive
+        let protected = [
+            r":\windows",
+            r":\program files",
+            r":\program files (x86)",
+            r":\programdata",
+            r":\system volume information",
+            r":\$recycle.bin",
+            r":\recovery",
+        ];
+        for prefix in &protected {
+            if stripped.len() > 2 && stripped[1..].starts_with(prefix) {
+                return true;
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        if stripped == "/" {
+            return true;
+        }
+        let protected = [
+            "/bin", "/sbin", "/etc", "/usr", "/sys", "/proc", "/dev", "/boot", "/System", "/Library", "/private"
+        ];
+        for prefix in &protected {
+            if stripped == *prefix || stripped.starts_with(&format!("{}/", prefix)) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Canonicalize and validate a path against traversal and system root access.
+pub fn validate_path(path: &str) -> Result<PathBuf, String> {
+    if path.trim().is_empty() {
+        return Err("Path cannot be empty".to_string());
+    }
+
+    // Unconditionally reject directory traversal sequences
+    if path.contains("..") {
+        return Err("Path traversal sequence '..' is prohibited".to_string());
+    }
+
+    let path_buf = PathBuf::from(path);
+
+    // If path exists, canonicalize directly
+    if path_buf.exists() {
+        let canonical = fs::canonicalize(&path_buf)
+            .map_err(|e| format!("Failed to canonicalize path: {}", e))?;
+        if is_system_root(&canonical) {
+            return Err("Access to system root directory is denied".to_string());
+        }
+        return Ok(canonical);
+    }
+
+    // If file doesn't exist yet (e.g. target of write_file), validate parent directory
+    if let Some(parent) = path_buf.parent() {
+        if !parent.as_os_str().is_empty() && parent.exists() {
+            let canonical_parent = fs::canonicalize(parent)
+                .map_err(|e| format!("Failed to canonicalize parent path: {}", e))?;
+            if is_system_root(&canonical_parent) {
+                return Err("Access to system root directory is denied".to_string());
+            }
+            if let Some(file_name) = path_buf.file_name() {
+                return Ok(canonical_parent.join(file_name));
+            }
+        }
+    }
+
+    if is_system_root(&path_buf) {
+        return Err("Access to system root directory is denied".to_string());
     }
 
     Ok(path_buf)
@@ -129,7 +209,8 @@ pub fn detect_language_from_path(path: String) -> String {
 
 #[tauri::command]
 pub fn get_file_modified_time(path: String) -> Result<u64, String> {
-    let metadata = fs::metadata(&path)
+    let safe_path = validate_path(&path)?;
+    let metadata = fs::metadata(&safe_path)
         .map_err(|e| format!("Failed to get file metadata: {}", e))?;
 
     let modified = metadata.modified()
@@ -153,15 +234,15 @@ pub async fn open_folder_dialog(_window: Window) -> Result<Option<String>, Strin
 
 #[derive(serde::Serialize)]
 pub struct FileNode {
-    name: String,
-    path: String,
-    is_dir: bool,
-    children: Option<Vec<FileNode>>,
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    pub children: Option<Vec<FileNode>>,
 }
 
 #[tauri::command]
 pub fn read_directory(path: String) -> Result<Vec<FileNode>, String> {
-    let dir_path = PathBuf::from(&path);
+    let dir_path = validate_path(&path)?;
 
     if !dir_path.is_dir() {
         return Err("Path is not a directory".to_string());
@@ -206,28 +287,69 @@ pub fn read_directory(path: String) -> Result<Vec<FileNode>, String> {
 
 #[tauri::command]
 pub async fn rename_file(old_path: String, new_path: String) -> Result<(), String> {
-    fs::rename(&old_path, &new_path)
+    let safe_old = validate_path(&old_path)?;
+    let safe_new = validate_path(&new_path)?;
+    fs::rename(&safe_old, &safe_new)
         .map_err(|e| format!("Failed to rename file: {}", e))
 }
 
 #[tauri::command]
-pub async fn delete_file(path: String) -> Result<(), String> {
-    let path_buf = PathBuf::from(&path);
-    if path_buf.is_dir() {
-        fs::remove_dir_all(&path_buf)
+pub async fn delete_file(
+    window: Window,
+    path: String,
+    auth_token: Option<String>,
+    state: tauri::State<'_, tokio::sync::Mutex<crate::AppState>>
+) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for sensitive native operation".to_string());
+    }
+    if let Some(token) = auth_token {
+        let app_state = state.lock().await;
+        if token != app_state.session_id {
+            return Err("Invalid authorization token".to_string());
+        }
+    }
+
+    let safe_path = validate_path(&path)?;
+
+    // Guard against root deletion: check parent and drive root
+    if safe_path.parent().is_none() || is_system_root(&safe_path) {
+        return Err("Cannot delete root directory".to_string());
+    }
+
+    if safe_path.is_dir() {
+        fs::remove_dir_all(&safe_path)
             .map_err(|e| format!("Failed to delete directory: {}", e))
     } else {
-        fs::remove_file(&path_buf)
+        fs::remove_file(&safe_path)
             .map_err(|e| format!("Failed to delete file: {}", e))
     }
 }
 
 #[tauri::command]
-pub async fn open_file_explorer(path: String) -> Result<(), String> {
+pub async fn open_file_explorer(
+    window: Window,
+    path: String,
+    auth_token: Option<String>,
+    state: tauri::State<'_, tokio::sync::Mutex<crate::AppState>>
+) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for file explorer invocation".to_string());
+    }
+    if let Some(token) = auth_token {
+        let app_state = state.lock().await;
+        if token != app_state.session_id {
+            return Err("Invalid authorization token".to_string());
+        }
+    }
+
+    let safe_path = validate_path(&path)?;
+    let path_str = safe_path.to_string_lossy().to_string();
+
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new("explorer")
-            .arg(&path)
+            .arg(&path_str)
             .spawn()
             .map_err(|e| format!("Failed to open file explorer: {}", e))?;
     }
@@ -235,7 +357,7 @@ pub async fn open_file_explorer(path: String) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
-            .arg(&path)
+            .arg(&path_str)
             .spawn()
             .map_err(|e| format!("Failed to open file explorer: {}", e))?;
     }
@@ -243,7 +365,7 @@ pub async fn open_file_explorer(path: String) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
-            .arg(&path)
+            .arg(&path_str)
             .spawn()
             .map_err(|e| format!("Failed to open file explorer: {}", e))?;
     }

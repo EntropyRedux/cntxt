@@ -40,28 +40,35 @@ async fn get_system_info() -> Result<Value, String> {
 }
 
 #[tauri::command]
-async fn open_external(url: String) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("cmd")
-            .args(&["/c", "start", "", &url])
-            .spawn()
-            .map_err(|e| format!("Failed to open URL: {}", e))?;
+async fn open_external(
+    window: tauri::Window,
+    url: String,
+    auth_token: Option<String>,
+    state: tauri::State<'_, Mutex<AppState>>,
+) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for external process execution".into());
     }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&url)
-            .spawn()
-            .map_err(|e| format!("Failed to open URL: {}", e))?;
+
+    if let Some(ref token) = auth_token {
+        let app_state = state.lock().await;
+        if token != &app_state.session_id {
+            return Err("Invalid authorization token".into());
+        }
     }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&url)
-            .spawn()
-            .map_err(|e| format!("Failed to open URL: {}", e))?;
+
+    let trimmed = url.trim();
+    if !trimmed.starts_with("https://") && !trimmed.starts_with("http://") {
+        return Err("Only https:// and http:// URLs are permitted".into());
     }
+
+    let forbidden_chars = ['&', '|', ';', '`', '$', '\n', '\r', '"', '\'', '<', '>'];
+    if trimmed.chars().any(|c| forbidden_chars.contains(&c)) {
+        return Err("URL contains illegal shell metacharacters".into());
+    }
+
+    open::that_detached(trimmed).map_err(|e| format!("Failed to open URL: {}", e))?;
+
     Ok(())
 }
 

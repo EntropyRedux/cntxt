@@ -220,10 +220,27 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
         }
       };
 
+      // Fix R-008: Multi-layer defensive regex scanner blocking constructor and prototype access
+      const FORBIDDEN_PATTERN = /\bconstructor\b|\[\s*['"`]constructor['"`]\s*\]|__proto__|prototype/i;
+      if (FORBIDDEN_PATTERN.test(code)) {
+        throw new Error('Security Error: Prototype and constructor access are prohibited in sandboxed actions.');
+      }
+
+      // Freeze safeApi and nested objects to prevent prototype tampering
+      Object.freeze(safeApi.dialog);
+      Object.freeze(safeApi.utils);
+      Object.freeze(safeApi);
+
       // Blocked global scope variables passed to prevent sandbox escape
       const blockedKeys = [
+        'globalThis',
         'window',
         'doc' + 'ument',
+        'Function',
+        'eval',
+        'Reflect',
+        'Proxy',
+        'process',
         'local' + 'Storage',
         'session' + 'Storage',
         'nav' + 'igator',
@@ -234,11 +251,11 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
       const blockedValues = blockedKeys.map(() => undefined);
 
       // Safe console wrapper for sandbox logs
-      const safeConsole = {
+      const safeConsole = Object.freeze({
         log: (...args: any[]) => console.log('[ContextPad Action]', ...args),
         warn: (...args: any[]) => console.warn('[ContextPad Action]', ...args),
         error: (...args: any[]) => console.error('[ContextPad Action]', ...args)
-      };
+      });
 
       const runner = new Function(
         'api',
