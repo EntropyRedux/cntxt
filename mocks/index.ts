@@ -8,8 +8,10 @@
 
 import { Template, Action, PinnedTab, VirtualFile, PinnedItem, OpenedFileRecord } from '../contracts/data_shapes';
 
-// Mode flag to determine if demo sample data should be injected into empty states
-export const IS_PROTOTYPE_DEMO_MODE = true;
+// Mode flag: defaults to FALSE in production desktop. Set true only if explicitly requested.
+export const IS_PROTOTYPE_DEMO_MODE = typeof window !== 'undefined' 
+  ? Boolean((window as any).__CONTEXTPAD_DEMO__) 
+  : false;
 
 // MOCK: replace with [native file system / real user workspace document]
 export const WELCOME_DOCUMENT = `# 🚀 Welcome to ContextPad v1.10.0

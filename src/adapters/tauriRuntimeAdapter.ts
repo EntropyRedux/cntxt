@@ -1,6 +1,7 @@
 /**
  * Tauri v2 Desktop Runtime Adapter
  * Implements IRuntimeBridge for production native desktop apps.
+ * Direct bridge to custom Tauri commands registered in src-tauri/src/main.rs.
  */
 
 import { 
@@ -8,9 +9,9 @@ import {
   IFileSystemBridge, 
   IWindowBridge, 
   IClipboardBridge, 
-  IStorageBridge,
-  IPlatformBridge,
-  IThemeBridge,
+  IStorageBridge, 
+  IPlatformBridge, 
+  IThemeBridge, 
   BridgeFileResult, 
   SupportedLanguage 
 } from '../ui-contract/bridgeContract';
@@ -18,6 +19,7 @@ import { STORAGE_KEYS } from './storageKeys';
 
 export class TauriRuntimeAdapter implements IRuntimeBridge {
   private inMemoryFallback: Map<string, string> = new Map();
+  private sessionToken: string | null = null;
 
   constructor() {
     this.detectLanguage = this.detectLanguage.bind(this);
@@ -63,18 +65,27 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     return null;
   }
 
+  public async getSessionToken(): Promise<string> {
+    if (this.sessionToken) return this.sessionToken;
+    try {
+      const info = await this.invokeTauri<{ session_id?: string }>('get_app_info');
+      if (info?.session_id) {
+        this.sessionToken = info.session_id;
+        return this.sessionToken;
+      }
+    } catch (e) {
+      console.warn('[TauriRuntimeAdapter] Failed to get session token:', e);
+    }
+    return '';
+  }
+
   public fs: IFileSystemBridge = {
     openFile: async (): Promise<BridgeFileResult | null> => {
       try {
-        const selectedPath = await this.invokeTauri<string | null>('plugin:dialog|open', {
-          options: {
-            multiple: false,
-            filters: [{ name: 'Documents', extensions: ['md', 'txt', 'json', 'js', 'ts', 'py', 'html', 'css', 'yaml'] }]
-          }
-        });
+        const selectedPath = await this.invokeTauri<string | null>('open_file_dialog');
         if (!selectedPath) return null;
 
-        const content = await this.invokeTauri<string>('plugin:fs|read_text_file', { path: selectedPath });
+        const content = await this.invokeTauri<string>('read_file', { path: selectedPath });
         if (content === null) return null;
 
         const filename = selectedPath.split(/[/\\]/).pop() || 'Untitled';
@@ -92,18 +103,15 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     openDirectory: async () => {
       try {
-        const selectedPath = await this.invokeTauri<string | null>('plugin:dialog|open', {
-          options: {
-            directory: true,
-            multiple: false
-          }
-        });
+        const selectedPath = await this.invokeTauri<string | null>('open_folder_dialog');
         if (!selectedPath) return null;
+
+        const entries = await this.invokeTauri<any[]>('read_directory', { path: selectedPath }) || [];
         const filename = selectedPath.split(/[/\\]/).pop() || 'Workspace';
         return {
           name: filename,
           path: selectedPath,
-          entries: []
+          entries
         };
       } catch (err) {
         console.error('[TauriRuntimeAdapter] openDirectory error:', err);
@@ -113,7 +121,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     saveFile: async (path: string, content: string): Promise<boolean> => {
       try {
-        const result = await this.invokeTauri('plugin:fs|write_text_file', { path, contents: content });
+        const result = await this.invokeTauri('write_file', { path, content });
         return result !== null;
       } catch (err) {
         console.error('[TauriRuntimeAdapter] saveFile error:', err);
@@ -123,15 +131,10 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     saveFileAs: async (suggestedName: string, content: string): Promise<string | null> => {
       try {
-        const savePath = await this.invokeTauri<string | null>('plugin:dialog|save', {
-          options: {
-            defaultPath: suggestedName,
-            filters: [{ name: 'Documents', extensions: ['md', 'txt', 'json'] }]
-          }
-        });
+        const savePath = await this.invokeTauri<string | null>('save_file_dialog', { defaultName: suggestedName });
         if (!savePath) return null;
 
-        await this.invokeTauri('plugin:fs|write_text_file', { path: savePath, contents: content });
+        await this.invokeTauri('write_file', { path: savePath, content });
         return savePath;
       } catch (err) {
         console.error('[TauriRuntimeAdapter] saveFileAs error:', err);
@@ -179,25 +182,22 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   public window: IWindowBridge = {
     isNative: true,
-    newWindow: async (url?: string): Promise<boolean> => {
+    newWindow: async (): Promise<boolean> => {
       try {
-        await this.invokeTauri('plugin:window|create', {
-          label: `window-${Date.now()}`,
-          url: url || 'index.html'
-        });
+        await this.invokeTauri('new_window');
         return true;
       } catch {
         return false;
       }
     },
     minimize: async (): Promise<void> => {
-      await this.invokeTauri('plugin:window|minimize');
+      await this.invokeTauri('minimize_window');
     },
     maximize: async (): Promise<void> => {
-      await this.invokeTauri('plugin:window|toggle_maximize');
+      await this.invokeTauri('maximize_window');
     },
     close: async (): Promise<void> => {
-      await this.invokeTauri('plugin:window|close');
+      await this.invokeTauri('close_window');
     },
     getPlatform: (): 'web' | 'macos' | 'windows' | 'linux' => {
       const p = navigator.platform.toLowerCase();
@@ -210,13 +210,13 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   public clipboard: IClipboardBridge = {
     readText: async (): Promise<string> => {
-      const result = await this.invokeTauri<string>('plugin:clipboard|read_text');
+      const result = await this.invokeTauri<string>('clipboard_read_text');
       if (result !== null) return result;
       return navigator.clipboard.readText();
     },
     writeText: async (text: string): Promise<boolean> => {
       try {
-        const result = await this.invokeTauri('plugin:clipboard|write_text', { text });
+        const result = await this.invokeTauri('clipboard_write_text', { text });
         if (result !== null) return true;
         await navigator.clipboard.writeText(text);
         return true;
@@ -228,30 +228,24 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   public storage: IStorageBridge = {
     getItem: async (key: string): Promise<string | null> => {
-      const val = await this.invokeTauri<string | null>('plugin:store|get', { key });
+      const val = await this.invokeTauri<string | null>('kv_get', { key });
       if (val !== null) return val;
       return this.inMemoryFallback.get(key) ?? null;
     },
     setItem: async (key: string, value: string): Promise<boolean> => {
-      const res = await this.invokeTauri('plugin:store|set', { key, value });
-      if (res !== null) {
-        await this.invokeTauri('plugin:store|save');
-        return true;
-      }
+      const res = await this.invokeTauri('kv_set', { key, value });
+      if (res !== null) return true;
       this.inMemoryFallback.set(key, value);
       return true;
     },
     removeItem: async (key: string): Promise<boolean> => {
-      const res = await this.invokeTauri('plugin:store|delete', { key });
-      if (res !== null) {
-        await this.invokeTauri('plugin:store|save');
-        return true;
-      }
+      const res = await this.invokeTauri('kv_remove', { key });
+      if (res !== null) return true;
       this.inMemoryFallback.delete(key);
       return true;
     },
     hasItem: async (key: string): Promise<boolean> => {
-      const res = await this.invokeTauri<boolean>('plugin:store|has', { key });
+      const res = await this.invokeTauri<boolean>('kv_has', { key });
       if (res !== null) return res;
       return this.inMemoryFallback.has(key);
     }
@@ -284,4 +278,23 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       return 'contextpad-dark';
     }
   };
+
+  // Sensitive native operations requiring token verification
+  public async deleteFile(path: string): Promise<boolean> {
+    const token = await this.getSessionToken();
+    const res = await this.invokeTauri('delete_file', { path, authToken: token });
+    return res !== null;
+  }
+
+  public async openFileExplorer(path: string): Promise<boolean> {
+    const token = await this.getSessionToken();
+    const res = await this.invokeTauri('open_file_explorer', { path, authToken: token });
+    return res !== null;
+  }
+
+  public async openExternalUrl(url: string): Promise<boolean> {
+    const token = await this.getSessionToken();
+    const res = await this.invokeTauri('open_external', { url, authToken: token });
+    return res !== null;
+  }
 }

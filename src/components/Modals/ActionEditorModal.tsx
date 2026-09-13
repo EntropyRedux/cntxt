@@ -181,7 +181,7 @@ api.toast('Action executed successfully!', 'success');`);
                 />
                 <select
                   value={type}
-                  onChange={(e: any) => setType(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setType(e.target.value as 'command' | 'button')}
                   className="h-7 px-2 theme-input rounded"
                 >
                   <option value="command">Command Palette</option>

@@ -21,6 +21,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { ThemeName } from '../types';
 import { AppUiEvents } from '../ui-contract/actionContract';
+import { addWindowListener } from '../adapters';
 
 export interface ShellTitleBarProps {
   events: AppUiEvents;
@@ -58,11 +59,11 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
       }
     };
 
-    window.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
+    const removePointer = addWindowListener('pointerdown', handlePointerDown);
+    const removeKey = addWindowListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
+      removePointer();
+      removeKey();
     };
   }, []);
 

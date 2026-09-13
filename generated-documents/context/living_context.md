@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.2
+Version: v1.3
 Last Updated: 2026-09-13
-Last Updated By: Antigravity Assistant (Refactor Execution Complete)
+Last Updated By: Antigravity Assistant (Pass 2 Prod Agent Reconciliation Complete)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) & Web Prototype
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -13,13 +13,13 @@ Active Stage:
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
   [ ] Feature Implementation
-  [x] Refactor
+  [x] Refactor (Stage 2 Pass 2 Reconciliation Complete — Ready for Stage 3)
   [ ] Testing
   [ ] Sync-Back
 
 Current Feature Group: FG-01: Core Workspace Shell & Document Tab Lifecycle
-Active Plan: /generated-documents/plans/refactor_plan_port_remediation_2026-09-13.md (Prompt 18 Reconciled v1.1)
-Last Git Checkpoint: 2026-09-13 — Batch 3 Hardening Committed (58a19b9)
+Active Plan: /generated-documents/plans/refactor_execution_report_port_remediation_2026-09-13.md (Prompt 20 Execution Report)
+Last Git Checkpoint: 2026-09-13 — Batch 4 Committed (efa023d); Pass 2 Reconciliation Complete
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.0
@@ -124,4 +124,12 @@ Finding Source: Audit Condition 1 & 4 (R-008 / R-011 conflict)
 Pillar: Pillar 8 (Deep Security)
 Decision: Retain `'unsafe-eval'` in CSP strictly for `new Function` action sandbox during post-port remediation; prune dead external API origins (`generativelanguage.googleapis.com`, `api.anthropic.com`).
 Reasoning: Removing `'unsafe-eval'` immediately breaks `new Function` sandbox execution. Full realm worker isolation (detached Web Worker with message passing) is scheduled for Feature Group FG-02 (Sandboxed JavaScript Actions).
+Status: APPROVED TRADEOFF
+
+Tradeoff ID: TR-004
+Date: 2026-09-13
+Finding Source: F-08 (Pass 1 Completion Audit)
+Pillar: Pillar 8 (Deep Security)
+Decision: Retain multi-layered regex scanner and frozen safeApi for action sandbox during Port Remediation; schedule full Web Worker realm isolation for FG-02.
+Reasoning: Regex pattern scanning and frozen safeApi prevent naive prototype pollutions and global leaks. Full detached Web Worker realm isolation will be engineered during Feature Group FG-02 (Sandboxed Actions).
 Status: APPROVED TRADEOFF

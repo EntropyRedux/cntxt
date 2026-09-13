@@ -45,7 +45,9 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
           if (Array.isArray(parsed)) {
             set({ pinnedItems: parsed });
           }
-        } catch {}
+        } catch (err) {
+          console.warn('[FileHistoryStore] Failed to parse pinned items JSON:', err);
+        }
       } else if (IS_PROTOTYPE_DEMO_MODE) {
         set({ pinnedItems: DEFAULT_PINNED_ITEMS });
         safePersist(activeStorage, STORAGE_KEYS.PINNED_ITEMS, JSON.stringify(DEFAULT_PINNED_ITEMS), 'pinned items');
@@ -57,7 +59,9 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
           if (Array.isArray(parsed)) {
             set({ openedHistory: parsed });
           }
-        } catch {}
+        } catch (err) {
+          console.warn('[FileHistoryStore] Failed to parse opened history JSON:', err);
+        }
       } else if (IS_PROTOTYPE_DEMO_MODE) {
         set({ openedHistory: DEFAULT_OPENED_HISTORY });
         safePersist(activeStorage, STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify(DEFAULT_OPENED_HISTORY), 'file history');

@@ -40,6 +40,11 @@ export async function safeRemove(
     return true;
   } catch (err: any) {
     console.error(`[Storage Removal Error] Failed to remove ${contextName}:`, err);
+    useNotificationStore.getState().addNotification(
+      'Storage Error',
+      `Could not delete ${contextName}. Local storage may be restricted.`,
+      'error'
+    );
     return false;
   }
 }

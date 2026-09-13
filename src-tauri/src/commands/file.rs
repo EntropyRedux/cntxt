@@ -303,11 +303,13 @@ pub async fn delete_file(
     if window.label() != "main" {
         return Err("Unauthorized window origin for sensitive native operation".to_string());
     }
-    if let Some(token) = auth_token {
-        let app_state = state.lock().await;
-        if token != app_state.session_id {
-            return Err("Invalid authorization token".to_string());
-        }
+    let token = auth_token.unwrap_or_default();
+    if token.trim().is_empty() {
+        return Err("Missing required authorization token".to_string());
+    }
+    let app_state = state.lock().await;
+    if token.trim() != app_state.session_id {
+        return Err("Invalid authorization token".to_string());
     }
 
     let safe_path = validate_path(&path)?;
@@ -336,11 +338,13 @@ pub async fn open_file_explorer(
     if window.label() != "main" {
         return Err("Unauthorized window origin for file explorer invocation".to_string());
     }
-    if let Some(token) = auth_token {
-        let app_state = state.lock().await;
-        if token != app_state.session_id {
-            return Err("Invalid authorization token".to_string());
-        }
+    let token = auth_token.unwrap_or_default();
+    if token.trim().is_empty() {
+        return Err("Missing required authorization token".to_string());
+    }
+    let app_state = state.lock().await;
+    if token.trim() != app_state.session_id {
+        return Err("Invalid authorization token".to_string());
     }
 
     let safe_path = validate_path(&path)?;

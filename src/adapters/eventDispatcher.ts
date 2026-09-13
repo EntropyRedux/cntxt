@@ -25,8 +25,9 @@ export function createUiEventDispatcher(
           useTabStore.getState().createTab(file.name, file.content, file.language, file.path);
           useNotificationStore.getState().addNotification('File Opened', file.name, 'success');
         }
-      } catch (err: any) {
-        useNotificationStore.getState().addNotification('Error Opening File', err?.message, 'error');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        useNotificationStore.getState().addNotification('Error Opening File', msg, 'error');
       }
     },
 
@@ -34,8 +35,9 @@ export function createUiEventDispatcher(
       try {
         await useTabStore.getState().saveCurrentTab();
         useNotificationStore.getState().addNotification('Saved', 'Document saved', 'success');
-      } catch (err: any) {
-        useNotificationStore.getState().addNotification('Save Failed', err?.message, 'error');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        useNotificationStore.getState().addNotification('Save Failed', msg, 'error');
       }
     },
 
@@ -59,8 +61,9 @@ export function createUiEventDispatcher(
         } else {
           useNotificationStore.getState().addNotification('New Window', 'New window requested (ready for native bridge)', 'info');
         }
-      } catch (err: any) {
-        useNotificationStore.getState().addNotification('New Window Error', err?.message, 'error');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        useNotificationStore.getState().addNotification('New Window Error', msg, 'error');
       }
     },
 
@@ -75,8 +78,9 @@ export function createUiEventDispatcher(
         a.click();
         URL.revokeObjectURL(url);
         useNotificationStore.getState().addNotification('Workspace Exported', 'Downloaded complete backup', 'success');
-      } catch (err: any) {
-        useNotificationStore.getState().addNotification('Export Failed', err?.message, 'error');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        useNotificationStore.getState().addNotification('Export Failed', msg, 'error');
       }
     },
 
@@ -85,8 +89,9 @@ export function createUiEventDispatcher(
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
-        input.onchange = async (e: any) => {
-          const file = e.target.files?.[0];
+        input.onchange = async (e: Event) => {
+          const target = e.target as HTMLInputElement;
+          const file = target.files?.[0];
           if (!file) return;
           const text = await file.text();
           const success = await bridge.fs.importWorkspace(text);
@@ -99,8 +104,9 @@ export function createUiEventDispatcher(
           }
         };
         input.click();
-      } catch (err: any) {
-        useNotificationStore.getState().addNotification('Import Failed', err?.message, 'error');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        useNotificationStore.getState().addNotification('Import Failed', msg, 'error');
       }
     },
 

@@ -50,11 +50,13 @@ async fn open_external(
         return Err("Unauthorized window origin for external process execution".into());
     }
 
-    if let Some(ref token) = auth_token {
-        let app_state = state.lock().await;
-        if token != &app_state.session_id {
-            return Err("Invalid authorization token".into());
-        }
+    let token = auth_token.unwrap_or_default();
+    if token.trim().is_empty() {
+        return Err("Missing required authorization token".into());
+    }
+    let app_state = state.lock().await;
+    if token.trim() != &app_state.session_id {
+        return Err("Invalid authorization token".into());
     }
 
     let trimmed = url.trim();
