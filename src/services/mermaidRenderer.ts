@@ -1,31 +1,30 @@
 import mermaid from 'mermaid';
-import { getElementById } from '../adapters';
+import { getElementById, getCssCustomProperty } from '../adapters';
 
 let isInitialized = false;
 
 export function initializeMermaid(isDark: boolean = true) {
   try {
+    const primaryColor = getCssCustomProperty('--accent-primary', '#007ACC');
+    const primaryTextColor = getCssCustomProperty('--text-primary', isDark ? '#EDEDED' : '#1F1F1F');
+    const primaryBorderColor = getCssCustomProperty('--card-border', isDark ? '#38BDF8' : '#007ACC');
+    const lineColor = getCssCustomProperty('--accent-info', isDark ? '#38BDF8' : '#007ACC');
+    const secondaryColor = getCssCustomProperty('--card-bg', isDark ? '#1F1F24' : '#F0F4F9');
+    const tertiaryColor = getCssCustomProperty('--bg-main', isDark ? '#25252A' : '#E9EEF6');
+    const background = getCssCustomProperty('--bg-main', isDark ? '#18181B' : '#FFFFFF');
+
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'loose',
       theme: isDark ? 'dark' : 'default',
-      themeVariables: isDark ? {
-        primaryColor: '#007ACC',
-        primaryTextColor: '#EDEDED',
-        primaryBorderColor: '#38BDF8',
-        lineColor: '#38BDF8',
-        secondaryColor: '#1F1F24',
-        tertiaryColor: '#25252A',
-        background: '#18181B',
-        fontFamily: 'Plus Jakarta Sans, sans-serif'
-      } : {
-        primaryColor: '#007ACC',
-        primaryTextColor: '#1F1F1F',
-        primaryBorderColor: '#007ACC',
-        lineColor: '#007ACC',
-        secondaryColor: '#F0F4F9',
-        tertiaryColor: '#E9EEF6',
-        background: '#FFFFFF',
+      themeVariables: {
+        primaryColor,
+        primaryTextColor,
+        primaryBorderColor,
+        lineColor,
+        secondaryColor,
+        tertiaryColor,
+        background,
         fontFamily: 'Plus Jakarta Sans, sans-serif'
       }
     });

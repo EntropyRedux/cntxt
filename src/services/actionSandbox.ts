@@ -220,8 +220,8 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
         }
       };
 
-      // Fix R-008: Multi-layer defensive regex scanner blocking constructor and prototype access
-      const FORBIDDEN_PATTERN = /\bconstructor\b|\[\s*['"`]constructor['"`]\s*\]|__proto__|prototype/i;
+      // Fix R-008: Multi-layer defensive regex scanner blocking constructor, prototype, and eval access
+      const FORBIDDEN_PATTERN = /\bconstructor\b|\[\s*['"`]constructor['"`]\s*\]|__proto__|prototype|\beval\b/i;
       if (FORBIDDEN_PATTERN.test(code)) {
         throw new Error('Security Error: Prototype and constructor access are prohibited in sandboxed actions.');
       }
@@ -237,7 +237,6 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
         'window',
         'doc' + 'ument',
         'Function',
-        'eval',
         'Reflect',
         'Proxy',
         'process',

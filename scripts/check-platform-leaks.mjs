@@ -7,7 +7,10 @@ const FORBIDDEN_TOKENS = [
   'window.open',
   'document.',
   'indexedDB',
-  'navigator.clipboard'
+  'navigator.clipboard',
+  '@tauri-apps/api',
+  'window.__TAURI_',
+  '__TAURI_INTERNALS__'
 ];
 
 const ROOT_SRC = path.resolve('src');

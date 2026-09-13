@@ -251,7 +251,7 @@ export class FormulaEngine {
       }
       if (node.op === '-') return Number(left) - Number(right);
       if (node.op === '*') return Number(left) * Number(right);
-      if (node.op === '/') return Number(right) === 0 ? 0 : Number(left) / Number(right);
+      if (node.op === '/') return Number(right) === 0 ? '#DIV/0!' : Number(left) / Number(right);
       if (node.op === '%') return Number(left) % Number(right);
     }
 
@@ -467,7 +467,8 @@ export class FormulaEngine {
         const nums = args.flat().map(Number).filter(n => !isNaN(n));
         return nums.reduce((acc, curr) => acc + curr, 0);
       }
-      case 'AVG': {
+      case 'AVG':
+      case 'AVERAGE': {
         const nums = args.flat().map(Number).filter(n => !isNaN(n));
         return nums.length ? nums.reduce((acc, curr) => acc + curr, 0) / nums.length : 0;
       }
@@ -504,10 +505,13 @@ export class FormulaEngine {
         return this.context.line;
       case 'COL':
         return this.context.column;
+      case 'LINES':
       case 'LINECOUNT':
         return this.context.lineCount;
+      case 'CHARS':
       case 'CHARCOUNT':
         return this.context.charCount;
+      case 'WORDS':
       case 'WORDCOUNT':
         return this.context.wordCount;
       case 'SELECTED':

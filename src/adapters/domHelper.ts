@@ -2,6 +2,7 @@
  * DOM Helper for Adapter Layer
  * Quarantines direct DOM interactions (document, window, navigator) inside src/adapters/.
  */
+import { useState, useEffect } from 'react';
 import { IRuntimeBridge } from '../ui-contract/bridgeContract';
 
 export function createElement<K extends keyof HTMLElementTagNameMap>(
@@ -70,6 +71,12 @@ export function removeFromBody(element: HTMLElement): void {
 export function getDocumentTheme(): string {
   if (typeof document === 'undefined') return 'contextpad-dark';
   return document.documentElement.getAttribute('data-theme') || 'contextpad-dark';
+}
+
+export function getCssCustomProperty(name: string, fallback: string = ''): string {
+  if (typeof document === 'undefined') return fallback;
+  const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return val || fallback;
 }
 
 export function isDarkTheme(): boolean {
@@ -172,5 +179,35 @@ export function execRedo(): void {
 export function isTouchDevice(): boolean {
   if (typeof window === 'undefined') return false;
   return ('ontouchstart' in window) || (typeof navigator !== 'undefined' && (navigator.maxTouchPoints || 0) > 0);
+}
+
+export function getSelectionText(): string {
+  if (typeof window === 'undefined' || !window.getSelection) return '';
+  return window.getSelection()?.toString() || '';
+}
+
+export function getWindowWidth(): number {
+  return typeof window !== 'undefined' ? window.innerWidth : 1200;
+}
+
+export function useWindowDimensions(): { width: number; height: number } {
+  const [dimensions, setDimensions] = useState(() => ({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800,
+  }));
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return dimensions;
 }
 

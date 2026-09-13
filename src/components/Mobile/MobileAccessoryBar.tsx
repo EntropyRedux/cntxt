@@ -10,11 +10,12 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useFormattingStore } from '../../store/formattingStore';
 import { executeFormatting } from '../../services/editor/formattingService';
 import { RibbonIcon } from '../Ribbon/RibbonIcon';
-import { useRuntimeBridge, isTouchDevice } from '../../adapters';
+import { useRuntimeBridge, isTouchDevice, useWindowDimensions, addWindowListener } from '../../adapters';
 import { safePersist } from '../../services/storageHelper';
 
 export const MobileAccessoryBar: React.FC = () => {
   const bridge = useRuntimeBridge();
+  const { width: windowWidth } = useWindowDimensions();
   const { activeTabId } = useTabStore();
   const { settings } = useSettingsStore();
   const { 
@@ -67,15 +68,10 @@ export const MobileAccessoryBar: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const handleResize = () => {
-      const isNarrow = window.innerWidth < 768;
-      const isMobileDevice = isTouchDevice();
-      setIsNarrowOrMobile(isNarrow || isMobileDevice || settings.touchOptimized);
-      checkOverflowAndScroll();
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
+    const isNarrow = windowWidth < 768;
+    const isMobileDevice = isTouchDevice();
+    setIsNarrowOrMobile(isNarrow || isMobileDevice || settings.touchOptimized);
+    checkOverflowAndScroll();
 
     const el = scrollContainerRef.current;
     let observer: ResizeObserver | null = null;
@@ -87,10 +83,9 @@ export const MobileAccessoryBar: React.FC = () => {
     }
 
     return () => {
-      window.removeEventListener('resize', handleResize);
       if (observer) observer.disconnect();
     };
-  }, [settings.touchOptimized, checkOverflowAndScroll, activeButtons.length, isMultiRowExpanded, buttonSize]);
+  }, [windowWidth, settings.touchOptimized, checkOverflowAndScroll, activeButtons.length, isMultiRowExpanded, buttonSize]);
 
   // Global mousemove and mouseup listeners for smooth drag-to-scroll even outside the element
   useEffect(() => {
@@ -119,11 +114,11 @@ export const MobileAccessoryBar: React.FC = () => {
       }
     };
 
-    window.addEventListener('mousemove', handleWindowMouseMove);
-    window.addEventListener('mouseup', handleWindowMouseUp);
+    const removeMove = addWindowListener('mousemove', handleWindowMouseMove);
+    const removeUp = addWindowListener('mouseup', handleWindowMouseUp);
     return () => {
-      window.removeEventListener('mousemove', handleWindowMouseMove);
-      window.removeEventListener('mouseup', handleWindowMouseUp);
+      removeMove();
+      removeUp();
     };
   }, [isMultiRowExpanded, checkOverflowAndScroll]);
 

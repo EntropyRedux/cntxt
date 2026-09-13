@@ -17,7 +17,7 @@ import { useNotificationStore } from '../../store/notificationStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { FormulaEngine } from '../../services/formulaParser';
 import { Action } from '../../types';
-import { useRuntimeBridge, triggerFileDownload, triggerFileInput } from '../../adapters';
+import { useRuntimeBridge, triggerFileDownload, triggerFileInput, getSelectionText } from '../../adapters';
 
 export const ActionManager: React.FC = () => {
   const bridge = useRuntimeBridge();
@@ -74,11 +74,10 @@ export const ActionManager: React.FC = () => {
       getText: () => activeTab.content,
       setText: (newText: string) => updateTabContent(activeTab.id, newText),
       getSelection: () => {
-        const selection = window.getSelection()?.toString();
-        return selection || '';
+        return getSelectionText();
       },
       replaceSelection: (replacement: string) => {
-        const selection = window.getSelection()?.toString();
+        const selection = getSelectionText();
         if (selection && activeTab.content.includes(selection)) {
           updateTabContent(activeTab.id, activeTab.content.replace(selection, replacement));
         } else {

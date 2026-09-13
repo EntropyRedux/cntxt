@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSettingsStore } from '../../store/settingsStore';
-import { useRuntimeBridge } from '../../adapters';
+import { useRuntimeBridge, useWindowDimensions, getWindowWidth, addWindowListener } from '../../adapters';
 import { safePersist } from '../../services/storageHelper';
 import { FileExplorer } from './FileExplorer';
 import { OutlinePanel } from './OutlinePanel';
@@ -29,19 +29,18 @@ const DEFAULT_DESKTOP_WIDTH = 340;
 export const Sidebar: React.FC = () => {
   const bridge = useRuntimeBridge();
   const { settings, toggleSidebar } = useSettingsStore();
+  const { width: windowWidth } = useWindowDimensions();
   const panelRef = useRef<HTMLElement>(null);
   const isOverlay = !!settings.sidebarOverlay;
 
   // Initialize width from bridge storage or screen dimensions
   const [width, setWidth] = useState<number>(() => {
-    if (typeof window !== 'undefined') {
-      if (window.innerWidth < 640) {
-        return Math.max(220, Math.round(window.innerWidth - 60));
-      }
-      if (window.innerWidth < 1024) {
-        return 300;
-      }
-      return DEFAULT_DESKTOP_WIDTH;
+    const winWidth = getWindowWidth();
+    if (winWidth < 640) {
+      return Math.max(220, Math.round(winWidth - 60));
+    }
+    if (winWidth < 1024) {
+      return 300;
     }
     return DEFAULT_DESKTOP_WIDTH;
   });
@@ -61,28 +60,23 @@ export const Sidebar: React.FC = () => {
 
   // Clamp width whenever the window size changes
   useEffect(() => {
-    const handleResize = () => {
-      const parentContainer = panelRef.current?.parentElement;
-      const containerWidth = parentContainer ? parentContainer.clientWidth : window.innerWidth;
-      const maxAvailable = Math.max(200, containerWidth - 24);
-      setWidth(prev => (prev > maxAvailable ? maxAvailable : prev));
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    const parentContainer = panelRef.current?.parentElement;
+    const containerWidth = parentContainer ? parentContainer.clientWidth : windowWidth;
+    const maxAvailable = Math.max(200, containerWidth - 24);
+    setWidth(prev => (prev > maxAvailable ? maxAvailable : prev));
+  }, [windowWidth]);
 
   // Reset width to sensible default
   const handleResetWidth = useCallback(() => {
     const parentContainer = panelRef.current?.parentElement;
-    const containerWidth = parentContainer ? parentContainer.clientWidth : window.innerWidth;
-    const target = typeof window !== 'undefined' && window.innerWidth < 640
+    const containerWidth = parentContainer ? parentContainer.clientWidth : windowWidth;
+    const target = windowWidth < 640
       ? Math.max(220, containerWidth - 40)
       : DEFAULT_DESKTOP_WIDTH;
 
     setWidth(target);
     safePersist(bridge.storage, STORAGE_KEY, String(target), 'sidebar width');
-  }, [bridge.storage]);
+  }, [bridge.storage, windowWidth]);
 
   // Drag resizer: Mouse
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -92,13 +86,15 @@ export const Sidebar: React.FC = () => {
 
     const rightEdge = panelRef.current 
       ? panelRef.current.getBoundingClientRect().right 
-      : window.innerWidth;
+      : windowWidth;
+
+    let cleanupListeners = () => {};
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       moveEvent.preventDefault();
       const newWidth = rightEdge - moveEvent.clientX;
       const parentContainer = panelRef.current?.parentElement;
-      const containerWidth = parentContainer ? parentContainer.clientWidth : window.innerWidth;
+      const containerWidth = parentContainer ? parentContainer.clientWidth : windowWidth;
       const minWidth = Math.min(220, Math.max(160, Math.floor(containerWidth * 0.25)));
       const maxWidth = Math.max(minWidth, containerWidth - 24);
       const clamped = Math.max(minWidth, Math.min(maxWidth, newWidth));
@@ -109,13 +105,16 @@ export const Sidebar: React.FC = () => {
 
     const onMouseUp = () => {
       setIsResizing(false);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+      cleanupListeners();
     };
 
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  }, [bridge.storage]);
+    const removeMove = addWindowListener('mousemove', onMouseMove);
+    const removeUp = addWindowListener('mouseup', onMouseUp);
+    cleanupListeners = () => {
+      removeMove();
+      removeUp();
+    };
+  }, [bridge.storage, windowWidth]);
 
   // Drag resizer: Touch
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -124,14 +123,16 @@ export const Sidebar: React.FC = () => {
 
     const rightEdge = panelRef.current 
       ? panelRef.current.getBoundingClientRect().right 
-      : window.innerWidth;
+      : windowWidth;
+
+    let cleanupTouchListeners = () => {};
 
     const onTouchMove = (moveEvent: TouchEvent) => {
       if (moveEvent.touches.length !== 1) return;
       const clientX = moveEvent.touches[0].clientX;
       const newWidth = rightEdge - clientX;
       const parentContainer = panelRef.current?.parentElement;
-      const containerWidth = parentContainer ? parentContainer.clientWidth : window.innerWidth;
+      const containerWidth = parentContainer ? parentContainer.clientWidth : windowWidth;
       const minWidth = Math.min(220, Math.max(160, Math.floor(containerWidth * 0.25)));
       const maxWidth = Math.max(minWidth, containerWidth - 24);
       const clamped = Math.max(minWidth, Math.min(maxWidth, newWidth));
@@ -142,15 +143,18 @@ export const Sidebar: React.FC = () => {
 
     const onTouchEnd = () => {
       setIsResizing(false);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('touchcancel', onTouchEnd);
+      cleanupTouchListeners();
     };
 
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd);
-    window.addEventListener('touchcancel', onTouchEnd);
-  }, []);
+    const removeTouchMove = addWindowListener('touchmove', onTouchMove);
+    const removeTouchEnd = addWindowListener('touchend', onTouchEnd);
+    const removeTouchCancel = addWindowListener('touchcancel', onTouchEnd);
+    cleanupTouchListeners = () => {
+      removeTouchMove();
+      removeTouchEnd();
+      removeTouchCancel();
+    };
+  }, [bridge.storage, windowWidth]);
 
   if (!settings.showSidebar) {
     return null;

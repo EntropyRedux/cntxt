@@ -12,7 +12,7 @@ import { executeFormatting } from '../../services/editor/formattingService';
 import { FormulaEngine } from '../../services/formulaParser';
 import { RibbonIcon } from './RibbonIcon';
 import { AppUiEvents } from '../../ui-contract/actionContract';
-import { useRuntimeBridge } from '../../adapters';
+import { useRuntimeBridge, getSelectionText } from '../../adapters';
 import { 
   SlidersHorizontal, 
   FileCode2, 
@@ -94,9 +94,9 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
         executeAction(item.targetId, {
           getText: () => activeTab.content,
           setText: (newText: string) => updateTabContent(activeTab.id, newText),
-          getSelection: () => window.getSelection()?.toString() || '',
+          getSelection: () => getSelectionText(),
           replaceSelection: (replacement: string) => {
-            const sel = window.getSelection()?.toString();
+            const sel = getSelectionText();
             if (sel && activeTab.content.includes(sel)) {
               updateTabContent(activeTab.id, activeTab.content.replace(sel, replacement));
             } else {

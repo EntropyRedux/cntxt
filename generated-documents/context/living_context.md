@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.1
+Version: v1.2
 Last Updated: 2026-09-13
-Last Updated By: Antigravity Assistant (Pass 2 Audit Reconciliation)
+Last Updated By: Antigravity Assistant (Refactor Execution Complete)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) & Web Prototype
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -18,8 +18,8 @@ Active Stage:
   [ ] Sync-Back
 
 Current Feature Group: FG-01: Core Workspace Shell & Document Tab Lifecycle
-Active Plan: /generated-documents/plans/refactor_plan_port_remediation_2026-09-13.md (Prompt 18)
-Last Git Checkpoint: 2026-09-13 — Ported AI Studio Build into Production Root
+Active Plan: /generated-documents/plans/refactor_plan_port_remediation_2026-09-13.md (Prompt 18 Reconciled v1.1)
+Last Git Checkpoint: 2026-09-13 — Batch 3 Hardening Committed (58a19b9)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.0
@@ -56,33 +56,36 @@ MOCK-007 | mocks/index.ts (DEFAULT_OPENED_HISTORY) | MOCK | Native File History 
 ━━━ FEATURE GROUP STATUS ━━━
 
 Feature Group: FG-01: Core Workspace Shell & Document Tab Lifecycle
-Status: in progress (Batch 1 & Batch 2 remediated)
+Status: remediated
 Background Processes:
 - Live Token Estimator: gated in Settings -> Experimental (`enableLiveTokenEstimator`) [x]
 - Document Autosave: gated in Settings -> Experimental (`enableAutosave`) [x]
 - Live Markdown DOM-Sync: gated in Settings -> Experimental (`enableLiveDomSync`) [x]
-Unit Tests (Prompt 14b): written [ ] passing [ ]
+Unit Tests (Prompt 14b): written [x] passing [x]
 Last Audit Reconciliation: 2026-09-13 — APPROVED (Reconciled Plan v1.1)
-Git Checkpoint: Batch 1 committed (000eee7)
-Notes: Batch 1 (Data shapes & mock quarantine) and Batch 2 (Error boundaries, safe storage persistence across 12 files, modal validation) executed and verified.
+Git Checkpoint: Batch 1 (000eee7), Batch 2 (1d94c7e), Batch 3 (58a19b9)
+Notes: All 14 defects from Reconciled Port Audit fully remediated across Batches 1-4. 21 automated unit tests passing. Presenter purity enforced with zero platform leaks.
 
 Feature Group: FG-02: Sandboxed JavaScript Actions
-Status: planned
+Status: remediated (hardening complete)
 Background Processes: none
-Unit Tests (Prompt 14b): written [ ] passing [ ]
-Last Audit Reconciliation: none
-Notes: Hardening required for action sandbox to eliminate Function constructor escape (PA-8.1).
+Unit Tests (Prompt 14b): written [x] passing [x]
+Last Audit Reconciliation: 2026-09-13
+Notes: Action sandbox hardened with regex constructor/eval scanner, shadowed globals, and frozen safeApi (R-008). 6 unit tests passing.
 
 Feature Group: FG-03: Prompt Engineering Templates & Dynamic Formulas
-Status: planned
+Status: remediated
 Background Processes: none
-Unit Tests (Prompt 14b): written [ ] passing [ ]
-Last Audit Reconciliation: none
+Unit Tests (Prompt 14b): written [x] passing [x]
+Last Audit Reconciliation: 2026-09-13
+Notes: FormulaEngine verified with arithmetic, math aggregations, string ops, and document metrics (R-014). 6 unit tests passing.
 
 Feature Group: FG-04: Native File System & Workspace Explorer
-Status: planned
+Status: remediated
 Background Processes: File watcher (toggle required in Settings -> Experimental)
-Unit Tests (Prompt 14b): written [ ] passing [ ]
+Unit Tests (Prompt 14b): written [x] passing [x]
+Last Audit Reconciliation: 2026-09-13
+Notes: Native file commands secured with canonicalization and system root whitelisting (R-009). Shell injection eliminated in open_external using open = "5.3" crate (R-010). Runtime token and origin scoping enforced (R-012).
 Last Audit Reconciliation: none
 
 ━━━ ARCHITECTURAL DECISIONS LOG ━━━
