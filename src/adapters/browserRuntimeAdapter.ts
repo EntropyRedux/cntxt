@@ -372,6 +372,12 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
       window.open(url || window.location.href, '_blank');
       return true;
     },
+    minimize: async (): Promise<void> => {},
+    maximize: async (): Promise<void> => {},
+    unmaximize: async (): Promise<void> => {},
+    toggleMaximize: async (): Promise<void> => {},
+    isMaximized: async (): Promise<boolean> => false,
+    close: async (): Promise<void> => {},
     getPlatform: (): 'web' | 'macos' | 'windows' | 'linux' => {
       const p = navigator.platform.toLowerCase();
       if (p.includes('mac')) return 'macos';

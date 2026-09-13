@@ -14,14 +14,16 @@ import {
   SlidersHorizontal,
   Variable,
   Terminal,
-  Check
+  Check,
+  Search
 } from 'lucide-react';
 import { useTabStore } from '../store/tabStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { ThemeName } from '../types';
 import { AppUiEvents } from '../ui-contract/actionContract';
-import { addWindowListener } from '../adapters';
+import { addWindowListener, useRuntimeBridge } from '../adapters';
+import { WindowControls } from '../components/TitleBar/WindowControls';
 
 export interface ShellTitleBarProps {
   events: AppUiEvents;
@@ -30,8 +32,24 @@ export interface ShellTitleBarProps {
 export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
   events
 }) => {
+  const bridge = useRuntimeBridge();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
+
+  const handleTitleBarDoubleClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === 'BUTTON' ||
+      target.tagName === 'INPUT' ||
+      target.tagName === 'A' ||
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('a')
+    ) {
+      return;
+    }
+    bridge.window.toggleMaximize?.();
+  };
 
   const { createTab, closeTab, activeTabId } = useTabStore();
   const { 
@@ -234,207 +252,233 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
   return (
     <header 
       ref={headerRef}
-      className={`h-10 bg-[var(--titlebar-bg)] border-b border-[var(--border-primary)] flex items-center justify-between px-2 sm:px-3 shrink-0 select-none gap-2 min-w-0 relative overflow-visible ${
+      className={`flex flex-col shrink-0 select-none relative overflow-visible ${
         openMenu !== null ? 'z-50' : 'z-40'
       }`}
     >
-      {/* Left: Rail Toggle & Menus */}
-      <div className="flex items-center gap-1 sm:gap-2 shrink-0 relative overflow-visible">
-        <div className="flex items-center pr-1.5 sm:pr-2 border-r border-[var(--border-subtle)]">
+      {/* Row 1: Themed Window Title Bar & Centered Quick Tools */}
+      <div 
+        data-tauri-drag-region="true"
+        onDoubleClick={handleTitleBarDoubleClick}
+        className="h-9 bg-[var(--titlebar-bg)] border-b border-[var(--border-primary)] flex items-center justify-between px-2 sm:px-3 shrink-0 gap-2 min-w-0 relative overflow-visible cursor-default"
+      >
+        {/* Left: Brand + Left Rail Toggle */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0" data-tauri-drag-region="false">
+          <div className="flex items-center gap-1.5 font-bold text-xs text-[var(--text-primary)] px-1 tracking-wider select-none">
+            <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shrink-0" />
+            <span>CNTXT</span>
+          </div>
+          <div className="h-3.5 w-px bg-[var(--border-subtle)] mx-0.5" />
           <button
             type="button"
             onClick={toggleActivityBar}
             title={settings.showActivityBar ? "Hide Left Rail (Ctrl+B)" : "Show Left Rail (Ctrl+B)"}
             aria-label={settings.showActivityBar ? "Hide Left Rail" : "Show Left Rail"}
             aria-pressed={settings.showActivityBar}
-            className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors shrink-0 cursor-pointer ${
+            className={`w-6 h-6 flex items-center justify-center rounded-md transition-colors shrink-0 cursor-pointer ${
               settings.showActivityBar 
                 ? 'text-[var(--accent-primary)] bg-[var(--accent-container)]/50 hover:bg-[var(--accent-container)]/80' 
                 : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
             }`}
           >
-            <PanelLeft className="w-4 h-4" />
+            <PanelLeft className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Dropdown Menus */}
-        <nav className="flex items-center gap-0.5 sm:gap-1" aria-label="Menu bar">
-          {menuGroups.map((menu) => {
-            const MenuIcon = menu.icon;
-            const isOpen = openMenu === menu.id;
-
-            return (
-              <div key={menu.id} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpenMenu(prev => prev === menu.id ? null : menu.id)}
-                  onMouseEnter={() => {
-                    if (openMenu !== null && openMenu !== 'theme') {
-                      setOpenMenu(menu.id);
-                    }
-                  }}
-                  title={`${menu.label} Menu`}
-                  aria-label={`${menu.label} Menu`}
-                  aria-expanded={isOpen}
-                  className={`h-7 px-2 text-xs font-medium rounded transition-colors flex items-center gap-1.5 cursor-pointer select-none ${
-                    isOpen
-                      ? 'bg-[var(--accent-primary)] text-white shadow-xs'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
-                  }`}
-                >
-                  <MenuIcon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="hidden sm:inline">{menu.label}</span>
-                </button>
-
-                {isOpen && (
-                  <div className="absolute left-0 top-full mt-1 w-56 sm:w-60 bg-[var(--dropdown-bg)] border border-[var(--border-primary)] rounded-lg shadow-2xl py-1 z-50 animate-in fade-in-50 zoom-in-95 duration-100">
-                    {menu.items.map((item, idx) => {
-                      if (item.isDivider) {
-                        return <div key={idx} className="my-1 border-t border-[var(--border-subtle)]" />;
-                      }
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            item.action?.();
-                            setOpenMenu(null);
-                          }}
-                          aria-label={item.label}
-                          title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
-                          className="w-full px-3 py-1.5 text-xs text-left flex items-center justify-between text-[var(--text-primary)] hover:bg-[var(--accent-primary)] hover:text-white transition-colors cursor-pointer"
-                        >
-                          <span className="truncate">{item.label}</span>
-                          {item.shortcut && (
-                            <span className="text-[10px] font-mono opacity-60 ml-2 shrink-0">
-                              {item.shortcut}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Right: Quick Tools, Theme & Panel Toggles */}
-      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-        {/* Rendered vs Raw Markdown Switcher */}
-        <button
-          type="button"
-          onClick={toggleEditorMode}
-          title={
-            isRendered
-              ? 'Switch to Raw Markdown Mode (Ctrl+M)'
-              : 'Switch to Live Rendered View (Ctrl+M)'
-          }
-          aria-label={`Editor mode: currently in ${isRendered ? 'Rendered' : 'Raw'} mode. Click to switch.`}
-          aria-pressed={isRendered}
-          className={`h-7 px-2 flex items-center gap-1.5 rounded-md transition-all border text-xs cursor-pointer ${
-            isRendered
-              ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80'
-              : 'bg-[var(--card-secondary-bg)] text-[var(--status-warning)] border-[var(--status-warning)]/40 hover:bg-[var(--card-hover-bg)]'
-          }`}
-        >
-          {isRendered ? (
-            <>
-              <Eye className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
-              <span className="hidden md:inline font-medium text-[11px]">Rendered</span>
-            </>
-          ) : (
-            <>
-              <Code2 className="w-3.5 h-3.5 text-[var(--status-warning)] shrink-0" />
-              <span className="hidden md:inline font-medium text-[11px]">Raw</span>
-            </>
-          )}
-        </button>
-
-        {/* Quick Command Palette Button */}
-        <button
-          type="button"
-          onClick={events.onOpenCommandPalette}
-          title="Command Palette (Ctrl+K)"
-          aria-label="Command Palette (Ctrl+K)"
-          className="w-7 h-7 flex items-center justify-center bg-[var(--editor-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-md transition-colors hover:border-[var(--border-primary)] cursor-pointer"
-        >
-          <Command className="w-3.5 h-3.5" />
-        </button>
-
-        {/* Touch Mode Quick Toggle */}
-        <button
-          type="button"
-          onClick={() => {
-            const nextTouch = !settings.touchOptimized;
-            updateSettings({
-              touchOptimized: nextTouch,
-              uiDensity: nextTouch ? 'touch' : 'desktop'
-            });
-          }}
-          title={settings.touchOptimized ? 'Disable Touch Mode' : 'Enable Touch Mode'}
-          aria-label={settings.touchOptimized ? 'Disable Touch Mode' : 'Enable Touch Mode'}
-          className={`w-7 h-7 flex items-center justify-center rounded-md text-xs transition-colors cursor-pointer ${
-            settings.touchOptimized 
-              ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] border border-[var(--accent-primary)]/40' 
-              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
-          }`}
-        >
-          <Smartphone className="w-3.5 h-3.5" />
-        </button>
-
-        {/* Theme Picker Dropdown */}
-        <div className="relative">
+        {/* Center: Search, Render MODE, Command Palette, Touch Mode, Theme Selection */}
+        <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-1 min-w-0" data-tauri-drag-region="false">
+          {/* Quick Search / Command Palette Bar */}
           <button
             type="button"
-            onClick={() => setOpenMenu(prev => prev === 'theme' ? null : 'theme')}
-            className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors cursor-pointer ${
-              openMenu === 'theme'
-                ? 'bg-[var(--accent-primary)] text-white'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
-            }`}
-            title="Switch Theme"
-            aria-label="Switch Theme"
-            aria-expanded={openMenu === 'theme'}
+            onClick={events.onOpenCommandPalette}
+            title="Search / Command Palette (Ctrl+K)"
+            aria-label="Search / Command Palette"
+            className="h-6 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--editor-bg)]/80 hover:bg-[var(--card-hover-bg)] border border-[var(--border-subtle)] hover:border-[var(--border-primary)] rounded-md transition-all cursor-pointer max-w-[190px] truncate shadow-xs"
           >
-            {isLightMode ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Moon className="w-3.5 h-3.5" />}
+            <Search className="w-3 h-3 shrink-0" />
+            <span className="text-[11px] truncate hidden md:inline">Search (Ctrl+K)</span>
+            <Command className="w-3 h-3 shrink-0 opacity-60 ml-auto hidden sm:inline" />
           </button>
-          
-          {openMenu === 'theme' && (
-            <div className="absolute right-0 top-full mt-1 w-52 bg-[var(--dropdown-bg)] border border-[var(--border-primary)] rounded-lg shadow-2xl py-1 z-50 animate-in fade-in-50 zoom-in-95 duration-100">
-              <div className="px-3 py-1 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider border-b border-[var(--border-subtle)]">
-                Color Themes
+
+          {/* Rendered vs Raw Markdown Switcher */}
+          <button
+            type="button"
+            onClick={toggleEditorMode}
+            title={
+              isRendered
+                ? 'Switch to Raw Markdown Mode (Ctrl+M)'
+                : 'Switch to Live Rendered View (Ctrl+M)'
+            }
+            aria-label={`Editor mode: currently in ${isRendered ? 'Rendered' : 'Raw'} mode. Click to switch.`}
+            aria-pressed={isRendered}
+            className={`h-6 px-2 flex items-center gap-1 rounded-md transition-all border text-xs cursor-pointer ${
+              isRendered
+                ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80'
+                : 'bg-[var(--card-secondary-bg)] text-[var(--status-warning)] border-[var(--status-warning)]/40 hover:bg-[var(--card-hover-bg)]'
+            }`}
+          >
+            {isRendered ? (
+              <>
+                <Eye className="w-3 h-3 text-[var(--accent-primary)] shrink-0" />
+                <span className="font-medium text-[10.5px]">Rendered</span>
+              </>
+            ) : (
+              <>
+                <Code2 className="w-3 h-3 text-[var(--status-warning)] shrink-0" />
+                <span className="font-medium text-[10.5px]">Raw</span>
+              </>
+            )}
+          </button>
+
+          {/* Touch Mode Quick Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              const nextTouch = !settings.touchOptimized;
+              updateSettings({
+                touchOptimized: nextTouch,
+                uiDensity: nextTouch ? 'touch' : 'desktop'
+              });
+            }}
+            title={settings.touchOptimized ? 'Disable Touch Mode' : 'Enable Touch Mode'}
+            aria-label={settings.touchOptimized ? 'Disable Touch Mode' : 'Enable Touch Mode'}
+            className={`h-6 px-2 flex items-center gap-1 rounded-md text-xs transition-colors cursor-pointer border ${
+              settings.touchOptimized 
+                ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] border border-[var(--accent-primary)]/40' 
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border-transparent'
+            }`}
+          >
+            <Smartphone className="w-3 h-3" />
+            <span className="text-[10.5px] hidden lg:inline">Touch</span>
+          </button>
+
+          {/* Theme Picker Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenMenu(prev => prev === 'theme' ? null : 'theme')}
+              className={`h-6 px-2 flex items-center gap-1 rounded-md transition-colors cursor-pointer border ${
+                openMenu === 'theme'
+                  ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border-transparent'
+              }`}
+              title="Switch Theme"
+              aria-label="Switch Theme"
+              aria-expanded={openMenu === 'theme'}
+            >
+              {isLightMode ? <Sun className="w-3 h-3 text-amber-500" /> : <Moon className="w-3 h-3" />}
+              <span className="text-[10.5px] hidden xl:inline">Theme</span>
+            </button>
+            
+            {openMenu === 'theme' && (
+              <div className="absolute right-0 top-full mt-1 w-52 bg-[var(--dropdown-bg)] border border-[var(--border-primary)] rounded-lg shadow-2xl py-1 z-50 animate-in fade-in-50 zoom-in-95 duration-100">
+                <div className="px-3 py-1 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider border-b border-[var(--border-subtle)]">
+                  Color Themes
+                </div>
+                <div className="max-h-64 overflow-y-auto py-0.5">
+                  {themes.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setTheme(t.id);
+                        setOpenMenu(null);
+                      }}
+                      aria-label={`Theme: ${t.name}`}
+                      title={t.name}
+                      className={`w-full px-3 py-1.5 text-xs text-left flex items-center justify-between transition-colors cursor-pointer ${
+                        settings.theme === t.id
+                          ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-medium'
+                          : 'text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+                      }`}
+                    >
+                      <span>{t.name}</span>
+                      {settings.theme === t.id && (
+                        <Check className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="max-h-64 overflow-y-auto py-0.5">
-                {themes.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      setTheme(t.id);
-                      setOpenMenu(null);
-                    }}
-                    aria-label={`Theme: ${t.name}`}
-                    title={t.name}
-                    className={`w-full px-3 py-1.5 text-xs text-left flex items-center justify-between transition-colors cursor-pointer ${
-                      settings.theme === t.id
-                        ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-medium'
-                        : 'text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
-                    }`}
-                  >
-                    <span>{t.name}</span>
-                    {settings.theme === t.id && (
-                      <Check className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* Right: Themed Window Controls (Tauri Desktop only; null in Web) */}
+        <div className="flex items-center shrink-0 h-full -mr-2 sm:-mr-3" data-tauri-drag-region="false">
+          <WindowControls />
         </div>
       </div>
+
+      {/* Row 2: Compact Menu Bar (File, Edit, View, Tools, Help) */}
+      <nav 
+        className={`bg-[var(--titlebar-bg)]/85 border-b border-[var(--border-subtle)] flex items-center px-2 sm:px-3 shrink-0 gap-0.5 sm:gap-1 select-none relative z-30 transition-all ${
+          settings.touchOptimized ? 'h-8.5' : 'h-7'
+        }`}
+        aria-label="Menu bar"
+      >
+        {menuGroups.map((menu) => {
+          const MenuIcon = menu.icon;
+          const isOpen = openMenu === menu.id;
+
+          return (
+            <div key={menu.id} className="relative">
+              <button
+                type="button"
+                onClick={() => setOpenMenu(prev => prev === menu.id ? null : menu.id)}
+                onMouseEnter={() => {
+                  if (openMenu !== null && openMenu !== 'theme') {
+                    setOpenMenu(menu.id);
+                  }
+                }}
+                title={`${menu.label} Menu`}
+                aria-label={`${menu.label} Menu`}
+                aria-expanded={isOpen}
+                className={`${
+                  settings.touchOptimized ? 'h-7 px-2.5 text-xs' : 'h-5.5 px-2 text-[11.5px]'
+                } font-medium rounded transition-colors flex items-center gap-1 cursor-pointer select-none ${
+                  isOpen
+                    ? 'bg-[var(--accent-primary)] text-white shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+                }`}
+              >
+                <MenuIcon className={`${settings.touchOptimized ? 'w-3.5 h-3.5' : 'w-3 h-3'} shrink-0`} />
+                <span>{menu.label}</span>
+              </button>
+
+              {isOpen && (
+                <div className="absolute left-0 top-full mt-1 w-56 sm:w-60 bg-[var(--dropdown-bg)] border border-[var(--border-primary)] rounded-lg shadow-2xl py-1 z-50 animate-in fade-in-50 zoom-in-95 duration-100">
+                  {menu.items.map((item, idx) => {
+                    if (item.isDivider) {
+                      return <div key={idx} className="my-1 border-t border-[var(--border-subtle)]" />;
+                    }
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          item.action?.();
+                          setOpenMenu(null);
+                        }}
+                        aria-label={item.label}
+                        title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
+                        className="w-full px-3 py-1.5 text-xs text-left flex items-center justify-between text-[var(--text-primary)] hover:bg-[var(--accent-primary)] hover:text-white transition-colors cursor-pointer"
+                      >
+                        <span className="truncate">{item.label}</span>
+                        {item.shortcut && (
+                          <span className="text-[10px] font-mono opacity-60 ml-2 shrink-0">
+                            {item.shortcut}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
     </header>
   );
 };

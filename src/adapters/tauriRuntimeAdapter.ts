@@ -196,6 +196,28 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     maximize: async (): Promise<void> => {
       await this.invokeTauri('maximize_window');
     },
+    unmaximize: async (): Promise<void> => {
+      await this.invokeTauri('unmaximize_window');
+    },
+    isMaximized: async (): Promise<boolean> => {
+      try {
+        return await this.invokeTauri<boolean>('is_maximized');
+      } catch {
+        return false;
+      }
+    },
+    toggleMaximize: async (): Promise<void> => {
+      try {
+        const max = await this.invokeTauri<boolean>('is_maximized');
+        if (max) {
+          await this.invokeTauri('unmaximize_window');
+        } else {
+          await this.invokeTauri('maximize_window');
+        }
+      } catch (err) {
+        console.error('[TauriRuntimeAdapter] toggleMaximize error:', err);
+      }
+    },
     close: async (): Promise<void> => {
       await this.invokeTauri('close_window');
     },

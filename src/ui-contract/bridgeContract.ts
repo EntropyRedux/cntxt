@@ -48,6 +48,9 @@ export interface IWindowBridge {
   newWindow: (url?: string) => Promise<boolean>;
   minimize?: () => Promise<void>;
   maximize?: () => Promise<void>;
+  unmaximize?: () => Promise<void>;
+  toggleMaximize?: () => Promise<void>;
+  isMaximized?: () => Promise<boolean>;
   close?: () => Promise<void>;
   isNative: boolean;
   getPlatform: () => 'web' | 'macos' | 'windows' | 'linux';

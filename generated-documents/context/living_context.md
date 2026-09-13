@@ -100,6 +100,10 @@ Reasoning: Background workers (live token estimation, autosave loop, live markdo
 Decision: Physical Mock Quarantine via `mocks/index.ts`
 Reasoning: All synthetic sample data is strictly isolated in `mocks/index.ts`. All stores (`tabStore`, `actionStore`, `templateStore`) and `FileExplorer` initialize with clean empty states (`[]`, `''`) and only inject mocks when `IS_PROTOTYPE_DEMO_MODE` is active.
 
+Decision: Themed Frameless Desktop Window Chrome & 3-Row Header Architecture
+Reasoning: In `tauri.conf.json`, `decorations: false` eliminates the un-themed native OS title bar that was cutting into the layout. `ShellTitleBar.tsx` implements a 3-row layout: Row 1 hosts the themed titlebar with centered quick tools (Search, Render mode, Touch mode, Theme picker) and custom `<WindowControls />`; Row 2 hosts the compact menu bar (`h-7` in desktop mode); Row 3 hosts document tabs and modular ribbon.
+AI Studio Preservation: Detailed in `/generated-documents/context/ai_studio_porting_invariants.md`. In web preview / AI Studio, window controls gracefully degrade to `null`. On desktop, `bridge.window` handles minimize, maximize, and close.
+
 ━━━ RECONCILED TRADEOFF HISTORY ━━━
 
 Tradeoff ID: TR-001
