@@ -264,8 +264,8 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
         onDoubleClick={handleTitleBarDoubleClick}
         className="h-9 bg-[var(--titlebar-bg)] border-b border-[var(--border-primary)] flex items-center justify-between px-2 sm:px-3 shrink-0 gap-2 min-w-0 relative overflow-visible cursor-default select-none"
       >
-        {/* Left: Brand + Left Rail Toggle */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* Left: Brand */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <div 
             className="flex items-center gap-1.5 font-bold text-xs text-[var(--text-primary)] px-1 tracking-wider select-none cursor-default"
             onMouseDown={handleWindowDrag}
@@ -273,21 +273,6 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
             <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shrink-0" />
             <span>CNTXT</span>
           </div>
-          <div className="h-3.5 w-px bg-[var(--border-subtle)] mx-0.5" />
-          <button
-            type="button"
-            onClick={toggleActivityBar}
-            title={settings.showActivityBar ? "Hide Left Rail (Ctrl+B)" : "Show Left Rail (Ctrl+B)"}
-            aria-label={settings.showActivityBar ? "Hide Left Rail" : "Show Left Rail"}
-            aria-pressed={settings.showActivityBar}
-            className={`w-6 h-6 flex items-center justify-center rounded-md transition-colors shrink-0 cursor-pointer ${
-              settings.showActivityBar 
-                ? 'text-[var(--accent-primary)] bg-[var(--accent-container)]/50 hover:bg-[var(--accent-container)]/80' 
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
-            }`}
-          >
-            <PanelLeft className="w-3.5 h-3.5" />
-          </button>
         </div>
 
         {/* Drag Spacer Left */}
@@ -298,8 +283,24 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           onDoubleClick={handleTitleBarDoubleClick}
         />
 
-        {/* Center: Search, Render MODE, Command Palette, Touch Mode, Theme Selection */}
+        {/* Center: Rail Toggle, Search, Render MODE, Command Palette, Touch Mode, Theme Selection */}
         <div className="flex items-center justify-center gap-1 sm:gap-1.5 shrink-0">
+          {/* Hide / Show Left Rail Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleActivityBar}
+            title={settings.showActivityBar ? "Hide Left Rail (Ctrl+B)" : "Show Left Rail (Ctrl+B)"}
+            aria-label={settings.showActivityBar ? "Hide Left Rail" : "Show Left Rail"}
+            aria-pressed={settings.showActivityBar}
+            className={`h-6 w-6 flex items-center justify-center rounded-md transition-colors shrink-0 cursor-pointer ${
+              settings.showActivityBar 
+                ? 'text-[var(--accent-primary)] bg-[var(--accent-container)]/50 hover:bg-[var(--accent-container)]/80' 
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+            }`}
+          >
+            <PanelLeft className="w-3.5 h-3.5" />
+          </button>
+
           {/* Quick Search / Command Palette Bar */}
           <button
             type="button"
