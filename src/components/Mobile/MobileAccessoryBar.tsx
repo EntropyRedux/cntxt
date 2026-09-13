@@ -11,6 +11,7 @@ import { useFormattingStore } from '../../store/formattingStore';
 import { executeFormatting } from '../../services/editor/formattingService';
 import { RibbonIcon } from '../Ribbon/RibbonIcon';
 import { useRuntimeBridge, isTouchDevice } from '../../adapters';
+import { safePersist } from '../../services/storageHelper';
 
 export const MobileAccessoryBar: React.FC = () => {
   const bridge = useRuntimeBridge();
@@ -31,12 +32,12 @@ export const MobileAccessoryBar: React.FC = () => {
       if (stored !== null) {
         setIsExpanded(stored === 'true');
       }
-    }).catch(() => {});
+    }).catch(err => console.warn('[MobileAccessoryBar] Failed to load stored state', err));
   }, [bridge.storage]);
 
   const handleToggleExpanded = (expanded: boolean) => {
     setIsExpanded(expanded);
-    bridge.storage.setItem('contextpad_accessory_bar_expanded', String(expanded)).catch(() => {});
+    safePersist(bridge.storage, 'contextpad_accessory_bar_expanded', String(expanded), 'accessory bar state');
   };
 
   const [isNarrowOrMobile, setIsNarrowOrMobile] = useState(false);

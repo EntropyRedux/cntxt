@@ -4,6 +4,7 @@ import { DEFAULT_MODEL_ID } from '../constants/models';
 import { THEME_DEFAULT_FONTS } from '../constants/fonts';
 import { IStorageBridge, IPlatformBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
+import { safePersist } from '../services/storageHelper';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -154,7 +155,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     };
     set({ settings: updated });
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated)).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.SETTINGS, JSON.stringify(updated), 'settings');
     }
   },
 
@@ -229,7 +230,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   resetSettings: () => {
     set({ settings: DEFAULT_SETTINGS });
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS)).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS), 'reset settings');
     }
   }
 }));

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Action, ActionCategory } from '../../contracts/data_shapes';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
+import { safePersist } from '../services/storageHelper';
 // MOCK: quarantined synthetic sample data for prototype demo mode
 import { DEFAULT_ACTIONS, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 
@@ -210,9 +211,5 @@ export const useActionStore = create<ActionState>((set, get) => ({
 
 function saveActions(actions: Action[]) {
   if (!activeStorage) return;
-  try {
-    activeStorage.setItem(STORAGE_KEYS.ACTIONS, JSON.stringify(actions)).catch(() => {});
-  } catch (e) {
-    console.error('Failed to save actions', e);
-  }
+  safePersist(activeStorage, STORAGE_KEYS.ACTIONS, JSON.stringify(actions), 'actions');
 }

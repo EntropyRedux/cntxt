@@ -56,15 +56,15 @@ MOCK-007 | mocks/index.ts (DEFAULT_OPENED_HISTORY) | MOCK | Native File History 
 ━━━ FEATURE GROUP STATUS ━━━
 
 Feature Group: FG-01: Core Workspace Shell & Document Tab Lifecycle
-Status: in progress (remediation queued)
+Status: in progress (Batch 1 & Batch 2 remediated)
 Background Processes:
 - Live Token Estimator: gated in Settings -> Experimental (`enableLiveTokenEstimator`) [x]
 - Document Autosave: gated in Settings -> Experimental (`enableAutosave`) [x]
 - Live Markdown DOM-Sync: gated in Settings -> Experimental (`enableLiveDomSync`) [x]
 Unit Tests (Prompt 14b): written [ ] passing [ ]
-Last Audit Reconciliation: 2026-09-13 — CONDITIONAL (Remediation Plan Approved)
-Git Checkpoint: initial port
-Notes: AI Studio build ported; IPC isolated in TauriRuntimeAdapter; Pass 2 reconciliation queued 14 valid defects across 4 batches.
+Last Audit Reconciliation: 2026-09-13 — APPROVED (Reconciled Plan v1.1)
+Git Checkpoint: Batch 1 committed (000eee7)
+Notes: Batch 1 (Data shapes & mock quarantine) and Batch 2 (Error boundaries, safe storage persistence across 12 files, modal validation) executed and verified.
 
 Feature Group: FG-02: Sandboxed JavaScript Actions
 Status: planned

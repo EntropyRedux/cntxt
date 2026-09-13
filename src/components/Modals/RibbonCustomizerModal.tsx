@@ -124,7 +124,7 @@ export const RibbonCustomizerModal: React.FC = () => {
       isOpen={isCustomizerOpen}
       onClose={closeCustomizer}
       title="Customize Modular Ribbon"
-      size="xl"
+      maxWidth="xl"
       footer={
         <div className="flex items-center justify-between w-full">
           <Button
@@ -400,7 +400,6 @@ export const RibbonCustomizerModal: React.FC = () => {
                         <Toggle
                           checked={item.enabled}
                           onChange={() => toggleItem(item.id)}
-                          size="sm"
                         />
 
                         <button
@@ -470,7 +469,6 @@ export const RibbonCustomizerModal: React.FC = () => {
                             <Toggle
                               checked={item.showLabel !== false}
                               onChange={() => updateItem(item.id, { showLabel: item.showLabel === false ? true : false })}
-                              size="sm"
                             />
                           </div>
                         </div>

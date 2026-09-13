@@ -1,9 +1,12 @@
 import React from 'react';
 import { TabBar } from '../components/TabBar/TabBar';
 import { Editor } from '../components/Editor/Editor';
+import { LivePreview } from '../components/Preview/LivePreview';
+import { ErrorBoundary } from '../components/Common/ErrorBoundary';
 import { MobileAccessoryBar } from '../components/Mobile/MobileAccessoryBar';
 import { VariableFloatingNavigator } from '../components/Editor/VariableFloatingNavigator';
 import { useTabStore } from '../store/tabStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { FileText, Plus } from 'lucide-react';
 import { Button } from '../primitives/Button';
 
@@ -17,6 +20,7 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
   showAccessoryBar = true
 }) => {
   const { tabs, activeTabId, createTab } = useTabStore();
+  const { settings } = useSettingsStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
 
   return (
@@ -27,13 +31,24 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
       {/* Editor Surface or Empty State */}
       <div className="flex-1 flex overflow-hidden relative">
         {activeTab ? (
-          <div className="w-full h-full overflow-hidden">
-            <Editor
-              key={activeTab.id}
-              tabId={activeTab.id}
-              content={activeTab.content}
-              language={activeTab.language}
-            />
+          <div className="w-full h-full overflow-hidden flex">
+            <div className={`h-full overflow-hidden ${settings.showLivePreview ? 'w-1/2 border-r border-[var(--border-subtle)]' : 'w-full'}`}>
+              <ErrorBoundary fallbackTitle="Editor Canvas Error">
+                <Editor
+                  key={activeTab.id}
+                  tabId={activeTab.id}
+                  content={activeTab.content}
+                  language={activeTab.language}
+                />
+              </ErrorBoundary>
+            </div>
+            {settings.showLivePreview && (
+              <div className="w-1/2 h-full overflow-hidden">
+                <ErrorBoundary fallbackTitle="Live Preview Error">
+                  <LivePreview content={activeTab.content} />
+                </ErrorBoundary>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] p-6 text-center select-none">

@@ -17,6 +17,7 @@ import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useFileHistoryStore, PinnedItem, OpenedFileRecord } from '../../store/fileHistoryStore';
 import { useRuntimeBridge } from '../../adapters';
+import { safePersist } from '../../services/storageHelper';
 import { BridgeDirectoryEntry } from '../../ui-contract/bridgeContract';
 import { VirtualFile } from '../../../contracts/data_shapes';
 // MOCK: quarantined synthetic sample data for prototype demo mode
@@ -215,7 +216,7 @@ export const FileExplorer: React.FC = () => {
 
     const updated = [...files, newFile];
     setFiles(updated);
-    bridge.storage.setItem('contextpad_virtual_files', JSON.stringify(updated)).catch(() => {});
+    safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'virtual files');
     handleOpenFile(newFile);
     addNotification('File Created', name, 'success');
   };
@@ -275,7 +276,7 @@ export const FileExplorer: React.FC = () => {
       const filtered = files.filter(f => f.name !== dirResult.name);
       const updated = [newFolder, ...filtered];
       setFiles(updated);
-      bridge.storage.setItem('contextpad_virtual_files', JSON.stringify(updated)).catch(() => {});
+      safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'workspace files');
 
       // Automatically expand this workspace folder
       setExpandedFolders(prev => ({

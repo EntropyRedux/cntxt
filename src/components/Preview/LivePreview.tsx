@@ -33,7 +33,7 @@ marked.use({
 
 interface LivePreviewProps {
   content: string;
-  tabTitle: string;
+  tabTitle?: string;
 }
 
 export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {

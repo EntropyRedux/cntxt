@@ -4,6 +4,7 @@ import { Template } from '../../contracts/data_shapes';
 import { DEFAULT_TEMPLATES, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
+import { safePersist } from '../services/storageHelper';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -173,9 +174,5 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
 
 function saveTemplates(templates: Template[]) {
   if (!activeStorage) return;
-  try {
-    activeStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(templates)).catch(() => {});
-  } catch (e) {
-    console.error('Failed to save templates', e);
-  }
+  safePersist(activeStorage, STORAGE_KEYS.TEMPLATES, JSON.stringify(templates), 'templates');
 }

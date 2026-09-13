@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
+import { safePersist } from '../services/storageHelper';
 import { PinnedItem, OpenedFileRecord } from '../contracts/data_shapes';
 import { DEFAULT_PINNED_ITEMS, DEFAULT_OPENED_HISTORY, IS_PROTOTYPE_DEMO_MODE } from '../../mocks';
 
@@ -47,7 +48,7 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
         } catch {}
       } else if (IS_PROTOTYPE_DEMO_MODE) {
         set({ pinnedItems: DEFAULT_PINNED_ITEMS });
-        await activeStorage.setItem(STORAGE_KEYS.PINNED_ITEMS, JSON.stringify(DEFAULT_PINNED_ITEMS)).catch(() => {});
+        safePersist(activeStorage, STORAGE_KEYS.PINNED_ITEMS, JSON.stringify(DEFAULT_PINNED_ITEMS), 'pinned items');
       }
 
       if (savedHistory) {
@@ -59,7 +60,7 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
         } catch {}
       } else if (IS_PROTOTYPE_DEMO_MODE) {
         set({ openedHistory: DEFAULT_OPENED_HISTORY });
-        await activeStorage.setItem(STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify(DEFAULT_OPENED_HISTORY)).catch(() => {});
+        safePersist(activeStorage, STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify(DEFAULT_OPENED_HISTORY), 'file history');
       }
     } catch (e) {
       console.error('Failed to initialize file history store', e);
@@ -90,7 +91,7 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
     set({ openedHistory: updated });
 
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify(updated)).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify(updated), 'file history');
     }
   },
 
@@ -101,14 +102,14 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
     set({ openedHistory: updated });
 
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify(updated)).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify(updated), 'file history');
     }
   },
 
   clearOpenedHistory: () => {
     set({ openedHistory: [] });
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify([])).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify([]), 'clear file history');
     }
   },
 
@@ -120,7 +121,7 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
     set({ pinnedItems: updated });
 
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.PINNED_ITEMS, JSON.stringify(updated)).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.PINNED_ITEMS, JSON.stringify(updated), 'pinned items');
     }
   },
 
@@ -131,7 +132,7 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
     set({ pinnedItems: updated });
 
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.PINNED_ITEMS, JSON.stringify(updated)).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.PINNED_ITEMS, JSON.stringify(updated), 'pinned items');
     }
   },
 

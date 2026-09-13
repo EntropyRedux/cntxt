@@ -365,7 +365,7 @@ export const FormattingCustomizerModal: React.FC = () => {
                           {button.label}
                         </span>
                         {!button.isBuiltIn && (
-                          <Badge variant="secondary" size="xs">
+                          <Badge variant="outline" size="xs">
                             Custom
                           </Badge>
                         )}

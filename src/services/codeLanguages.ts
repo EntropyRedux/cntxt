@@ -90,7 +90,9 @@ export function preloadCommonLanguages(): void {
   for (const name of names) {
     const desc = LanguageDescription.matchLanguageName(languages, name, true);
     if (desc && !desc.support) {
-      desc.load().catch(() => {});
+      desc.load().catch((err) => {
+        console.warn(`[Language Loader] Background preload for language '${name}' failed:`, err);
+      });
     }
   }
 }

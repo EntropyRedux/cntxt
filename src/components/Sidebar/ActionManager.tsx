@@ -116,7 +116,11 @@ export const ActionManager: React.FC = () => {
       }
     };
 
-    await executeAction(action.id, executionContext);
+    try {
+      await executeAction(action.id, executionContext);
+    } catch (err: any) {
+      addNotification('Action Failed', err?.message || `Error executing action "${action.name}"`, 'error');
+    }
   };
 
   const handleExport = () => {

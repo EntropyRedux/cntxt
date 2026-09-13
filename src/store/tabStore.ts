@@ -6,6 +6,7 @@ import { editorRegistry } from '../services/editor/editorRegistry';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { useSettingsStore } from './settingsStore';
+import { safePersist, safeRemove } from '../services/storageHelper';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -133,7 +134,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
     // Save to bridge storage & meta
     if (activeStorage) {
-      activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${id}`, content).catch(() => {});
+      safePersist(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${id}`, content, `tab content for ${newTab.title}`);
     }
     saveTabsMeta(newTabs, id);
 
@@ -148,7 +149,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       const filtered = get().tabs.filter(t => t.id !== tabId);
       set({ tabs: filtered, activeTabId: newId });
       if (activeStorage) {
-        activeStorage.removeItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`).catch(() => {});
+        safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, `tab ${tabId}`);
       }
       saveTabsMeta(filtered, newId);
       return;
@@ -165,7 +166,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
     set({ tabs: newTabs, activeTabId: nextActiveId });
     if (activeStorage) {
-      activeStorage.removeItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`).catch(() => {});
+      safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, `tab ${tabId}`);
     }
     saveTabsMeta(newTabs, nextActiveId);
   },
@@ -176,7 +177,7 @@ export const useTabStore = create<TabState>((set, get) => ({
     const remaining = tabs.filter(t => t.id === keepTabId);
 
     if (activeStorage) {
-      toDelete.forEach(t => activeStorage!.removeItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`).catch(() => {}));
+      toDelete.forEach(t => safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`, `tab ${t.id}`));
     }
     set({ tabs: remaining, activeTabId: keepTabId });
     saveTabsMeta(remaining, keepTabId);
@@ -185,7 +186,7 @@ export const useTabStore = create<TabState>((set, get) => ({
   closeAllTabs: () => {
     const { tabs } = get();
     if (activeStorage) {
-      tabs.forEach(t => activeStorage!.removeItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`).catch(() => {}));
+      tabs.forEach(t => safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`, `tab ${t.id}`));
     }
     
     const newId = `tab_${Date.now()}`;
@@ -200,7 +201,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       lastModifiedTime: Date.now()
     };
     if (activeStorage) {
-      activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${newId}`, '').catch(() => {});
+      safePersist(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${newId}`, '', 'new tab content');
     }
     set({ tabs: [freshTab], activeTabId: newId });
     saveTabsMeta([freshTab], newId);
@@ -209,7 +210,7 @@ export const useTabStore = create<TabState>((set, get) => ({
   setActiveTabId: (tabId: string) => {
     set({ activeTabId: tabId });
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, tabId).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.ACTIVE_TAB_ID, tabId, 'active tab id');
     }
   },
 
@@ -357,8 +358,8 @@ function saveTabsMeta(tabs: Tab[], activeTabId: string) {
       lastModifiedTime,
       isPinned
     }));
-    activeStorage.setItem(STORAGE_KEYS.TABS_META, JSON.stringify(metaOnly)).catch(() => {});
-    activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, activeTabId).catch(() => {});
+    safePersist(activeStorage, STORAGE_KEYS.TABS_META, JSON.stringify(metaOnly), 'tabs metadata');
+    safePersist(activeStorage, STORAGE_KEYS.ACTIVE_TAB_ID, activeTabId, 'active tab id');
   } catch (e) {
     console.error('Failed to save tab metadata', e);
   }
@@ -376,7 +377,7 @@ function debouncedContentSave(tabId: string, content: string) {
   const interval = settings.autosaveIntervalMs ?? 1000;
   saveTimers[tabId] = setTimeout(() => {
     if (activeStorage) {
-      activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, content).catch(() => {});
+      safePersist(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, content, `autosave for tab ${tabId}`);
     }
     delete saveTimers[tabId];
   }, interval);

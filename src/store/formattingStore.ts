@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { MarkdownFormatButton, FormattingButtonSize } from '../types';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
+import { safePersist } from '../services/storageHelper';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -377,11 +378,7 @@ interface FormattingState {
 
 const saveButtonsToStorage = (buttons: MarkdownFormatButton[]) => {
   if (!activeStorage) return;
-  try {
-    activeStorage.setItem(STORAGE_KEYS.FORMATTING_BUTTONS, JSON.stringify(buttons)).catch(() => {});
-  } catch (e) {
-    console.error('Failed to save formatting buttons to storage', e);
-  }
+  safePersist(activeStorage, STORAGE_KEYS.FORMATTING_BUTTONS, JSON.stringify(buttons), 'formatting buttons');
 };
 
 export const useFormattingStore = create<FormattingState>((set, get) => ({
@@ -441,7 +438,7 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
   setIsMultiRowExpanded: (expanded: boolean) => {
     set({ isMultiRowExpanded: expanded });
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.FORMATTING_MULTIROW, String(expanded)).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.FORMATTING_MULTIROW, String(expanded), 'formatting multirow setting');
     }
   },
 
@@ -449,14 +446,14 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
     const next = !get().isMultiRowExpanded;
     set({ isMultiRowExpanded: next });
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.FORMATTING_MULTIROW, String(next)).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.FORMATTING_MULTIROW, String(next), 'formatting multirow setting');
     }
   },
 
   setButtonSize: (size: FormattingButtonSize) => {
     set({ buttonSize: size });
     if (activeStorage) {
-      activeStorage.setItem(STORAGE_KEYS.FORMATTING_SIZE, size).catch(() => {});
+      safePersist(activeStorage, STORAGE_KEYS.FORMATTING_SIZE, size, 'formatting size setting');
     }
   },
 

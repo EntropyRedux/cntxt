@@ -57,12 +57,19 @@ if (api.getSelection()) {
 api.toast('Action executed successfully!', 'success');`);
     }
     setTestStatus(null);
+    setErrors({});
   }, [editingAction, isActionEditorOpen]);
+
+  const [errors, setErrors] = useState<{ name?: string; code?: string }>({});
 
   if (!isActionEditorOpen) return null;
 
   const handleTestRun = async () => {
-    if (!code.trim()) return;
+    if (!code.trim()) {
+      setErrors(prev => ({ ...prev, code: 'Action code is required to test' }));
+      addNotification('Validation Error', 'Please write action code to test.', 'warning');
+      return;
+    }
     setTestStatus({ msg: 'Running...' });
     try {
       const { executeInSandbox } = await import('../../services/actionSandbox');
@@ -75,7 +82,15 @@ api.toast('Action executed successfully!', 'success');`);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !code.trim()) return;
+    const newErrors: { name?: string; code?: string } = {};
+    if (!name.trim()) newErrors.name = 'Action name is required';
+    if (!code.trim()) newErrors.code = 'Action code cannot be empty';
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      addNotification('Validation Error', 'Please complete all required fields.', 'warning');
+      return;
+    }
+    setErrors({});
 
     if (editingAction) {
       updateAction(editingAction.id, {
@@ -140,10 +155,18 @@ api.toast('Action executed successfully!', 'success');`);
                 type="text"
                 required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
+                }}
                 placeholder="e.g. Format Table to JSON"
-                className="w-full h-7 px-2.5 theme-input rounded"
+                className={`w-full h-7 px-2.5 theme-input rounded ${errors.name ? 'border-[var(--status-error)]' : ''}`}
               />
+              {errors.name && (
+                <span className="text-[10px] text-[var(--status-error)] mt-1 block font-medium">
+                  {errors.name}
+                </span>
+              )}
             </div>
 
             <div>
@@ -192,10 +215,18 @@ api.toast('Action executed successfully!', 'success');`);
             <textarea
               required
               value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="flex-1 w-full p-3 theme-input rounded font-mono text-[var(--syntax-tag)] text-xs leading-relaxed resize-none"
+              onChange={(e) => {
+                setCode(e.target.value);
+                if (errors.code) setErrors(prev => ({ ...prev, code: undefined }));
+              }}
+              className={`flex-1 w-full p-3 theme-input rounded font-mono text-[var(--syntax-tag)] text-xs leading-relaxed resize-none ${errors.code ? 'border-[var(--status-error)]' : ''}`}
               spellCheck={false}
             />
+            {errors.code && (
+              <span className="text-[10px] text-[var(--status-error)] mt-1 block font-medium">
+                {errors.code}
+              </span>
+            )}
           </div>
 
           {/* Footer Controls */}

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { RibbonItem } from '../types';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
+import { safePersist } from '../services/storageHelper';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -127,11 +128,7 @@ interface RibbonState {
 
 const saveRibbonToStorage = (items: RibbonItem[]) => {
   if (!activeStorage) return;
-  try {
-    activeStorage.setItem(STORAGE_KEYS.RIBBON, JSON.stringify(items)).catch(() => {});
-  } catch (e) {
-    console.error('Failed to save ribbon items', e);
-  }
+  safePersist(activeStorage, STORAGE_KEYS.RIBBON, JSON.stringify(items), 'ribbon items');
 };
 
 export const useRibbonStore = create<RibbonState>((set, get) => ({

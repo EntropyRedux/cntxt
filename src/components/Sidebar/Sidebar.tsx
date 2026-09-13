@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useRuntimeBridge } from '../../adapters';
+import { safePersist } from '../../services/storageHelper';
 import { FileExplorer } from './FileExplorer';
 import { OutlinePanel } from './OutlinePanel';
 import { TemplateManager } from './TemplateManager';
@@ -53,7 +54,7 @@ export const Sidebar: React.FC = () => {
           setWidth(parsed);
         }
       }
-    }).catch(() => {});
+    }).catch(err => console.warn('[Sidebar] Failed to load stored width', err));
   }, [bridge.storage]);
 
   const [isResizing, setIsResizing] = useState(false);
@@ -80,7 +81,7 @@ export const Sidebar: React.FC = () => {
       : DEFAULT_DESKTOP_WIDTH;
 
     setWidth(target);
-    bridge.storage.setItem(STORAGE_KEY, String(target)).catch(() => {});
+    safePersist(bridge.storage, STORAGE_KEY, String(target), 'sidebar width');
   }, [bridge.storage]);
 
   // Drag resizer: Mouse
@@ -103,7 +104,7 @@ export const Sidebar: React.FC = () => {
       const clamped = Math.max(minWidth, Math.min(maxWidth, newWidth));
 
       setWidth(clamped);
-      bridge.storage.setItem(STORAGE_KEY, String(clamped)).catch(() => {});
+      safePersist(bridge.storage, STORAGE_KEY, String(clamped), 'sidebar width');
     };
 
     const onMouseUp = () => {
@@ -136,7 +137,7 @@ export const Sidebar: React.FC = () => {
       const clamped = Math.max(minWidth, Math.min(maxWidth, newWidth));
 
       setWidth(clamped);
-      bridge.storage.setItem(STORAGE_KEY, String(clamped)).catch(() => {});
+      safePersist(bridge.storage, STORAGE_KEY, String(clamped), 'sidebar width');
     };
 
     const onTouchEnd = () => {

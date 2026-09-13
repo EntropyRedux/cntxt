@@ -4,6 +4,7 @@ import { PinnedTab } from '../../contracts/data_shapes';
 import { DEFAULT_PINNED_TABS, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
+import { safePersist } from '../services/storageHelper';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -142,9 +143,5 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
 function saveWorkflows(workflows: PinnedTab[]) {
   if (!activeStorage) return;
-  try {
-    activeStorage.setItem(STORAGE_KEYS.WORKFLOWS, JSON.stringify(workflows)).catch(() => {});
-  } catch (e) {
-    console.error('Failed to save workflows', e);
-  }
+  safePersist(activeStorage, STORAGE_KEYS.WORKFLOWS, JSON.stringify(workflows), 'workflows');
 }

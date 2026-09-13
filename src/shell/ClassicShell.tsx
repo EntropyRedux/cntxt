@@ -5,6 +5,7 @@ import { ShellEditorContainer } from './ShellEditorContainer';
 import { ShellStatusBar } from './ShellStatusBar';
 import { ModularRibbon } from '../components/Ribbon/ModularRibbon';
 import { ActivityBar } from '../components/ActivityBar/ActivityBar';
+import { ErrorBoundary } from '../components/Common/ErrorBoundary';
 import { useSettingsStore } from '../store/settingsStore';
 import { AppUiEvents } from '../ui-contract/actionContract';
 
@@ -28,7 +29,9 @@ export const ClassicShell: React.FC<ShellLayoutProps> = ({
       />
 
       {/* 2. Modular Ribbon Toolbox */}
-      <ModularRibbon events={events} />
+      <ErrorBoundary fallbackTitle="Ribbon Error">
+        <ModularRibbon events={events} />
+      </ErrorBoundary>
 
       {/* 3. Workspace Row: Left Rail aligns directly with TabBar row */}
       <div className="flex-1 flex overflow-hidden relative">
@@ -36,8 +39,12 @@ export const ClassicShell: React.FC<ShellLayoutProps> = ({
 
         {/* Central Workspace Column: Editor & Sidebar */}
         <div className="flex-1 flex overflow-hidden relative">
-          <ShellEditorContainer />
-          <ShellSidebar />
+          <ErrorBoundary fallbackTitle="Editor Container Error">
+            <ShellEditorContainer />
+          </ErrorBoundary>
+          <ErrorBoundary fallbackTitle="Sidebar Error">
+            <ShellSidebar />
+          </ErrorBoundary>
         </div>
       </div>
 
