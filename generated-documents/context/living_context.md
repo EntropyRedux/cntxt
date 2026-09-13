@@ -50,8 +50,8 @@ MOCK-002 | mocks/index.ts (DEFAULT_ACTIONS) | MOCK | Native Action Registry & Pe
 MOCK-003 | mocks/index.ts (DEFAULT_TEMPLATES) | MOCK | Native Template Registry & Filesystem (`templates/`) | FG-03: Templates | active (demo mode)
 MOCK-004 | mocks/index.ts (DEFAULT_PINNED_TABS) | MOCK | Native Pinned Tab Store (`plugin:store`) | FG-01: Document Tabs | active (demo mode)
 MOCK-005 | mocks/index.ts (INITIAL_PROJECT_FILES) | MOCK | Native Workspace Directory Tree (`plugin:fs`) | FG-04: Workspace Explorer | active (demo mode)
-MOCK-006 | mocks/index.ts (DEFAULT_PINNED_ITEMS) | MOCK | Native Pinned Files Store (`plugin:store`) | FG-04: Workspace Explorer | scheduled for quarantine
-MOCK-007 | mocks/index.ts (DEFAULT_OPENED_HISTORY) | MOCK | Native File History Store (`plugin:store`) | FG-04: Workspace Explorer | scheduled for quarantine
+MOCK-006 | mocks/index.ts (DEFAULT_PINNED_ITEMS) | MOCK | Native Pinned Files Store (`plugin:store`) | FG-04: Workspace Explorer | active (demo mode) / quarantined
+MOCK-007 | mocks/index.ts (DEFAULT_OPENED_HISTORY) | MOCK | Native File History Store (`plugin:store`) | FG-04: Workspace Explorer | active (demo mode) / quarantined
 
 ━━━ FEATURE GROUP STATUS ━━━
 

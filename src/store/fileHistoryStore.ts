@@ -1,75 +1,10 @@
 import { create } from 'zustand';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
+import { PinnedItem, OpenedFileRecord } from '../contracts/data_shapes';
+import { DEFAULT_PINNED_ITEMS, DEFAULT_OPENED_HISTORY, IS_PROTOTYPE_DEMO_MODE } from '../../mocks';
 
-export interface PinnedItem {
-  id: string;
-  name: string;
-  type: 'file' | 'folder';
-  path?: string;
-  language?: string;
-  content?: string;
-}
-
-export interface OpenedFileRecord {
-  id: string;
-  name: string;
-  type: 'file' | 'folder';
-  path?: string | null;
-  language?: string;
-  content?: string;
-  openedAt: number;
-}
-
-const DEFAULT_PINNED_ITEMS: PinnedItem[] = [
-  {
-    id: 'folder-specs',
-    name: 'specifications',
-    type: 'folder'
-  },
-  {
-    id: 'f-draft',
-    name: 'draft_system_prompt.md',
-    type: 'file',
-    language: 'markdown'
-  },
-  {
-    id: 'f-user',
-    name: 'user_persona.json',
-    type: 'file',
-    language: 'json'
-  }
-];
-
-const DEFAULT_OPENED_HISTORY: OpenedFileRecord[] = [
-  {
-    id: 'folder-specs',
-    name: 'specifications',
-    type: 'folder',
-    openedAt: Date.now() - 1000 * 60 * 2
-  },
-  {
-    id: 'f-welcome',
-    name: 'Welcome.md',
-    type: 'file',
-    language: 'markdown',
-    openedAt: Date.now() - 1000 * 60 * 4
-  },
-  {
-    id: 'f-draft',
-    name: 'draft_system_prompt.md',
-    type: 'file',
-    language: 'markdown',
-    openedAt: Date.now() - 1000 * 60 * 18
-  },
-  {
-    id: 'f-user',
-    name: 'user_persona.json',
-    type: 'file',
-    language: 'json',
-    openedAt: Date.now() - 1000 * 60 * 42
-  }
-];
+export type { PinnedItem, OpenedFileRecord };
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -88,8 +23,8 @@ interface FileHistoryState {
 }
 
 export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
-  pinnedItems: DEFAULT_PINNED_ITEMS,
-  openedHistory: DEFAULT_OPENED_HISTORY,
+  pinnedItems: IS_PROTOTYPE_DEMO_MODE ? DEFAULT_PINNED_ITEMS : [],
+  openedHistory: IS_PROTOTYPE_DEMO_MODE ? DEFAULT_OPENED_HISTORY : [],
 
   initializeFileHistory: async (storage?: IStorageBridge) => {
     if (storage) {
@@ -110,8 +45,9 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
             set({ pinnedItems: parsed });
           }
         } catch {}
-      } else {
-        await activeStorage.setItem(STORAGE_KEYS.PINNED_ITEMS, JSON.stringify(DEFAULT_PINNED_ITEMS));
+      } else if (IS_PROTOTYPE_DEMO_MODE) {
+        set({ pinnedItems: DEFAULT_PINNED_ITEMS });
+        await activeStorage.setItem(STORAGE_KEYS.PINNED_ITEMS, JSON.stringify(DEFAULT_PINNED_ITEMS)).catch(() => {});
       }
 
       if (savedHistory) {
@@ -121,8 +57,9 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
             set({ openedHistory: parsed });
           }
         } catch {}
-      } else {
-        await activeStorage.setItem(STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify(DEFAULT_OPENED_HISTORY));
+      } else if (IS_PROTOTYPE_DEMO_MODE) {
+        set({ openedHistory: DEFAULT_OPENED_HISTORY });
+        await activeStorage.setItem(STORAGE_KEYS.OPENED_FILE_HISTORY, JSON.stringify(DEFAULT_OPENED_HISTORY)).catch(() => {});
       }
     } catch (e) {
       console.error('Failed to initialize file history store', e);

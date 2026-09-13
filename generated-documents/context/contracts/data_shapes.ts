@@ -410,3 +410,22 @@ export interface EditorContext {
   getLine: (n: number) => string;
   getRange: (fromLine: number, toLine: number) => string;
 }
+
+export interface PinnedItem {
+  id: string;
+  name: string;
+  type: 'file' | 'folder' | 'document' | 'template' | 'action';
+  path?: string | null;
+  language?: SupportedLanguage | string;
+  content?: string;
+}
+
+export interface OpenedFileRecord {
+  id: string;
+  name: string;
+  type?: 'file' | 'folder' | 'document' | 'template' | 'action';
+  path?: string | null;
+  language?: SupportedLanguage | string;
+  content?: string;
+  openedAt: number;
+}

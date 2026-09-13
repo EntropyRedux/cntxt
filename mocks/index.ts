@@ -6,7 +6,7 @@
  * Mocks are injected ONLY when running in prototype demo mode.
  */
 
-import { Template, Action, PinnedTab, VirtualFile } from '../contracts/data_shapes';
+import { Template, Action, PinnedTab, VirtualFile, PinnedItem, OpenedFileRecord } from '../contracts/data_shapes';
 
 // Mode flag to determine if demo sample data should be injected into empty states
 export const IS_PROTOTYPE_DEMO_MODE = true;
@@ -766,5 +766,57 @@ export const INITIAL_PROJECT_FILES: VirtualFile[] = [
       { id: 'f-api', name: 'openapi_schema.yaml', path: '/specifications/openapi_schema.yaml', type: 'file', content: 'openapi: 3.0.0\ninfo:\n  title: ContextPad Workspace API\n  version: 1.10.0', language: 'yaml' },
       { id: 'f-arch', name: 'architecture_rfc.md', path: '/specifications/architecture_rfc.md', type: 'file', content: '# RFC 101: Workspace Sync\n\nDate: {=TODAY()}', language: 'markdown' }
     ]
+  }
+];
+
+// MOCK-006: replace with [native file system / real user pinned files]
+export const DEFAULT_PINNED_ITEMS: PinnedItem[] = [
+  {
+    id: 'folder-specs',
+    name: 'specifications',
+    type: 'folder'
+  },
+  {
+    id: 'f-draft',
+    name: 'draft_system_prompt.md',
+    type: 'file',
+    language: 'markdown'
+  },
+  {
+    id: 'f-user',
+    name: 'user_persona.json',
+    type: 'file',
+    language: 'json'
+  }
+];
+
+// MOCK-007: replace with [native persistent store / real user opened file history]
+export const DEFAULT_OPENED_HISTORY: OpenedFileRecord[] = [
+  {
+    id: 'folder-specs',
+    name: 'specifications',
+    type: 'folder',
+    openedAt: 1700000000000 - 1000 * 60 * 2
+  },
+  {
+    id: 'f-welcome',
+    name: 'Welcome.md',
+    type: 'file',
+    language: 'markdown',
+    openedAt: 1700000000000 - 1000 * 60 * 4
+  },
+  {
+    id: 'f-draft',
+    name: 'draft_system_prompt.md',
+    type: 'file',
+    language: 'markdown',
+    openedAt: 1700000000000 - 1000 * 60 * 18
+  },
+  {
+    id: 'f-user',
+    name: 'user_persona.json',
+    type: 'file',
+    language: 'json',
+    openedAt: 1700000000000 - 1000 * 60 * 42
   }
 ];

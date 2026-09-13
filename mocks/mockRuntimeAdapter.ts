@@ -14,8 +14,8 @@ import {
   IThemeBridge,
   BridgeFileResult, 
   SupportedLanguage 
-} from '../ui-contract/bridgeContract';
-import { STORAGE_KEYS } from './storageKeys';
+} from '../src/ui-contract/bridgeContract';
+import { STORAGE_KEYS } from '../src/adapters/storageKeys';
 
 export class MockRuntimeAdapter implements IRuntimeBridge {
   public mockFiles: Map<string, { content: string; language: SupportedLanguage }> = new Map();

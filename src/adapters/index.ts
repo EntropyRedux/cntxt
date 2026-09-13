@@ -1,6 +1,5 @@
 export * from './storageKeys';
 export * from './browserRuntimeAdapter';
-export * from './mockRuntimeAdapter';
 export * from './tauriRuntimeAdapter';
 export * from './runtimeBridge';
 export * from './eventDispatcher';
