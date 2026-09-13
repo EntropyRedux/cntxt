@@ -324,7 +324,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
             }
             aria-label={`Editor mode: currently in ${isRendered ? 'Rendered' : 'Raw'} mode. Click to switch.`}
             aria-pressed={isRendered}
-            className={`h-6 px-2 flex items-center gap-1 rounded-md transition-all border text-xs cursor-pointer ${
+            className={`h-6 px-1.5 sm:px-2 flex items-center gap-1 rounded-md transition-all border text-xs cursor-pointer ${
               isRendered
                 ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80'
                 : 'bg-[var(--card-secondary-bg)] text-[var(--status-warning)] border-[var(--status-warning)]/40 hover:bg-[var(--card-hover-bg)]'
@@ -333,12 +333,12 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
             {isRendered ? (
               <>
                 <Eye className="w-3 h-3 text-[var(--accent-primary)] shrink-0" />
-                <span className="font-medium text-[10.5px]">Rendered</span>
+                <span className="font-medium text-[10.5px] hidden sm:inline">Rendered</span>
               </>
             ) : (
               <>
                 <Code2 className="w-3 h-3 text-[var(--status-warning)] shrink-0" />
-                <span className="font-medium text-[10.5px]">Raw</span>
+                <span className="font-medium text-[10.5px] hidden sm:inline">Raw</span>
               </>
             )}
           </button>
@@ -436,7 +436,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
         data-tauri-drag-region
         onMouseDown={handleWindowDrag}
         onDoubleClick={handleTitleBarDoubleClick}
-        className={`bg-[var(--titlebar-bg)]/85 border-b border-[var(--border-subtle)] flex items-center px-2 sm:px-3 shrink-0 gap-0.5 sm:gap-1 select-none relative z-30 transition-all cursor-default ${
+        className={`bg-[var(--titlebar-bg)]/85 border-b border-[var(--border-subtle)] flex items-center px-2 sm:px-3 shrink-0 gap-0.5 sm:gap-1 select-none relative z-30 transition-all cursor-default overflow-x-auto no-scrollbar ${
           settings.touchOptimized ? 'h-8.5' : 'h-7'
         }`}
         aria-label="Menu bar"

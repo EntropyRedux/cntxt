@@ -16,8 +16,8 @@
         "title": "CNTXT",
         "width": 1280,
         "height": 800,
-        "minWidth": 700,
-        "minHeight": 500,
+        "minWidth": 400,
+        "minHeight": 350,
         "decorations": false,
         "transparent": false
       }
