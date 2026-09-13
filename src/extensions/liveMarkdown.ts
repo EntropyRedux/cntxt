@@ -157,6 +157,7 @@ class MermaidBlockWidget extends WidgetType {
       } else {
         canvas.innerHTML = res.svg;
       }
+      view.requestMeasure();
     });
 
     container.addEventListener('click', () => {
@@ -170,7 +171,7 @@ class MermaidBlockWidget extends WidgetType {
   }
 
   ignoreEvent(): boolean {
-    return false;
+    return true;
   }
 }
 
@@ -219,11 +220,15 @@ class DisplayMathWidget extends WidgetType {
       view.focus();
     });
 
+    requestAnimationFrame(() => {
+      view.requestMeasure();
+    });
+
     return container;
   }
 
   ignoreEvent(): boolean {
-    return false;
+    return true;
   }
 }
 
@@ -248,7 +253,7 @@ class InlineMathWidget extends WidgetType {
   }
 
   ignoreEvent(): boolean {
-    return false;
+    return true;
   }
 }
 
@@ -317,7 +322,7 @@ class TableBlockWidget extends WidgetType {
   }
 
   ignoreEvent(): boolean {
-    return false;
+    return true;
   }
 }
 
@@ -342,11 +347,20 @@ class CodeBlockHeaderWidget extends WidgetType {
     );
   }
 
-  toDOM(): HTMLElement {
+  toDOM(view: EditorView): HTMLElement {
     const meta = getLanguageMeta(this.language);
 
     const header = createElement('div', {
-      className: 'cm-live-codeblock-header select-none flex items-center justify-between px-3 py-1.5 border-b border-[#2E2E38] bg-[#16161B] text-[#A1A1AA] rounded-t-[7px] w-full'
+      className: 'cm-live-codeblock-header select-none flex items-center justify-between px-3 py-1.5 border-b border-[#2E2E38] bg-[#16161B] text-[#A1A1AA] rounded-t-[7px] w-full cursor-pointer'
+    });
+
+    header.addEventListener('click', (e) => {
+      if (!(e.target as HTMLElement)?.closest('.cm-live-copy-code-btn')) {
+        view.dispatch({
+          selection: { anchor: this.linePos }
+        });
+        view.focus();
+      }
     });
 
     const left = createElement('div', {
@@ -412,7 +426,7 @@ class CodeBlockHeaderWidget extends WidgetType {
   }
 
   ignoreEvent(): boolean {
-    return false;
+    return true;
   }
 }
 
@@ -423,6 +437,9 @@ class CodeBlockFooterWidget extends WidgetType {
     });
   }
   eq(): boolean {
+    return true;
+  }
+  ignoreEvent(): boolean {
     return true;
   }
 }
@@ -470,7 +487,7 @@ class TaskCheckboxWidget extends WidgetType {
   }
 
   ignoreEvent(): boolean {
-    return false;
+    return true;
   }
 }
 
@@ -484,12 +501,15 @@ class BulletWidget extends WidgetType {
   eq(): boolean {
     return true;
   }
+  ignoreEvent(): boolean {
+    return true;
+  }
 }
 
 class HrWidget extends WidgetType {
   toDOM(): HTMLElement {
     const hrContainer = createElement('div', {
-      className: 'cm-live-hr-wrap py-3 my-2 select-none w-full'
+      className: 'cm-live-hr-wrap py-3 select-none w-full'
     });
     const hr = createElement('hr', {
       className: 'border-t border-[#3F3F46] my-0 w-full'
@@ -498,6 +518,9 @@ class HrWidget extends WidgetType {
     return hrContainer;
   }
   eq(): boolean {
+    return true;
+  }
+  ignoreEvent(): boolean {
     return true;
   }
 }
@@ -532,6 +555,10 @@ class LinkWidget extends WidgetType {
     });
     return a;
   }
+
+  ignoreEvent(): boolean {
+    return true;
+  }
 }
 
 class ImageWidget extends WidgetType {
@@ -557,7 +584,7 @@ class ImageWidget extends WidgetType {
 
   toDOM(view: EditorView): HTMLElement {
     const container = createElement('span', {
-      className: 'cm-live-image-figure block my-2 select-none'
+      className: 'cm-live-image-figure block py-1 select-none'
     });
 
     const card = createElement('div', {
@@ -574,6 +601,10 @@ class ImageWidget extends WidgetType {
       referrerpolicy: 'no-referrer'
     }) as HTMLImageElement;
 
+    img.onload = () => {
+      view.requestMeasure();
+    };
+
     // Error fallback
     img.onerror = () => {
       card.innerHTML = '';
@@ -586,6 +617,7 @@ class ImageWidget extends WidgetType {
           this.src.startsWith('data:') ? '[Embedded Image Data]' : this.src
         }</span>
       `;
+      view.requestMeasure();
     };
 
     // Quick Action Bar on top right of the card
@@ -719,7 +751,7 @@ class ImageWidget extends WidgetType {
   }
 
   ignoreEvent(): boolean {
-    return false;
+    return true;
   }
 }
 
@@ -958,11 +990,14 @@ function buildDecorations(state: EditorState): DecorationSet {
 
     // 2. Determine active lines where the cursor / selection currently sits
     const activeLines = new Set<number>();
-    for (const range of state.selection.ranges) {
-      const startLine = doc.lineAt(range.from).number;
-      const endLine = doc.lineAt(range.to).number;
-      for (let l = startLine; l <= endLine; l++) {
-        activeLines.add(l);
+    const isSelectionActive = !state.selection.main.empty;
+    // When the user is actively selecting text across ranges, do not mark lines as raw-editing
+    // to prevent jarring layout shifts under the cursor while dragging
+    if (!isSelectionActive) {
+      for (const range of state.selection.ranges) {
+        if (range.empty) {
+          activeLines.add(doc.lineAt(range.head).number);
+        }
       }
     }
 
@@ -1168,14 +1203,6 @@ function buildDecorations(state: EditorState): DecorationSet {
       // D. Regular Markdown Row
       // =====================================================================
 
-      // If active row: show raw markdown for smooth typing (unless it has large data:image embedded)
-      const hasEmbeddedDataImage = line.text.includes('data:image/');
-      if (isLineActive && !hasEmbeddedDataImage) {
-        builder.add(line.from, line.from, Decoration.line({ class: 'cm-live-active-row' }));
-        pos = line.to + 1;
-        continue;
-      }
-
       let lineDeco: Decoration | null = isLineActive ? Decoration.line({ class: 'cm-live-active-row' }) : null;
       const rangeDecos: RangeDecoItem[] = [];
       const lineText = line.text;
@@ -1185,24 +1212,44 @@ function buildDecorations(state: EditorState): DecorationSet {
       if (headingMatch) {
         const level = headingMatch[1].length;
         const markerLen = headingMatch[1].length + 1;
-        lineDeco = Decoration.line({ class: `cm-live-heading cm-live-h${level}` });
-        rangeDecos.push({
-          from: line.from,
-          to: line.from + markerLen,
-          deco: Decoration.replace({})
+        lineDeco = Decoration.line({ 
+          class: `cm-live-heading cm-live-h${level}${isLineActive ? ' cm-live-active-row' : ''}` 
         });
+        if (isLineActive) {
+          rangeDecos.push({
+            from: line.from,
+            to: line.from + markerLen,
+            deco: Decoration.mark({ class: 'cm-live-heading-marker' })
+          });
+        } else {
+          rangeDecos.push({
+            from: line.from,
+            to: line.from + markerLen,
+            deco: Decoration.replace({})
+          });
+        }
       }
 
       // 2. Blockquotes (> quote)
       const quoteMatch = lineText.match(/^>\s*(.*)$/);
       if (quoteMatch && !headingMatch) {
-        lineDeco = Decoration.line({ class: 'cm-live-blockquote' });
-        const prefixLen = lineText.startsWith('> ') ? 2 : 1;
-        rangeDecos.push({
-          from: line.from,
-          to: Math.min(line.from + prefixLen, line.to),
-          deco: Decoration.replace({})
+        lineDeco = Decoration.line({ 
+          class: `cm-live-blockquote${isLineActive ? ' cm-live-active-row' : ''}` 
         });
+        const prefixLen = lineText.startsWith('> ') ? 2 : 1;
+        if (isLineActive) {
+          rangeDecos.push({
+            from: line.from,
+            to: Math.min(line.from + prefixLen, line.to),
+            deco: Decoration.mark({ class: 'cm-live-heading-marker' })
+          });
+        } else {
+          rangeDecos.push({
+            from: line.from,
+            to: Math.min(line.from + prefixLen, line.to),
+            deco: Decoration.replace({})
+          });
+        }
       }
 
       // 3. Task checkboxes (- [ ] / - [x])
@@ -1211,7 +1258,7 @@ function buildDecorations(state: EditorState): DecorationSet {
         const isChecked = taskMatch[2].toLowerCase() === 'x';
         const prefixLen = taskMatch[1].length + 2;
         lineDeco = Decoration.line({ 
-          class: isChecked ? 'cm-live-task-done' : 'cm-live-task-item' 
+          class: (isChecked ? 'cm-live-task-done' : 'cm-live-task-item') + (isLineActive ? ' cm-live-active-row' : '') 
         });
         rangeDecos.push({
           from: line.from,
@@ -1237,11 +1284,13 @@ function buildDecorations(state: EditorState): DecorationSet {
       if (bulletMatch && !taskMatch && !hrMatch) {
         const indent = bulletMatch[1].length;
         const markerPos = line.from + indent;
-        rangeDecos.push({
-          from: markerPos,
-          to: markerPos + 2,
-          deco: Decoration.replace({ widget: new BulletWidget() })
-        });
+        if (!isLineActive) {
+          rangeDecos.push({
+            from: markerPos,
+            to: markerPos + 2,
+            deco: Decoration.replace({ widget: new BulletWidget() })
+          });
+        }
       }
 
       // 6. Inline Formatting (LaTeX Math, Links, Code, Bold, Italic, Strikethrough, Tags)
@@ -1306,21 +1355,29 @@ function buildDecorations(state: EditorState): DecorationSet {
         while ((match = codeRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
-          rangeDecos.push({
-            from: start,
-            to: start + 1,
-            deco: Decoration.replace({})
-          });
-          rangeDecos.push({
-            from: start + 1,
-            to: end - 1,
-            deco: Decoration.mark({ class: 'cm-live-code-pill' })
-          });
-          rangeDecos.push({
-            from: end - 1,
-            to: end,
-            deco: Decoration.replace({})
-          });
+          if (isLineActive) {
+            rangeDecos.push({
+              from: start,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-code-pill font-mono' })
+            });
+          } else {
+            rangeDecos.push({
+              from: start,
+              to: start + 1,
+              deco: Decoration.replace({})
+            });
+            rangeDecos.push({
+              from: start + 1,
+              to: end - 1,
+              deco: Decoration.mark({ class: 'cm-live-code-pill' })
+            });
+            rangeDecos.push({
+              from: end - 1,
+              to: end,
+              deco: Decoration.replace({})
+            });
+          }
         }
 
         // Bold: **bold** or __bold__
@@ -1328,21 +1385,29 @@ function buildDecorations(state: EditorState): DecorationSet {
         while ((match = boldRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
-          rangeDecos.push({
-            from: start,
-            to: start + 2,
-            deco: Decoration.replace({})
-          });
-          rangeDecos.push({
-            from: start + 2,
-            to: end - 2,
-            deco: Decoration.mark({ class: 'cm-live-bold' })
-          });
-          rangeDecos.push({
-            from: end - 2,
-            to: end,
-            deco: Decoration.replace({})
-          });
+          if (isLineActive) {
+            rangeDecos.push({
+              from: start,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-bold' })
+            });
+          } else {
+            rangeDecos.push({
+              from: start,
+              to: start + 2,
+              deco: Decoration.replace({})
+            });
+            rangeDecos.push({
+              from: start + 2,
+              to: end - 2,
+              deco: Decoration.mark({ class: 'cm-live-bold' })
+            });
+            rangeDecos.push({
+              from: end - 2,
+              to: end,
+              deco: Decoration.replace({})
+            });
+          }
         }
 
         // Italic: *italic* or _italic_
@@ -1350,21 +1415,29 @@ function buildDecorations(state: EditorState): DecorationSet {
         while ((match = italicRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
-          rangeDecos.push({
-            from: start,
-            to: start + 1,
-            deco: Decoration.replace({})
-          });
-          rangeDecos.push({
-            from: start + 1,
-            to: end - 1,
-            deco: Decoration.mark({ class: 'cm-live-italic' })
-          });
-          rangeDecos.push({
-            from: end - 1,
-            to: end,
-            deco: Decoration.replace({})
-          });
+          if (isLineActive) {
+            rangeDecos.push({
+              from: start,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-italic' })
+            });
+          } else {
+            rangeDecos.push({
+              from: start,
+              to: start + 1,
+              deco: Decoration.replace({})
+            });
+            rangeDecos.push({
+              from: start + 1,
+              to: end - 1,
+              deco: Decoration.mark({ class: 'cm-live-italic' })
+            });
+            rangeDecos.push({
+              from: end - 1,
+              to: end,
+              deco: Decoration.replace({})
+            });
+          }
         }
 
         // Strikethrough: ~~strike~~
@@ -1372,21 +1445,29 @@ function buildDecorations(state: EditorState): DecorationSet {
         while ((match = strikeRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
-          rangeDecos.push({
-            from: start,
-            to: start + 2,
-            deco: Decoration.replace({})
-          });
-          rangeDecos.push({
-            from: start + 2,
-            to: end - 2,
-            deco: Decoration.mark({ class: 'cm-live-strikethrough' })
-          });
-          rangeDecos.push({
-            from: end - 2,
-            to: end,
-            deco: Decoration.replace({})
-          });
+          if (isLineActive) {
+            rangeDecos.push({
+              from: start,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-strikethrough' })
+            });
+          } else {
+            rangeDecos.push({
+              from: start,
+              to: start + 2,
+              deco: Decoration.replace({})
+            });
+            rangeDecos.push({
+              from: start + 2,
+              to: end - 2,
+              deco: Decoration.mark({ class: 'cm-live-strikethrough' })
+            });
+            rangeDecos.push({
+              from: end - 2,
+              to: end,
+              deco: Decoration.replace({})
+            });
+          }
         }
 
         // Tags: #tag

@@ -11,12 +11,29 @@ export interface BridgeFileResult {
   language: SupportedLanguage;
 }
 
+export interface BridgeDirectoryEntry {
+  id: string;
+  name: string;
+  type: 'file' | 'folder';
+  content?: string;
+  language?: SupportedLanguage;
+  path?: string;
+  children?: BridgeDirectoryEntry[];
+}
+
+export interface BridgeFolderResult {
+  name: string;
+  path?: string;
+  entries: BridgeDirectoryEntry[];
+}
+
 /**
  * FileSystem Bridge Contract
  * Decouples the UI from Tauri fs, Node fs, or Web file picker
  */
 export interface IFileSystemBridge {
   openFile: () => Promise<BridgeFileResult | null>;
+  openDirectory?: () => Promise<BridgeFolderResult | null>;
   saveFile: (path: string, content: string) => Promise<boolean>;
   saveFileAs: (suggestedName: string, content: string) => Promise<string | null>;
   exportWorkspace: () => Promise<string>;

@@ -40,7 +40,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const { tabs, activeTabId, saveCurrentTab, isSaving, createTab, closeTab, closeAllTabs, duplicateTab } = useTabStore();
-  const { settings, toggleSidebar, toggleActivityBar, toggleEditorMode, toggleStatusBar, toggleTouchMode, updateSettings, setActiveSidebarTab } = useSettingsStore();
+  const { 
+    settings, 
+    toggleSidebar, 
+    toggleSidebarOverlay,
+    toggleActivityBar, 
+    toggleEditorMode, 
+    toggleStatusBar, 
+    toggleTouchMode, 
+    updateSettings, 
+    setActiveSidebarTab
+  } = useSettingsStore();
   const { templates, openVariableModal, resetToDefaults: resetTemplates } = useTemplateStore();
   const { actions, openActionEditor, resetToDefaults: resetActions } = useActionStore();
   const { addNotification } = useNotificationStore();
@@ -146,6 +156,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           action: toggleEditorMode 
         },
         { label: 'Toggle Activity Rail (Icons)', shortcut: 'Ctrl+B', action: toggleActivityBar },
+        { label: settings.sidebarOverlay ? 'Right Panel: Switch to Docked' : 'Right Panel: Switch to Overlay', action: toggleSidebarOverlay },
         { label: 'Toggle Status Bar', action: toggleStatusBar, divider: true },
         { label: 'Show File Explorer', action: () => setActiveSidebarTab('explorer') },
         { label: 'Show Document Outline', action: () => setActiveSidebarTab('outline') },
@@ -210,16 +221,22 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       aria-label="Application Top Bar"
       className="theme-titlebar flex items-center justify-between px-3 py-1.5 select-none relative z-40 gap-2 shrink-0 min-h-[40px]"
     >
-      {/* Left: Pure Icon Dropdown Menus & Quick File Actions */}
+      {/* Left: Rail Toggle, Pure Icon Dropdown Menus & Quick File Actions */}
       <div className="flex flex-wrap items-center gap-1">
-        {/* Brand Icon */}
-        <div 
-          title="ContextPad" 
-          aria-label="ContextPad Home"
-          className="w-7 h-7 rounded-md bg-[var(--accent-primary)] flex items-center justify-center text-white shadow-xs shrink-0 mr-0.5"
+        {/* Toggle Left Rail Button */}
+        <button
+          onClick={toggleActivityBar}
+          title={settings.showActivityBar ? 'Hide Activity Rail (Ctrl+B)' : 'Show Activity Rail (Ctrl+B)'}
+          aria-label={settings.showActivityBar ? 'Hide Activity Rail' : 'Show Activity Rail'}
+          aria-pressed={settings.showActivityBar}
+          className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors mr-0.5 cursor-pointer ${
+            settings.showActivityBar 
+              ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border border-[var(--accent-primary)]/30 hover:bg-[var(--accent-container)]/80' 
+              : 'hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'
+          }`}
         >
-          <Sparkles className="w-4 h-4" />
-        </div>
+          <PanelLeft className="w-4 h-4" />
+        </button>
 
         {/* Pure Icon Menus */}
         <div className="flex flex-wrap items-center space-x-0.5">
@@ -339,21 +356,6 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           ) : (
             <Code2 className="w-3.5 h-3.5" />
           )}
-        </button>
-
-        {/* Hide / Show Activity Rail Button */}
-        <button
-          onClick={toggleActivityBar}
-          title={settings.showActivityBar ? 'Hide Activity Rail (Ctrl+B)' : 'Show Activity Rail (Ctrl+B)'}
-          aria-label={settings.showActivityBar ? 'Hide Activity Rail' : 'Show Activity Rail'}
-          aria-pressed={settings.showActivityBar}
-          className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${
-            settings.showActivityBar 
-              ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border border-[var(--accent-primary)]/30 hover:bg-[var(--accent-container)]/80' 
-              : 'hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'
-          }`}
-        >
-          <PanelLeft className="w-3.5 h-3.5" />
         </button>
 
         {/* Shortcuts / Help */}

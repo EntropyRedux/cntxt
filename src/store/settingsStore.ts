@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ViewSettings } from '../types';
 import { DEFAULT_MODEL_ID } from '../constants/models';
+import { THEME_DEFAULT_FONTS } from '../constants/fonts';
 import { IStorageBridge, IPlatformBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 
@@ -8,9 +9,13 @@ let activeStorage: IStorageBridge | null = null;
 
 interface SettingsState {
   settings: ViewSettings;
+  isFontSelectorOpen: boolean;
+  openFontSelector: () => void;
+  closeFontSelector: () => void;
   initializeSettings: (storage?: IStorageBridge, platform?: IPlatformBridge) => Promise<void>;
   updateSettings: (updates: Partial<ViewSettings>) => void;
   toggleSidebar: () => void;
+  toggleSidebarOverlay: () => void;
   toggleActivityBar: () => void;
   toggleRibbon: () => void;
   setRibbonVisible: (visible: boolean) => void;
@@ -62,10 +67,17 @@ const DEFAULT_SETTINGS: ViewSettings = {
   indexingScope: 'thorough',
   selectedModelId: DEFAULT_MODEL_ID,
   budgetThreshold: 32000,
-  uiDensity: 'comfortable',
+  uiDensity: 'desktop',
   touchOptimized: false,
+  sidebarOverlay: false,
   showMobileAccessoryBar: true,
   showRibbon: true,
+  enableExperimentalSettings: false,
+  enableLiveTokenEstimator: true,
+  enableAutosave: true,
+  enableLiveDomSync: true,
+  enableLiveMarkdownSync: true,
+  autosaveIntervalMs: 1000,
   autocompleteConfig: {
     enableKeywords: true,
     enableTemplates: true,
@@ -87,6 +99,9 @@ const DEFAULT_SETTINGS: ViewSettings = {
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   settings: DEFAULT_SETTINGS,
+  isFontSelectorOpen: false,
+  openFontSelector: () => set({ isFontSelectorOpen: true }),
+  closeFontSelector: () => set({ isFontSelectorOpen: false }),
 
   initializeSettings: async (storage?: IStorageBridge, platform?: IPlatformBridge) => {
     if (storage) {
@@ -103,7 +118,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       try {
         const stored = await activeStorage.getItem(STORAGE_KEYS.SETTINGS);
         if (stored) {
-          initialSettings = { ...initialSettings, ...JSON.parse(stored) };
+          const parsed = JSON.parse(stored);
+          if (parsed.uiDensity === 'comfortable' || parsed.uiDensity === 'compact') {
+            parsed.uiDensity = 'desktop';
+          }
+          initialSettings = { ...initialSettings, ...parsed };
         }
       } catch (e) {
         console.warn('Failed to load stored settings:', e);
@@ -114,7 +133,25 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   updateSettings: (updates) => {
-    const updated = { ...get().settings, ...updates };
+    const current = get().settings;
+    let fontFamilyToApply = updates.fontFamily;
+    
+    // When changing themes, switch to that theme's default fitting font if font isn't explicitly provided
+    if (updates.theme && updates.theme !== current.theme && !updates.fontFamily) {
+      fontFamilyToApply = THEME_DEFAULT_FONTS[updates.theme] || current.fontFamily;
+    }
+
+    if (updates.enableLiveDomSync !== undefined && updates.enableLiveMarkdownSync === undefined) {
+      updates.enableLiveMarkdownSync = updates.enableLiveDomSync;
+    } else if (updates.enableLiveMarkdownSync !== undefined && updates.enableLiveDomSync === undefined) {
+      updates.enableLiveDomSync = updates.enableLiveMarkdownSync;
+    }
+
+    const updated = { 
+      ...current, 
+      ...updates,
+      ...(fontFamilyToApply ? { fontFamily: fontFamilyToApply } : {})
+    };
     set({ settings: updated });
     if (activeStorage) {
       activeStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated)).catch(() => {});
@@ -124,6 +161,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   toggleSidebar: () => {
     const showSidebar = !get().settings.showSidebar;
     get().updateSettings({ showSidebar });
+  },
+
+  toggleSidebarOverlay: () => {
+    const sidebarOverlay = !get().settings.sidebarOverlay;
+    get().updateSettings({ sidebarOverlay });
   },
 
   toggleActivityBar: () => {
@@ -163,7 +205,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const next = !get().settings.touchOptimized;
     get().updateSettings({ 
       touchOptimized: next, 
-      uiDensity: next ? 'touch' : 'comfortable' 
+      uiDensity: next ? 'touch' : 'desktop' 
     });
   },
 

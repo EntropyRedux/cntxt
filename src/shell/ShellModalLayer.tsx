@@ -6,6 +6,7 @@ import { ShortcutsModal } from '../components/Modals/ShortcutsModal';
 import { RibbonCustomizerModal } from '../components/Modals/RibbonCustomizerModal';
 import { FormattingCustomizerModal } from '../components/Modals/FormattingCustomizerModal';
 import { InsertImageModal } from '../components/Modals/InsertImageModal';
+import { FontSelectorModal } from '../components/Modals/FontSelectorModal';
 
 export interface ShellModalLayerProps {
   isCommandPaletteOpen: boolean;
@@ -32,6 +33,7 @@ export const ShellModalLayer: React.FC<ShellModalLayerProps> = ({
       <RibbonCustomizerModal />
       <FormattingCustomizerModal />
       <InsertImageModal />
+      <FontSelectorModal />
       
       <ShortcutsModal 
         isOpen={isShortcutsOpen}

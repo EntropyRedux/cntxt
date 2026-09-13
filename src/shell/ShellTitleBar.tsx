@@ -39,6 +39,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
     toggleActivityBar, 
     toggleRibbon,
     toggleEditorMode, 
+    toggleSidebarOverlay,
     setActiveSidebarTab,
     updateSettings 
   } = useSettingsStore();
@@ -67,6 +68,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
 
   const themes: { id: ThemeName; name: string }[] = [
     { id: 'google-material-3', name: 'Google Material 3 (Light)' },
+    { id: 'parchment', name: 'Parchment (Warm Linen)' },
     { id: 'contextpad-dark', name: 'ContextPad Dark (Default)' },
     { id: 'one-dark', name: 'One Dark Pro' },
     { id: 'dracula', name: 'Dracula' },
@@ -125,18 +127,18 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           action: toggleRibbon 
         },
         { 
+          label: settings.sidebarOverlay ? 'Right Panel: Switch to Docked' : 'Right Panel: Switch to Overlay', 
+          action: toggleSidebarOverlay 
+        },
+        { 
           label: settings.editorMode === 'rendered' ? 'Switch to Raw Markdown' : 'Switch to Live Rendered View', 
           shortcut: 'Ctrl+M', 
           action: toggleEditorMode 
         },
         { isDivider: true },
         { 
-          label: 'Density: Compact', 
-          action: () => updateSettings({ uiDensity: 'compact' }) 
-        },
-        { 
-          label: 'Density: Comfortable', 
-          action: () => updateSettings({ uiDensity: 'comfortable' }) 
+          label: 'Density: Desktop', 
+          action: () => updateSettings({ uiDensity: 'desktop', touchOptimized: false }) 
         },
         { 
           label: 'Density: Touch Optimized', 
@@ -225,27 +227,33 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
     }
   ];
 
-  const isLightMode = settings.theme === 'google-material-3' || settings.theme === 'github-light';
+  const isLightMode = settings.theme === 'google-material-3' || settings.theme === 'github-light' || settings.theme === 'parchment';
   const isRendered = (settings.editorMode || 'rendered') === 'rendered';
 
   return (
     <header 
       ref={headerRef}
-      className="h-10 bg-[var(--titlebar-bg)] border-b border-[var(--border-primary)] flex items-center justify-between px-2 sm:px-3 shrink-0 select-none z-30 gap-2 min-w-0 relative overflow-visible"
+      className={`h-10 bg-[var(--titlebar-bg)] border-b border-[var(--border-primary)] flex items-center justify-between px-2 sm:px-3 shrink-0 select-none gap-2 min-w-0 relative overflow-visible ${
+        openMenu !== null ? 'z-50' : 'z-40'
+      }`}
     >
-      {/* Left: App Branding & Menus */}
+      {/* Left: Rail Toggle & Menus */}
       <div className="flex items-center gap-1 sm:gap-2 shrink-0 relative overflow-visible">
-        <div className="flex items-center gap-2 pr-1.5 sm:pr-2 border-r border-[var(--border-subtle)]">
-          <div 
-            title="ContextPad"
-            aria-label="ContextPad"
-            className="w-6 h-6 rounded bg-gradient-to-tr from-[var(--accent-primary)] to-blue-400 flex items-center justify-center text-white shadow-xs shrink-0"
+        <div className="flex items-center pr-1.5 sm:pr-2 border-r border-[var(--border-subtle)]">
+          <button
+            type="button"
+            onClick={toggleActivityBar}
+            title={settings.showActivityBar ? "Hide Left Rail (Ctrl+B)" : "Show Left Rail (Ctrl+B)"}
+            aria-label={settings.showActivityBar ? "Hide Left Rail" : "Show Left Rail"}
+            aria-pressed={settings.showActivityBar}
+            className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors shrink-0 cursor-pointer ${
+              settings.showActivityBar 
+                ? 'text-[var(--accent-primary)] bg-[var(--accent-container)]/50 hover:bg-[var(--accent-container)]/80' 
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+            }`}
           >
-            <span className="font-mono font-bold text-[11px]">C</span>
-          </div>
-          <span className="text-xs font-semibold text-[var(--text-primary)] hidden md:inline tracking-tight">
-            ContextPad
-          </span>
+            <PanelLeft className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Dropdown Menus */}
@@ -362,7 +370,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
             const nextTouch = !settings.touchOptimized;
             updateSettings({
               touchOptimized: nextTouch,
-              uiDensity: nextTouch ? 'touch' : 'comfortable'
+              uiDensity: nextTouch ? 'touch' : 'desktop'
             });
           }}
           title={settings.touchOptimized ? 'Disable Touch Mode' : 'Enable Touch Mode'}
@@ -425,24 +433,6 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
             </div>
           )}
         </div>
-
-        <div className="h-4 w-px bg-[var(--border-subtle)] mx-0.5 shrink-0" />
-
-        {/* Toggle Show/Hide Left Rail */}
-        <button
-          type="button"
-          onClick={toggleActivityBar}
-          title={settings.showActivityBar ? "Hide Left Rail (Ctrl+B)" : "Show Left Rail (Ctrl+B)"}
-          aria-label={settings.showActivityBar ? "Hide Left Rail" : "Show Left Rail"}
-          aria-pressed={settings.showActivityBar}
-          className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors shrink-0 cursor-pointer ${
-            settings.showActivityBar 
-              ? 'text-[var(--accent-primary)] bg-[var(--accent-container)]/50' 
-              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
-          }`}
-        >
-          <PanelLeft className="w-3.5 h-3.5" />
-        </button>
       </div>
     </header>
   );

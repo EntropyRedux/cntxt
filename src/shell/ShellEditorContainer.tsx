@@ -2,6 +2,7 @@ import React from 'react';
 import { TabBar } from '../components/TabBar/TabBar';
 import { Editor } from '../components/Editor/Editor';
 import { MobileAccessoryBar } from '../components/Mobile/MobileAccessoryBar';
+import { VariableFloatingNavigator } from '../components/Editor/VariableFloatingNavigator';
 import { useTabStore } from '../store/tabStore';
 import { FileText, Plus } from 'lucide-react';
 import { Button } from '../primitives/Button';
@@ -19,7 +20,7 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
   const activeTab = tabs.find(t => t.id === activeTabId);
 
   return (
-    <main className={`flex-1 flex flex-col min-w-0 bg-[var(--editor-bg)] overflow-hidden relative ${className}`}>
+    <main className={`flex-1 flex flex-col min-w-0 bg-[var(--editor-bg)] overflow-hidden relative z-0 ${className}`}>
       {/* Document Tab Bar */}
       <TabBar />
 
@@ -53,6 +54,9 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
             />
           </div>
         )}
+
+        {/* Floating Variable Navigator & Quick-Fill Button (Touch Mode) */}
+        <VariableFloatingNavigator />
       </div>
 
       {/* Quick Markdown Formatting Toolbar */}

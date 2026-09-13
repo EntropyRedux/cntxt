@@ -149,9 +149,10 @@ export const AVAILABLE_ICONS = Object.keys(ICON_MAP);
 export interface RibbonIconProps {
   name: string;
   className?: string;
+  strokeWidth?: number;
 }
 
-export const RibbonIcon: React.FC<RibbonIconProps> = ({ name, className = 'w-3.5 h-3.5' }) => {
+export const RibbonIcon: React.FC<RibbonIconProps> = ({ name, className = 'w-3.5 h-3.5', strokeWidth = 2.2 }) => {
   const IconComponent = ICON_MAP[name] || Sparkles;
-  return <IconComponent className={className} />;
+  return <IconComponent className={className} strokeWidth={strokeWidth} />;
 };

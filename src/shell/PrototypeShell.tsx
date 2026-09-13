@@ -27,20 +27,16 @@ export const PrototypeShell: React.FC<PrototypeShellProps> = ({
         events={events}
       />
 
-      {/* 2. Workspace Row: Left Rail (Stationary) -> Main Content Area */}
+      {/* 2. Modular Ribbon Toolbox */}
+      <ModularRibbon events={events} />
+
+      {/* 3. Workspace Row: Left Rail aligns directly with TabBar row */}
       <div className="flex-1 flex overflow-hidden relative">
         {showActivityBar && !isTouch && <ActivityBar orientation="vertical" />}
 
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          {/* Customizable Modular Ribbon */}
-          {settings.showRibbon && (
-            <ModularRibbon events={events} />
-          )}
-
-          <div className="flex-1 flex overflow-hidden relative">
-            <ShellEditorContainer />
-            <ShellSidebar />
-          </div>
+        <div className="flex-1 flex overflow-hidden relative">
+          <ShellEditorContainer />
+          <ShellSidebar />
         </div>
       </div>
 

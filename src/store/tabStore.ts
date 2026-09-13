@@ -1,9 +1,11 @@
 import { create } from 'zustand';
-import { Tab, SupportedLanguage } from '../types';
-import { WELCOME_DOCUMENT } from '../constants/defaultData';
+import { Tab, SupportedLanguage } from '../../contracts/data_shapes';
+// MOCK: quarantined synthetic sample data for prototype demo mode
+import { WELCOME_DOCUMENT, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 import { editorRegistry } from '../services/editor/editorRegistry';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
+import { useSettingsStore } from './settingsStore';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -53,7 +55,11 @@ export const useTabStore = create<TabState>((set, get) => ({
     };
 
     if (!activeStorage) {
-      set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId });
+      if (IS_PROTOTYPE_DEMO_MODE) {
+        set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId });
+      } else {
+        set({ tabs: [], activeTabId: '' });
+      }
       return;
     }
 
@@ -84,18 +90,26 @@ export const useTabStore = create<TabState>((set, get) => ({
         }
       }
 
-      // First run: Create Welcome Document
-      await activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${initialTabId}`, WELCOME_DOCUMENT);
-      await activeStorage.setItem(STORAGE_KEYS.TABS_META, JSON.stringify([defaultWelcomeTab]));
-      await activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, initialTabId);
+      if (IS_PROTOTYPE_DEMO_MODE) {
+        // First run in Demo Mode: Create Welcome Document
+        await activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${initialTabId}`, WELCOME_DOCUMENT);
+        await activeStorage.setItem(STORAGE_KEYS.TABS_META, JSON.stringify([defaultWelcomeTab]));
+        await activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, initialTabId);
 
-      set({
-        tabs: [defaultWelcomeTab],
-        activeTabId: initialTabId
-      });
+        set({
+          tabs: [defaultWelcomeTab],
+          activeTabId: initialTabId
+        });
+      } else {
+        set({ tabs: [], activeTabId: '' });
+      }
     } catch (e) {
       console.error('Error initializing tabs:', e);
-      set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId });
+      if (IS_PROTOTYPE_DEMO_MODE) {
+        set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId });
+      } else {
+        set({ tabs: [], activeTabId: '' });
+      }
     }
   },
 
@@ -355,10 +369,15 @@ function debouncedContentSave(tabId: string, content: string) {
   if (saveTimers[tabId]) {
     clearTimeout(saveTimers[tabId]);
   }
+  const settings = useSettingsStore.getState().settings;
+  if (!settings.enableAutosave) {
+    return;
+  }
+  const interval = settings.autosaveIntervalMs ?? 1000;
   saveTimers[tabId] = setTimeout(() => {
     if (activeStorage) {
       activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, content).catch(() => {});
     }
     delete saveTimers[tabId];
-  }, 1000);
+  }, interval);
 }

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { PinnedTab } from '../types';
-import { DEFAULT_PINNED_TABS } from '../constants/defaultData';
+import { PinnedTab } from '../../contracts/data_shapes';
+// MOCK: quarantined synthetic sample data for prototype demo mode
+import { DEFAULT_PINNED_TABS, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 
@@ -27,7 +28,7 @@ interface WorkflowState {
 }
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
-  workflows: DEFAULT_PINNED_TABS,
+  workflows: [],
   searchQuery: '',
   selectedCategory: 'All',
 
@@ -35,18 +36,29 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (storage) {
       activeStorage = storage;
     }
-    if (!activeStorage) return;
+    if (!activeStorage) {
+      if (IS_PROTOTYPE_DEMO_MODE) {
+        set({ workflows: DEFAULT_PINNED_TABS });
+      }
+      return;
+    }
 
     try {
       const stored = await activeStorage.getItem(STORAGE_KEYS.WORKFLOWS);
       if (stored) {
         set({ workflows: JSON.parse(stored) });
-      } else {
+      } else if (IS_PROTOTYPE_DEMO_MODE) {
         set({ workflows: DEFAULT_PINNED_TABS });
         await activeStorage.setItem(STORAGE_KEYS.WORKFLOWS, JSON.stringify(DEFAULT_PINNED_TABS));
+      } else {
+        set({ workflows: [] });
       }
     } catch {
-      set({ workflows: DEFAULT_PINNED_TABS });
+      if (IS_PROTOTYPE_DEMO_MODE) {
+        set({ workflows: DEFAULT_PINNED_TABS });
+      } else {
+        set({ workflows: [] });
+      }
     }
   },
 

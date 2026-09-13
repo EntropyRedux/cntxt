@@ -4,7 +4,8 @@ import {
   ChevronDown,
   Sparkles,
   PanelRight,
-  Check
+  Check,
+  Pause
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -22,8 +23,23 @@ export const StatusBar: React.FC = () => {
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const modelMenuRef = useRef<HTMLDivElement>(null);
 
+  const isLiveEstimatorEnabled = settings.enableLiveTokenEstimator ?? true;
+
+  const runCalculation = async () => {
+    if (!activeTab) return;
+    const res = await tokenEstimatorService.estimateTokensAsync(
+      activeTab.content, 
+      settings.selectedModelId
+    );
+    setEstimate(res);
+  };
+
   useEffect(() => {
     let isMounted = true;
+    if (!isLiveEstimatorEnabled) {
+      return;
+    }
+
     const updateEst = async () => {
       if (!activeTab) return;
       const res = await tokenEstimatorService.estimateTokensAsync(
@@ -43,7 +59,7 @@ export const StatusBar: React.FC = () => {
       isMounted = false;
       unsub();
     };
-  }, [activeTab?.content, settings.selectedModelId]);
+  }, [activeTab?.content, settings.selectedModelId, isLiveEstimatorEnabled]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -68,6 +84,34 @@ export const StatusBar: React.FC = () => {
   const cursorLine = activeTab?.cursorLine || 1;
   const cursorCol = activeTab?.cursorCol || 1;
 
+  // Multi-line selection range calculation
+  const selectionLineRange = (() => {
+    if (
+      typeof activeTab?.selectionStartLine === 'number' &&
+      typeof activeTab?.selectionEndLine === 'number' &&
+      activeTab.selectionStartLine < activeTab.selectionEndLine
+    ) {
+      return { start: activeTab.selectionStartLine, end: activeTab.selectionEndLine };
+    }
+    if (
+      typeof activeTab?.selectionFrom === 'number' &&
+      typeof activeTab?.selectionTo === 'number' &&
+      activeTab.selectionFrom < activeTab.selectionTo &&
+      activeTab.content
+    ) {
+      const textBeforeFrom = activeTab.content.slice(0, activeTab.selectionFrom);
+      const startLine = textBeforeFrom.split('\n').length;
+      const textBeforeTo = activeTab.content.slice(0, activeTab.selectionTo);
+      const toLine = textBeforeTo.split('\n').length;
+      const isAtStartOfToLine = textBeforeTo.endsWith('\n');
+      const effectiveEndLine = (isAtStartOfToLine && toLine > startLine) ? toLine - 1 : toLine;
+      if (effectiveEndLine > startLine) {
+        return { start: startLine, end: effectiveEndLine };
+      }
+    }
+    return null;
+  })();
+
   const currentModel = AI_MODELS.find(m => m.id === settings.selectedModelId) || AI_MODELS[0];
   const isTokensSidebarActive = settings.showSidebar && settings.activeSidebarTab === 'tokens';
   const isOverBudget = estimate ? estimate.tokenCount > settings.budgetThreshold : false;
@@ -87,8 +131,12 @@ export const StatusBar: React.FC = () => {
     <footer className="theme-statusbar flex items-center h-6 px-3.5 text-[11px] justify-between select-none font-sans z-30 shrink-0 relative">
       {/* Left side metrics */}
       <div className="flex items-center space-x-3.5 min-w-0">
-        <span className="font-mono text-[var(--text-primary)] font-medium shrink-0">
-          Ln {cursorLine}, Col {cursorCol}
+        <span 
+          id="statusbar-line-indicator"
+          className="font-mono text-[var(--text-primary)] font-medium shrink-0"
+          title={selectionLineRange ? `Selected lines ${selectionLineRange.start} to ${selectionLineRange.end}` : `Line ${cursorLine}, Column ${cursorCol}`}
+        >
+          Ln {selectionLineRange ? `${selectionLineRange.start}-${selectionLineRange.end}` : cursorLine}, Col {cursorCol}
         </span>
 
         <span className="text-[var(--text-muted)] opacity-40 hidden md:inline">•</span>
@@ -155,16 +203,35 @@ export const StatusBar: React.FC = () => {
 
           <div className="h-2.5 w-px bg-[var(--border-subtle)]" />
 
-          {/* Live Token Count */}
-          <div 
-            className="flex items-center gap-1 font-mono text-[var(--text-primary)]"
-            title={estimate ? `${estimate.tokenCount.toLocaleString()} tokens (${percentOfContext.toFixed(2)}% of ${(currentModel.contextWindow / 1000).toFixed(0)}k context)` : 'Calculating tokens...'}
-          >
-            <span className="font-semibold">
-              {estimate ? estimate.tokenCount.toLocaleString() : '0'}
-            </span>
-            <span className="text-[var(--text-muted)] font-sans">tok</span>
-          </div>
+          {/* Live Token Count or Paused State */}
+          {isLiveEstimatorEnabled ? (
+            <div 
+              className="flex items-center gap-1 font-mono text-[var(--text-primary)]"
+              title={estimate ? `${estimate.tokenCount.toLocaleString()} tokens (${percentOfContext.toFixed(2)}% of ${(currentModel.contextWindow / 1000).toFixed(0)}k context)` : 'Calculating tokens...'}
+            >
+              <span className="font-semibold">
+                {estimate ? estimate.tokenCount.toLocaleString() : '0'}
+              </span>
+              <span className="text-[var(--text-muted)] font-sans">tok</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={runCalculation}
+              title="Token estimator is paused. Click to calculate now."
+              aria-label="Token estimator is paused. Click to calculate now."
+              className="flex items-center gap-1 font-mono text-amber-500 hover:text-amber-400 cursor-pointer text-[10px] transition-colors"
+            >
+              <Pause className="w-2.5 h-2.5 shrink-0" />
+              {estimate ? (
+                <span>
+                  <span className="font-semibold">{estimate.tokenCount.toLocaleString()}</span> tok <span className="text-[9px] opacity-75">(Paused)</span>
+                </span>
+              ) : (
+                <span>Paused (Click to calculate)</span>
+              )}
+            </button>
+          )}
 
           <div className="h-2.5 w-px bg-[var(--border-subtle)]" />
 

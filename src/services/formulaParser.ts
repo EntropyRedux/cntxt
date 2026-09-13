@@ -26,9 +26,15 @@ export class FormulaEngine {
   public evaluate(rawExpr: string): FormulaResult {
     try {
       let expr = rawExpr.trim();
-      // Remove enclosing {= ... } if present
-      if (expr.startsWith('{=') && expr.endsWith('}')) {
+      // Remove enclosing {= ... }, {!= ...}, {=! ... } if present
+      if (expr.startsWith('{!=') && expr.endsWith('}')) {
+        expr = expr.slice(3, -1).trim();
+      } else if (expr.startsWith('{=!') && expr.endsWith('}')) {
+        expr = expr.slice(3, -1).trim();
+      } else if (expr.startsWith('{=') && expr.endsWith('}')) {
         expr = expr.slice(2, -1).trim();
+      } else if (expr.startsWith('!=')) {
+        expr = expr.slice(2).trim();
       } else if (expr.startsWith('=')) {
         expr = expr.slice(1).trim();
       }
@@ -260,6 +266,10 @@ export class FormulaEngine {
 
   private executeFunction(name: string, args: any[]): any {
     const strArg = (idx: number, fallback = '') => args[idx] !== undefined ? String(args[idx]) : fallback;
+    const textOrSelectArg = (idx: number, fallback = '') => {
+      if (args[idx] !== undefined && args[idx] !== '') return String(args[idx]);
+      return this.context.selectedText || fallback;
+    };
     const numArg = (idx: number, fallback = 0) => {
       const val = Number(args[idx]);
       return isNaN(val) ? fallback : val;
@@ -298,29 +308,29 @@ export class FormulaEngine {
 
       // --- Text Case & Transforms ---
       case 'UPPER':
-        return strArg(0).toUpperCase();
+        return textOrSelectArg(0).toUpperCase();
       case 'LOWER':
-        return strArg(0).toLowerCase();
+        return textOrSelectArg(0).toLowerCase();
       case 'TITLE':
-        return strArg(0).replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+        return textOrSelectArg(0).replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
       case 'TRIM':
-        return strArg(0).trim();
+        return textOrSelectArg(0).trim();
       case 'REVERSE':
-        return strArg(0).split('').reverse().join('');
+        return textOrSelectArg(0).split('').reverse().join('');
       case 'CAMEL': {
-        const s = strArg(0).replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase()).replace(/[^a-zA-Z0-9]/g, '');
+        const s = textOrSelectArg(0).replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase()).replace(/[^a-zA-Z0-9]/g, '');
         return s.charAt(0).toLowerCase() + s.slice(1);
       }
       case 'PASCAL': {
-        const s = strArg(0).replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase()).replace(/[^a-zA-Z0-9]/g, '');
+        const s = textOrSelectArg(0).replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase()).replace(/[^a-zA-Z0-9]/g, '');
         return s.charAt(0).toUpperCase() + s.slice(1);
       }
       case 'SNAKE':
-        return strArg(0).trim().toLowerCase().replace(/[\s\W-]+/g, '_');
+        return textOrSelectArg(0).trim().toLowerCase().replace(/[\s\W-]+/g, '_');
       case 'KEBAB':
-        return strArg(0).trim().toLowerCase().replace(/[\s\W_]+/g, '-');
+        return textOrSelectArg(0).trim().toLowerCase().replace(/[\s\W_]+/g, '-');
       case 'CONSTANT':
-        return strArg(0).trim().toUpperCase().replace(/[\s\W-]+/g, '_');
+        return textOrSelectArg(0).trim().toUpperCase().replace(/[\s\W-]+/g, '_');
 
       // --- String & Substring ---
       case 'CONCAT':
@@ -393,14 +403,14 @@ export class FormulaEngine {
 
       // --- List & Lines Operations ---
       case 'SORT': {
-        const text = strArg(0);
+        const text = textOrSelectArg(0);
         const desc = strArg(1).toUpperCase() === 'DESC';
         const lines = text.split('\n').filter(l => l.length > 0);
         lines.sort((a, b) => desc ? b.localeCompare(a) : a.localeCompare(b));
         return lines.join('\n');
       }
       case 'UNIQUE': {
-        const text = strArg(0);
+        const text = textOrSelectArg(0);
         const lines = text.split('\n');
         return Array.from(new Set(lines)).join('\n');
       }
@@ -416,15 +426,15 @@ export class FormulaEngine {
         return parts[index] !== undefined ? parts[index] : '';
       }
       case 'NUMBERLIST': {
-        const text = strArg(0);
+        const text = textOrSelectArg(0);
         return text.split('\n').filter(l => l.trim().length > 0).map((l, idx) => `${idx + 1}. ${l}`).join('\n');
       }
       case 'BULLETLIST': {
-        const text = strArg(0);
+        const text = textOrSelectArg(0);
         return text.split('\n').filter(l => l.trim().length > 0).map(l => `* ${l}`).join('\n');
       }
       case 'CHECKLIST': {
-        const text = strArg(0);
+        const text = textOrSelectArg(0);
         return text.split('\n').filter(l => l.trim().length > 0).map(l => `- [ ] ${l}`).join('\n');
       }
 
@@ -501,7 +511,13 @@ export class FormulaEngine {
       case 'WORDCOUNT':
         return this.context.wordCount;
       case 'SELECTED':
+      case 'SELECTION':
         return this.context.selectedText || '';
+      case 'ACTION':
+      case 'RUN': {
+        const actId = strArg(0);
+        return `[Action:${actId}]`;
+      }
       case 'GETLINE':
         return this.context.getLine(numArg(0, 1));
       case 'GETRANGE':

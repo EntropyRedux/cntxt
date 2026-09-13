@@ -2,91 +2,202 @@ import React, { useState, useEffect } from 'react';
 import { 
   FilePlus, 
   Folder, 
-  FileText, 
+  FolderPlus,
   Upload, 
   ChevronRight, 
   ChevronDown,
-  Menu
+  Pin,
+  PinOff,
+  History,
+  Trash2,
+  Clock,
+  X
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
-import { useTemplateStore } from '../../store/templateStore';
+import { useFileHistoryStore, PinnedItem, OpenedFileRecord } from '../../store/fileHistoryStore';
 import { useRuntimeBridge } from '../../adapters';
+import { BridgeDirectoryEntry } from '../../ui-contract/bridgeContract';
+import { VirtualFile } from '../../../contracts/data_shapes';
+// MOCK: quarantined synthetic sample data for prototype demo mode
+import { INITIAL_PROJECT_FILES, IS_PROTOTYPE_DEMO_MODE } from '../../../mocks/index';
 
-interface VirtualFile {
-  id: string;
-  name: string;
-  type: 'file' | 'folder';
-  content?: string;
-  language?: string;
-  children?: VirtualFile[];
-}
+export type { VirtualFile };
 
-const INITIAL_PROJECT_FILES: VirtualFile[] = [
-  {
-    id: 'f-draft',
-    name: 'draft_system_prompt.md',
-    type: 'file',
-    content: `# System Prompt: Creative Assistant\n\nYou are a highly capable agent named {{agent_name:ContextBot}}.\nYour primary objective is to facilitate workflow automation.\n\n{=DATE_ISO()} Initial Draft\n\n## Guidelines\n- Maintain professional tone.\n- Format output as markdown.\n- Use !important markers for constraints.`,
-    language: 'markdown'
-  },
-  {
-    id: 'f-user',
-    name: 'user_persona.json',
-    type: 'file',
-    content: `{\n  "persona": "Prompt Engineer",\n  "experience": "Senior",\n  "models": ["GPT-4o", "Claude 3.7", "Gemini 2.0 Flash"],\n  "created": "{=TODAY()}"\n}`,
-    language: 'json'
-  },
-  {
-    id: 'f-readme',
-    name: 'README.md',
-    type: 'file',
-    content: `# ContextPad Workspace\n\nStructured writing, prompt engineering, technical drafting, and workflow automation.`,
-    language: 'markdown'
-  },
-  {
-    id: 'folder-specs',
-    name: 'specifications',
-    type: 'folder',
-    children: [
-      { id: 'f-api', name: 'openapi_schema.yaml', type: 'file', content: 'openapi: 3.0.0\ninfo:\n  title: ContextPad Workspace API\n  version: 1.10.0', language: 'yaml' },
-      { id: 'f-arch', name: 'architecture_rfc.md', type: 'file', content: '# RFC 101: Workspace Sync\n\nDate: {=TODAY()}', language: 'markdown' }
-    ]
+const formatRelativeTime = (timestamp: number): string => {
+  const diff = Date.now() - timestamp;
+  if (diff < 60 * 1000) return 'Just now';
+  const mins = Math.floor(diff / (60 * 1000));
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(diff / (60 * 60 * 1000));
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  return `${days}d ago`;
+};
+
+const findFileInTree = (tree: VirtualFile[], name: string): VirtualFile | null => {
+  for (const item of tree) {
+    if (item.type === 'file' && item.name === name) return item;
+    if (item.type === 'folder' && item.children) {
+      const found = findFileInTree(item.children, name);
+      if (found) return found;
+    }
   }
-];
+  return null;
+};
+
+const findFolderInTree = (tree: VirtualFile[], idOrName: string): VirtualFile | null => {
+  for (const item of tree) {
+    if (item.type === 'folder' && (item.id === idOrName || item.name === idOrName)) {
+      return item;
+    }
+    if (item.type === 'folder' && item.children) {
+      const found = findFolderInTree(item.children, idOrName);
+      if (found) return found;
+    }
+  }
+  return null;
+};
 
 export const FileExplorer: React.FC = () => {
   const bridge = useRuntimeBridge();
-  const [files, setFiles] = useState<VirtualFile[]>(INITIAL_PROJECT_FILES);
+  const [files, setFiles] = useState<VirtualFile[]>([]);
 
   useEffect(() => {
     bridge.storage.getItem('contextpad_virtual_files').then(saved => {
       if (saved) {
         try {
           setFiles(JSON.parse(saved));
-        } catch {}
+        } catch {
+          if (IS_PROTOTYPE_DEMO_MODE) {
+            setFiles(INITIAL_PROJECT_FILES);
+          }
+        }
+      } else if (IS_PROTOTYPE_DEMO_MODE) {
+        setFiles(INITIAL_PROJECT_FILES);
       }
-    }).catch(() => {});
+    }).catch(() => {
+      if (IS_PROTOTYPE_DEMO_MODE) {
+        setFiles(INITIAL_PROJECT_FILES);
+      }
+    });
   }, [bridge.storage]);
 
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     'folder-specs': true
   });
 
+  const [collapsedSections, setCollapsedSections] = useState<Record<'workspace' | 'pinned' | 'history', boolean>>({
+    workspace: false,
+    pinned: false,
+    history: false
+  });
+
+  const toggleSection = (section: 'workspace' | 'pinned' | 'history') => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   const { createTab, tabs, activeTabId, setActiveTabId } = useTabStore();
-  const { templates } = useTemplateStore();
+  const { 
+    pinnedItems, 
+    openedHistory, 
+    isPinned, 
+    togglePinItem, 
+    pinItem,
+    unpinItem, 
+    removeOpenedFile, 
+    clearOpenedHistory, 
+    recordOpenedFile 
+  } = useFileHistoryStore();
   const { addNotification } = useNotificationStore();
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }));
   };
 
-  const handleOpenFile = (file: VirtualFile) => {
-    const existing = tabs.find(t => t.title === file.name);
+  const handleOpenFile = (file: { id?: string; name: string; content?: string; language?: string; path?: string | null }) => {
+    const existing = tabs.find(t => t.title === file.name || (file.path && t.filePath === file.path));
     if (existing) {
       setActiveTabId(existing.id);
     } else {
-      createTab(file.name, file.content || '', (file.language as any) || 'markdown');
+      createTab(file.name, file.content || '', (file.language as any) || 'markdown', file.path);
+    }
+    recordOpenedFile({
+      id: file.id || file.name,
+      name: file.name,
+      type: 'file',
+      path: file.path,
+      language: file.language || 'markdown',
+      content: file.content
+    });
+  };
+
+  const handleOpenPinnedItem = (item: PinnedItem) => {
+    if (item.type === 'folder') {
+      const target = findFolderInTree(files, item.id) || findFolderInTree(files, item.name);
+      const folderId = target?.id || item.id;
+      setExpandedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }));
+      setCollapsedSections(prev => ({ ...prev, workspace: false }));
+      addNotification('Folder', `Toggled "${item.name}" in workspace tree`, 'info');
+      return;
+    }
+
+    // Pinned file
+    const matchedVirtual = findFileInTree(files, item.name);
+    handleOpenFile({
+      id: item.id,
+      name: item.name,
+      content: matchedVirtual?.content || item.content,
+      language: matchedVirtual?.language || item.language || 'markdown',
+      path: item.path
+    });
+  };
+
+  const handleOpenHistoryItem = (historyItem: OpenedFileRecord) => {
+    if (historyItem.type === 'folder') {
+      const target = findFolderInTree(files, historyItem.id) || findFolderInTree(files, historyItem.name);
+      const targetId = target ? target.id : historyItem.id;
+
+      // Toggle expanded state
+      setExpandedFolders(prev => ({
+        ...prev,
+        [targetId]: !prev[targetId]
+      }));
+
+      // Ensure workspace files section is expanded
+      setCollapsedSections(prev => ({ ...prev, workspace: false }));
+
+      // Bring to top of history
+      recordOpenedFile({
+        id: targetId,
+        name: historyItem.name,
+        type: 'folder'
+      });
+
+      addNotification('Folder', `Toggled "${historyItem.name}" in workspace tree`, 'info');
+      return;
+    }
+
+    const matchedVirtual = findFileInTree(files, historyItem.name);
+    handleOpenFile({
+      id: historyItem.id,
+      name: historyItem.name,
+      content: matchedVirtual?.content || historyItem.content,
+      language: matchedVirtual?.language || historyItem.language || 'markdown',
+      path: historyItem.path
+    });
+  };
+
+  const handleTogglePin = (item: PinnedItem) => {
+    const currentlyPinned = isPinned(item.id) || isPinned(item.name);
+    togglePinItem(item);
+    if (currentlyPinned) {
+      addNotification('Unpinned', item.name, 'info');
+    } else {
+      addNotification('Pinned', `"${item.name}" added to quick access`, 'success');
     }
   };
 
@@ -105,7 +216,7 @@ export const FileExplorer: React.FC = () => {
     const updated = [...files, newFile];
     setFiles(updated);
     bridge.storage.setItem('contextpad_virtual_files', JSON.stringify(updated)).catch(() => {});
-    createTab(newFile.name, newFile.content, newFile.language as any);
+    handleOpenFile(newFile);
     addNotification('File Created', name, 'success');
   };
 
@@ -113,7 +224,12 @@ export const FileExplorer: React.FC = () => {
     try {
       const file = await bridge.fs.openFile();
       if (file) {
-        createTab(file.name, file.content, (file.language as any) || 'markdown', file.path);
+        handleOpenFile({
+          name: file.name,
+          content: file.content,
+          language: (file.language as any) || 'markdown',
+          path: file.path
+        });
         addNotification('File Opened', file.name, 'success');
       }
     } catch (e: any) {
@@ -123,74 +239,357 @@ export const FileExplorer: React.FC = () => {
     }
   };
 
+  const handleNativeOpenFolder = async () => {
+    try {
+      if (!bridge.fs.openDirectory) {
+        addNotification('Folder Picker', 'Folder picker is not supported in this runtime environment', 'error');
+        return;
+      }
+
+      const dirResult = await bridge.fs.openDirectory();
+      if (!dirResult) return;
+
+      const folderId = `folder_${Date.now()}_${dirResult.name.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+      // Convert bridge directory entries to VirtualFile format recursively
+      const mapEntriesToVirtual = (entries: BridgeDirectoryEntry[]): VirtualFile[] => {
+        return entries.map(entry => ({
+          id: entry.id || `item_${Math.random().toString(36).substr(2, 7)}`,
+          name: entry.name,
+          type: entry.type,
+          content: entry.content,
+          language: entry.language,
+          path: entry.path,
+          children: entry.children ? mapEntriesToVirtual(entry.children) : undefined
+        }));
+      };
+
+      const newFolder: VirtualFile = {
+        id: folderId,
+        name: dirResult.name,
+        type: 'folder',
+        children: mapEntriesToVirtual(dirResult.entries)
+      };
+
+      // Add to files state (replace existing folder with same name or prepend)
+      const filtered = files.filter(f => f.name !== dirResult.name);
+      const updated = [newFolder, ...filtered];
+      setFiles(updated);
+      bridge.storage.setItem('contextpad_virtual_files', JSON.stringify(updated)).catch(() => {});
+
+      // Automatically expand this workspace folder
+      setExpandedFolders(prev => ({
+        ...prev,
+        [folderId]: true
+      }));
+
+      // Ensure workspace section itself is visible/expanded
+      setCollapsedSections(prev => ({
+        ...prev,
+        workspace: false
+      }));
+
+      // Add folder to top of opened folders/files history section
+      recordOpenedFile({
+        id: folderId,
+        name: dirResult.name,
+        type: 'folder'
+      });
+
+      addNotification('Folder Workspace Added', `"${dirResult.name}" expanded in Workspace Files`, 'success');
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') {
+        addNotification('Could not open folder', e?.message || 'Unknown error', 'error');
+      }
+    }
+  };
+
   const activeTab = tabs.find(t => t.id === activeTabId);
 
   return (
     <div className="theme-sidebar flex flex-col h-full text-xs select-none">
       {/* Header controls */}
-      <div className="p-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] flex justify-between items-center border-b border-[var(--border-primary)]">
+      <div className="p-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] flex justify-between items-center border-b border-[var(--border-primary)] shrink-0">
         <span>Explorer</span>
         <div className="flex items-center gap-1">
           <button
             onClick={handleCreateNewFile}
             title="New File"
-            className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors"
+            aria-label="New File"
+            className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors cursor-pointer"
           >
             <FilePlus className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleNativeOpenFile}
             title="Open Disk File"
-            className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors"
+            aria-label="Open Disk File"
+            className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors cursor-pointer"
           >
             <Upload className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={handleNativeOpenFolder}
+            title="Open Folder as Workspace"
+            aria-label="Open Folder as Workspace"
+            className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--accent-primary)] hover:text-[var(--text-primary)] rounded transition-colors cursor-pointer"
+          >
+            <FolderPlus className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* File Tree */}
-      <div className="flex-1 overflow-y-auto p-2">
-        <div className="flex flex-col gap-0.5">
-          {files.map(item => (
-            <FileTreeNode
-              key={item.id}
-              item={item}
-              activeFileName={activeTab?.title}
-              expandedFolders={expandedFolders}
-              toggleFolder={toggleFolder}
-              onOpenFile={handleOpenFile}
-            />
-          ))}
+      {/* Scrollable Explorer Body */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-3">
+        {/* Section 1: Workspace Files Tree */}
+        <div>
+          <div className="flex items-center justify-between py-1 px-1 mb-1">
+            <button
+              onClick={() => toggleSection('workspace')}
+              className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer group"
+              aria-expanded={!collapsedSections.workspace}
+              title={collapsedSections.workspace ? "Expand Workspace Files" : "Collapse Workspace Files"}
+            >
+              {collapsedSections.workspace ? (
+                <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text-primary)]" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text-primary)]" />
+              )}
+              <span>Workspace Files</span>
+              <span className="text-[9px] px-1 py-0.2 rounded bg-[var(--card-bg)] text-[var(--text-secondary)] font-mono ml-0.5">
+                {files.length}
+              </span>
+            </button>
+          </div>
+
+          {!collapsedSections.workspace && (
+            <div className="flex flex-col gap-0.5 mt-1">
+              {files.map(item => (
+                <FileTreeNode
+                  key={item.id}
+                  item={item}
+                  activeFileName={activeTab?.title}
+                  expandedFolders={expandedFolders}
+                  toggleFolder={toggleFolder}
+                  onOpenFile={handleOpenFile}
+                  isPinned={isPinned}
+                  onTogglePin={handleTogglePin}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Pinned Templates Section */}
-        <div className="mt-6 border-t border-[var(--border-primary)] pt-4 px-1">
-          <div className="text-[10px] font-bold uppercase text-[var(--text-muted)] mb-2 px-1">Pinned Templates</div>
-          <div className="flex flex-col gap-0.5">
-            {templates.slice(0, 4).map((tmpl, i) => {
-              const dotColors = ['bg-[#E06C75]', 'bg-[#98C379]', 'bg-[#61AFEF]', 'bg-[#E5C07B]'];
-              return (
-                <div
-                  key={tmpl.id}
-                  onClick={() => {
-                    if (activeTab) {
-                      useTabStore.getState().insertTextAtCursor(activeTab.id, tmpl.content);
-                      addNotification('Template Inserted', tmpl.name, 'success');
-                    }
-                  }}
-                  className="text-xs p-1.5 flex items-center gap-2 text-[var(--text-secondary)] hover:bg-[var(--card-hover-bg)] hover:text-[var(--text-primary)] rounded cursor-pointer transition-colors"
-                >
-                  <div className={`w-2 h-2 rounded-full ${dotColors[i % dotColors.length]}`} />
-                  <span className="truncate">{tmpl.name}</span>
-                </div>
-              );
-            })}
+        {/* Section 2: Pinned Files / Folders (Quick Access) */}
+        <div className="border-t border-[var(--border-primary)] pt-2.5 px-1">
+          <div className="flex items-center justify-between py-1 px-1 mb-1">
+            <button
+              onClick={() => toggleSection('pinned')}
+              className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer group"
+              aria-expanded={!collapsedSections.pinned}
+              title={collapsedSections.pinned ? "Expand Pinned Files / Folders" : "Collapse Pinned Files / Folders"}
+            >
+              {collapsedSections.pinned ? (
+                <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text-primary)]" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text-primary)]" />
+              )}
+              <Pin className="w-3 h-3 text-[var(--accent-primary)]" />
+              <span>Pinned Files / Folders</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--card-hover-bg)] text-[var(--text-secondary)] font-mono ml-0.5">
+                {pinnedItems.length}
+              </span>
+            </button>
           </div>
+
+          {!collapsedSections.pinned && (
+            <div>
+              {pinnedItems.length === 0 ? (
+                <div className="text-[11px] text-[var(--text-muted)] italic px-2 py-2 flex items-center gap-1.5 opacity-75">
+                  <Pin className="w-3 h-3 shrink-0" />
+                  <span>Hover over any file or folder to pin it</span>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-0.5 mt-1">
+                  {pinnedItems.map(item => {
+                    const isFolder = item.type === 'folder';
+                    const isActive = !isFolder && activeTab?.title === item.name;
+                    const strokeColor = getFileIconColor(item.name);
+
+                    return (
+                      <div
+                        key={item.id || item.name}
+                        onClick={() => handleOpenPinnedItem(item)}
+                        className={`group/pin relative text-xs flex items-center gap-2 p-1.5 rounded cursor-pointer transition-colors ${
+                          isActive
+                            ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-semibold'
+                            : 'text-[var(--text-secondary)] hover:bg-[var(--card-hover-bg)] hover:text-[var(--text-primary)]'
+                        }`}
+                      >
+                        {isFolder ? (
+                          <Folder className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.5" className="shrink-0">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                          </svg>
+                        )}
+
+                        <span className="truncate flex-1 pr-6">{item.name}</span>
+
+                        {isFolder && (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--border-subtle)] mr-6">
+                            Folder
+                          </span>
+                        )}
+
+                        {/* Explicit Unpin Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            unpinItem(item.id || item.name);
+                            addNotification('Unpinned', item.name, 'info');
+                          }}
+                          title={`Unpin ${item.name}`}
+                          aria-label={`Unpin ${item.name}`}
+                          className="absolute right-1 p-1 text-[var(--accent-primary)] hover:text-red-400 hover:bg-[var(--card-hover-bg)] rounded transition-colors cursor-pointer"
+                        >
+                          <PinOff className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Section 3: Opened Folders / Files History */}
+        <div className="border-t border-[var(--border-primary)] pt-2.5 px-1">
+          <div className="flex items-center justify-between py-1 px-1 mb-1">
+            <button
+              onClick={() => toggleSection('history')}
+              className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer group"
+              aria-expanded={!collapsedSections.history}
+              title={collapsedSections.history ? "Expand Opened Folders / Files History" : "Collapse Opened Folders / Files History"}
+            >
+              {collapsedSections.history ? (
+                <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text-primary)]" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text-primary)]" />
+              )}
+              <History className="w-3 h-3 text-[var(--accent-primary)]" />
+              <span>Opened Folders / Files History</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--card-hover-bg)] text-[var(--text-secondary)] font-mono ml-0.5">
+                {openedHistory.length}
+              </span>
+            </button>
+
+            {openedHistory.length > 0 && !collapsedSections.history && (
+              <button
+                onClick={() => {
+                  clearOpenedHistory();
+                  addNotification('History Cleared', 'Opened history was cleared', 'info');
+                }}
+                title="Clear history"
+                aria-label="Clear history"
+                className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-red-400 rounded transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {!collapsedSections.history && (
+            <div>
+              {openedHistory.length === 0 ? (
+                <div className="text-[11px] text-[var(--text-muted)] italic px-2 py-2 flex items-center gap-1.5 opacity-75">
+                  <Clock className="w-3 h-3 shrink-0" />
+                  <span>No opened files or folders yet</span>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-0.5 mt-1">
+                  {openedHistory.map(record => {
+                    const isFolder = record.type === 'folder';
+                    const isActive = !isFolder && activeTab?.title === record.name;
+                    const strokeColor = getFileIconColor(record.name);
+                    const pinned = isPinned(record.id) || isPinned(record.name);
+
+                    return (
+                      <div
+                        key={record.id}
+                        onClick={() => handleOpenHistoryItem(record)}
+                        className={`group/hist relative text-xs flex items-center gap-2 p-1.5 rounded cursor-pointer transition-colors ${
+                          isActive
+                            ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-semibold'
+                            : 'text-[var(--text-secondary)] hover:bg-[var(--card-hover-bg)] hover:text-[var(--text-primary)]'
+                        }`}
+                      >
+                        {isFolder ? (
+                          <Folder className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.5" className="shrink-0">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                          </svg>
+                        )}
+
+                        <div className="flex flex-col min-w-0 flex-1 pr-14">
+                          <span className="truncate text-xs">{record.name}</span>
+                          <span className="text-[10px] text-[var(--text-muted)] opacity-70 truncate flex items-center gap-1">
+                            {isFolder && <span className="font-semibold text-[9px] uppercase tracking-wider text-[var(--accent-primary)]">Folder ·</span>}
+                            <span>{formatRelativeTime(record.openedAt)}</span>
+                          </span>
+                        </div>
+
+                        {/* Explicit Pin/Unpin button and remove button */}
+                        <div className="absolute right-1 flex items-center gap-0.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTogglePin({
+                                id: record.id,
+                                name: record.name,
+                                type: record.type,
+                                path: record.path || undefined,
+                                language: record.language
+                              });
+                            }}
+                            title={pinned ? `Unpin "${record.name}"` : `Pin "${record.name}" to quick access`}
+                            aria-label={pinned ? `Unpin "${record.name}"` : `Pin "${record.name}" to quick access`}
+                            className={`p-1 rounded transition-colors cursor-pointer ${
+                              pinned 
+                                ? 'text-[var(--accent-primary)] hover:text-red-400 hover:bg-[var(--accent-container)]' 
+                                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+                            }`}
+                          >
+                            {pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeOpenedFile(record.id);
+                            }}
+                            title="Remove from history"
+                            aria-label="Remove from history"
+                            className="p-1 text-[var(--text-muted)] hover:text-red-400 opacity-60 group-hover/hist:opacity-100 hover:bg-[var(--card-hover-bg)] rounded transition-colors cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Footer info */}
-      <div className="p-2 px-3 border-t border-[var(--border-primary)] bg-[var(--sidebar-header-bg)] text-[10px] text-[var(--text-muted)] flex items-center justify-between">
+      <div className="p-2 px-3 border-t border-[var(--border-primary)] bg-[var(--sidebar-header-bg)] text-[10px] text-[var(--text-muted)] flex items-center justify-between shrink-0">
         <span>Workspace Files</span>
         <span className="text-[var(--status-success)] font-medium">● Synced</span>
       </div>
@@ -212,20 +611,42 @@ const FileTreeNode: React.FC<{
   expandedFolders: Record<string, boolean>;
   toggleFolder: (id: string) => void;
   onOpenFile: (file: VirtualFile) => void;
-}> = ({ item, activeFileName, expandedFolders, toggleFolder, onOpenFile }) => {
+  isPinned: (idOrName: string) => boolean;
+  onTogglePin: (item: PinnedItem) => void;
+}> = ({ item, activeFileName, expandedFolders, toggleFolder, onOpenFile, isPinned, onTogglePin }) => {
+  const pinned = isPinned(item.id) || isPinned(item.name);
+
   if (item.type === 'folder') {
     const isExpanded = !!expandedFolders[item.id];
     return (
       <div>
-        <button
-          onClick={() => toggleFolder(item.id)}
-          className="w-full flex items-center gap-1.5 p-1.5 hover:bg-[var(--card-hover-bg)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-left"
-        >
-          {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
-          <Folder className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-          <span className="truncate font-medium text-xs text-[var(--text-primary)]">{item.name}</span>
-        </button>
+        <div className="group/folder relative flex items-center">
+          <button
+            onClick={() => toggleFolder(item.id)}
+            className="w-full flex items-center gap-1.5 p-1.5 hover:bg-[var(--card-hover-bg)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-left pr-7 cursor-pointer"
+          >
+            {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />}
+            <Folder className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+            <span className="truncate font-medium text-xs text-[var(--text-primary)] flex-1">{item.name}</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onTogglePin({ id: item.id, name: item.name, type: 'folder' });
+            }}
+            title={pinned ? "Unpin folder" : "Pin folder to quick access"}
+            aria-label={pinned ? "Unpin folder" : "Pin folder to quick access"}
+            className={`absolute right-1 p-1 rounded transition-all cursor-pointer ${
+              pinned 
+                ? 'text-[var(--accent-primary)] opacity-100 hover:bg-[var(--accent-container)]' 
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover/folder:opacity-100 hover:bg-[var(--card-hover-bg)]'
+            }`}
+          >
+            {pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+          </button>
+        </div>
 
+        {/* Nested folders: clicking any nested folder expands or collapses it recursively */}
         {isExpanded && item.children && (
           <div className="pl-3 border-l border-[var(--border-primary)] ml-2 my-0.5 space-y-0.5">
             {item.children.map(child => (
@@ -236,6 +657,8 @@ const FileTreeNode: React.FC<{
                 expandedFolders={expandedFolders}
                 toggleFolder={toggleFolder}
                 onOpenFile={onOpenFile}
+                isPinned={isPinned}
+                onTogglePin={onTogglePin}
               />
             ))}
           </div>
@@ -250,7 +673,7 @@ const FileTreeNode: React.FC<{
   return (
     <div
       onClick={() => onOpenFile(item)}
-      className={`text-xs flex items-center gap-2 p-1.5 rounded cursor-pointer transition-colors ${
+      className={`group/node relative text-xs flex items-center gap-2 p-1.5 rounded cursor-pointer transition-colors ${
         isActive 
           ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-semibold' 
           : 'text-[var(--text-secondary)] hover:bg-[var(--card-hover-bg)] hover:text-[var(--text-primary)]'
@@ -260,7 +683,28 @@ const FileTreeNode: React.FC<{
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <polyline points="14 2 14 8 20 8" />
       </svg>
-      <span className="truncate">{item.name}</span>
+      <span className="truncate flex-1 pr-6">{item.name}</span>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onTogglePin({
+            id: item.id,
+            name: item.name,
+            type: 'file',
+            content: item.content,
+            language: item.language
+          });
+        }}
+        title={pinned ? "Unpin file" : "Pin file to quick access"}
+        aria-label={pinned ? "Unpin file" : "Pin file to quick access"}
+        className={`absolute right-1 p-1 rounded transition-all cursor-pointer ${
+          pinned 
+            ? 'text-[var(--accent-primary)] opacity-100 hover:bg-[var(--accent-container)]' 
+            : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover/node:opacity-100 hover:bg-[var(--card-hover-bg)]'
+        }`}
+      >
+        {pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+      </button>
     </div>
   );
 };

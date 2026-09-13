@@ -151,49 +151,6 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     isBuiltIn: true
   },
 
-  // Interactive & Prompt Placeholders
-  {
-    id: 'fmt_var',
-    label: '{{var}}',
-    icon: 'Variable',
-    title: 'Insert Template Variable {{var}}',
-    prefix: '{{',
-    suffix: '}}',
-    type: 'wrap',
-    category: 'tool',
-    enabled: true,
-    isAccent: true,
-    order: 11,
-    isBuiltIn: true
-  },
-  {
-    id: 'fmt_formula',
-    label: '{=}',
-    icon: 'Calculator',
-    title: 'Insert Inline Formula {=COUNT()}',
-    prefix: '{=',
-    suffix: '}',
-    type: 'wrap',
-    category: 'tool',
-    enabled: true,
-    isAccent: true,
-    order: 12,
-    isBuiltIn: true
-  },
-  {
-    id: 'fmt_slash',
-    label: '/',
-    icon: 'Slash',
-    title: 'Trigger Slash Commands Menu (/)',
-    prefix: '/',
-    type: 'insert',
-    category: 'tool',
-    enabled: true,
-    isAccent: true,
-    order: 13,
-    isBuiltIn: true
-  },
-
   // Lists & Tasks
   {
     id: 'fmt_task',
@@ -204,7 +161,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'line-prefix',
     category: 'list',
     enabled: true,
-    order: 14,
+    order: 11,
     isBuiltIn: true
   },
   {
@@ -216,7 +173,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'line-prefix',
     category: 'list',
     enabled: true,
-    order: 15,
+    order: 12,
     isBuiltIn: true
   },
   {
@@ -228,7 +185,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'line-prefix',
     category: 'list',
     enabled: false,
-    order: 16,
+    order: 13,
     isBuiltIn: true
   },
 
@@ -242,7 +199,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'line-prefix',
     category: 'block',
     enabled: true,
-    order: 17,
+    order: 14,
     isBuiltIn: true
   },
   {
@@ -255,7 +212,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'block',
     category: 'block',
     enabled: false,
-    order: 18,
+    order: 15,
     isBuiltIn: true
   },
   {
@@ -267,7 +224,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'line-prefix',
     category: 'block',
     enabled: false,
-    order: 19,
+    order: 16,
     isBuiltIn: true
   },
   {
@@ -279,7 +236,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'line-prefix',
     category: 'block',
     enabled: false,
-    order: 20,
+    order: 17,
     isBuiltIn: true
   },
 
@@ -294,7 +251,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'wrap',
     category: 'insert',
     enabled: false,
-    order: 21,
+    order: 18,
     isBuiltIn: true
   },
   {
@@ -307,7 +264,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'wrap',
     category: 'insert',
     enabled: true,
-    order: 22,
+    order: 19,
     isBuiltIn: true
   },
   {
@@ -319,7 +276,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'insert',
     category: 'insert',
     enabled: false,
-    order: 23,
+    order: 20,
     isBuiltIn: true
   },
   {
@@ -331,7 +288,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     type: 'insert',
     category: 'insert',
     enabled: false,
-    order: 24,
+    order: 21,
     isBuiltIn: true
   },
 
@@ -346,7 +303,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     commandId: 'indent',
     category: 'tool',
     enabled: true,
-    order: 25,
+    order: 22,
     isBuiltIn: true
   },
   {
@@ -359,7 +316,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     commandId: 'outdent',
     category: 'tool',
     enabled: true,
-    order: 26,
+    order: 23,
     isBuiltIn: true
   },
   {
@@ -372,7 +329,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     commandId: 'undo',
     category: 'tool',
     enabled: true,
-    order: 27,
+    order: 24,
     isBuiltIn: true
   },
   {
@@ -385,7 +342,7 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     commandId: 'redo',
     category: 'tool',
     enabled: true,
-    order: 28,
+    order: 25,
     isBuiltIn: true
   }
 ];
@@ -444,13 +401,19 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
       if (stored) {
         const parsed = JSON.parse(stored) as MarkdownFormatButton[];
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const parsedIds = new Set(parsed.map(b => b.id));
-          const missingPresets = PRESET_FORMATTING_BUTTONS
-            .filter(p => !parsedIds.has(p.id))
-            .map(p => ({ ...p, enabled: false, order: parsed.length + p.order }));
+          // Strictly Markdown formatting buttons only: filter out non-markdown items (variables, formulas, slash menus)
+          const nonMarkdownIds = new Set(['fmt_var', 'fmt_formula', 'fmt_slash']);
+          const cleanParsed = parsed.filter(b => !nonMarkdownIds.has(b.id));
 
-          const merged = [...parsed, ...missingPresets].sort((a, b) => a.order - b.order);
+          const cleanPresets = PRESET_FORMATTING_BUTTONS.filter(p => !nonMarkdownIds.has(p.id));
+          const parsedIds = new Set(cleanParsed.map(b => b.id));
+          const missingPresets = cleanPresets
+            .filter(p => !parsedIds.has(p.id))
+            .map(p => ({ ...p, enabled: false, order: cleanParsed.length + p.order }));
+
+          const merged = [...cleanParsed, ...missingPresets].sort((a, b) => a.order - b.order);
           set({ buttons: merged });
+          saveButtonsToStorage(merged);
         }
       } else {
         set({ buttons: PRESET_FORMATTING_BUTTONS });

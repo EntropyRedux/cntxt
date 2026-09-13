@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ListTree, 
   Search, 
@@ -12,9 +12,11 @@ import {
   ExternalLink,
   ChevronRight,
   Filter,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useRuntimeBridge, querySelector } from '../../adapters';
 
@@ -31,6 +33,7 @@ interface OutlineItem {
 export const OutlinePanel: React.FC = () => {
   const bridge = useRuntimeBridge();
   const { tabs, activeTabId, insertTextAtCursor } = useTabStore();
+  const { settings } = useSettingsStore();
   const { addNotification } = useNotificationStore();
   
   const [filterType, setFilterType] = useState<'all' | 'heading' | 'code' | 'task' | 'table'>('all');
@@ -40,11 +43,28 @@ export const OutlinePanel: React.FC = () => {
   const activeTab = tabs.find(t => t.id === activeTabId);
   const content = activeTab?.content || '';
 
+  const isLiveSync = settings.enableLiveDomSync ?? settings.enableLiveMarkdownSync ?? true;
+  const [syncedContent, setSyncedContent] = useState(content);
+
+  useEffect(() => {
+    if (isLiveSync) {
+      setSyncedContent(content);
+    }
+  }, [content, isLiveSync]);
+
+  const handleManualSync = () => {
+    setSyncedContent(content);
+    addNotification('Outline Synced', 'Document outline updated with latest content', 'info');
+  };
+
+  const isOutdated = !isLiveSync && content !== syncedContent;
+
   // Parse document content into structured outline items
   const outlineItems = useMemo<OutlineItem[]>(() => {
-    if (!content) return [];
+    const textToParse = isLiveSync ? content : syncedContent;
+    if (!textToParse) return [];
 
-    const lines = content.split('\n');
+    const lines = textToParse.split('\n');
     const items: OutlineItem[] = [];
     let inCodeBlock = false;
     let codeBlockLang = '';
@@ -225,6 +245,20 @@ export const OutlinePanel: React.FC = () => {
           <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-primary)]">Document Outline</span>
         </div>
         <div className="flex items-center gap-1">
+          {!isLiveSync && (
+            <button
+              onClick={handleManualSync}
+              title={isOutdated ? "Sync outline with latest changes" : "Outline is up to date"}
+              aria-label="Refresh Outline"
+              className={`p-1 rounded transition-colors ${
+                isOutdated 
+                  ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+              }`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isOutdated ? 'animate-spin-slow' : ''}`} />
+            </button>
+          )}
           <button
             onClick={copyTableOfContents}
             title="Copy Table of Contents (TOC)"

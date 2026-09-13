@@ -1,111 +1,11 @@
 import { create } from 'zustand';
-import { Action, ActionCategory } from '../types';
+import { Action, ActionCategory } from '../../contracts/data_shapes';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
+// MOCK: quarantined synthetic sample data for prototype demo mode
+import { DEFAULT_ACTIONS, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 
-export const DEFAULT_ACTIONS: Action[] = [
-  {
-    id: 'act_summarize',
-    name: 'Summarize Document',
-    description: 'Generates an executive summary of the current note content',
-    category: 'Text Analysis',
-    shortcut: 'Ctrl+Shift+S',
-    code: `
-// Executive Summary Generator
-const text = api.getContent();
-if (!text.trim()) {
-  api.notify("Document is empty", "warning");
-  return;
-}
-api.notify("Analyzing text content...", "info");
-const lines = text.split('\\n').filter(l => l.trim().length > 0);
-const wordCount = text.split(/\\s+/).filter(Boolean).length;
-const charCount = text.length;
-
-const summary = \`## Executive Summary\\n\\n**Key Metrics:**\\n- Total Words: \${wordCount}\\n- Total Characters: \${charCount}\\n- Paragraphs: \${lines.length}\\n\\n**Core Takeaways:**\\n\` + lines.slice(0, 3).map(l => \`- \${l.replace(/^[#*\\-\\s]+/, '')}\`).join('\\n');
-
-api.insertAtCursor('\\n\\n' + summary);
-api.notify("Summary appended successfully!", "success");
-    `,
-    color: 'emerald'
-  },
-  {
-    id: 'act_format_table',
-    name: 'Clean Markdown Table',
-    description: 'Normalizes column widths and whitespace in markdown tables',
-    category: 'Formatting',
-    shortcut: 'Ctrl+Shift+T',
-    code: `
-const text = api.getContent();
-const lines = text.split('\\n');
-let modified = false;
-
-const newLines = lines.map(line => {
-  if (line.includes('|')) {
-    const cells = line.split('|').map(c => c.trim());
-    modified = true;
-    return cells.join(' | ');
-  }
-  return line;
-});
-
-if (modified) {
-  api.setContent(newLines.join('\\n'));
-  api.notify("Normalized markdown tables", "success");
-} else {
-  api.notify("No markdown table found in current document", "info");
-}
-    `,
-    color: 'sky'
-  },
-  {
-    id: 'act_slugify',
-    name: 'Generate URL Slug',
-    description: 'Converts selected text or heading to kebab-case slug',
-    category: 'Utility',
-    code: `
-const sel = api.getSelection();
-const target = sel || api.getContent().split('\\n')[0];
-if (!target) {
-  api.notify("Nothing to slugify", "warning");
-  return;
-}
-const slug = target
-  .toLowerCase()
-  .trim()
-  .replace(/[^\\w\\s-]/g, '')
-  .replace(/[\\s_-]+/g, '-')
-  .replace(/^-+|-+$/g, '');
-
-if (sel) {
-  api.replaceSelection(slug);
-} else {
-  api.insertAtCursor(slug);
-}
-api.notify(\`Generated slug: \${slug}\`, "success");
-    `,
-    color: 'indigo'
-  },
-  {
-    id: 'act_extract_todos',
-    name: 'Extract All Tasks',
-    description: 'Gathers all checkbox tasks (- [ ]) and copies to end of document',
-    category: 'Text Analysis',
-    code: `
-const text = api.getContent();
-const matches = text.match(/^[ \\t]*- \\[([ xX])\\]\\s+(.+)$/gm);
-if (!matches || matches.length === 0) {
-  api.notify("No checklist tasks found (- [ ] ...)", "info");
-  return;
-}
-const header = "\\n\\n### Consolidated Task Checklist\\n";
-const tasks = matches.join('\\n');
-api.insertAtCursor(header + tasks + '\\n');
-api.notify(\`Extracted \${matches.length} tasks\`, "success");
-    `,
-    color: 'amber'
-  }
-];
+export { DEFAULT_ACTIONS };
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -136,7 +36,7 @@ interface ActionState {
 }
 
 export const useActionStore = create<ActionState>((set, get) => ({
-  actions: DEFAULT_ACTIONS,
+  actions: [],
   searchQuery: '',
   selectedCategory: 'All',
   isActionEditorOpen: false,
@@ -147,18 +47,29 @@ export const useActionStore = create<ActionState>((set, get) => ({
     if (storage) {
       activeStorage = storage;
     }
-    if (!activeStorage) return;
+    if (!activeStorage) {
+      if (IS_PROTOTYPE_DEMO_MODE) {
+        set({ actions: DEFAULT_ACTIONS });
+      }
+      return;
+    }
 
     try {
       const stored = await activeStorage.getItem(STORAGE_KEYS.ACTIONS);
       if (stored) {
         set({ actions: JSON.parse(stored) });
-      } else {
+      } else if (IS_PROTOTYPE_DEMO_MODE) {
         set({ actions: DEFAULT_ACTIONS });
         await activeStorage.setItem(STORAGE_KEYS.ACTIONS, JSON.stringify(DEFAULT_ACTIONS));
+      } else {
+        set({ actions: [] });
       }
     } catch {
-      set({ actions: DEFAULT_ACTIONS });
+      if (IS_PROTOTYPE_DEMO_MODE) {
+        set({ actions: DEFAULT_ACTIONS });
+      } else {
+        set({ actions: [] });
+      }
     }
   },
 
@@ -254,8 +165,14 @@ export const useActionStore = create<ActionState>((set, get) => ({
       await executeInSandbox(action.code, sandboxApi);
     } catch (e: any) {
       console.error('Action execution failed', e);
-      if (sandboxApi && sandboxApi.notify) {
-        sandboxApi.notify(e?.message || 'Error executing action', 'error');
+      const errorMsg = e?.message || 'Error executing action';
+      if (sandboxApi && typeof sandboxApi.notify === 'function') {
+        sandboxApi.notify(errorMsg, 'error');
+      } else if (sandboxApi && typeof sandboxApi.toast === 'function') {
+        sandboxApi.toast(errorMsg, 'error');
+      } else {
+        const { useNotificationStore } = await import('./notificationStore');
+        useNotificationStore.getState().addNotification(action.name || 'Action Failed', errorMsg, 'error');
       }
     } finally {
       set({ isRunningAction: false });

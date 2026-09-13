@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { Template } from '../types';
-import { DEFAULT_TEMPLATES } from '../constants/defaultData';
+import { Template } from '../../contracts/data_shapes';
+// MOCK: quarantined synthetic sample data for prototype demo mode
+import { DEFAULT_TEMPLATES, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 
@@ -31,7 +32,7 @@ interface TemplateState {
 }
 
 export const useTemplateStore = create<TemplateState>((set, get) => ({
-  templates: DEFAULT_TEMPLATES,
+  templates: [],
   searchQuery: '',
   selectedCategory: 'All',
   isVariableModalOpen: false,
@@ -41,18 +42,30 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
     if (storage) {
       activeStorage = storage;
     }
-    if (!activeStorage) return;
+    if (!activeStorage) {
+      if (IS_PROTOTYPE_DEMO_MODE) {
+        set({ templates: DEFAULT_TEMPLATES });
+      }
+      return;
+    }
 
     try {
       const stored = await activeStorage.getItem(STORAGE_KEYS.TEMPLATES);
       if (stored) {
-        set({ templates: JSON.parse(stored) });
-      } else {
+        const parsed: Template[] = JSON.parse(stored);
+        set({ templates: parsed });
+      } else if (IS_PROTOTYPE_DEMO_MODE) {
         set({ templates: DEFAULT_TEMPLATES });
         await activeStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(DEFAULT_TEMPLATES));
+      } else {
+        set({ templates: [] });
       }
     } catch {
-      set({ templates: DEFAULT_TEMPLATES });
+      if (IS_PROTOTYPE_DEMO_MODE) {
+        set({ templates: DEFAULT_TEMPLATES });
+      } else {
+        set({ templates: [] });
+      }
     }
   },
 

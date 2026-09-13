@@ -122,6 +122,13 @@ interface RequestPayload {
     info: 'Insert {{variable:default_val}} placeholder',
     type: 'variable',
     apply: '{{variable_name:default_value}}'
+  },
+  {
+    label: '/variable-input',
+    detail: 'Interactive Input',
+    info: 'Insert [[{{field_name:default_val}}]] live input field',
+    type: 'variable',
+    apply: '[[{{field_name:default_value}}]]'
   }
 ];
 

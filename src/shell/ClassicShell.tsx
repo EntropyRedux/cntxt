@@ -27,20 +27,17 @@ export const ClassicShell: React.FC<ShellLayoutProps> = ({
         events={events}
       />
 
-      {/* 2. Workspace Row: Left Rail (Stationary) -> Workspace Content Area */}
+      {/* 2. Modular Ribbon Toolbox */}
+      <ModularRibbon events={events} />
+
+      {/* 3. Workspace Row: Left Rail aligns directly with TabBar row */}
       <div className="flex-1 flex overflow-hidden relative">
         {showActivityBar && !isTouch && <ActivityBar orientation="vertical" />}
 
-        {/* Central Workspace Column: Ribbon Toolbox + (Editor & Sidebar) */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          {settings.showRibbon && (
-            <ModularRibbon events={events} />
-          )}
-
-          <div className="flex-1 flex overflow-hidden relative">
-            <ShellEditorContainer />
-            <ShellSidebar />
-          </div>
+        {/* Central Workspace Column: Editor & Sidebar */}
+        <div className="flex-1 flex overflow-hidden relative">
+          <ShellEditorContainer />
+          <ShellSidebar />
         </div>
       </div>
 

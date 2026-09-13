@@ -1,5 +1,6 @@
 export type ThemeName = 
   | 'google-material-3'
+  | 'parchment'
   | 'contextpad-dark' 
   | 'one-dark' 
   | 'dracula' 
@@ -20,6 +21,6 @@ export interface UiThemeDefinition {
 
 export interface ThemeEventContracts {
   onThemeChange: (theme: ThemeName) => void;
-  onDensityChange: (density: 'compact' | 'comfortable' | 'touch') => void;
+  onDensityChange: (density: 'desktop' | 'touch') => void;
   onTouchOptimizedChange: (enabled: boolean) => void;
 }

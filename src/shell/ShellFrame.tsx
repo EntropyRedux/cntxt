@@ -4,6 +4,7 @@ import { ShellModalLayer } from './ShellModalLayer';
 import { ShellNotificationLayer } from './ShellNotificationLayer';
 import { createUiEventDispatcher } from '../adapters/eventDispatcher';
 import { useRuntimeBridge } from '../adapters/runtimeBridge';
+import { addWindowListener } from '../adapters/domHelper';
 import { useSettingsStore } from '../store/settingsStore';
 import { useTabStore } from '../store/tabStore';
 import { useTemplateStore } from '../store/templateStore';
@@ -12,6 +13,7 @@ import { useWorkflowStore } from '../store/workflowStore';
 import { useRibbonStore } from '../store/ribbonStore';
 import { useFormattingStore } from '../store/formattingStore';
 import { useNotificationStore } from '../store/notificationStore';
+import { useFileHistoryStore } from '../store/fileHistoryStore';
 import { compressAndConvertToDataUrl, generateImageAlt } from '../services/imageService';
 
 export const ShellFrame: React.FC = () => {
@@ -40,6 +42,7 @@ export const ShellFrame: React.FC = () => {
   const { initializeRibbon } = useRibbonStore();
   const { initializeFormattingStore } = useFormattingStore();
   const { toggleActivityBar, toggleEditorMode, initializeSettings } = useSettingsStore();
+  const { initializeFileHistory, recordOpenedFile } = useFileHistoryStore();
 
   // Initialize data stores on mount with bridge
   useEffect(() => {
@@ -50,13 +53,30 @@ export const ShellFrame: React.FC = () => {
     initializeWorkflows(bridge.storage);
     initializeRibbon(bridge.storage);
     initializeFormattingStore(bridge.storage);
-  }, [bridge, initializeSettings, initializeTabs, initializeTemplates, initializeActions, initializeWorkflows, initializeRibbon, initializeFormattingStore]);
+    initializeFileHistory(bridge.storage);
+  }, [bridge, initializeSettings, initializeTabs, initializeTemplates, initializeActions, initializeWorkflows, initializeRibbon, initializeFormattingStore, initializeFileHistory]);
 
   // Sync theme via bridge
   useEffect(() => {
     const currentTheme = settings.theme || 'contextpad-dark';
     bridge.theme.applyTheme(currentTheme);
   }, [settings.theme, bridge.theme]);
+
+  // Track active tab in opened file history
+  useEffect(() => {
+    if (activeTabId && tabs.length > 0) {
+      const active = tabs.find(t => t.id === activeTabId);
+      if (active && active.title) {
+        recordOpenedFile({
+          id: active.id,
+          name: active.title,
+          path: active.filePath,
+          language: active.language,
+          content: active.content
+        });
+      }
+    }
+  }, [activeTabId, tabs, recordOpenedFile]);
 
   // Create event dispatcher adapter
   const events = React.useMemo(() => {
@@ -81,6 +101,9 @@ export const ShellFrame: React.FC = () => {
       } else {
         events.onSaveFile();
       }
+    } else if (modifier && e.shiftKey && e.key.toLowerCase() === 'r') {
+      e.preventDefault();
+      useSettingsStore.getState().toggleRibbon();
     } else if (modifier && e.key.toLowerCase() === 'b') {
       e.preventDefault();
       toggleActivityBar();
@@ -124,8 +147,8 @@ export const ShellFrame: React.FC = () => {
   }, [tabs, activeTabId, setActiveTabId, closeTab, toggleActivityBar, toggleEditorMode, createTab, events, openVariableModal]);
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const unsub = addWindowListener('keydown', handleKeyDown);
+    return unsub;
   }, [handleKeyDown]);
 
   // Drag and Drop File Handlers
@@ -167,7 +190,7 @@ export const ShellFrame: React.FC = () => {
   return (
     <div
       data-theme={settings.theme || 'contextpad-dark'}
-      data-density={settings.uiDensity || 'comfortable'}
+      data-density={settings.uiDensity === 'touch' ? 'touch' : 'desktop'}
       data-touch={settings.touchOptimized ? 'true' : 'false'}
       className="flex flex-col h-screen w-screen theme-app font-sans overflow-hidden select-none"
       onDragOver={handleDragOver}

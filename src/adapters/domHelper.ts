@@ -111,6 +111,18 @@ export function addDocumentListener(type: string, listener: (e: any) => void): (
   };
 }
 
+export function addWindowListener(
+  type: string, 
+  listener: (e: any) => void, 
+  options?: boolean | AddEventListenerOptions
+): () => void {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener(type, listener, options);
+  return () => {
+    window.removeEventListener(type, listener, options as any);
+  };
+}
+
 export function removeDocumentListener(type: string, listener: (e: any) => void): void {
   if (typeof document !== 'undefined') {
     document.removeEventListener(type, listener);

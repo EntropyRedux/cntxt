@@ -29,6 +29,7 @@ export const Sidebar: React.FC = () => {
   const bridge = useRuntimeBridge();
   const { settings, toggleSidebar } = useSettingsStore();
   const panelRef = useRef<HTMLElement>(null);
+  const isOverlay = !!settings.sidebarOverlay;
 
   // Initialize width from bridge storage or screen dimensions
   const [width, setWidth] = useState<number>(() => {
@@ -60,7 +61,9 @@ export const Sidebar: React.FC = () => {
   // Clamp width whenever the window size changes
   useEffect(() => {
     const handleResize = () => {
-      const maxAvailable = Math.max(200, window.innerWidth - 80);
+      const parentContainer = panelRef.current?.parentElement;
+      const containerWidth = parentContainer ? parentContainer.clientWidth : window.innerWidth;
+      const maxAvailable = Math.max(200, containerWidth - 24);
       setWidth(prev => (prev > maxAvailable ? maxAvailable : prev));
     };
 
@@ -70,8 +73,10 @@ export const Sidebar: React.FC = () => {
 
   // Reset width to sensible default
   const handleResetWidth = useCallback(() => {
+    const parentContainer = panelRef.current?.parentElement;
+    const containerWidth = parentContainer ? parentContainer.clientWidth : window.innerWidth;
     const target = typeof window !== 'undefined' && window.innerWidth < 640
-      ? Math.max(220, window.innerWidth - 80)
+      ? Math.max(220, containerWidth - 40)
       : DEFAULT_DESKTOP_WIDTH;
 
     setWidth(target);
@@ -91,9 +96,10 @@ export const Sidebar: React.FC = () => {
     const onMouseMove = (moveEvent: MouseEvent) => {
       moveEvent.preventDefault();
       const newWidth = rightEdge - moveEvent.clientX;
-      const containerWidth = window.innerWidth;
+      const parentContainer = panelRef.current?.parentElement;
+      const containerWidth = parentContainer ? parentContainer.clientWidth : window.innerWidth;
       const minWidth = Math.min(220, Math.max(160, Math.floor(containerWidth * 0.25)));
-      const maxWidth = Math.max(minWidth, containerWidth - 80);
+      const maxWidth = Math.max(minWidth, containerWidth - 24);
       const clamped = Math.max(minWidth, Math.min(maxWidth, newWidth));
 
       setWidth(clamped);
@@ -123,9 +129,10 @@ export const Sidebar: React.FC = () => {
       if (moveEvent.touches.length !== 1) return;
       const clientX = moveEvent.touches[0].clientX;
       const newWidth = rightEdge - clientX;
-      const containerWidth = window.innerWidth;
+      const parentContainer = panelRef.current?.parentElement;
+      const containerWidth = parentContainer ? parentContainer.clientWidth : window.innerWidth;
       const minWidth = Math.min(220, Math.max(160, Math.floor(containerWidth * 0.25)));
-      const maxWidth = Math.max(minWidth, containerWidth - 60);
+      const maxWidth = Math.max(minWidth, containerWidth - 24);
       const clamped = Math.max(minWidth, Math.min(maxWidth, newWidth));
 
       setWidth(clamped);
@@ -200,19 +207,22 @@ export const Sidebar: React.FC = () => {
   return (
     <aside
       ref={panelRef}
-      style={{ width: `${width}px` }}
+      style={{ width: `${width}px`, maxWidth: isOverlay ? 'calc(100% - 24px)' : '100%' }}
       aria-label={tabInfo.title}
-      className="theme-sidebar h-full flex flex-col relative shrink-0 z-10 select-none transition-none border-l border-[var(--border-primary)] bg-[var(--sidebar-bg)] shadow-xs"
+      className={`theme-sidebar h-full flex flex-col select-none transition-none border-l border-[var(--border-primary)] bg-[var(--sidebar-bg)] ${
+        isOverlay 
+          ? 'absolute right-0 top-0 bottom-0 z-30 shadow-2xl backdrop-blur-md' 
+          : 'relative shrink-0 z-10 shadow-xs'
+      }`}
     >
       {/* Left-edge Draggable Resizer Handle */}
       <div
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize side panel"
-        title="Drag to resize · Double-click to reset"
+        title="Drag to resize"
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
-        onDoubleClick={handleResetWidth}
         className={`absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize z-30 group flex items-center justify-center select-none touch-none ${
           isResizing ? 'cursor-col-resize' : ''
         }`}
@@ -250,27 +260,21 @@ export const Sidebar: React.FC = () => {
           <span className="font-semibold text-xs truncate text-[var(--text-primary)]">
             {tabInfo.title}
           </span>
+          {isOverlay && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-medium tracking-wide bg-[var(--accent-container)] text-[var(--on-accent-container)] shrink-0 hidden xs:inline-block">
+              Overlay
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          {/* Width indicator / quick reset */}
-          <button
-            type="button"
-            onClick={handleResetWidth}
-            title={`Current width: ${Math.round(width)}px (Click to reset)`}
-            aria-label="Reset panel width"
-            className="text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] px-1.5 py-0.5 rounded transition-colors hidden sm:inline-flex items-center"
-          >
-            {Math.round(width)}px
-          </button>
-
           {/* Close Panel Button */}
           <button
             type="button"
             onClick={toggleSidebar}
             title="Close side panel"
             aria-label="Close side panel"
-            className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors active:scale-95"
+            className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors active:scale-95 cursor-pointer"
           >
             <PanelRightClose className="w-4 h-4" />
           </button>

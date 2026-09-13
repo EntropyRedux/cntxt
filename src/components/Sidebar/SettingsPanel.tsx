@@ -10,17 +10,24 @@ import {
   Smartphone,
   Laptop,
   Touchpad,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Type,
+  Layers,
+  Activity,
+  Cpu,
+  Clock,
+  FlaskConical
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useFormattingStore } from '../../store/formattingStore';
 import { useRuntimeBridge } from '../../adapters';
 import { ThemeName } from '../../types';
+import { CURATED_FONTS, getCuratedFontByFamily, THEME_DEFAULT_FONTS } from '../../constants/fonts';
 
 export const SettingsPanel: React.FC = () => {
   const bridge = useRuntimeBridge();
-  const { settings, updateSettings, resetSettings } = useSettingsStore();
+  const { settings, updateSettings, resetSettings, openFontSelector } = useSettingsStore();
   const { addNotification } = useNotificationStore();
   const { 
     isMultiRowExpanded, 
@@ -38,6 +45,14 @@ export const SettingsPanel: React.FC = () => {
       bg: '#FFFFFF', 
       accent: '#0B57D0',
       badge: 'Material 3 Light' 
+    },
+    { 
+      id: 'parchment', 
+      name: 'Parchment', 
+      mode: 'light', 
+      bg: '#FAF6EE', 
+      accent: '#9C522B',
+      badge: 'Warm Linen' 
     },
     { 
       id: 'contextpad-dark', 
@@ -133,7 +148,7 @@ export const SettingsPanel: React.FC = () => {
             <span>Application Theme Engine</span>
           </div>
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent-container)] text-[var(--on-accent-container)] font-semibold">
-            {settings.theme === 'google-material-3' ? 'M3 Light' : 'Dark Mode'}
+            {settings.theme === 'parchment' ? 'Parchment' : settings.theme === 'google-material-3' ? 'M3 Light' : 'Dark Mode'}
           </span>
         </div>
 
@@ -144,12 +159,17 @@ export const SettingsPanel: React.FC = () => {
         <div className="grid grid-cols-2 gap-2 pt-1">
           {themes.map(t => {
             const isSelected = settings.theme === t.id;
+            const themeDefaultFontFamily = THEME_DEFAULT_FONTS[t.id];
+            const matchingFont = getCuratedFontByFamily(themeDefaultFontFamily);
             return (
               <button
                 key={t.id}
                 type="button"
-                onClick={() => updateSettings({ theme: t.id })}
-                title={`Theme: ${t.name}`}
+                onClick={() => {
+                  updateSettings({ theme: t.id, fontFamily: themeDefaultFontFamily });
+                  addNotification('Theme & Font Applied', `Switched to ${t.name} (Font: ${matchingFont.name})`, 'info');
+                }}
+                title={`Theme: ${t.name} (Default Font: ${matchingFont.name})`}
                 aria-label={`Select ${t.name} theme`}
                 className={`p-2 rounded-lg border text-left transition-all relative flex flex-col justify-between ${
                   isSelected 
@@ -157,7 +177,7 @@ export const SettingsPanel: React.FC = () => {
                     : 'border-[var(--border-primary)] bg-[var(--card-secondary-bg)] hover:border-[var(--accent-primary)]/50'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-1">
                   <span className="font-semibold text-[11px] text-[var(--text-primary)] truncate flex items-center gap-1">
                     {t.mode === 'light' ? (
                       <Sun className="w-3 h-3 text-[#E68A00] shrink-0" />
@@ -169,7 +189,11 @@ export const SettingsPanel: React.FC = () => {
                   {isSelected && <Check className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />}
                 </div>
 
-                <div className="flex items-center justify-between mt-1">
+                <div className="text-[10px] text-[var(--text-muted)] truncate mb-1">
+                  Font: <span className="text-[var(--text-secondary)] font-medium">{matchingFont.name}</span>
+                </div>
+
+                <div className="flex items-center justify-between mt-0.5">
                   <div className="flex items-center gap-1">
                     <div 
                       className="w-4 h-3.5 rounded-xs border border-[var(--border-primary)]" 
@@ -222,15 +246,14 @@ export const SettingsPanel: React.FC = () => {
               <span className="text-[10px] text-[var(--text-muted)]">Spacing & target sizing</span>
             </div>
             <select
-              value={settings.uiDensity || 'comfortable'}
+              value={settings.uiDensity === 'touch' ? 'touch' : 'desktop'}
               onChange={(e: any) => updateSettings({ 
                 uiDensity: e.target.value,
                 touchOptimized: e.target.value === 'touch'
               })}
               className="theme-input font-medium rounded px-2 py-1 text-xs text-[var(--accent-primary)] font-semibold"
             >
-              <option value="compact">Compact (Dense Desktop)</option>
-              <option value="comfortable">Comfortable (Standard)</option>
+              <option value="desktop">Desktop Mode</option>
               <option value="touch">Touchscreen (Large 44px+)</option>
             </select>
           </div>
@@ -246,7 +269,7 @@ export const SettingsPanel: React.FC = () => {
               checked={settings.touchOptimized}
               onChange={(e) => updateSettings({ 
                 touchOptimized: e.target.checked,
-                uiDensity: e.target.checked ? 'touch' : 'comfortable'
+                uiDensity: e.target.checked ? 'touch' : 'desktop'
               })}
               className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
             />
@@ -318,6 +341,46 @@ export const SettingsPanel: React.FC = () => {
         </div>
       </div>
 
+      {/* Workspace & Side Panel Layout */}
+      <div className="p-3 theme-card rounded-lg space-y-2.5 shadow-xs">
+        <div className="flex items-center justify-between">
+          <div className="font-bold text-[var(--text-primary)] text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+            <span>Workspace & Panels</span>
+          </div>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+            settings.sidebarOverlay 
+              ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)]' 
+              : 'bg-[var(--card-secondary-bg)] text-[var(--text-muted)]'
+          }`}>
+            {settings.sidebarOverlay ? 'Overlay Active' : 'Docked (Pushes Editor)'}
+          </span>
+        </div>
+
+        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+          Configure how the right side panel displays relative to the editor surface.
+        </p>
+
+        <div className="space-y-2 pt-1">
+          {/* Right Panel as Overlay Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="pr-3">
+              <span className="text-[var(--text-primary)] block font-medium">Right Panel as Overlay</span>
+              <span className="text-[10px] text-[var(--text-muted)]">
+                Display right panel as an overlay over the editor instead of pushing or resizing editor contents (does not overlay on left rail buttons)
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              id="toggle-sidebar-overlay"
+              checked={!!settings.sidebarOverlay}
+              onChange={(e) => updateSettings({ sidebarOverlay: e.target.checked })}
+              className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer shrink-0"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Editor & Typography */}
       <div className="p-3 theme-card rounded-lg space-y-2.5 shadow-xs">
         <div className="font-bold text-[var(--text-primary)] text-[11px] uppercase tracking-wider">
@@ -338,6 +401,55 @@ export const SettingsPanel: React.FC = () => {
               <option value="rendered">Live Rendered Markdown</option>
               <option value="raw">Raw Markdown</option>
             </select>
+          </div>
+
+          {/* Editor Font Family Selector */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[var(--text-primary)] block font-medium">Editor Font Family</span>
+                <span className="text-[10px] text-[var(--text-muted)]">Scientifically curated typefaces</span>
+              </div>
+              <button
+                type="button"
+                onClick={openFontSelector}
+                className="text-[10px] text-[var(--accent-primary)] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                title="Open Scientific Font Studio"
+              >
+                <Type className="w-3 h-3" />
+                <span>Font Studio</span>
+              </button>
+            </div>
+            <select
+              value={settings.fontFamily}
+              onChange={(e) => updateSettings({ fontFamily: e.target.value })}
+              className="theme-input w-full font-medium rounded px-2 py-1.5 text-xs text-[var(--text-primary)]"
+            >
+              {CURATED_FONTS.map(f => (
+                <option key={f.id} value={f.fontFamily}>
+                  {f.name} ({f.badge})
+                </option>
+              ))}
+            </select>
+            {(() => {
+              const activeFont = getCuratedFontByFamily(settings.fontFamily);
+              const themeDefaultFont = THEME_DEFAULT_FONTS[settings.theme];
+              const isThemeDefault = activeFont && activeFont.fontFamily === themeDefaultFont;
+              return activeFont ? (
+                <div className="text-[10px] text-[var(--text-muted)] bg-[var(--card-secondary-bg)] p-1.5 rounded border border-[var(--border-subtle)] flex items-center justify-between">
+                  <span className="truncate">{activeFont.researchFocus}</span>
+                  {isThemeDefault ? (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0 ml-1 font-semibold">
+                      Theme Default
+                    </span>
+                  ) : (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--accent-container)] text-[var(--on-accent-container)] shrink-0 ml-1">
+                      {activeFont.badge}
+                    </span>
+                  )}
+                </div>
+              ) : null;
+            })()}
           </div>
 
           <div className="flex items-center justify-between">
@@ -464,6 +576,125 @@ export const SettingsPanel: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Experimental Settings & Background Process Gating (Mandatory Invariant 4) */}
+      <div className="p-3 theme-card rounded-lg space-y-3 shadow-xs">
+        <div className="flex items-center justify-between">
+          <div className="font-bold text-[var(--text-primary)] text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+            <FlaskConical className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+            <span>Experimental Settings</span>
+          </div>
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <span className="text-[10px] text-[var(--text-secondary)] font-medium">
+              {settings.enableExperimentalSettings ? 'Enabled' : 'Disabled'}
+            </span>
+            <input
+              type="checkbox"
+              id="toggle-experimental-settings"
+              checked={settings.enableExperimentalSettings ?? false}
+              onChange={(e) => updateSettings({ enableExperimentalSettings: e.target.checked })}
+              className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
+            />
+          </label>
+        </div>
+
+        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+          Unlock granular controls for background workers, asynchronous DOM sync, and performance optimization toggles.
+        </p>
+
+        {/* Toggles remain HIDDEN by default unless explicitly enabled by the user under Experimental Settings master toggle */}
+        {!settings.enableExperimentalSettings ? (
+          <div className="p-2 rounded bg-[var(--card-secondary-bg)] border border-dashed border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)] flex items-center justify-between">
+            <span>Background process toggles are hidden. Standard background workers are active.</span>
+          </div>
+        ) : (
+          <div className="space-y-3 pt-1 border-t border-[var(--border-subtle)] animate-in fade-in duration-200">
+            <div className="text-[10px] uppercase font-semibold text-[var(--accent-primary)] tracking-wider flex items-center gap-1">
+              <Cpu className="w-3 h-3" />
+              <span>Background Processes</span>
+            </div>
+
+            {/* 1. Live Token Estimator */}
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <span className="text-xs text-[var(--text-primary)] block font-medium">Live Token Estimator</span>
+                <span className="text-[10px] text-[var(--text-muted)] leading-tight block mt-0.5">
+                  Calculate token counts and model costs on every keystroke. Zero background computation or polling when toggled off.
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                id="toggle-live-token-estimator"
+                checked={settings.enableLiveTokenEstimator ?? true}
+                onChange={(e) => updateSettings({ enableLiveTokenEstimator: e.target.checked })}
+                className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer shrink-0 mt-0.5"
+              />
+            </div>
+
+            {/* 2. Document Autosave */}
+            <div className="space-y-2 border-t border-[var(--border-subtle)] pt-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-xs text-[var(--text-primary)] block font-medium">Document Autosave</span>
+                  <span className="text-[10px] text-[var(--text-muted)] leading-tight block mt-0.5">
+                    Automatically persist open tabs and buffer edits to storage in the background.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  id="toggle-enable-autosave"
+                  checked={settings.enableAutosave ?? true}
+                  onChange={(e) => updateSettings({ enableAutosave: e.target.checked })}
+                  className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer shrink-0 mt-0.5"
+                />
+              </div>
+
+              {settings.enableAutosave && (
+                <div className="flex items-center justify-between pl-2 border-l-2 border-[var(--accent-primary)]/40 pt-1">
+                  <span className="text-[10px] text-[var(--text-secondary)] flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-[var(--accent-primary)]" />
+                    <span>Autosave Interval ({settings.autosaveIntervalMs ?? 1000}ms)</span>
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="range"
+                      min={250}
+                      max={5000}
+                      step={250}
+                      value={settings.autosaveIntervalMs ?? 1000}
+                      onChange={(e) => updateSettings({ autosaveIntervalMs: Number(e.target.value) })}
+                      className="w-20 accent-[var(--accent-primary)]"
+                    />
+                    <span className="text-[9px] font-mono text-[var(--text-muted)] w-10 text-right">
+                      {((settings.autosaveIntervalMs ?? 1000) / 1000).toFixed(1)}s
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Live Markdown DOM-Sync */}
+            <div className="flex items-start justify-between gap-2 border-t border-[var(--border-subtle)] pt-2">
+              <div>
+                <span className="text-xs text-[var(--text-primary)] block font-medium">Live Markdown DOM-Sync</span>
+                <span className="text-[10px] text-[var(--text-muted)] leading-tight block mt-0.5">
+                  Continuously synchronize editor changes with Markdown AST, LaTeX, Mermaid diagrams, and DOM preview in real-time.
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                id="toggle-live-dom-sync"
+                checked={settings.enableLiveDomSync ?? settings.enableLiveMarkdownSync ?? true}
+                onChange={(e) => updateSettings({ 
+                  enableLiveDomSync: e.target.checked,
+                  enableLiveMarkdownSync: e.target.checked
+                })}
+                className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer shrink-0 mt-0.5"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Storage & Backup */}

@@ -11,7 +11,7 @@ import {
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Tab } from '../../types';
-import { addDocumentListener } from '../../adapters';
+import { addDocumentListener, addWindowListener } from '../../adapters';
 
 export const TabBar: React.FC = () => {
   const { 
@@ -31,11 +31,25 @@ export const TabBar: React.FC = () => {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tab: Tab } | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [showAllTabsDropdown, setShowAllTabsDropdown] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [tabFilterText, setTabFilterText] = useState('');
+  const [isAutoHidden, setIsAutoHidden] = useState(false);
+
+  // Reset search state whenever dropdown closes
+  useEffect(() => {
+    if (!showAllTabsDropdown) {
+      setIsSearchOpen(false);
+      setTabFilterText('');
+    }
+  }, [showAllTabsDropdown]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const floatingButtonRef = useRef<HTMLButtonElement>(null);
   const activeTabRef = useRef<HTMLDivElement>(null);
+  const activeTouchTabRef = useRef<HTMLDivElement>(null);
+
+  const activeTab = tabs.find(t => t.id === activeTabId);
 
   // Scroll active tab into view whenever activeTabId changes
   useEffect(() => {
@@ -89,24 +103,270 @@ export const TabBar: React.FC = () => {
     setDraggedIndex(null);
   };
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or touch
   useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+    const handleOutsideClick = (e: any) => {
+      const target = e.target as Node;
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(target) &&
+        (!floatingButtonRef.current || !floatingButtonRef.current.contains(target))
+      ) {
         setShowAllTabsDropdown(false);
       }
     };
     if (showAllTabsDropdown) {
-      return addDocumentListener('mousedown', handleOutsideClick);
+      const removeMouseDown = addDocumentListener('mousedown', handleOutsideClick);
+      const removeTouchStart = addDocumentListener('touchstart', handleOutsideClick);
+      return () => {
+        removeMouseDown();
+        removeTouchStart();
+      };
     }
   }, [showAllTabsDropdown]);
+
+  const isTouch = settings.touchOptimized || settings.uiDensity === 'touch';
+
+  // In touch mode, scroll the active tab item into view when the dropdown opens
+  useEffect(() => {
+    if (showAllTabsDropdown && isTouch && activeTouchTabRef.current) {
+      activeTouchTabRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [showAllTabsDropdown, isTouch]);
+
+  // Auto-hide floating button on touch mode during typing, scrolling, or editor interaction
+  useEffect(() => {
+    if (!isTouch) return;
+
+    let timer: any = null;
+
+    const triggerActivity = () => {
+      // Don't auto-hide when the tabs dropdown popover is currently open
+      if (showAllTabsDropdown) return;
+
+      setIsAutoHidden(true);
+      if (timer) clearTimeout(timer);
+
+      // Restore button visibility after 2 seconds of typing/scrolling inactivity
+      timer = setTimeout(() => {
+        setIsAutoHidden(false);
+      }, 2000);
+    };
+
+    const handleKeyDown = () => triggerActivity();
+    const handleScroll = () => triggerActivity();
+    const handleTouchMove = () => triggerActivity();
+
+    const unsubKey = addWindowListener('keydown', handleKeyDown, { passive: true });
+    const unsubScroll = addWindowListener('scroll', handleScroll, { capture: true, passive: true });
+    const unsubTouch = addWindowListener('touchmove', handleTouchMove, { capture: true, passive: true });
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      unsubKey();
+      unsubScroll();
+      unsubTouch();
+    };
+  }, [isTouch, showAllTabsDropdown]);
 
   const filteredTabs = tabs.filter(t => 
     t.title.toLowerCase().includes(tabFilterText.toLowerCase()) ||
     t.content.toLowerCase().includes(tabFilterText.toLowerCase())
   );
 
-  const isTouch = settings.touchOptimized;
+  const displayTabs = isSearchOpen && tabFilterText.trim() ? filteredTabs : tabs;
+
+  // In touch mode, hide the horizontal tabs row to maximize editor area space,
+  // and render the tab selection dropdown as an elegant, auto-hiding floating action button.
+  if (isTouch) {
+    return (
+      <>
+        {/* Invisible gesture hot-zone: Tapping or hovering near the top-right reveals the tab button instantly */}
+        <div 
+          className="absolute top-0 right-0 w-36 h-12 z-20 pointer-events-auto"
+          onMouseEnter={() => setIsAutoHidden(false)}
+          onTouchStart={() => setIsAutoHidden(false)}
+        />
+
+        <div 
+          className={`absolute top-2.5 right-3.5 z-20 select-none transition-all duration-300 ease-out ${
+            isAutoHidden && !showAllTabsDropdown
+              ? 'opacity-0 -translate-y-2 pointer-events-none'
+              : 'opacity-70 hover:opacity-100 focus-within:opacity-100 translate-y-0'
+          }`}
+          onMouseEnter={() => setIsAutoHidden(false)}
+          onTouchStart={() => setIsAutoHidden(false)}
+        >
+          {/* Floating Tab Selection Dropdown Button */}
+          <button
+            ref={floatingButtonRef}
+            type="button"
+            onClick={() => {
+              setIsAutoHidden(false);
+              setShowAllTabsDropdown(!showAllTabsDropdown);
+              setTabFilterText('');
+            }}
+            title={`Tab selection: ${activeTab ? activeTab.title : 'No document'} (${tabs.length} open tabs)`}
+            aria-label="Open tab selection menu"
+            aria-expanded={showAllTabsDropdown}
+            className={`flex items-center gap-2 h-9 px-3 rounded-full shadow-md border backdrop-blur-md transition-all cursor-pointer ${
+              showAllTabsDropdown
+                ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] border-[var(--accent-primary)] ring-2 ring-[var(--accent-primary)]/30 opacity-100'
+                : 'bg-[var(--card-bg)]/90 text-[var(--text-primary)] border-[var(--border-primary)] hover:border-[var(--accent-primary)]/50 active:scale-95'
+            }`}
+          >
+          {activeTab ? (
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={getLanguageStrokeColor(activeTab.title, activeTab.language)}
+              strokeWidth="2"
+              className="shrink-0"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+          ) : (
+            <Layers className="w-4 h-4 text-[var(--accent-primary)] shrink-0" />
+          )}
+
+          <span className="text-xs font-semibold max-w-[120px] sm:max-w-[180px] truncate">
+            {activeTab ? activeTab.title : 'Tabs (0)'}
+          </span>
+
+          {activeTab?.isDirty && (
+            <span
+              className="w-2 h-2 rounded-full bg-[var(--status-warning)] shrink-0 animate-pulse"
+              title="Unsaved changes"
+            />
+          )}
+
+          <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-full bg-[var(--app-bg)] text-[var(--text-muted)] border border-[var(--border-subtle)] shrink-0 font-medium">
+            {tabs.length}
+          </span>
+
+          <ChevronDown
+            className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-150 shrink-0 ${
+              showAllTabsDropdown ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {/* Tab Selection Popover */}
+        {showAllTabsDropdown && (
+          <div
+            ref={dropdownRef}
+            className="theme-dropdown absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-24px)] max-h-[calc(100dvh-4.5rem)] rounded-2xl shadow-2xl border border-[var(--border-primary)] bg-[var(--sidebar-bg)] z-50 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+          >
+            {/* Popover Header: Title & New Tab (Search removed in touch mode to maximize space and usability) */}
+            <div className="px-3.5 py-2.5 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--sidebar-header-bg)] shrink-0 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-semibold text-[var(--text-primary)] truncate">Open Tabs</span>
+                <span className="text-[11px] text-[var(--text-muted)] font-mono px-1.5 py-0.5 rounded-full bg-[var(--app-bg)] border border-[var(--border-subtle)] font-medium shrink-0">
+                  {tabs.length}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    createTab();
+                    setShowAllTabsDropdown(false);
+                  }}
+                  title="New Tab"
+                  aria-label="New Document Tab"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] active:scale-95 transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New</span>
+                </button>
+              </div>
+            </div>
+
+            {/* List of tabs with visible touch-friendly scrollbar and vertical scrolling */}
+            <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y divide-y divide-[var(--border-primary)] custom-touch-scrollbar max-h-[60vh]">
+              {tabs.map((t) => {
+                const isSelected = t.id === activeTabId;
+                const strokeColor = getLanguageStrokeColor(t.title, t.language);
+                return (
+                  <div
+                    key={t.id}
+                    ref={isSelected ? activeTouchTabRef : undefined}
+                    onClick={() => {
+                      setActiveTabId(t.id);
+                      setShowAllTabsDropdown(false);
+                    }}
+                    className={`flex items-center justify-between px-3.5 py-3 min-h-[44px] text-xs cursor-pointer transition-colors group ${
+                      isSelected
+                        ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-semibold'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--card-hover-bg)] hover:text-[var(--text-primary)] active:bg-[var(--card-hover-bg)]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate flex-1 min-w-0 pr-2">
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={strokeColor}
+                        strokeWidth="2"
+                        className="shrink-0"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                      <span className="truncate text-xs sm:text-sm">{t.title}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {t.isPinned && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePinTab(t.id);
+                          }}
+                          title="Unpin Tab"
+                          aria-label={`Unpin tab ${t.title}`}
+                          className="p-1.5 rounded text-[var(--status-warning)] hover:bg-[var(--card-hover-bg)]"
+                        >
+                          <Pin className="w-3.5 h-3.5 fill-[var(--status-warning)]" />
+                        </button>
+                      )}
+                      {t.isDirty && (
+                        <span className="w-2 h-2 rounded-full bg-[var(--status-warning)] mr-1" title="Unsaved changes" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeTab(t.id);
+                        }}
+                        title="Close Tab"
+                        aria-label={`Close tab ${t.title}`}
+                        className="p-1.5 rounded-lg hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] active:scale-90 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {displayTabs.length === 0 && (
+                <div className="py-8 text-center text-xs text-[var(--text-muted)]">
+                  {tabs.length === 0 ? 'No open tabs' : 'No matching tabs found'}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
 
   return (
     <nav 
@@ -119,7 +379,9 @@ export const TabBar: React.FC = () => {
       <div 
         ref={scrollContainerRef}
         onWheel={handleWheel}
-        className="flex items-stretch flex-1 min-w-0 h-full overflow-x-auto no-scrollbar scroll-smooth touch-pan-x"
+        className={`flex items-stretch flex-1 min-w-0 h-full overflow-x-auto no-scrollbar scroll-smooth touch-pan-x ${
+          !settings.showRibbon && (!settings.showActivityBar || isTouch) ? 'pl-10' : ''
+        }`}
       >
         {tabs.map((tab, idx) => {
           const isActive = tab.id === activeTabId;
@@ -237,23 +499,76 @@ export const TabBar: React.FC = () => {
             ref={dropdownRef}
             className="theme-dropdown absolute right-0 top-full mt-1 w-72 max-h-96 rounded-lg shadow-2xl z-50 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
           >
-            <div className="p-2 border-b border-[var(--border-primary)] flex items-center gap-1.5 bg-[var(--sidebar-header-bg)]">
-              <Search className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
-              <input
-                type="text"
-                autoFocus
-                placeholder="Search open tabs..."
-                value={tabFilterText}
-                onChange={(e) => setTabFilterText(e.target.value)}
-                className="w-full bg-transparent text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none"
-              />
-              <span className="text-[10px] text-[var(--text-muted)] font-mono shrink-0">
-                {filteredTabs.length}/{tabs.length}
-              </span>
+            {/* Popover Header: Title, Search Button & New Tab */}
+            <div className="px-3 py-2 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--sidebar-header-bg)] shrink-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-semibold text-[var(--text-primary)] truncate">Open Tabs</span>
+                <span className="text-[10px] text-[var(--text-muted)] font-mono px-1.5 py-0.5 rounded-full bg-[var(--app-bg)] border border-[var(--border-subtle)] font-medium shrink-0">
+                  {displayTabs.length}{displayTabs.length !== tabs.length ? `/${tabs.length}` : ''}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchOpen(prev => {
+                      if (prev) setTabFilterText('');
+                      return !prev;
+                    });
+                  }}
+                  title={isSearchOpen ? "Close search" : "Search tabs"}
+                  aria-label={isSearchOpen ? "Close search" : "Search tabs"}
+                  aria-expanded={isSearchOpen}
+                  className={`p-1 rounded text-xs transition-colors cursor-pointer ${
+                    isSearchOpen 
+                      ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/30'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+                  }`}
+                >
+                  <Search className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    createTab();
+                    setShowAllTabsDropdown(false);
+                  }}
+                  title="New Tab (Ctrl+N)"
+                  aria-label="New Document Tab"
+                  className="p-1 rounded text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
+            {/* Collapsible Search Input (never auto-focused upon opening dropdown) */}
+            {isSearchOpen && (
+              <div className="px-2.5 py-1.5 border-b border-[var(--border-primary)] flex items-center gap-1.5 bg-[var(--card-bg)] shrink-0 animate-in fade-in slide-in-from-top-1 duration-150">
+                <Search className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Filter open tabs..."
+                  value={tabFilterText}
+                  onChange={(e) => setTabFilterText(e.target.value)}
+                  className="w-full bg-transparent text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none"
+                />
+                {tabFilterText && (
+                  <button
+                    type="button"
+                    onClick={() => setTabFilterText('')}
+                    title="Clear filter"
+                    aria-label="Clear filter"
+                    className="p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="overflow-y-auto max-h-72 divide-y divide-[var(--border-primary)]">
-              {filteredTabs.map((t) => {
+              {displayTabs.map((t) => {
                 const isSelected = t.id === activeTabId;
                 const strokeColor = getLanguageStrokeColor(t.title, t.language);
                 return (
@@ -300,9 +615,9 @@ export const TabBar: React.FC = () => {
                 );
               })}
 
-              {filteredTabs.length === 0 && (
+              {displayTabs.length === 0 && (
                 <div className="py-4 text-center text-xs text-[var(--text-muted)]">
-                  No matching tabs found
+                  {tabs.length === 0 ? 'No open tabs' : 'No matching tabs found'}
                 </div>
               )}
             </div>

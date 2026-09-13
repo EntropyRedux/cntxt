@@ -21,6 +21,8 @@ export interface UiTab {
   lastModifiedTime?: number;
   cursorLine?: number;
   cursorCol?: number;
+  selectionStartLine?: number | null;
+  selectionEndLine?: number | null;
 }
 
 export interface TabEventContracts {

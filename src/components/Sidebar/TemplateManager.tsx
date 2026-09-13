@@ -18,6 +18,7 @@ import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { Template } from '../../types';
 import { triggerFileDownload, triggerFileInput } from '../../adapters';
+import { parseVariableToken } from '../../extensions/templateVariables';
 
 export const TemplateManager: React.FC = () => {
   const { 
@@ -269,15 +270,23 @@ export const TemplateManager: React.FC = () => {
               {/* Variable badges */}
               {tmpl.variables.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {tmpl.variables.slice(0, 4).map(v => (
-                    <span
-                      key={v}
-                      className="px-1.5 py-0.2 bg-[var(--card-secondary-bg)] text-[var(--accent-primary)] border border-[var(--border-primary)] rounded text-[10px] font-mono flex items-center gap-0.5 font-medium"
-                    >
-                      <Variable className="w-2.5 h-2.5 opacity-70" />
-                      {v.split(':')[0]}
-                    </span>
-                  ))}
+                  {tmpl.variables.slice(0, 4).map(v => {
+                    const parsed = parseVariableToken(v);
+                    return (
+                      <span
+                        key={v}
+                        className={`px-1.5 py-0.2 bg-[var(--card-secondary-bg)] border rounded text-[10px] font-mono flex items-center gap-0.5 font-medium ${
+                          parsed.isRequired
+                            ? 'text-rose-600 dark:text-rose-400 border-rose-500/30'
+                            : 'text-[var(--accent-primary)] border-[var(--border-primary)]'
+                        }`}
+                      >
+                        <Variable className="w-2.5 h-2.5 opacity-70" />
+                        <span>{parsed.cleanName}</span>
+                        {parsed.isRequired && <span className="font-bold text-rose-500 leading-none">*</span>}
+                      </span>
+                    );
+                  })}
                   {tmpl.variables.length > 4 && (
                     <span className="text-[10px] text-[var(--text-muted)] self-center">
                       +{tmpl.variables.length - 4} more

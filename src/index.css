@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "katex/dist/katex.min.css";
 
 /* =========================================================================
    Universal Theme Variables Engine (Dark & Material 3 Light Support)
@@ -83,43 +82,43 @@
 [data-theme="google-material-3"],
 [data-theme="github-light"],
 [data-theme="material-light"] {
-  --app-bg: #F8F9FA;
+  --app-bg: #EDF2FA;
   --titlebar-bg: #F0F4F9;
   --titlebar-fg: #1F1F1F;
-  --titlebar-border: #E1E3E1;
-  --tabbar-bg: #E9EEF6;
-  --tab-active-bg: #FFFFFF;
+  --titlebar-border: #D3D7DC;
+  --tabbar-bg: #E8EEF5;
+  --tab-active-bg: #F8F9FA;
   --tab-active-fg: #0B57D0;
   --tab-active-border: #0B57D0;
-  --tab-inactive-bg: #E9EEF6;
+  --tab-inactive-bg: #E8EEF5;
   --tab-inactive-fg: #444746;
   --tab-hover-bg: #DFE4EC;
-  --tab-border: #E1E3E1;
-  --editor-bg: #FFFFFF;
+  --tab-border: #D3D7DC;
+  --editor-bg: #F8F9FA;
   --editor-fg: #1F1F1F;
-  --activitybar-bg: #E9EEF6;
+  --activitybar-bg: #E8EEF5;
   --activitybar-fg: #444746;
   --activitybar-active-bg: #D3E3FD;
   --activitybar-active-fg: #041E49;
   --activitybar-hover-bg: #DFE4EC;
-  --activitybar-border: #E1E3E1;
+  --activitybar-border: #D3D7DC;
   --sidebar-bg: #F0F4F9;
   --sidebar-fg: #1F1F1F;
-  --sidebar-header-bg: #E9EEF6;
-  --sidebar-border: #E1E3E1;
+  --sidebar-header-bg: #E8EEF5;
+  --sidebar-border: #D3D7DC;
   --statusbar-bg: #F0F4F9;
   --statusbar-fg: #444746;
-  --statusbar-border: #E1E3E1;
+  --statusbar-border: #D3D7DC;
   --card-bg: #FFFFFF;
   --card-fg: #1F1F1F;
-  --card-hover-bg: #F5F8FC;
-  --card-border: #E1E3E1;
-  --card-secondary-bg: #F2F5F9;
+  --card-hover-bg: #EDF2FA;
+  --card-border: #D3D7DC;
+  --card-secondary-bg: #EDF2FA;
   --input-bg: #FFFFFF;
   --input-fg: #1F1F1F;
-  --input-border: #C4C7C5;
+  --input-border: #747775;
   --input-focus-border: #0B57D0;
-  --input-placeholder: #747775;
+  --input-placeholder: #5E6266;
   --modal-bg: #FFFFFF;
   --modal-fg: #1F1F1F;
   --modal-border: #C4C7C5;
@@ -134,22 +133,96 @@
   --accent-container: #D3E3FD;
   --on-accent-container: #041E49;
   --accent-ring: rgba(11, 87, 208, 0.25);
-  --border-primary: #E1E3E1;
-  --border-subtle: #EEF0F2;
+  --border-primary: #D3D7DC;
+  --border-subtle: rgba(0, 0, 0, 0.09);
   --text-primary: #1F1F1F;
   --text-secondary: #444746;
-  --text-muted: #747775;
+  --text-muted: #5E6266;
   --text-accent: #0B57D0;
   --codeblock-container-bg: #F0F4F9;
-  --codeblock-container-border: #D8DCE3;
-  --codeblock-header-bg: #E3E8EF;
-  --codeblock-header-border: #D8DCE3;
-  --scrollbar-thumb: #C4C7C5;
-  --scrollbar-thumb-hover: #9CA3AF;
+  --codeblock-container-border: #D3D7DC;
+  --codeblock-header-bg: #E2E7EE;
+  --codeblock-header-border: #D3D7DC;
+  --scrollbar-thumb: #B8BCC2;
+  --scrollbar-thumb-hover: #80868B;
   --status-success: #146C2E;
-  --status-warning: #B06000;
+  --status-warning: #8C4E00;
   --status-error: #BA1A1A;
   --status-info: #00639B;
+}
+
+/* =========================================================================
+   Parchment Theme (Warm Editorial Linen with Terracotta & Espresso)
+   ========================================================================= */
+
+[data-theme="parchment"] {
+  --app-bg: #F3EDE1;
+  --titlebar-bg: #EAE2D2;
+  --titlebar-fg: #1C1917;
+  --titlebar-border: #DFD4C0;
+  --tabbar-bg: #EAE2D2;
+  --tab-active-bg: #FAF6EE;
+  --tab-active-fg: #9C522B;
+  --tab-active-border: #9C522B;
+  --tab-inactive-bg: #EAE2D2;
+  --tab-inactive-fg: #6E6659;
+  --tab-hover-bg: #E2D7C4;
+  --tab-border: #DFD4C0;
+  --editor-bg: #FAF6EE;
+  --editor-fg: #1C1917;
+  --activitybar-bg: #E6DDCB;
+  --activitybar-fg: #6E6659;
+  --activitybar-active-bg: #F4E7DB;
+  --activitybar-active-fg: #9C522B;
+  --activitybar-hover-bg: #DFD5C2;
+  --activitybar-border: #DFD4C0;
+  --sidebar-bg: #F3EDE1;
+  --sidebar-fg: #1C1917;
+  --sidebar-header-bg: #EAE2D2;
+  --sidebar-border: #E2D7C4;
+  --statusbar-bg: #EAE2D2;
+  --statusbar-fg: #6E6659;
+  --statusbar-border: #DFD4C0;
+  --card-bg: #FFFFFF;
+  --card-fg: #1C1917;
+  --card-hover-bg: #FAF6EE;
+  --card-border: #E2D7C4;
+  --card-secondary-bg: #F5EFE4;
+  --input-bg: #FFFFFF;
+  --input-fg: #1C1917;
+  --input-border: #D8CCB7;
+  --input-focus-border: #9C522B;
+  --input-placeholder: #9E9484;
+  --modal-bg: #FAF6EE;
+  --modal-fg: #1C1917;
+  --modal-border: #D8CCB7;
+  --modal-header-bg: #EAE2D2;
+  --modal-overlay: rgba(28, 25, 23, 0.45);
+  --dropdown-bg: #FFFFFF;
+  --dropdown-fg: #1C1917;
+  --dropdown-hover-bg: #F4E7DB;
+  --dropdown-border: #D8CCB7;
+  --accent-primary: #9C522B;
+  --accent-primary-hover: #834320;
+  --accent-container: #F4E7DB;
+  --on-accent-container: #783A16;
+  --accent-ring: rgba(156, 82, 43, 0.25);
+  --border-primary: #E2D7C4;
+  --border-subtle: rgba(28, 25, 23, 0.08);
+  --text-primary: #1C1917;
+  --text-secondary: #6E6659;
+  --text-muted: #9E9484;
+  --text-accent: #9C522B;
+  --codeblock-container-bg: #F3EDE1;
+  --codeblock-container-border: #E2D7C4;
+  --codeblock-header-bg: #EAE2D2;
+  --codeblock-header-border: #DFD4C0;
+  --scrollbar-thumb: #D1C4AF;
+  --scrollbar-thumb-hover: #B8A891;
+  --status-success: #2D6A4F;
+  --status-warning: #B45309;
+  --status-error: #B91C1C;
+  --status-info: #9C522B;
 }
 
 /* =========================================================================
@@ -642,6 +715,27 @@
   ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
   }
+
+  /* Touch Scrollbar with Explicit Visibility */
+  .custom-touch-scrollbar {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  .custom-touch-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-touch-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-touch-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+  .custom-touch-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
 }
 
 /* =========================================================================
@@ -867,8 +961,10 @@
 
 .cm-live-heading {
   font-family: inherit;
-  margin-top: 0.2em;
-  margin-bottom: 0.1em;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0.25em !important;
+  padding-bottom: 0.15em !important;
 }
 
 .cm-live-h1 {
@@ -926,6 +1022,72 @@
   font-style: italic;
   color: var(--text-secondary) !important;
   border-radius: 0 4px 4px 0;
+}
+
+/* Google Docs Aesthetic Overrides for Material 3 Light Mode */
+[data-theme="google-material-3"] .cm-live-h1,
+[data-theme="material-light"] .cm-live-h1 {
+  color: #0B57D0 !important;
+  border-bottom: 1.5px solid #D3D7DC !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="google-material-3"] .cm-live-h2,
+[data-theme="material-light"] .cm-live-h2 {
+  color: #1F1F1F !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="google-material-3"] .cm-live-h3,
+[data-theme="material-light"] .cm-live-h3 {
+  color: #444746 !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="google-material-3"] .cm-live-h4,
+[data-theme="material-light"] .cm-live-h4,
+[data-theme="google-material-3"] .cm-live-h5,
+[data-theme="material-light"] .cm-live-h5,
+[data-theme="google-material-3"] .cm-live-h6,
+[data-theme="material-light"] .cm-live-h6 {
+  color: #5E6266 !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="google-material-3"] .cm-live-blockquote,
+[data-theme="material-light"] .cm-live-blockquote {
+  border-left: 3.5px solid #0B57D0 !important;
+  background-color: #EDF2FA !important;
+  color: #444746 !important;
+  border-radius: 0 4px 4px 0 !important;
+}
+
+[data-theme="google-material-3"] .cm-live-code-pill,
+[data-theme="material-light"] .cm-live-code-pill {
+  background-color: #EDF2FA !important;
+  color: #0B57D0 !important;
+  border: 1px solid #D3D7DC !important;
+}
+
+[data-theme="google-material-3"] .cm-live-table-container,
+[data-theme="material-light"] .cm-live-table-container {
+  border: 1px solid #D3D7DC !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="google-material-3"] .cm-live-table th,
+[data-theme="material-light"] .cm-live-table th {
+  background-color: #EDF2FA !important;
+  color: #1F1F1F !important;
+  border-bottom: 2px solid #D3D7DC !important;
+  border-right: 1px solid #D3D7DC !important;
+}
+
+[data-theme="google-material-3"] .cm-live-table td,
+[data-theme="material-light"] .cm-live-table td {
+  border-bottom: 1px solid #E2E6EB !important;
+  border-right: 1px solid #E2E6EB !important;
+  color: #1F1F1F !important;
 }
 
 .cm-live-quote-marker {
@@ -993,7 +1155,8 @@
   border-right: 1px solid var(--codeblock-container-border) !important;
   border-top-left-radius: 8px !important;
   border-top-right-radius: 8px !important;
-  margin-top: 0.85em !important;
+  margin-top: 0 !important;
+  padding-top: 4px !important;
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
@@ -1026,7 +1189,7 @@
   border-bottom: 1px solid var(--codeblock-container-border) !important;
   border-bottom-left-radius: 8px !important;
   border-bottom-right-radius: 8px !important;
-  margin-bottom: 0.9em !important;
+  margin-bottom: 0 !important;
   padding-bottom: 4px !important;
   padding-left: 14px !important;
   padding-right: 14px !important;
@@ -1043,8 +1206,8 @@
   background-color: var(--codeblock-container-bg) !important;
   border: 1px solid var(--codeblock-container-border) !important;
   border-radius: 8px !important;
-  margin-top: 0.85em !important;
-  margin-bottom: 0.9em !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
   padding: 6px 14px !important;
   font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
 }
@@ -1066,7 +1229,8 @@
    ========================================================= */
 
 .cm-live-table-container {
-  margin: 0.85em 0;
+  margin: 0 !important;
+  padding: 4px 0;
   width: 100%;
   overflow-x: auto;
   border-radius: 8px;
@@ -1130,7 +1294,8 @@
    ========================================================= */
 
 .cm-live-mermaid-container {
-  margin: 0.85em 0;
+  margin: 0 !important;
+  padding-bottom: 4px;
   border-radius: 8px;
   border: 1px solid var(--border-primary);
   background-color: var(--card-bg);
@@ -1169,7 +1334,7 @@
    ========================================================= */
 
 .cm-live-math-block {
-  margin: 0.85em 0;
+  margin: 0 !important;
   border-radius: 8px;
   border: 1px solid var(--border-primary);
   background-color: var(--card-secondary-bg);
@@ -1204,7 +1369,8 @@
 
 /* Live Markdown Rendered Images */
 .cm-live-image-figure {
-  margin: 0.85em 0;
+  margin: 0 !important;
+  padding: 4px 0;
   display: block;
 }
 
@@ -1276,3 +1442,24 @@
   color: var(--text-secondary);
   border-radius: 0 6px 6px 0;
 }
+
+/* Custom Touch Scrollbar */
+.custom-touch-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+.custom-touch-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-touch-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-touch-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
+.custom-touch-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+

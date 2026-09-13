@@ -12,10 +12,14 @@ import {
   IPlatformBridge,
   IThemeBridge,
   BridgeFileResult, 
+  BridgeFolderResult,
+  BridgeDirectoryEntry,
   SupportedLanguage 
 } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from './storageKeys';
 import { browserDB } from './browserIndexedDB';
+import { applyThemeTokensToElement } from '../../theme/index';
+import { ThemeName } from '../../contracts/data_shapes';
 
 export class BrowserRuntimeAdapter implements IRuntimeBridge {
   constructor() {
@@ -105,6 +109,153 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
           };
           reader.onerror = () => resolve(null);
           reader.readAsText(file);
+        };
+
+        input.click();
+      });
+    },
+
+    openDirectory: async (): Promise<BridgeFolderResult | null> => {
+      // Modern Web File System Access API
+      if ('showDirectoryPicker' in window) {
+        try {
+          const dirHandle = await (window as any).showDirectoryPicker();
+          if (!dirHandle) return null;
+
+          const readDirectoryHandle = async (handle: any, parentPath: string = ''): Promise<BridgeDirectoryEntry[]> => {
+            const list: BridgeDirectoryEntry[] = [];
+            for await (const entry of handle.values()) {
+              const currentPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+              if (entry.kind === 'file') {
+                try {
+                  const file = await entry.getFile();
+                  let content = '';
+                  if (file.size < 2 * 1024 * 1024) {
+                    content = await file.text();
+                  }
+                  list.push({
+                    id: `f_${Math.random().toString(36).substr(2, 6)}_${entry.name}`,
+                    name: entry.name,
+                    type: 'file',
+                    content,
+                    path: currentPath,
+                    language: this.detectLanguage(entry.name)
+                  });
+                } catch {}
+              } else if (entry.kind === 'directory') {
+                const children = await readDirectoryHandle(entry, currentPath);
+                list.push({
+                  id: `dir_${Math.random().toString(36).substr(2, 6)}_${entry.name}`,
+                  name: entry.name,
+                  type: 'folder',
+                  path: currentPath,
+                  children
+                });
+              }
+            }
+            return list;
+          };
+
+          const entries = await readDirectoryHandle(dirHandle, dirHandle.name);
+          return {
+            name: dirHandle.name,
+            path: dirHandle.name,
+            entries
+          };
+        } catch (err: any) {
+          if (err?.name === 'AbortError') return null;
+          console.warn('showDirectoryPicker failed, falling back to input webkitdirectory', err);
+        }
+      }
+
+      // Universal HTML Input Fallback with webkitdirectory
+      return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.setAttribute('webkitdirectory', '');
+        input.setAttribute('directory', '');
+        input.multiple = true;
+
+        input.onchange = async () => {
+          const fileList = input.files;
+          if (!fileList || fileList.length === 0) {
+            resolve(null);
+            return;
+          }
+
+          const firstPath = fileList[0].webkitRelativePath || fileList[0].name;
+          const rootName = firstPath.split('/')[0] || 'Workspace';
+
+          const rootMap = new Map<string, any>();
+
+          for (let i = 0; i < fileList.length; i++) {
+            const file = fileList[i];
+            const relPath = file.webkitRelativePath || file.name;
+            const parts = relPath.split('/');
+
+            const subParts = parts.slice(1);
+            if (subParts.length === 0) continue;
+
+            let currentMap = rootMap;
+            for (let p = 0; p < subParts.length - 1; p++) {
+              const dirName = subParts[p];
+              if (!currentMap.has(dirName)) {
+                currentMap.set(dirName, {
+                  id: `dir_${Math.random().toString(36).substr(2, 6)}_${dirName}`,
+                  name: dirName,
+                  type: 'folder',
+                  childrenMap: new Map()
+                });
+              }
+              currentMap = currentMap.get(dirName).childrenMap;
+            }
+
+            const fileName = subParts[subParts.length - 1];
+            try {
+              const text = await file.text();
+              currentMap.set(fileName, {
+                id: `f_${Math.random().toString(36).substr(2, 6)}_${fileName}`,
+                name: fileName,
+                type: 'file',
+                content: text,
+                path: relPath,
+                language: this.detectLanguage(fileName)
+              });
+            } catch {
+              currentMap.set(fileName, {
+                id: `f_${Math.random().toString(36).substr(2, 6)}_${fileName}`,
+                name: fileName,
+                type: 'file',
+                content: '',
+                path: relPath,
+                language: this.detectLanguage(fileName)
+              });
+            }
+          }
+
+          const convertMapToEntries = (map: Map<string, any>): BridgeDirectoryEntry[] => {
+            const result: BridgeDirectoryEntry[] = [];
+            for (const [, item] of map.entries()) {
+              if (item.type === 'folder') {
+                result.push({
+                  id: item.id,
+                  name: item.name,
+                  type: 'folder',
+                  children: convertMapToEntries(item.childrenMap)
+                });
+              } else {
+                result.push(item);
+              }
+            }
+            return result;
+          };
+
+          const entries = convertMapToEntries(rootMap);
+          resolve({
+            name: rootName,
+            path: rootName,
+            entries
+          });
         };
 
         input.click();
@@ -291,7 +442,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
   public theme: IThemeBridge = {
     applyTheme: (theme: string) => {
       if (typeof document !== 'undefined') {
-        document.documentElement.setAttribute('data-theme', theme);
+        applyThemeTokensToElement(theme as ThemeName, document.documentElement);
         document.body.setAttribute('data-theme', theme);
       }
     },

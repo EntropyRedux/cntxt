@@ -8,7 +8,7 @@ import { SupportedLanguage } from './tabContract';
  */
 export type ShellMode = 'classic' | 'prototype';
 
-export type UiDensity = 'compact' | 'comfortable' | 'touch';
+export type UiDensity = 'desktop' | 'touch';
 
 export type DockSide = 'left' | 'right';
 

@@ -3,7 +3,8 @@ import {
   Terminal, 
   X, 
   Save, 
-  Code2
+  Code2,
+  Play
 } from 'lucide-react';
 import { useActionStore } from '../../store/actionStore';
 import { useTabStore } from '../../store/tabStore';
@@ -59,6 +60,18 @@ api.toast('Action executed successfully!', 'success');`);
   }, [editingAction, isActionEditorOpen]);
 
   if (!isActionEditorOpen) return null;
+
+  const handleTestRun = async () => {
+    if (!code.trim()) return;
+    setTestStatus({ msg: 'Running...' });
+    try {
+      const { executeInSandbox } = await import('../../services/actionSandbox');
+      await executeInSandbox(code, {});
+      setTestStatus({ success: true, msg: 'Test completed' });
+    } catch (err: any) {
+      setTestStatus({ success: false, msg: err?.message || 'Error executing' });
+    }
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,6 +209,17 @@ api.toast('Action executed successfully!', 'success');`);
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleTestRun}
+                title="Test Run Script"
+                aria-label="Test Run Script"
+                className="h-8 px-3 rounded flex items-center gap-1.5 text-xs font-medium bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] text-[var(--text-primary)] border border-[var(--border-primary)] transition-colors"
+              >
+                <Play className="w-3.5 h-3.5 text-[var(--status-success)]" />
+                <span>Test Run</span>
+              </button>
+
               <button
                 type="button"
                 onClick={closeActionEditor}

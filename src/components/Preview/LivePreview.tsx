@@ -6,7 +6,9 @@ import {
   Check, 
   ZoomIn, 
   ZoomOut, 
-  ListTree
+  ListTree,
+  RefreshCw,
+  Pause
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -14,6 +16,20 @@ import { FormulaEngine } from '../../services/formulaParser';
 import { renderLatex } from '../../services/mathRenderer';
 import { renderMermaidDiagram } from '../../services/mermaidRenderer';
 import { useRuntimeBridge, isDarkTheme } from '../../adapters';
+import { highlightCodeSnippet } from '../../services/codeLanguages';
+
+// Configure marked with custom code renderer using CodeMirror native syntax highlighting
+marked.use({
+  renderer: {
+    code(token: any, langStr?: string) {
+      const codeText = typeof token === 'string' ? token : (token?.text ?? '');
+      const lang = typeof token === 'string' ? (langStr || '') : (token?.lang || '');
+      const cleanLang = (lang || '').trim().split(/\s+/)[0];
+      const highlighted = highlightCodeSnippet(codeText, cleanLang);
+      return `<pre><code class="language-${cleanLang || 'text'}">${highlighted}</code></pre>`;
+    }
+  }
+});
 
 interface LivePreviewProps {
   content: string;
@@ -28,19 +44,36 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
   const [showToc, setShowToc] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  // 1. Evaluate custom inline formulas (e.g. {{lineCount}}) in real-time
+  const isLiveSync = settings.enableLiveDomSync ?? settings.enableLiveMarkdownSync ?? true;
+  const [syncedContent, setSyncedContent] = useState(content);
+
+  useEffect(() => {
+    if (isLiveSync) {
+      setSyncedContent(content);
+    }
+  }, [content, isLiveSync]);
+
+  const handleManualSync = () => {
+    setSyncedContent(content);
+    addNotification('Preview Synced', 'Live preview updated with latest content', 'info');
+  };
+
+  const isContentOutdated = !isLiveSync && content !== syncedContent;
+
+  // 1. Evaluate custom inline formulas (e.g. {{lineCount}})
   const formulaEvaluated = useMemo(() => {
+    const activeText = isLiveSync ? content : syncedContent;
     try {
       const formulaEngine = new FormulaEngine({
-        lineCount: content.split('\n').length,
-        charCount: content.length,
-        wordCount: (content.trim().match(/\S+/g) || []).length
+        lineCount: activeText.split('\n').length,
+        charCount: activeText.length,
+        wordCount: (activeText.trim().match(/\S+/g) || []).length
       });
-      return formulaEngine.replaceInlineFormulas(content);
+      return formulaEngine.replaceInlineFormulas(activeText);
     } catch {
-      return content;
+      return activeText;
     }
-  }, [content]);
+  }, [isLiveSync, content, syncedContent]);
 
   // 2. Pre-process LaTeX Math & Mermaid blocks before passing to marked
   const processedMarkdown = useMemo(() => {
@@ -195,6 +228,24 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
         </button>
 
         <div className="h-3 w-px bg-[var(--border-primary)] mx-0.5" />
+
+        {/* Sync Control */}
+        {!isLiveSync && (
+          <button
+            type="button"
+            onClick={handleManualSync}
+            title={isContentOutdated ? 'Sync preview with latest editor changes' : 'Preview is up to date'}
+            aria-label="Refresh Preview"
+            className={`p-1.5 rounded-md flex items-center gap-1 text-[10px] font-medium transition-colors ${
+              isContentOutdated
+                ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'
+                : 'hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)]'
+            }`}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isContentOutdated ? 'animate-spin-slow' : ''}`} />
+            {isContentOutdated && <span>Sync</span>}
+          </button>
+        )}
 
         <button
           type="button"

@@ -7,16 +7,16 @@ import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 
 import { markdown } from '@codemirror/lang-markdown';
-import { languages } from '@codemirror/language-data';
 import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { json } from '@codemirror/lang-json';
+import { resolveCodeLanguage, preloadCommonLanguages } from '../../services/codeLanguages';
 
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { getEditorThemeExtension } from '../../themes';
 import { slashCommandExtension } from '../../extensions/slashCommands';
-import { templateVariablesExtension } from '../../extensions/templateVariables';
+import { templateVariablesExtension, variableTabKeymap } from '../../extensions/templateVariables';
 import { inlineFormulasExtension } from '../../extensions/inlineFormulas';
 import { liveMarkdownExtension } from '../../extensions/liveMarkdown';
 import { lineCounterSelectionExtension } from '../../extensions/lineNumberSelection';
@@ -36,6 +36,9 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const liveMarkdownCompartmentRef = useRef<Compartment>(new Compartment());
+  const templateVariablesCompartmentRef = useRef<Compartment>(new Compartment());
+  const inlineFormulasCompartmentRef = useRef<Compartment>(new Compartment());
+  const guttersCompartmentRef = useRef<Compartment>(new Compartment());
   const updatingFromStoreRef = useRef(false);
   const isFirstRenderRef = useRef(true);
 
@@ -53,22 +56,54 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
         return json();
       case 'markdown':
       default:
-        return markdown({ codeLanguages: languages });
+        preloadCommonLanguages();
+        return markdown({ codeLanguages: resolveCodeLanguage });
     }
+  };
+
+  const getGuttersExtension = (
+    isRendered: boolean,
+    isMarkdownOrText: boolean,
+    showLineNumbers: boolean,
+    enableFoldGutter: boolean
+  ): Extension => {
+    // In Rendered mode for markdown/text, omit all gutters so the editor area
+    // extends fully and occupies the space where line numbers appear in raw mode.
+    if (isRendered && isMarkdownOrText) {
+      return [];
+    }
+
+    const extensions: Extension[] = [];
+    if (showLineNumbers) {
+      extensions.push(
+        lineCounterSelectionExtension(),
+        highlightActiveLineGutter()
+      );
+    }
+    if (enableFoldGutter) {
+      extensions.push(foldGutter());
+    }
+    return extensions;
   };
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const isRenderedMode = (settings.editorMode || 'rendered') === 'rendered';
+    const isMarkdownOrText = language === 'markdown' || language === 'text';
 
     // Build extension stack
     const extensions: Extension[] = [
-      settings.showLineNumbers ? lineCounterSelectionExtension() : [],
-      highlightActiveLineGutter(),
+      guttersCompartmentRef.current.of(
+        getGuttersExtension(
+          isRenderedMode,
+          isMarkdownOrText,
+          settings.showLineNumbers,
+          settings.enableFoldGutter
+        )
+      ),
       highlightActiveLine(),
       history(),
-      settings.enableFoldGutter ? foldGutter() : [],
       indentOnInput(),
       settings.enableBracketMatching ? bracketMatching() : [],
       closeBrackets(),
@@ -77,6 +112,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
 
       // Keymaps
       keymap.of([
+        ...variableTabKeymap(),
         ...closeBracketsKeymap,
         ...defaultKeymap,
         ...searchKeymap,
@@ -93,23 +129,37 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
 
       // ContextPad Custom Extensions
       slashCommandExtension(),
-      templateVariablesExtension(),
-      inlineFormulasExtension(),
+      templateVariablesCompartmentRef.current.of(
+        templateVariablesExtension(isRenderedMode && isMarkdownOrText)
+      ),
+      inlineFormulasCompartmentRef.current.of(
+        inlineFormulasExtension(isRenderedMode && isMarkdownOrText)
+      ),
       imageDropPasteExtension(),
       liveMarkdownCompartmentRef.current.of(
-        liveMarkdownExtension(isRenderedMode && (language === 'markdown' || language === 'text'), bridge)
+        liveMarkdownExtension(isRenderedMode && isMarkdownOrText, bridge)
       ),
 
       // Custom font size and line height styling
       EditorView.theme({
         '&': {
           fontSize: `${settings.fontSize}px`,
+          fontFamily: `${settings.fontFamily} !important`,
           height: '100%'
         },
         '.cm-scroller': {
-          fontFamily: settings.fontFamily,
+          fontFamily: `${settings.fontFamily} !important`,
           lineHeight: '1.6',
           padding: '10px 14px'
+        },
+        '.cm-content': {
+          fontFamily: `${settings.fontFamily} !important`,
+          minWidth: '0',
+          maxWidth: '100%',
+          flexGrow: '1'
+        },
+        '.cm-line': {
+          fontFamily: `${settings.fontFamily} !important`
         }
       }),
 
@@ -124,12 +174,33 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
           const mainSel = update.state.selection.main;
           const pos = mainSel.head;
           const line = update.state.doc.lineAt(pos);
+
+          let selectionStartLine: number | null = null;
+          let selectionEndLine: number | null = null;
+
+          if (mainSel.from !== mainSel.to) {
+            const fromLine = update.state.doc.lineAt(mainSel.from);
+            const toLine = update.state.doc.lineAt(mainSel.to);
+            // If the selection ends at column 0 of toLine and spans multiple lines,
+            // the selection does not include any characters on toLine itself.
+            const effectiveEndLine = (mainSel.to === toLine.from && toLine.number > fromLine.number)
+              ? toLine.number - 1
+              : toLine.number;
+
+            if (effectiveEndLine > fromLine.number) {
+              selectionStartLine = fromLine.number;
+              selectionEndLine = effectiveEndLine;
+            }
+          }
+
           updateTabMetadata(tabId, {
             cursorLine: line.number,
             cursorCol: pos - line.from + 1,
             cursorOffset: pos,
             selectionFrom: mainSel.from,
-            selectionTo: mainSel.to
+            selectionTo: mainSel.to,
+            selectionStartLine,
+            selectionEndLine
           });
         }
       })
@@ -154,9 +225,9 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       viewRef.current = null;
       isFirstRenderRef.current = true;
     };
-  }, [tabId, language, settings.theme, settings.fontSize, settings.showLineNumbers]);
+  }, [tabId, language, settings.theme, settings.fontSize, settings.fontFamily]);
 
-  // Dynamically reconfigure live markdown mode without recreating editor
+  // Dynamically reconfigure live markdown mode and gutters without recreating editor
   useEffect(() => {
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
@@ -165,19 +236,38 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     const view = viewRef.current;
     if (!view) return;
     const isRenderedMode = (settings.editorMode || 'rendered') === 'rendered';
-    const effect = liveMarkdownCompartmentRef.current.reconfigure(
-      liveMarkdownExtension(isRenderedMode && (language === 'markdown' || language === 'text'), bridge)
+    const isMarkdownOrText = language === 'markdown' || language === 'text';
+
+    const templateVarEffect = templateVariablesCompartmentRef.current.reconfigure(
+      templateVariablesExtension(isRenderedMode && isMarkdownOrText)
     );
+    const formulasEffect = inlineFormulasCompartmentRef.current.reconfigure(
+      inlineFormulasExtension(isRenderedMode && isMarkdownOrText)
+    );
+    const markdownEffect = liveMarkdownCompartmentRef.current.reconfigure(
+      liveMarkdownExtension(isRenderedMode && isMarkdownOrText, bridge)
+    );
+    const guttersEffect = guttersCompartmentRef.current.reconfigure(
+      getGuttersExtension(
+        isRenderedMode,
+        isMarkdownOrText,
+        settings.showLineNumbers,
+        settings.enableFoldGutter
+      )
+    );
+
+    const applyEffects = () => {
+      if (viewRef.current) {
+        viewRef.current.dispatch({ effects: [templateVarEffect, formulasEffect, markdownEffect, guttersEffect] });
+      }
+    };
+
     if ((view as any).updating) {
-      queueMicrotask(() => {
-        if (viewRef.current) {
-          viewRef.current.dispatch({ effects: effect });
-        }
-      });
+      queueMicrotask(applyEffects);
     } else {
-      view.dispatch({ effects: effect });
+      applyEffects();
     }
-  }, [settings.editorMode, language]);
+  }, [settings.editorMode, language, settings.showLineNumbers, settings.enableFoldGutter]);
 
   // Keep editor content synchronized with external updates without losing cursor
   useEffect(() => {
@@ -214,6 +304,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       <div 
         ref={containerRef} 
         className="w-full h-full flex-1 overflow-hidden" 
+        style={{ fontFamily: settings.fontFamily }}
       />
     </div>
   );

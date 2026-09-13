@@ -15,7 +15,8 @@ import {
   Eye, 
   Code2,
   ExternalLink,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Type
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useTemplateStore } from '../../store/templateStore';
@@ -160,6 +161,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
         useRibbonStore.getState().openCustomizer();
       }
     },
+    {
+      id: 'cmd-editor-font-studio',
+      title: 'Select Editor Font & Typography Studio',
+      subtitle: 'Scientifically curated fonts for visual ergonomics, dyslexia, and eye comfort',
+      category: 'Commands',
+      icon: Type,
+      action: () => {
+        useSettingsStore.getState().openFontSelector();
+      }
+    },
     // Tabs list
     ...tabs.map(t => ({
       id: `tab-${t.id}`,
@@ -192,7 +203,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
       category: 'Actions' as const,
       icon: Terminal,
       action: () => {
-        useActionStore.getState().executeAction(act.id, {} as any);
+        useActionStore.getState().executeAction(act.id);
       }
     })),
     // Workflows

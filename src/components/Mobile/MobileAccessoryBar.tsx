@@ -2,12 +2,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ChevronUp,
   ChevronDown,
-  Variable,
   SlidersHorizontal,
   Plus
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
-import { useTemplateStore } from '../../store/templateStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useFormattingStore } from '../../store/formattingStore';
 import { executeFormatting } from '../../services/editor/formattingService';
@@ -17,7 +15,6 @@ import { useRuntimeBridge, isTouchDevice } from '../../adapters';
 export const MobileAccessoryBar: React.FC = () => {
   const bridge = useRuntimeBridge();
   const { activeTabId } = useTabStore();
-  const { openVariableModal } = useTemplateStore();
   const { settings } = useSettingsStore();
   const { 
     buttons, 
@@ -243,8 +240,8 @@ export const MobileAccessoryBar: React.FC = () => {
   return (
     <div className="z-20 border-t border-[var(--border-primary)] bg-[var(--titlebar-bg)]/95 backdrop-blur-md shrink-0 select-none shadow-md">
       <div className="flex items-start justify-between w-full relative">
-        {/* Pinned Left Section: Toolbar collapse & Fill Variables */}
-        <div className={`flex items-center ${sizeStyles.gap} ${sizeStyles.containerPad} shrink-0 self-start`}>
+        {/* Pinned Left Section: Toolbar collapse */}
+        <div className={`flex items-center ${sizeStyles.containerPad} shrink-0 self-start`}>
           {/* Toggle chevron button: hides the entire bar */}
           <button
             type="button"
@@ -252,23 +249,10 @@ export const MobileAccessoryBar: React.FC = () => {
             title="Hide toolbar"
             aria-label="Hide toolbar"
             aria-expanded={true}
-            className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-[var(--border-subtle)] active:scale-95 shadow-2xs`}
+            className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-[var(--border-primary)] active:scale-95 shadow-2xs cursor-pointer`}
           >
-            <ChevronDown className={sizeStyles.accessoryIcon} />
+            <ChevronDown className={`${sizeStyles.accessoryIcon} stroke-[2.2]`} />
           </button>
-
-          {/* Fill Variables modal trigger */}
-          <button
-            type="button"
-            onClick={() => openVariableModal()}
-            title="Fill Variables"
-            aria-label="Fill Variables"
-            className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-[var(--border-subtle)] active:scale-95 shadow-2xs`}
-          >
-            <Variable className={sizeStyles.accessoryIcon} />
-          </button>
-
-          <div className={`${sizeStyles.divider} w-px bg-[var(--border-subtle)] shrink-0 mx-0.5`} />
         </div>
 
         {/* Center Section: Dynamic Markdown Formatting Buttons (Single-row scrollable OR Multi-row wrapped) */}
@@ -309,13 +293,13 @@ export const MobileAccessoryBar: React.FC = () => {
                   onClick={() => executeFormatting(btn, activeTabId || undefined)}
                   title={btn.title || btn.label}
                   aria-label={btn.title || btn.label}
-                  className={`${sizeStyles.btn} flex items-center justify-center font-medium transition-all shrink-0 active:scale-95 shadow-xs border select-none ${
+                  className={`${sizeStyles.btn} flex items-center justify-center font-bold transition-all shrink-0 active:scale-95 shadow-2xs border select-none cursor-pointer ${
                     btn.isAccent
                       ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80'
-                      : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--border-primary)] hover:bg-[var(--card-hover-bg)]'
+                      : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--border-primary)] hover:bg-[var(--card-hover-bg)] hover:border-[var(--text-secondary)] hover:text-[var(--accent-primary)]'
                   }`}
                 >
-                  <RibbonIcon name={btn.icon} className={`${sizeStyles.icon} shrink-0 pointer-events-none`} />
+                  <RibbonIcon name={btn.icon} className={`${sizeStyles.icon} shrink-0 pointer-events-none stroke-[2.2]`} strokeWidth={2.2} />
                 </button>
               );
             })}
@@ -357,16 +341,16 @@ export const MobileAccessoryBar: React.FC = () => {
                   : "Expand toolbar to show all hidden formatting buttons"
               }
               aria-expanded={isMultiRowExpanded}
-              className={`${sizeStyles.accessoryBtn} flex items-center justify-center shrink-0 transition-all active:scale-95 shadow-2xs border ${
+              className={`${sizeStyles.accessoryBtn} flex items-center justify-center shrink-0 transition-all active:scale-95 shadow-2xs border cursor-pointer ${
                 isMultiRowExpanded
                   ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] border-[var(--accent-primary)]/40 font-semibold'
-                  : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border-[var(--border-subtle)]'
+                  : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border-[var(--border-primary)]'
               }`}
             >
               {isMultiRowExpanded ? (
-                <ChevronDown className={sizeStyles.accessoryIcon} />
+                <ChevronDown className={`${sizeStyles.accessoryIcon} stroke-[2.2]`} />
               ) : (
-                <ChevronUp className={sizeStyles.accessoryIcon} />
+                <ChevronUp className={`${sizeStyles.accessoryIcon} stroke-[2.2]`} />
               )}
             </button>
           )}
@@ -377,9 +361,9 @@ export const MobileAccessoryBar: React.FC = () => {
             onClick={openCustomizer}
             title="Customize Markdown Formatting Buttons (Add, Remove, Reorder, Layout, Size)"
             aria-label="Customize Markdown Formatting Buttons"
-            className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-dashed border-[var(--border-primary)] active:scale-95 shadow-2xs group`}
+            className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-dashed border-[var(--border-primary)] active:scale-95 shadow-2xs group cursor-pointer`}
           >
-            <SlidersHorizontal className={`${sizeStyles.accessoryIcon} transition-transform group-hover:rotate-45`} />
+            <SlidersHorizontal className={`${sizeStyles.accessoryIcon} stroke-[2.2] transition-transform group-hover:rotate-45`} />
           </button>
         </div>
       </div>

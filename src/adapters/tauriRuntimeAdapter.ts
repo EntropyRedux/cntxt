@@ -1,9 +1,6 @@
 /**
  * Tauri v2 Desktop Runtime Adapter
  * Implements IRuntimeBridge for production native desktop apps.
- *
- * All platform capabilities are backed by custom Rust commands exposed
- * through the Tauri invoke bridge (no third-party plugins required).
  */
 
 import { 
@@ -21,36 +18,9 @@ import { STORAGE_KEYS } from './storageKeys';
 
 export class TauriRuntimeAdapter implements IRuntimeBridge {
   private inMemoryFallback: Map<string, string> = new Map();
-  private appVersion: string | null = null;
 
-  private async invokeTauri<T>(cmd: string, args: Record<string, any> = {}): Promise<T | null> {
-    try {
-      const tauri = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__;
-      if (tauri && typeof tauri.invoke === 'function') {
-        return await tauri.invoke(cmd, args);
-      }
-    } catch (e) {
-      console.warn(`[TauriRuntimeAdapter] invoke(${cmd}) failed:`, e);
-    }
-    return null;
-  }
-
-  private detectPlatform(): 'web' | 'macos' | 'windows' | 'linux' {
-    const p = (typeof navigator !== 'undefined' ? navigator.platform : '').toLowerCase();
-    if (p.includes('mac')) return 'macos';
-    if (p.includes('win')) return 'windows';
-    if (p.includes('linux')) return 'linux';
-    return 'web';
-  }
-
-  private async resolveAppVersion(): Promise<string> {
-    if (this.appVersion) return this.appVersion;
-    const info = await this.invokeTauri<{ version?: string }>('get_app_info');
-    if (info && typeof info.version === 'string' && info.version) {
-      this.appVersion = info.version;
-      return info.version;
-    }
-    return '0.1.0';
+  constructor() {
+    this.detectLanguage = this.detectLanguage.bind(this);
   }
 
   private detectLanguage(filename: string): SupportedLanguage {
@@ -81,25 +51,38 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     }
   }
 
+  private async invokeTauri<T>(cmd: string, args: Record<string, any> = {}): Promise<T | null> {
+    try {
+      const tauri = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__;
+      if (tauri && typeof tauri.invoke === 'function') {
+        return await tauri.invoke(cmd, args);
+      }
+    } catch (e) {
+      console.warn(`[TauriRuntimeAdapter] invoke(${cmd}) failed:`, e);
+    }
+    return null;
+  }
+
   public fs: IFileSystemBridge = {
     openFile: async (): Promise<BridgeFileResult | null> => {
       try {
-        const selectedPath = await this.invokeTauri<string>('open_file_dialog');
+        const selectedPath = await this.invokeTauri<string | null>('plugin:dialog|open', {
+          options: {
+            multiple: false,
+            filters: [{ name: 'Documents', extensions: ['md', 'txt', 'json', 'js', 'ts', 'py', 'html', 'css', 'yaml'] }]
+          }
+        });
         if (!selectedPath) return null;
 
-        const content = await this.invokeTauri<string>('read_file', { path: selectedPath });
+        const content = await this.invokeTauri<string>('plugin:fs|read_text_file', { path: selectedPath });
         if (content === null) return null;
 
         const filename = selectedPath.split(/[/\\]/).pop() || 'Untitled';
-
-        const detected = await this.invokeTauri<string>('detect_language_from_path', { path: selectedPath });
-        const language = (detected as SupportedLanguage) || this.detectLanguage(filename);
-
         return {
           name: filename,
           path: selectedPath,
           content,
-          language
+          language: this.detectLanguage(filename)
         };
       } catch (err) {
         console.error('[TauriRuntimeAdapter] openFile error:', err);
@@ -107,9 +90,30 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       }
     },
 
+    openDirectory: async () => {
+      try {
+        const selectedPath = await this.invokeTauri<string | null>('plugin:dialog|open', {
+          options: {
+            directory: true,
+            multiple: false
+          }
+        });
+        if (!selectedPath) return null;
+        const filename = selectedPath.split(/[/\\]/).pop() || 'Workspace';
+        return {
+          name: filename,
+          path: selectedPath,
+          entries: []
+        };
+      } catch (err) {
+        console.error('[TauriRuntimeAdapter] openDirectory error:', err);
+        return null;
+      }
+    },
+
     saveFile: async (path: string, content: string): Promise<boolean> => {
       try {
-        const result = await this.invokeTauri('write_file', { path, content });
+        const result = await this.invokeTauri('plugin:fs|write_text_file', { path, contents: content });
         return result !== null;
       } catch (err) {
         console.error('[TauriRuntimeAdapter] saveFile error:', err);
@@ -119,12 +123,15 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     saveFileAs: async (suggestedName: string, content: string): Promise<string | null> => {
       try {
-        const savePath = await this.invokeTauri<string>('save_file_dialog', { defaultName: suggestedName });
+        const savePath = await this.invokeTauri<string | null>('plugin:dialog|save', {
+          options: {
+            defaultPath: suggestedName,
+            filters: [{ name: 'Documents', extensions: ['md', 'txt', 'json'] }]
+          }
+        });
         if (!savePath) return null;
 
-        const result = await this.invokeTauri('write_file', { path: savePath, content });
-        if (result === null) return null;
-
+        await this.invokeTauri('plugin:fs|write_text_file', { path: savePath, contents: content });
         return savePath;
       } catch (err) {
         console.error('[TauriRuntimeAdapter] saveFileAs error:', err);
@@ -135,7 +142,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     exportWorkspace: async (): Promise<string> => {
       const keys = Object.values(STORAGE_KEYS);
       const backup: Record<string, any> = {
-        version: await this.resolveAppVersion(),
+        version: '1.10.0',
         exportedAt: new Date().toISOString(),
         data: {}
       };
@@ -172,77 +179,94 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   public window: IWindowBridge = {
     isNative: true,
-    newWindow: async (): Promise<boolean> => {
-      const result = await this.invokeTauri('new_window');
-      return result !== null;
+    newWindow: async (url?: string): Promise<boolean> => {
+      try {
+        await this.invokeTauri('plugin:window|create', {
+          label: `window-${Date.now()}`,
+          url: url || 'index.html'
+        });
+        return true;
+      } catch {
+        return false;
+      }
     },
     minimize: async (): Promise<void> => {
-      await this.invokeTauri('minimize_window');
+      await this.invokeTauri('plugin:window|minimize');
     },
     maximize: async (): Promise<void> => {
-      await this.invokeTauri('maximize_window');
+      await this.invokeTauri('plugin:window|toggle_maximize');
     },
     close: async (): Promise<void> => {
-      await this.invokeTauri('confirm_close');
+      await this.invokeTauri('plugin:window|close');
     },
     getPlatform: (): 'web' | 'macos' | 'windows' | 'linux' => {
-      return this.detectPlatform();
+      const p = navigator.platform.toLowerCase();
+      if (p.includes('mac')) return 'macos';
+      if (p.includes('win')) return 'windows';
+      if (p.includes('linux')) return 'linux';
+      return 'linux';
     }
   };
 
   public clipboard: IClipboardBridge = {
     readText: async (): Promise<string> => {
-      const result = await this.invokeTauri<string>('clipboard_read_text');
+      const result = await this.invokeTauri<string>('plugin:clipboard|read_text');
       if (result !== null) return result;
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        return navigator.clipboard.readText();
-      }
-      return '';
+      return navigator.clipboard.readText();
     },
     writeText: async (text: string): Promise<boolean> => {
       try {
-        const result = await this.invokeTauri('clipboard_write_text', { text });
+        const result = await this.invokeTauri('plugin:clipboard|write_text', { text });
         if (result !== null) return true;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(text);
-          return true;
-        }
-      } catch (err) {
-        console.error('[TauriRuntimeAdapter] writeText error:', err);
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        return false;
       }
-      return false;
     }
   };
 
   public storage: IStorageBridge = {
     getItem: async (key: string): Promise<string | null> => {
-      const val = await this.invokeTauri<string | null>('kv_get', { key });
+      const val = await this.invokeTauri<string | null>('plugin:store|get', { key });
       if (val !== null) return val;
       return this.inMemoryFallback.get(key) ?? null;
     },
     setItem: async (key: string, value: string): Promise<boolean> => {
-      const res = await this.invokeTauri('kv_set', { key, value });
-      if (res !== null) return true;
+      const res = await this.invokeTauri('plugin:store|set', { key, value });
+      if (res !== null) {
+        await this.invokeTauri('plugin:store|save');
+        return true;
+      }
       this.inMemoryFallback.set(key, value);
       return true;
     },
     removeItem: async (key: string): Promise<boolean> => {
-      const res = await this.invokeTauri('kv_remove', { key });
-      if (res !== null) return true;
+      const res = await this.invokeTauri('plugin:store|delete', { key });
+      if (res !== null) {
+        await this.invokeTauri('plugin:store|save');
+        return true;
+      }
       this.inMemoryFallback.delete(key);
       return true;
     },
     hasItem: async (key: string): Promise<boolean> => {
-      const res = await this.invokeTauri<boolean>('kv_has', { key });
+      const res = await this.invokeTauri<boolean>('plugin:store|has', { key });
       if (res !== null) return res;
       return this.inMemoryFallback.has(key);
     }
   };
 
   public platform: IPlatformBridge = {
-    os: this.detectPlatform() as 'macos' | 'windows' | 'linux' | 'web',
+    os: (() => {
+      const p = navigator.platform.toLowerCase();
+      if (p.includes('mac')) return 'macos';
+      if (p.includes('win')) return 'windows';
+      if (p.includes('linux')) return 'linux';
+      return 'linux';
+    })(),
     isTouch: typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints > 0)),
-    isMac: (typeof navigator !== 'undefined' ? navigator.platform.toUpperCase().indexOf('MAC') >= 0 : false),
+    isMac: navigator.platform.toUpperCase().indexOf('MAC') >= 0,
     isMobile: false
   };
 

@@ -19,6 +19,7 @@ import {
   Eye, 
   Plus, 
   Sparkles,
+  ChevronLeft,
   ChevronRight
 } from 'lucide-react';
 
@@ -29,7 +30,7 @@ export interface ModularRibbonProps {
 export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
   const bridge = useRuntimeBridge();
   const { items, openCustomizer } = useRibbonStore();
-  const { settings, toggleEditorMode, setActiveSidebarTab } = useSettingsStore();
+  const { settings, toggleRibbon, toggleEditorMode, setActiveSidebarTab } = useSettingsStore();
   const { tabs, activeTabId, createTab, updateTabContent, insertTextAtCursor } = useTabStore();
   const { templates, openVariableModal } = useTemplateStore();
   const { actions, executeAction } = useActionStore();
@@ -168,18 +169,49 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
   // Exclude toggle-view from ribbon items since it is now permanently in the top bar
   const activeItems = items.filter(i => i.enabled && i.targetId !== 'toggle-view');
 
+  if (!settings.showRibbon) {
+    return (
+      <button
+        type="button"
+        id="modular-ribbon-expand-btn"
+        onClick={toggleRibbon}
+        title="Open Modular Ribbon (Ctrl+Shift+R)"
+        aria-label="Open Modular Ribbon"
+        className="fixed top-[46px] left-2.5 sm:left-3 z-40 w-6 h-6 rounded-full bg-[var(--card-bg)] hover:bg-[var(--card-hover-bg)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] shadow-2xs flex items-center justify-center transition-all active:scale-95 group cursor-pointer"
+      >
+        <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 stroke-[2.2]" />
+      </button>
+    );
+  }
+
   return (
-    <div className="h-8 bg-[var(--titlebar-bg)]/80 border-b border-[var(--border-subtle)] px-3 flex items-center justify-between text-xs shrink-0 select-none">
-      {/* Dynamic Ribbon Buttons Scroll Area */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+    <div 
+      id="modular-ribbon"
+      className="h-8.5 bg-[var(--titlebar-bg)] border-b border-[var(--border-primary)] px-2 flex items-center justify-between text-xs shrink-0 select-none transition-all duration-150"
+    >
+      {/* Left Chevron (collapses ribbon) & Dynamic Ribbon Buttons Scroll Area */}
+      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 min-w-0">
+        <button
+          type="button"
+          id="modular-ribbon-collapse-btn"
+          onClick={toggleRibbon}
+          title="Collapse Modular Ribbon (Ctrl+Shift+R)"
+          aria-label="Collapse Modular Ribbon"
+          className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] active:scale-95 transition-all shrink-0 cursor-pointer"
+        >
+          <ChevronLeft className="w-3.5 h-3.5 stroke-[2.2]" />
+        </button>
+
+        <div className="h-3.5 w-px bg-[var(--border-subtle)] mx-0.5 shrink-0" />
+
         {activeItems.map((item) => {
           const colorClass = 
-            item.color === 'amber' ? 'text-amber-500' :
-            item.color === 'emerald' ? 'text-emerald-500' :
-            item.color === 'purple' ? 'text-purple-500' :
-            item.color === 'rose' ? 'text-rose-500' :
-            item.color === 'cyan' ? 'text-cyan-500' :
-            item.color === 'blue' ? 'text-blue-500' :
+            item.color === 'amber' ? 'text-amber-700 dark:text-amber-400' :
+            item.color === 'emerald' ? 'text-emerald-700 dark:text-emerald-400' :
+            item.color === 'purple' ? 'text-purple-700 dark:text-purple-400' :
+            item.color === 'rose' ? 'text-rose-700 dark:text-rose-400' :
+            item.color === 'cyan' ? 'text-teal-700 dark:text-teal-400' :
+            item.color === 'blue' ? 'text-blue-700 dark:text-blue-400' :
             'text-[var(--accent-primary)]';
 
           // If button is view toggle, show current dynamic state
@@ -201,16 +233,16 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
               onClick={() => handleButtonClick(item)}
               title={tooltipText}
               aria-label={dynamicLabel}
-              className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] active:scale-95 transition-all shrink-0"
+              className="w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-primary)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] active:scale-95 transition-all shrink-0 font-medium cursor-pointer"
             >
               {isViewToggle ? (
                 isRendered ? (
-                  <Eye className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                  <Eye className="w-3.5 h-3.5 text-[var(--accent-primary)] stroke-[2.2]" />
                 ) : (
-                  <FileCode2 className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                  <FileCode2 className="w-3.5 h-3.5 text-[var(--accent-primary)] stroke-[2.2]" />
                 )
               ) : (
-                <RibbonIcon name={item.icon} className={`w-3.5 h-3.5 ${colorClass}`} />
+                <RibbonIcon name={item.icon} className={`w-3.5 h-3.5 ${colorClass}`} strokeWidth={2.2} />
               )}
             </button>
           );
@@ -222,11 +254,11 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
         <button
           type="button"
           onClick={openCustomizer}
-          className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] active:scale-95 transition-all shrink-0"
+          className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] active:scale-95 transition-all shrink-0 cursor-pointer"
           title="Customize Ribbon (Add, reorder, or pin custom actions)"
           aria-label="Customize Ribbon"
         >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
+          <SlidersHorizontal className="w-3.5 h-3.5 stroke-[2.2]" />
         </button>
       </div>
     </div>

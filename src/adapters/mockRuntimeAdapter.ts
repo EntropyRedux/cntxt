@@ -42,6 +42,24 @@ export class MockRuntimeAdapter implements IRuntimeBridge {
       };
     },
 
+    openDirectory: async () => {
+      return {
+        name: 'mock_workspace',
+        path: '/mock/workspace',
+        entries: [
+          {
+            id: 'mock-nested',
+            name: 'docs',
+            type: 'folder' as const,
+            children: [
+              { id: 'm-api', name: 'api.md', type: 'file' as const, content: '# API Documentation', language: 'markdown' as const }
+            ]
+          },
+          { id: 'm-readme', name: 'README.md', type: 'file' as const, content: '# Mock Workspace', language: 'markdown' as const }
+        ]
+      };
+    },
+
     saveFile: async (path: string, content: string): Promise<boolean> => {
       this.mockFiles.set(path, { content, language: 'markdown' });
       return true;

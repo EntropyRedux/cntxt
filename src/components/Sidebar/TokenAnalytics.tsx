@@ -6,7 +6,9 @@ import {
   Layers,
   Code2,
   Variable,
-  FileText
+  FileText,
+  RefreshCw,
+  Pause
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -20,9 +22,35 @@ export const TokenAnalytics: React.FC = () => {
 
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [estimate, setEstimate] = useState<TokenEstimate | null>(null);
+  const isLiveEstimatorEnabled = settings.enableLiveTokenEstimator ?? true;
+
+  const handleManualRecalculate = async () => {
+    if (!activeTab) return;
+    const res = await tokenEstimatorService.estimateTokensAsync(
+      activeTab.content, 
+      settings.selectedModelId
+    );
+    setEstimate(res);
+  };
 
   useEffect(() => {
     let isMounted = true;
+
+    // When live estimator is disabled, do not run background calculations or subscribe to keystrokes
+    if (!isLiveEstimatorEnabled) {
+      if (!estimate && activeTab) {
+        tokenEstimatorService.estimateTokensAsync(
+          activeTab.content, 
+          settings.selectedModelId
+        ).then(res => {
+          if (isMounted) setEstimate(res);
+        });
+      }
+      return () => {
+        isMounted = false;
+      };
+    }
+
     const calculate = async () => {
       if (!activeTab) return;
       const res = await tokenEstimatorService.estimateTokensAsync(
@@ -44,7 +72,7 @@ export const TokenAnalytics: React.FC = () => {
       isMounted = false;
       unsubscribe();
     };
-  }, [activeTab?.content, settings.selectedModelId]);
+  }, [activeTab?.content, settings.selectedModelId, isLiveEstimatorEnabled]);
 
   if (!activeTab || !estimate) {
     return (
@@ -66,13 +94,29 @@ export const TokenAnalytics: React.FC = () => {
         <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[var(--text-secondary)] text-[11px]">
           <span>Token & Cost Analytics</span>
         </div>
-        <span className={`px-2 py-0.2 rounded text-[10px] font-mono border ${
-          estimate.status === 'live' 
-            ? 'bg-[var(--status-success)]/15 text-[var(--status-success)] border-[var(--status-success)]/30' 
-            : 'bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] border-[var(--accent-primary)]/30'
-        }`}>
-          ● {estimate.status}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {!isLiveEstimatorEnabled && (
+            <button
+              type="button"
+              onClick={handleManualRecalculate}
+              title="Recalculate tokens manually"
+              aria-label="Recalculate tokens manually"
+              className="p-1 rounded hover:bg-[var(--card-hover-bg)] text-[var(--accent-primary)] flex items-center gap-1 text-[10px] cursor-pointer"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>Recalculate</span>
+            </button>
+          )}
+          <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${
+            !isLiveEstimatorEnabled
+              ? 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+              : estimate.status === 'live' 
+                ? 'bg-[var(--status-success)]/15 text-[var(--status-success)] border-[var(--status-success)]/30' 
+                : 'bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] border-[var(--accent-primary)]/30'
+          }`}>
+            {!isLiveEstimatorEnabled ? '● Paused' : `● ${estimate.status}`}
+          </span>
+        </div>
       </div>
 
       {/* Primary Token & Cost Metric Card */}
