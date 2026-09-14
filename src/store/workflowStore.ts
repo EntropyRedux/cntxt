@@ -5,6 +5,7 @@ import { DEFAULT_PINNED_TABS, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
+import { useRibbonStore } from './ribbonStore';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -12,16 +13,29 @@ interface WorkflowState {
   workflows: PinnedTab[];
   searchQuery: string;
   selectedCategory: string;
+  collapsedCategories: string[];
   
   // Actions
   setSearchQuery: (query: string) => void;
   setSelectedCategory: (category: string) => void;
+  toggleCategoryCollapse: (category: string) => void;
+  isCategoryCollapsed: (category: string) => boolean;
+
   createWorkflow: (item: Omit<PinnedTab, 'id' | 'createdAt'>) => PinnedTab;
   updateWorkflow: (id: string, updates: Partial<PinnedTab>) => void;
   deleteWorkflow: (id: string) => void;
   toggleHideWorkflow: (id: string) => void;
   duplicateWorkflow: (id: string) => void;
   reorderWorkflows: (sourceIdx: number, destIdx: number) => void;
+  
+  // Bulk operations
+  bulkDeleteWorkflows: (ids: string[]) => void;
+  bulkToggleHideWorkflows: (ids: string[], hide?: boolean) => void;
+
+  // Ribbon synchronization
+  isPinnedToRibbon: (id: string) => boolean;
+  togglePinToRibbon: (id: string) => void;
+
   importWorkflows: (imported: PinnedTab[]) => number;
   exportWorkflows: () => string;
   resetToDefaults: () => void;
@@ -32,6 +46,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   workflows: [],
   searchQuery: '',
   selectedCategory: 'All',
+  collapsedCategories: [],
 
   initializeWorkflows: async (storage?: IStorageBridge) => {
     if (storage) {
@@ -66,10 +81,24 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setSelectedCategory: (selectedCategory) => set({ selectedCategory }),
 
+  toggleCategoryCollapse: (category) => {
+    const collapsed = get().collapsedCategories;
+    const exists = collapsed.includes(category);
+    const updated = exists 
+      ? collapsed.filter(c => c !== category)
+      : [...collapsed, category];
+    set({ collapsedCategories: updated });
+  },
+
+  isCategoryCollapsed: (category) => {
+    return get().collapsedCategories.includes(category);
+  },
+
   createWorkflow: (itemData) => {
     const newItem: PinnedTab = {
+      isHidden: false,
       ...itemData,
-      id: `wf_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: `wf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       createdAt: Date.now()
     };
 
@@ -83,16 +112,48 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const updated = get().workflows.map(item => item.id === id ? { ...item, ...updates } : item);
     set({ workflows: updated });
     saveWorkflows(updated);
+
+    // Synchronize updates with ribbon item if pinned
+    const ribbonStore = useRibbonStore.getState();
+    const ribbonItem = ribbonStore.items.find(i => i.type === 'workflow' && i.targetId === id);
+    if (ribbonItem) {
+      ribbonStore.updateItem(ribbonItem.id, {
+        label: updates.name ?? ribbonItem.label,
+        icon: updates.icon ?? ribbonItem.icon,
+        tooltip: `${(updates.type ?? 'workflow') === 'bookmark' ? 'Bookmark' : 'Workflow Blueprint'}: ${updates.name ?? ribbonItem.label}`
+      });
+    }
   },
 
   deleteWorkflow: (id) => {
     const updated = get().workflows.filter(item => item.id !== id);
     set({ workflows: updated });
     saveWorkflows(updated);
+    useRibbonStore.getState().removeItemByTarget(id, 'workflow');
+  },
+
+  bulkDeleteWorkflows: (ids) => {
+    const idSet = new Set(ids);
+    const updated = get().workflows.filter(item => !idSet.has(item.id));
+    set({ workflows: updated });
+    saveWorkflows(updated);
+    ids.forEach(id => useRibbonStore.getState().removeItemByTarget(id, 'workflow'));
   },
 
   toggleHideWorkflow: (id) => {
     const updated = get().workflows.map(item => item.id === id ? { ...item, isHidden: !item.isHidden } : item);
+    set({ workflows: updated });
+    saveWorkflows(updated);
+  },
+
+  bulkToggleHideWorkflows: (ids, hide) => {
+    const idSet = new Set(ids);
+    const updated = get().workflows.map(item => {
+      if (idSet.has(item.id)) {
+        return { ...item, isHidden: hide !== undefined ? hide : !item.isHidden };
+      }
+      return item;
+    });
     set({ workflows: updated });
     saveWorkflows(updated);
   },
@@ -119,6 +180,34 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     saveWorkflows(result);
   },
 
+  isPinnedToRibbon: (id) => {
+    return useRibbonStore.getState().items.some(
+      item => item.type === 'workflow' && item.targetId === id
+    );
+  },
+
+  togglePinToRibbon: (id) => {
+    const isPinned = get().isPinnedToRibbon(id);
+    const ribbonStore = useRibbonStore.getState();
+
+    if (isPinned) {
+      ribbonStore.removeItemByTarget(id, 'workflow');
+    } else {
+      const wf = get().workflows.find(w => w.id === id);
+      if (wf) {
+        ribbonStore.addItem({
+          label: wf.name,
+          icon: wf.icon || (wf.type === 'bookmark' ? 'Bookmark' : 'Workflow'),
+          type: 'workflow',
+          targetId: wf.id,
+          color: wf.type === 'bookmark' ? 'amber' : 'purple',
+          tooltip: `${wf.type === 'bookmark' ? 'Bookmark' : 'Workflow Blueprint'}: ${wf.name}`,
+          enabled: true
+        });
+      }
+    }
+  },
+
   importWorkflows: (imported) => {
     if (!Array.isArray(imported)) return 0;
     const current = get().workflows;
@@ -136,8 +225,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   resetToDefaults: () => {
-    set({ workflows: DEFAULT_PINNED_TABS });
-    saveWorkflows(DEFAULT_PINNED_TABS);
+    const resetWorkflows = IS_PROTOTYPE_DEMO_MODE ? DEFAULT_PINNED_TABS : [];
+    set({ workflows: resetWorkflows });
+    saveWorkflows(resetWorkflows);
   }
 }));
 

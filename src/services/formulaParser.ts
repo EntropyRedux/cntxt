@@ -1,6 +1,8 @@
 import { EditorContext, FormulaResult } from '../types';
 
 export class FormulaEngine {
+  private static globalFunctions = new Map<string, (args: any[], context: EditorContext) => any>();
+  private instanceFunctions = new Map<string, (args: any[], context: EditorContext) => any>();
   private context: EditorContext;
 
   constructor(context?: Partial<EditorContext>) {
@@ -14,6 +16,50 @@ export class FormulaEngine {
       getLine: context?.getLine ?? (() => ''),
       getRange: context?.getRange ?? (() => '')
     };
+  }
+
+  /**
+   * Register a custom formula function globally across all FormulaEngine instances.
+   */
+  public static registerFunction(
+    name: string,
+    fn: (args: any[], context: EditorContext) => any,
+    info?: Partial<FormulaFunctionInfo>
+  ): void {
+    const upper = name.toUpperCase();
+    FormulaEngine.globalFunctions.set(upper, fn);
+    if (info) {
+      const existingIdx = FORMULA_FUNCTIONS.findIndex(f => f.name === upper);
+      const fullInfo: FormulaFunctionInfo = {
+        name: upper,
+        description: info.description || `Custom formula function ${upper}`,
+        example: info.example || `${upper}()`,
+        category: info.category || 'Custom'
+      };
+      if (existingIdx >= 0) {
+        FORMULA_FUNCTIONS[existingIdx] = fullInfo;
+      } else {
+        FORMULA_FUNCTIONS.push(fullInfo);
+      }
+    }
+  }
+
+  /**
+   * Unregister a globally registered custom formula function.
+   */
+  public static unregisterFunction(name: string): boolean {
+    const upper = name.toUpperCase();
+    const deleted = FormulaEngine.globalFunctions.delete(upper);
+    const idx = FORMULA_FUNCTIONS.findIndex(f => f.name === upper);
+    if (idx >= 0) FORMULA_FUNCTIONS.splice(idx, 1);
+    return deleted;
+  }
+
+  /**
+   * Register a custom formula function specifically for this FormulaEngine instance.
+   */
+  public registerFunction(name: string, fn: (args: any[], context: EditorContext) => any): void {
+    this.instanceFunctions.set(name.toUpperCase(), fn);
   }
 
   public updateContext(context: Partial<EditorContext>) {
@@ -136,10 +182,17 @@ export class FormulaEngine {
           expect('Paren', ')');
           return { type: 'Call', name: name.toUpperCase(), args };
         } else {
-          // Constant / Keyword (like TRUE, FALSE, PI)
-          if (name.toUpperCase() === 'TRUE') return { type: 'Literal', value: true };
-          if (name.toUpperCase() === 'FALSE') return { type: 'Literal', value: false };
-          if (name.toUpperCase() === 'PI') return { type: 'Literal', value: Math.PI };
+          // Constant / Keyword (like TRUE, FALSE, PI, SELECTION, LINECOUNT, etc.)
+          const upper = name.toUpperCase();
+          if (upper === 'TRUE') return { type: 'Literal', value: true };
+          if (upper === 'FALSE') return { type: 'Literal', value: false };
+          if (upper === 'PI') return { type: 'Literal', value: Math.PI };
+          if (upper === 'SELECTION' || upper === 'SELECTED') return { type: 'Literal', value: this.context.selectedText || '' };
+          if (upper === 'LINE') return { type: 'Literal', value: this.context.line };
+          if (upper === 'COL' || upper === 'COLUMN') return { type: 'Literal', value: this.context.column };
+          if (upper === 'LINES' || upper === 'LINECOUNT') return { type: 'Literal', value: this.context.lineCount };
+          if (upper === 'CHARS' || upper === 'CHARCOUNT') return { type: 'Literal', value: this.context.charCount };
+          if (upper === 'WORDS' || upper === 'WORDCOUNT') return { type: 'Literal', value: this.context.wordCount };
           return { type: 'Literal', value: name };
         }
       }
@@ -265,6 +318,16 @@ export class FormulaEngine {
   }
 
   private executeFunction(name: string, args: any[]): any {
+    const upper = name.toUpperCase();
+
+    // Check custom registered instance & global functions first
+    if (this.instanceFunctions.has(upper)) {
+      return this.instanceFunctions.get(upper)!(args, this.context);
+    }
+    if (FormulaEngine.globalFunctions.has(upper)) {
+      return FormulaEngine.globalFunctions.get(upper)!(args, this.context);
+    }
+
     const strArg = (idx: number, fallback = '') => args[idx] !== undefined ? String(args[idx]) : fallback;
     const textOrSelectArg = (idx: number, fallback = '') => {
       if (args[idx] !== undefined && args[idx] !== '') return String(args[idx]);
@@ -275,7 +338,13 @@ export class FormulaEngine {
       return isNaN(val) ? fallback : val;
     };
 
-    switch (name) {
+    switch (upper) {
+      // --- Explicit Action Flow Directives ---
+      case 'INSERT':
+        return args[0] !== undefined ? args[0] : '';
+      case 'REPLACE_SELECTION':
+        return args[0] !== undefined ? args[0] : '';
+
       // --- Date & Time ---
       case 'TODAY': {
         const d = new Date();
@@ -336,41 +405,55 @@ export class FormulaEngine {
       case 'CONCAT':
         return args.map(a => String(a)).join('');
       case 'LEN':
-        return strArg(0).length;
+        return textOrSelectArg(0).length;
+      case 'SLUGIFY': {
+        const target = textOrSelectArg(0);
+        return target.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+      }
+      case 'REPEAT':
+        return textOrSelectArg(0).repeat(Math.max(0, numArg(1, 1)));
       case 'LEFT': {
-        const str = strArg(0);
+        const str = textOrSelectArg(0);
         const len = numArg(1, str.length);
         return str.substring(0, len);
       }
       case 'RIGHT': {
-        const str = strArg(0);
+        const str = textOrSelectArg(0);
         const len = numArg(1, str.length);
         return str.substring(Math.max(0, str.length - len));
       }
       case 'MID': {
-        const str = strArg(0);
+        const str = textOrSelectArg(0);
         const start = Math.max(0, numArg(1, 1) - 1);
         const len = numArg(2, str.length);
         return str.substring(start, start + len);
       }
       case 'REPLACE': {
-        const text = strArg(0);
+        const text = textOrSelectArg(0);
         const search = strArg(1);
         const replaceWith = strArg(2);
         return text.split(search).join(replaceWith);
       }
       case 'WRAP': {
-        const str = strArg(0);
+        const str = textOrSelectArg(0);
         const left = strArg(1, '"');
         const right = strArg(2, left);
         return `${left}${str}${right}`;
       }
-      case 'PREFIX':
+      case 'PREFIX': {
+        if (args.length <= 1) {
+          return `${strArg(0)}${this.context.selectedText || ''}`;
+        }
         return `${strArg(0)}${strArg(1)}`;
-      case 'SUFFIX':
+      }
+      case 'SUFFIX': {
+        if (args.length <= 1) {
+          return `${this.context.selectedText || ''}${strArg(0)}`;
+        }
         return `${strArg(1)}${strArg(0)}`;
+      }
       case 'PAD': {
-        const str = strArg(0);
+        const str = textOrSelectArg(0);
         const targetLen = numArg(1, 10);
         const padChar = strArg(2, ' ').charAt(0) || ' ';
         return str.padEnd(targetLen, padChar);
@@ -378,28 +461,49 @@ export class FormulaEngine {
 
       // --- Markdown & Formatting ---
       case 'BOLD':
-        return `**${strArg(0)}**`;
+        return `**${textOrSelectArg(0)}**`;
       case 'ITALIC':
-        return `*${strArg(0)}*`;
+        return `*${textOrSelectArg(0)}*`;
+      case 'STRIKE':
+        return `~~${textOrSelectArg(0)}~~`;
       case 'CODE':
-        return `\`${strArg(0)}\``;
+        return `\`${textOrSelectArg(0)}\``;
       case 'CODEBLOCK': {
-        const lang = strArg(0, '');
-        const code = strArg(1, '');
+        const lang = strArg(1, strArg(0, ''));
+        const code = args.length > 1 ? textOrSelectArg(0) : (this.context.selectedText || strArg(1, ''));
         return `\`\`\`${lang}\n${code}\n\`\`\``;
       }
       case 'LINK': {
-        const text = strArg(0);
+        const text = textOrSelectArg(0);
         const url = strArg(1, '#');
         return `[${text}](${url})`;
       }
+      case 'IMAGE': {
+        const alt = strArg(0, 'Image');
+        const url = strArg(1, '#');
+        return `![${alt}](${url})`;
+      }
       case 'HEADING': {
-        const level = Math.min(6, Math.max(1, numArg(0, 1)));
-        const text = strArg(1);
-        return `${'#'.repeat(level)} ${text}`;
+        const lvl = numArg(1, numArg(0, 1));
+        const text = args.length > 1 ? textOrSelectArg(0) : (this.context.selectedText || textOrSelectArg(1));
+        return `${'#'.repeat(Math.min(6, Math.max(1, lvl)))} ${text}`;
       }
       case 'QUOTE':
-        return `> ${strArg(0)}`;
+        return `> ${textOrSelectArg(0)}`;
+
+      // --- Wrap Helpers ---
+      case 'PARENTHESES':
+        return `(${textOrSelectArg(0)})`;
+      case 'BRACKETS':
+        return `[${textOrSelectArg(0)}]`;
+      case 'BRACES':
+        return `{${textOrSelectArg(0)}}`;
+      case 'ANGLES':
+        return `<${textOrSelectArg(0)}>`;
+      case 'SINGLEQUOTE':
+        return `'${textOrSelectArg(0)}'`;
+      case 'DOUBLEQUOTE':
+        return `"${textOrSelectArg(0)}"`;
 
       // --- List & Lines Operations ---
       case 'SORT': {
@@ -407,6 +511,12 @@ export class FormulaEngine {
         const desc = strArg(1).toUpperCase() === 'DESC';
         const lines = text.split('\n').filter(l => l.length > 0);
         lines.sort((a, b) => desc ? b.localeCompare(a) : a.localeCompare(b));
+        return lines.join('\n');
+      }
+      case 'SORTDESC': {
+        const text = textOrSelectArg(0);
+        const lines = text.split('\n').filter(l => l.length > 0);
+        lines.sort((a, b) => b.localeCompare(a));
         return lines.join('\n');
       }
       case 'UNIQUE': {
@@ -436,6 +546,30 @@ export class FormulaEngine {
       case 'CHECKLIST': {
         const text = textOrSelectArg(0);
         return text.split('\n').filter(l => l.trim().length > 0).map(l => `- [ ] ${l}`).join('\n');
+      }
+      case 'INDENT': {
+        const text = textOrSelectArg(0);
+        const spaces = ' '.repeat(numArg(1, 2));
+        return text.split('\n').map(l => l ? spaces + l : l).join('\n');
+      }
+      case 'UNINDENT': {
+        const text = textOrSelectArg(0);
+        const count = numArg(1, 2);
+        return text.split('\n').map(l => l.replace(new RegExp(`^[ ]{1,${count}}`), '')).join('\n');
+      }
+
+      // --- DateTime Helpers ---
+      case 'YEAR': {
+        const d = args[0] ? new Date(args[0]) : new Date();
+        return isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
+      }
+      case 'MONTH': {
+        const d = args[0] ? new Date(args[0]) : new Date();
+        return isNaN(d.getTime()) ? new Date().getMonth() + 1 : d.getMonth() + 1;
+      }
+      case 'DAY': {
+        const d = args[0] ? new Date(args[0]) : new Date();
+        return isNaN(d.getTime()) ? new Date().getDate() : d.getDate();
       }
 
       // --- Encoding & Hashing ---
@@ -557,3 +691,85 @@ type ASTNode =
   | { type: 'Literal'; value: any }
   | { type: 'BinaryOp'; op: string; left: ASTNode; right: ASTNode }
   | { type: 'Call'; name: string; args: ASTNode[] };
+
+export interface FormulaFunctionInfo {
+  name: string;
+  description: string;
+  example: string;
+  category: string;
+}
+
+export const FORMULA_FUNCTIONS: FormulaFunctionInfo[] = [
+  // Text
+  { name: 'UPPER', description: 'Convert text to uppercase', example: 'UPPER(selection)', category: 'Text' },
+  { name: 'LOWER', description: 'Convert text to lowercase', example: 'LOWER(selection)', category: 'Text' },
+  { name: 'TITLE', description: 'Convert to Title Case', example: 'TITLE(selection)', category: 'Text' },
+  { name: 'TRIM', description: 'Strip leading & trailing whitespace', example: 'TRIM(selection)', category: 'Text' },
+  { name: 'LEN', description: 'Character length of text', example: 'LEN(selection)', category: 'Text' },
+  { name: 'SLUGIFY', description: 'Convert text to URL-friendly slug', example: 'SLUGIFY(selection)', category: 'Text' },
+  { name: 'REVERSE', description: 'Reverse character string', example: 'REVERSE(selection)', category: 'Text' },
+  { name: 'REPEAT', description: 'Repeat string N times', example: 'REPEAT(selection, 3)', category: 'Text' },
+
+  // Markdown
+  { name: 'BOLD', description: 'Wrap in bold (**text**)', example: 'BOLD(selection)', category: 'Markdown' },
+  { name: 'ITALIC', description: 'Wrap in italic (*text*)', example: 'ITALIC(selection)', category: 'Markdown' },
+  { name: 'STRIKE', description: 'Wrap in strikethrough (~~text~~)', example: 'STRIKE(selection)', category: 'Markdown' },
+  { name: 'CODE', description: 'Wrap in inline code (`code`)', example: 'CODE(selection)', category: 'Markdown' },
+  { name: 'CODEBLOCK', description: 'Wrap in fenced code block', example: 'CODEBLOCK(selection, "typescript")', category: 'Markdown' },
+  { name: 'QUOTE', description: 'Wrap in blockquote (> text)', example: 'QUOTE(selection)', category: 'Markdown' },
+  { name: 'HEADING', description: 'Format as markdown heading', example: 'HEADING(selection, 2)', category: 'Markdown' },
+  { name: 'LINK', description: 'Create markdown link', example: 'LINK(selection, "https://")', category: 'Markdown' },
+  { name: 'IMAGE', description: 'Create markdown image', example: 'IMAGE("Alt text", "https://")', category: 'Markdown' },
+
+  // Wrap
+  { name: 'PARENTHESES', description: 'Wrap in ()', example: 'PARENTHESES(selection)', category: 'Wrap' },
+  { name: 'BRACKETS', description: 'Wrap in []', example: 'BRACKETS(selection)', category: 'Wrap' },
+  { name: 'BRACES', description: 'Wrap in {}', example: 'BRACES(selection)', category: 'Wrap' },
+  { name: 'ANGLES', description: 'Wrap in <>', example: 'ANGLES(selection)', category: 'Wrap' },
+  { name: 'SINGLEQUOTE', description: "Wrap in ''", example: 'SINGLEQUOTE(selection)', category: 'Wrap' },
+  { name: 'DOUBLEQUOTE', description: 'Wrap in ""', example: 'DOUBLEQUOTE(selection)', category: 'Wrap' },
+
+  // Lines
+  { name: 'SORT', description: 'Sort lines alphabetically A-Z', example: 'SORT(selection)', category: 'Lines' },
+  { name: 'SORTDESC', description: 'Sort lines reverse Z-A', example: 'SORTDESC(selection)', category: 'Lines' },
+  { name: 'UNIQUE', description: 'Remove duplicate lines', example: 'UNIQUE(selection)', category: 'Lines' },
+  { name: 'NUMBERLIST', description: 'Convert lines to numbered list', example: 'NUMBERLIST(selection)', category: 'Lines' },
+  { name: 'BULLETLIST', description: 'Convert lines to bulleted list', example: 'BULLETLIST(selection)', category: 'Lines' },
+  { name: 'CHECKLIST', description: 'Convert lines to task checklist', example: 'CHECKLIST(selection)', category: 'Lines' },
+  { name: 'INDENT', description: 'Indent lines by 2 spaces', example: 'INDENT(selection, 2)', category: 'Lines' },
+  { name: 'UNINDENT', description: 'Outdent lines by 2 spaces', example: 'UNINDENT(selection, 2)', category: 'Lines' },
+
+  // DateTime
+  { name: 'NOW', description: 'Current timestamp string', example: 'NOW()', category: 'DateTime' },
+  { name: 'TODAY', description: 'Current date YYYY-MM-DD', example: 'TODAY()', category: 'DateTime' },
+  { name: 'YEAR', description: 'Current or date year', example: 'YEAR()', category: 'DateTime' },
+  { name: 'MONTH', description: 'Current or date month', example: 'MONTH()', category: 'DateTime' },
+  { name: 'DAY', description: 'Current or date day', example: 'DAY()', category: 'DateTime' },
+
+  // Document Context
+  { name: 'LINE', description: 'Active cursor line number', example: 'LINE()', category: 'Document' },
+  { name: 'COL', description: 'Active cursor column number', example: 'COL()', category: 'Document' },
+  { name: 'LINECOUNT', description: 'Total document lines', example: 'LINECOUNT()', category: 'Document' },
+  { name: 'CHARCOUNT', description: 'Total document characters', example: 'CHARCOUNT()', category: 'Document' },
+  { name: 'WORDCOUNT', description: 'Total document word count', example: 'WORDCOUNT()', category: 'Document' },
+  { name: 'SELECTION', description: 'Current highlighted text', example: 'SELECTION()', category: 'Document' },
+
+  // Prompt & AI
+  { name: 'XML_TAG', description: 'Enclose text in XML tags', example: 'XML_TAG("user_query", selection)', category: 'Prompt' },
+  { name: 'SYSTEM_PROMPT', description: 'Generate structured system prompt', example: 'SYSTEM_PROMPT("Coding Expert", "Be concise")', category: 'Prompt' },
+  { name: 'UUID', description: 'Generate random UUID v4', example: 'UUID()', category: 'Utility' },
+  { name: 'INSERT', description: 'Force result to insert next to text without replacing selection', example: 'INSERT(" [Length: " + LEN(selection) + "]")', category: 'Utility' },
+  { name: 'REPLACE_SELECTION', description: 'Force result to explicitly replace active selection', example: 'REPLACE_SELECTION(TODAY())', category: 'Utility' }
+];
+
+export function getFormulaFunctionsByCategory(): Record<string, FormulaFunctionInfo[]> {
+  const grouped: Record<string, FormulaFunctionInfo[]> = {};
+  for (const fn of FORMULA_FUNCTIONS) {
+    if (!grouped[fn.category]) {
+      grouped[fn.category] = [];
+    }
+    grouped[fn.category].push(fn);
+  }
+  return grouped;
+}
+

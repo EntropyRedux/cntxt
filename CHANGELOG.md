@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-14 — Mobile Platform Target Specification & Cross-Platform Canonical Data Shapes
+- **Mobile (Android) Target Platform Specification**:
+  - Published [`project_brief_v1.1.md`](file:///c:/Projects/LocalActive/Repo/Active/CNTXT/generated-documents/context/project_brief_v1.1.md) and updated [`living_context.md`](file:///c:/Projects/LocalActive/Repo/Active/CNTXT/generated-documents/context/living_context.md) (v1.5) formally adopting Android (via Tauri v2 Mobile runtime) as an official target platform alongside Desktop (Windows/macOS/Linux) and Web.
+  - Documented mobile runtime architecture: touch ergonomics, soft keyboard layout handling, mobile accessory toolbar (`MobileAccessoryBar`), bottom navigation (`MobileBottomNav`), and Android Scoped Storage / Storage Access Framework (SAF) integration.
+- **Canonical Data Shapes Alignment (Option B Polyglot Invariant)**:
+  - Formally aligned with Core Architectural Invariant 3 (Option B): maintaining synchronized contract mirrors between `contracts/data_shapes.ts` and `generated-documents/context/contracts/data_shapes.ts` across multi-platform boundaries.
+  - Added `SupportedPlatformOS` and `DeviceProfile` domain shapes.
+  - Expanded `IPlatformBridge` and adapter runtime detection in `src/adapters/tauriRuntimeAdapter.ts` and `src/adapters/browserRuntimeAdapter.ts` to detect Android/iOS environments.
+  - Automated verification via `scripts/check-contract-sync.mjs` confirming 100% byte-identical synchronization.
+
+### 2026-09-14 — Interactive Action Buttons, Extensible Formula Engine & Selection Control
+- **Interactive In-Document Action Buttons (`[[action:id]]` & `[[action:id|Label]]`)**:
+  - Implemented live interactive button widgets embedded directly in markdown documents via CodeMirror `Decoration.replace` and `WidgetType`.
+  - Clicking in-document buttons executes formulas or sandboxed actions on-the-fly and reflects updates immediately in the active editor.
+- **Tri-State Selection Transformation Framework**:
+  - Added `selectionBehavior: 'auto' | 'replace' | 'insert'` to `Action` contract and state.
+  - Implemented 3-way toggle controls in both the full `ActionEditorModal.tsx` and in-sidebar `ActionManager.tsx`.
+  - `replace`: Guarantees the highlighted text is overwritten by the action output.
+  - `insert`: Guarantees highlighted text is preserved, inserting output adjacent at the end of selection.
+  - `auto`: Automatically infers intent based on whether the formula references `selection` or is a formatting transform.
+- **Extensible Open Plugin Registry for `FormulaEngine`**:
+  - Added `FormulaEngine.registerFunction(name, handler, metadata)` and instance-level `.registerFunction()` enabling runtime registration of custom formula functions.
+  - Registered functions automatically integrate into the AST parser and populate the Formula Builder UI catalog.
+  - Added `INSERT(expr)` and `REPLACE_SELECTION(expr)` built-in formula directives for granular text retention control.
+  - Over 50+ built-in functions supported across Text, Markdown, Wrap, Lines, Math, DateTime, and Document Context categories.
+- **Decoupled Headless Action Execution Service**:
+  - Implemented `src/services/actionExecutor.ts` coordinating execution between `EditorView`, document stores, formula evaluation, and JavaScript sandbox without coupling UI presenters to native IPC.
+  - Expanded `SandboxAPI` with `api.wrapSelection(prefix, suffix)`.
+- **Comprehensive Automated Test Suite**:
+  - Expanded vitest test suite to **86 automated unit tests** across 10 test files (`formulaParser`, `actionButtons`, `actionSandbox`, `actionStoreAndCompletion`, `templateVariables`, `tabStore`, `fileOps`, `findReplace`, `tokenEstimator`, `mermaidTheming`), all passing with 100% green status.
+  - Scanned 108 files with zero platform leaks outside `src/adapters/` via `npm run lint`.
+
+### 2026-09-13 — Post-Port Remediation & Architecture Hardening
+- Remediated all 14 audit defects from Reconciled Port Audit across Batches 1–4.
+- Hardened `actionSandbox.ts` with regex constructor/eval scanner, shadowed globals, and frozen `safeApi`.
+- Gated background processes (Token Estimator, Autosave, Live Markdown Sync) under **Settings -> Experimental**.
+- Hardened Tauri native file commands with canonicalization and canonical system root whitelisting (`src-tauri/src/commands/file.rs`).
+- Replaced dangerous shell metacharacters and eliminated shell injection in `open_external` using `open = "5.3"` crate.
+- Isolated all synthetic sample data strictly in `mocks/index.ts`.
+
 ### 2026-09-09 — Repository & Documentation Setup
 - Initialized public repository (`EntropyRedux/cntxt`) with baseline commit
 - Rewrote README.md to reflect the actual production repo layout, architecture rules, and current status

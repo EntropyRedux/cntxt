@@ -6,8 +6,10 @@
 export const STORAGE_KEYS = {
   SETTINGS: 'contextpad_settings',
   ACTIONS: 'contextpad_actions',
+  ACTIONS_UI: 'contextpad_actions_ui',
   WORKFLOWS: 'contextpad_workflows',
   TEMPLATES: 'contextpad_templates',
+  TEMPLATES_UI: 'contextpad_templates_ui',
   RIBBON: 'contextpad_modular_ribbon',
   FORMATTING_BUTTONS: 'contextpad_formatting_buttons',
   FORMATTING_MULTIROW: 'contextpad_formatting_multirow',

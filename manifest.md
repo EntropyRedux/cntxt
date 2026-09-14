@@ -40,6 +40,7 @@ All background processes (live token estimation, autosave loop, live markdown sy
 | Component | Location | Props Contract | Theme Tokens Used | Mock Data Used | Background Processes | Test Contract | Port Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `Editor` | `src/components/Editor/Editor.tsx` | `{ tabId, content, onChange, onCursorChange }` | CodeMirror Theme Tokens (`theme/index.ts`) | None | Autosave timer | `tests/editor.contract.md` | PORT AS-IS |
+| `FloatingSearch` | `src/components/Editor/FloatingSearch.tsx` | In-editor floating search & replace | `--card-bg`, `--card-border`, `--text-primary`, `--accent-primary` | None | None | `tests/findReplace.test.ts` | PORT AS-IS |
 | `LivePreview` | `src/components/Preview/LivePreview.tsx` | `{ content, isVisible }` | `--bg-main`, `--text-primary`, `--card-bg`, `--card-border` | None | Mermaid / KaTeX render cache | `tests/livePreview.contract.md` | PORT AS-IS |
 
 ### Sidebar Panels & Utilities
@@ -48,7 +49,7 @@ All background processes (live token estimation, autosave loop, live markdown sy
 | `Sidebar` | `src/components/Sidebar/Sidebar.tsx` | Collapsible side panel | `--card-bg`, `--card-border`, `--text-primary` | None | None | `tests/sidebar.contract.md` | PORT AS-IS |
 | `FileExplorer` | `src/components/Sidebar/FileExplorer.tsx` | Workspace file tree & pinned files | `--card-bg`, `--card-border`, `--text-primary`, `--accent-primary` | `DEFAULT_PINNED_ITEMS`, `DEFAULT_OPENED_HISTORY` (demo only) | Native directory scan | `tests/fileExplorer.contract.md` | PORT AS-IS |
 | `OutlinePanel` | `src/components/Sidebar/OutlinePanel.tsx` | Markdown heading tree | `--card-bg`, `--card-border`, `--text-primary` | None | AST parsing on tab switch | `tests/outline.contract.md` | PORT AS-IS |
-| `ActionManager` | `src/components/Sidebar/ActionManager.tsx` | Sandboxed script manager | `--card-bg`, `--card-border`, `--text-primary`, `--status-error` | None | Sandbox execution | `tests/actionSandbox.contract.md` | PORT AS-IS |
+| `ActionManager` | `src/components/Sidebar/ActionManager.tsx` | Sandboxed script & formula manager | `--card-bg`, `--card-border`, `--text-primary`, `--status-error` | None | Sandbox execution | `tests/actionSandbox.contract.md` | PORT AS-IS |
 | `TemplateManager` | `src/components/Sidebar/TemplateManager.tsx` | Reusable template snippets | `--card-bg`, `--card-border`, `--text-primary`, `--accent-primary` | None | None | `tests/template.contract.md` | PORT AS-IS |
 | `WorkflowManager` | `src/components/Sidebar/WorkflowManager.tsx` | Multi-step workflows | `--card-bg`, `--card-border`, `--text-primary`, `--accent-primary` | None | Sequential execution | `tests/workflow.contract.md` | PORT AS-IS |
 | `TokenAnalytics` | `src/components/Sidebar/TokenAnalytics.tsx` | Live LLM token estimation | `--card-bg`, `--card-border`, `--text-primary`, `--accent-primary` | None | Token estimator loop | `tests/tokenEstimator.contract.md` | PORT AS-IS |
@@ -59,6 +60,7 @@ All background processes (live token estimation, autosave loop, live markdown sy
 | Component | Location | Props Contract | Theme Tokens Used | Mock Data Used | Background Processes | Test Contract | Port Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `ActionEditorModal` | `src/components/Modals/ActionEditorModal.tsx` | `{ isOpen, onClose, actionId }` | `--card-bg`, `--card-border`, `--status-error`, `--text-primary` | None | Sandbox test runner | `tests/actionEditor.contract.md` | PORT AS-IS |
+| `TemplateVariableModal`| `src/components/Modals/TemplateVariableModal.tsx` | Template variable filler | `--card-bg`, `--card-border`, `--text-primary`, `--accent-primary` | None | None | `tests/templateVariables.test.ts` | PORT AS-IS |
 | `RibbonCustomizerModal`| `src/components/Modals/RibbonCustomizerModal.tsx` | `{ isOpen, onClose }` | `--card-bg`, `--card-border`, `--text-primary` | None | None | `tests/ribbonCustomizer.contract.md` | PORT AS-IS |
 | `FormattingCustomizerModal` | `src/components/Modals/FormattingCustomizerModal.tsx` | `{ isOpen, onClose }` | `--card-bg`, `--card-border`, `--text-primary` | None | None | `tests/formattingCustomizer.contract.md` | PORT AS-IS |
 

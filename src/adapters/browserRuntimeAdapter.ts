@@ -262,6 +262,14 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
       });
     },
 
+    readDirectory: async (_path: string): Promise<BridgeDirectoryEntry[] | null> => {
+      return null;
+    },
+
+    readFile: async (_path: string): Promise<string | null> => {
+      return null;
+    },
+
     saveFile: async (_path: string, _content: string): Promise<boolean> => {
       return true;
     },
@@ -435,7 +443,10 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
 
   public platform: IPlatformBridge = {
     os: (() => {
-      const p = navigator.platform.toLowerCase();
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+      const p = typeof navigator !== 'undefined' ? navigator.platform.toLowerCase() : '';
+      if (ua.includes('android')) return 'android';
+      if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) return 'ios';
       if (p.includes('mac')) return 'macos';
       if (p.includes('win')) return 'windows';
       if (p.includes('linux')) return 'linux';
@@ -443,7 +454,10 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     })(),
     isTouch: typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints > 0)),
     isMac: typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0,
-    isMobile: typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints > 0)) && window.innerWidth < 768
+    isMobile: typeof window !== 'undefined' && (
+      /android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (('ontouchstart' in window || (navigator.maxTouchPoints > 0)) && window.innerWidth < 768)
+    )
   };
 
   public theme: IThemeBridge = {

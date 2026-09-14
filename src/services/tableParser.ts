@@ -83,17 +83,17 @@ export function formatTableCellHtml(text: string): string {
     return `<span class="cm-table-math inline-flex align-middle">${res.html}</span>`;
   });
 
-  // 2. Process inline code: `code`
-  formatted = formatted.replace(/`([^`\n]+)`/g, '<code class="px-1.5 py-0.5 rounded text-[11px] font-mono bg-[#27272F] text-[#38BDF8] border border-[#3F3F46]">$1</code>');
+  // 2. Process inline code: `code` (use cm-live-code-pill to match inline code outside tables)
+  formatted = formatted.replace(/`([^`\n]+)`/g, '<code class="cm-live-code-pill font-mono">$1</code>');
 
   // 3. Process bold: **bold**
-  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong class="cm-live-bold font-bold">$1</strong>');
 
   // 4. Process italic: *italic*
-  formatted = formatted.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+  formatted = formatted.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em class="cm-live-italic italic">$1</em>');
 
   // 5. Process links: [text](url)
-  formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[#38BDF8] underline hover:text-[#7DD3FC]">$1</a>');
+  formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[var(--accent-primary)] underline hover:opacity-80 transition-opacity">$1</a>');
 
   return formatted;
 }

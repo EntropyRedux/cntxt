@@ -4,7 +4,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
-import { execUndo, execRedo, querySelector, useRuntimeBridge } from '../../adapters';
+import { execUndo, execRedo, addWindowListener, useRuntimeBridge } from '../../adapters';
 
 interface MenuBarProps {
   onOpenFile: () => void;
@@ -24,7 +24,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const { createTab, saveCurrentTab, closeTab, closeAllTabs, activeTabId, tabs, duplicateTab } = useTabStore();
-  const { settings, updateSettings, toggleSidebar, togglePreview, toggleStatusBar, setActiveSidebarTab } = useSettingsStore();
+  const { settings, updateSettings, toggleSidebar, togglePreview, toggleStatusBar, toggleRibbon, toggleMobileAccessoryBar, setActiveSidebarTab } = useSettingsStore();
   const { templates, openVariableModal, resetToDefaults: resetTemplates } = useTemplateStore();
   const { actions, openActionEditor, resetToDefaults: resetActions } = useActionStore();
   const { addNotification } = useNotificationStore();
@@ -35,8 +35,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         setOpenMenu(null);
       }
     };
-    window.addEventListener('mousedown', handleClickOutside);
-    return () => window.removeEventListener('mousedown', handleClickOutside);
+    return addWindowListener('mousedown', handleClickOutside);
   }, []);
 
   const handleExportWorkspace = async () => {
@@ -87,10 +86,11 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       items: [
         { label: 'Undo', shortcut: 'Ctrl+Z', action: () => execUndo() },
         { label: 'Redo', shortcut: 'Ctrl+Y', action: () => execRedo(), divider: true },
-        { label: 'Fill Template Variables...', shortcut: 'Ctrl+Alt+V', action: () => openVariableModal() },
-        { label: 'Find & Replace in Editor', shortcut: 'Ctrl+F', action: () => {
-          const cm = querySelector('.cm-editor');
-          cm?.focus();
+        { label: 'Find in Editor', shortcut: 'Ctrl+F', action: () => {
+          window.dispatchEvent(new CustomEvent('open-search', { detail: { mode: 'find' } }));
+        }},
+        { label: 'Replace in Editor', shortcut: 'Ctrl+H', action: () => {
+          window.dispatchEvent(new CustomEvent('open-search', { detail: { mode: 'replace' } }));
         }}
       ]
     },
@@ -100,6 +100,15 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       items: [
         { label: 'Toggle Sidebar', shortcut: 'Ctrl+B', action: toggleSidebar },
         { label: 'Toggle Live Preview', shortcut: 'Ctrl+P', action: togglePreview },
+        { 
+          label: settings.showRibbon ? 'Hide Modular Ribbon' : 'Show Modular Ribbon', 
+          shortcut: 'Ctrl+Shift+R', 
+          action: toggleRibbon 
+        },
+        { 
+          label: (settings.showMobileAccessoryBar ?? true) ? 'Hide Markdown Formatting quick buttons' : 'Show Markdown Formatting quick buttons', 
+          action: toggleMobileAccessoryBar 
+        },
         { label: 'Toggle Status Bar', action: toggleStatusBar, divider: true },
         { label: 'Show File Explorer', action: () => setActiveSidebarTab('explorer') },
         { label: 'Show Document Outline', action: () => setActiveSidebarTab('outline') },

@@ -20,6 +20,7 @@ interface SettingsState {
   toggleActivityBar: () => void;
   toggleRibbon: () => void;
   setRibbonVisible: (visible: boolean) => void;
+  toggleMenuBar: () => void;
   togglePreview: () => void;
   toggleEditorMode: () => void;
   setEditorMode: (mode: 'raw' | 'rendered') => void;
@@ -38,6 +39,8 @@ const DEFAULT_SETTINGS: ViewSettings = {
   showBreadcrumb: true,
   showActivityBar: true,
   showSidebar: true,
+  showRibbon: true,
+  showMenuBar: true,
   activeSidebarTab: 'templates',
   showCodeBlockMarkers: true,
   showLivePreview: false,
@@ -72,7 +75,6 @@ const DEFAULT_SETTINGS: ViewSettings = {
   touchOptimized: false,
   sidebarOverlay: false,
   showMobileAccessoryBar: true,
-  showRibbon: true,
   enableExperimentalSettings: false,
   enableLiveTokenEstimator: true,
   enableAutosave: true,
@@ -181,6 +183,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setRibbonVisible: (showRibbon: boolean) => {
     get().updateSettings({ showRibbon });
+  },
+
+  toggleMenuBar: () => {
+    const showMenuBar = !(get().settings.showMenuBar ?? true);
+    get().updateSettings({ showMenuBar });
   },
 
   togglePreview: () => {

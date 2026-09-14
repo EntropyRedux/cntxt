@@ -4,7 +4,7 @@ import {
   ListTree, 
   LayoutTemplate, 
   Terminal, 
-  Coins, 
+  Workflow, 
   Settings,
   SlidersHorizontal
 } from 'lucide-react';
@@ -19,7 +19,7 @@ export const MobileBottomNav: React.FC = () => {
     { id: 'outline', label: 'Outline', icon: ListTree },
     { id: 'templates', label: 'Templates', icon: LayoutTemplate },
     { id: 'actions', label: 'Actions', icon: Terminal },
-    { id: 'tokens', label: 'Tokens', icon: Coins },
+    { id: 'workflows', label: 'Workflows', icon: Workflow },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

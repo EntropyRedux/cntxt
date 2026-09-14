@@ -47,13 +47,13 @@ const findFileInTree = (tree: VirtualFile[], name: string): VirtualFile | null =
   return null;
 };
 
-const findFolderInTree = (tree: VirtualFile[], idOrName: string): VirtualFile | null => {
+const findFolderInTree = (tree: VirtualFile[], idOrNameOrPath: string): VirtualFile | null => {
   for (const item of tree) {
-    if (item.type === 'folder' && (item.id === idOrName || item.name === idOrName)) {
+    if (item.type === 'folder' && (item.id === idOrNameOrPath || item.name === idOrNameOrPath || (item.path && item.path === idOrNameOrPath))) {
       return item;
     }
     if (item.type === 'folder' && item.children) {
-      const found = findFolderInTree(item.children, idOrName);
+      const found = findFolderInTree(item.children, idOrNameOrPath);
       if (found) return found;
     }
   }
@@ -65,23 +65,39 @@ export const FileExplorer: React.FC = () => {
   const [files, setFiles] = useState<VirtualFile[]>([]);
 
   useEffect(() => {
-    bridge.storage.getItem('contextpad_virtual_files').then(saved => {
-      if (saved) {
-        try {
-          setFiles(JSON.parse(saved));
-        } catch {
-          if (IS_PROTOTYPE_DEMO_MODE) {
-            setFiles(INITIAL_PROJECT_FILES);
+    const loadFiles = async () => {
+      try {
+        const saved = await bridge.storage.getItem('contextpad_virtual_files');
+        if (saved) {
+          try {
+            setFiles(JSON.parse(saved));
+          } catch {
+            setFiles(IS_PROTOTYPE_DEMO_MODE ? INITIAL_PROJECT_FILES : []);
           }
+        } else if (IS_PROTOTYPE_DEMO_MODE) {
+          setFiles(INITIAL_PROJECT_FILES);
+        } else {
+          setFiles([]);
         }
-      } else if (IS_PROTOTYPE_DEMO_MODE) {
-        setFiles(INITIAL_PROJECT_FILES);
+      } catch {
+        setFiles(IS_PROTOTYPE_DEMO_MODE ? INITIAL_PROJECT_FILES : []);
       }
-    }).catch(() => {
-      if (IS_PROTOTYPE_DEMO_MODE) {
-        setFiles(INITIAL_PROJECT_FILES);
-      }
-    });
+    };
+
+    loadFiles();
+
+    const handleStorageRefresh = () => {
+      loadFiles();
+    };
+
+    window.addEventListener('focus', handleStorageRefresh);
+    window.addEventListener('storage', handleStorageRefresh);
+    window.addEventListener('contextpad_files_updated', handleStorageRefresh);
+    return () => {
+      window.removeEventListener('focus', handleStorageRefresh);
+      window.removeEventListener('storage', handleStorageRefresh);
+      window.removeEventListener('contextpad_files_updated', handleStorageRefresh);
+    };
   }, [bridge.storage]);
 
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
@@ -115,32 +131,96 @@ export const FileExplorer: React.FC = () => {
   } = useFileHistoryStore();
   const { addNotification } = useNotificationStore();
 
-  const toggleFolder = (folderId: string) => {
-    setExpandedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }));
+  const toggleFolder = async (folderId: string, folderPath?: string) => {
+    const willExpand = !expandedFolders[folderId];
+    setExpandedFolders(prev => ({ ...prev, [folderId]: willExpand }));
+
+    // If expanding, dynamically check if children need to be loaded from disk
+    if (willExpand && bridge.fs.readDirectory) {
+      const node = findFolderInTree(files, folderId);
+      const targetPath = node?.path || folderPath;
+
+      // If node has no loaded children (undefined or empty), fetch them live from disk
+      if (targetPath && (!node?.children || node.children.length === 0)) {
+        try {
+          const rawKids = await bridge.fs.readDirectory(targetPath);
+          if (rawKids && rawKids.length > 0) {
+            const mapKidsToVirtual = (entries: BridgeDirectoryEntry[]): VirtualFile[] => {
+              return entries.map(entry => ({
+                id: entry.id || entry.path || `item_${Math.random().toString(36).substr(2, 7)}`,
+                name: entry.name,
+                type: entry.type,
+                content: entry.content,
+                language: entry.language,
+                path: entry.path,
+                children: entry.children ? mapKidsToVirtual(entry.children) : undefined
+              }));
+            };
+
+            const mappedKids = mapKidsToVirtual(rawKids);
+            const updateTreeRecursively = (list: VirtualFile[]): VirtualFile[] => {
+              return list.map(item => {
+                if (item.id === folderId || (item.path && item.path === targetPath)) {
+                  return { ...item, children: mappedKids };
+                }
+                if (item.children) {
+                  return { ...item, children: updateTreeRecursively(item.children) };
+                }
+                return item;
+              });
+            };
+
+            setFiles(prev => {
+              const updated = updateTreeRecursively(prev);
+              safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'workspace files');
+              return updated;
+            });
+          }
+        } catch (err) {
+          console.warn('[FileExplorer] Could not read subfolder:', targetPath, err);
+        }
+      }
+    }
   };
 
-  const handleOpenFile = (file: { id?: string; name: string; content?: string; language?: string; path?: string | null }) => {
-    const existing = tabs.find(t => t.title === file.name || (file.path && t.filePath === file.path));
+  const handleOpenFile = async (file: { id?: string; name: string; content?: string; language?: string; path?: string | null }) => {
+    let fileContent = file.content;
+    if (fileContent === undefined && file.path && bridge.fs.readFile) {
+      try {
+        const diskContent = await bridge.fs.readFile(file.path);
+        if (diskContent !== null) {
+          fileContent = diskContent;
+        }
+      } catch (err) {
+        console.warn('Could not read file from disk:', err);
+      }
+    }
+
+    const existing = tabs.find(t => (file.path && t.filePath === file.path) || t.title === file.name);
     if (existing) {
+      if (fileContent !== undefined && existing.content !== fileContent && !existing.isDirty) {
+        useTabStore.getState().updateTabContent(existing.id, fileContent);
+      }
       setActiveTabId(existing.id);
     } else {
-      createTab(file.name, file.content || '', (file.language as any) || 'markdown', file.path);
+      createTab(file.name, fileContent || '', (file.language as any) || 'markdown', file.path);
     }
     recordOpenedFile({
-      id: file.id || file.name,
+      id: file.id || file.path || file.name,
       name: file.name,
       type: 'file',
       path: file.path,
       language: file.language || 'markdown',
-      content: file.content
+      content: fileContent
     });
   };
 
   const handleOpenPinnedItem = (item: PinnedItem) => {
     if (item.type === 'folder') {
-      const target = findFolderInTree(files, item.id) || findFolderInTree(files, item.name);
+      const target = findFolderInTree(files, item.id) || findFolderInTree(files, item.name) || (item.path ? findFolderInTree(files, item.path) : null);
       const folderId = target?.id || item.id;
-      setExpandedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }));
+      const folderPath = target?.path || item.path;
+      toggleFolder(folderId, folderPath);
       setCollapsedSections(prev => ({ ...prev, workspace: false }));
       addNotification('Folder', `Toggled "${item.name}" in workspace tree`, 'info');
       return;
@@ -159,14 +239,12 @@ export const FileExplorer: React.FC = () => {
 
   const handleOpenHistoryItem = (historyItem: OpenedFileRecord) => {
     if (historyItem.type === 'folder') {
-      const target = findFolderInTree(files, historyItem.id) || findFolderInTree(files, historyItem.name);
+      const target = findFolderInTree(files, historyItem.id) || findFolderInTree(files, historyItem.name) || (historyItem.path ? findFolderInTree(files, historyItem.path) : null);
       const targetId = target ? target.id : historyItem.id;
+      const targetPath = target?.path || historyItem.path;
 
-      // Toggle expanded state
-      setExpandedFolders(prev => ({
-        ...prev,
-        [targetId]: !prev[targetId]
-      }));
+      // Toggle expanded state and load from disk if needed
+      toggleFolder(targetId, targetPath);
 
       // Ensure workspace files section is expanded
       setCollapsedSections(prev => ({ ...prev, workspace: false }));
@@ -175,7 +253,8 @@ export const FileExplorer: React.FC = () => {
       recordOpenedFile({
         id: targetId,
         name: historyItem.name,
-        type: 'folder'
+        type: 'folder',
+        path: targetPath
       });
 
       addNotification('Folder', `Toggled "${historyItem.name}" in workspace tree`, 'info');
@@ -269,6 +348,7 @@ export const FileExplorer: React.FC = () => {
         id: folderId,
         name: dirResult.name,
         type: 'folder',
+        path: dirResult.path,
         children: mapEntriesToVirtual(dirResult.entries)
       };
 
@@ -294,7 +374,8 @@ export const FileExplorer: React.FC = () => {
       recordOpenedFile({
         id: folderId,
         name: dirResult.name,
-        type: 'folder'
+        type: 'folder',
+        path: dirResult.path
       });
 
       addNotification('Folder Workspace Added', `"${dirResult.name}" expanded in Workspace Files`, 'success');
@@ -365,18 +446,42 @@ export const FileExplorer: React.FC = () => {
 
           {!collapsedSections.workspace && (
             <div className="flex flex-col gap-0.5 mt-1">
-              {files.map(item => (
-                <FileTreeNode
-                  key={item.id}
-                  item={item}
-                  activeFileName={activeTab?.title}
-                  expandedFolders={expandedFolders}
-                  toggleFolder={toggleFolder}
-                  onOpenFile={handleOpenFile}
-                  isPinned={isPinned}
-                  onTogglePin={handleTogglePin}
-                />
-              ))}
+              {files.length === 0 ? (
+                <div className="text-center py-5 px-3 bg-[var(--card-bg)]/40 rounded-lg border border-dashed border-[var(--border-subtle)] my-1">
+                  <Folder className="w-7 h-7 text-[var(--text-muted)] mx-auto mb-2 opacity-50" />
+                  <p className="text-[11px] text-[var(--text-secondary)] font-medium mb-0.5">No Workspace Opened</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mb-3">Open a folder or file to explore project files</p>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      onClick={handleNativeOpenFolder}
+                      className="px-2.5 py-1.5 bg-[var(--accent-primary)] text-white text-[11px] font-medium rounded hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                      <FolderPlus className="w-3.5 h-3.5" />
+                      <span>Open Folder</span>
+                    </button>
+                    <button
+                      onClick={handleNativeOpenFile}
+                      className="px-2.5 py-1 bg-[var(--card-bg)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-[10px] font-medium rounded hover:bg-[var(--card-hover-bg)] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>Open File</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                files.map(item => (
+                  <FileTreeNode
+                    key={item.id}
+                    item={item}
+                    activeFileName={activeTab?.title}
+                    expandedFolders={expandedFolders}
+                    toggleFolder={toggleFolder}
+                    onOpenFile={handleOpenFile}
+                    isPinned={isPinned}
+                    onTogglePin={handleTogglePin}
+                  />
+                ))
+              )}
             </div>
           )}
         </div>
@@ -610,7 +715,7 @@ const FileTreeNode: React.FC<{
   item: VirtualFile;
   activeFileName?: string;
   expandedFolders: Record<string, boolean>;
-  toggleFolder: (id: string) => void;
+  toggleFolder: (id: string, path?: string) => void;
   onOpenFile: (file: VirtualFile) => void;
   isPinned: (idOrName: string) => boolean;
   onTogglePin: (item: PinnedItem) => void;
@@ -623,7 +728,7 @@ const FileTreeNode: React.FC<{
       <div>
         <div className="group/folder relative flex items-center">
           <button
-            onClick={() => toggleFolder(item.id)}
+            onClick={() => toggleFolder(item.id, item.path)}
             className="w-full flex items-center gap-1.5 p-1.5 hover:bg-[var(--card-hover-bg)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-left pr-7 cursor-pointer"
           >
             {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />}
@@ -633,7 +738,7 @@ const FileTreeNode: React.FC<{
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onTogglePin({ id: item.id, name: item.name, type: 'folder' });
+              onTogglePin({ id: item.id, name: item.name, type: 'folder', path: item.path });
             }}
             title={pinned ? "Unpin folder" : "Pin folder to quick access"}
             aria-label={pinned ? "Unpin folder" : "Pin folder to quick access"}
@@ -648,20 +753,31 @@ const FileTreeNode: React.FC<{
         </div>
 
         {/* Nested folders: clicking any nested folder expands or collapses it recursively */}
-        {isExpanded && item.children && (
+        {isExpanded && (
           <div className="pl-3 border-l border-[var(--border-primary)] ml-2 my-0.5 space-y-0.5">
-            {item.children.map(child => (
-              <FileTreeNode
-                key={child.id}
-                item={child}
-                activeFileName={activeFileName}
-                expandedFolders={expandedFolders}
-                toggleFolder={toggleFolder}
-                onOpenFile={onOpenFile}
-                isPinned={isPinned}
-                onTogglePin={onTogglePin}
-              />
-            ))}
+            {item.children && item.children.length > 0 ? (
+              item.children.map(child => (
+                <FileTreeNode
+                  key={child.id}
+                  item={child}
+                  activeFileName={activeFileName}
+                  expandedFolders={expandedFolders}
+                  toggleFolder={toggleFolder}
+                  onOpenFile={onOpenFile}
+                  isPinned={isPinned}
+                  onTogglePin={onTogglePin}
+                />
+              ))
+            ) : item.children === undefined ? (
+              <div className="text-[10px] text-[var(--text-muted)] italic py-1 px-1.5 flex items-center gap-1.5 opacity-70 select-none">
+                <span className="w-2.5 h-2.5 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin"></span>
+                <span>Loading...</span>
+              </div>
+            ) : (
+              <div className="text-[10px] text-[var(--text-muted)] italic py-1 px-1.5 select-none">
+                (empty folder)
+              </div>
+            )}
           </div>
         )}
       </div>

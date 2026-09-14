@@ -92,9 +92,9 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     type: 'dark',
     colors: {
       appBg: '#18181B',
-      titlebarBg: '#1F1F24',
+      titlebarBg: '#141417',
       titlebarFg: '#D4D4D8',
-      titlebarBorder: '#2B2B33',
+      titlebarBorder: '#23232A',
       tabbarBg: '#18181B',
       tabActiveBg: '#1E1E1E',
       tabActiveFg: '#FFFFFF',
@@ -167,9 +167,9 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     type: 'light',
     colors: {
       appBg: '#EDF2FA',
-      titlebarBg: '#F0F4F9',
+      titlebarBg: '#DFE4EC',
       titlebarFg: '#1F1F1F',
-      titlebarBorder: '#D3D7DC',
+      titlebarBorder: '#CBD2DB',
       tabbarBg: '#E8EEF5',
       tabActiveBg: '#F8F9FA',
       tabActiveFg: '#0B57D0',
@@ -242,9 +242,9 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     type: 'light',
     colors: {
       appBg: '#F7F4EB',
-      titlebarBg: '#EFEAD8',
+      titlebarBg: '#DFD5C2',
       titlebarFg: '#2C2518',
-      titlebarBorder: '#DDD5BD',
+      titlebarBorder: '#D1C4AF',
       tabbarBg: '#EFEAD8',
       tabActiveBg: '#FCFAF2',
       tabActiveFg: '#8C5E24',
@@ -317,9 +317,9 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     type: 'dark',
     colors: {
       appBg: '#21252B',
-      titlebarBg: '#282C34',
+      titlebarBg: '#1E2227',
       titlebarFg: '#ABB2BF',
-      titlebarBorder: '#181A1F',
+      titlebarBorder: '#14161B',
       tabbarBg: '#21252B',
       tabActiveBg: '#282C34',
       tabActiveFg: '#61AFEF',
@@ -392,9 +392,9 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     type: 'dark',
     colors: {
       appBg: '#21222C',
-      titlebarBg: '#282A36',
+      titlebarBg: '#191A21',
       titlebarFg: '#F8F8F2',
-      titlebarBorder: '#191A21',
+      titlebarBorder: '#13141A',
       tabbarBg: '#21222C',
       tabActiveBg: '#282A36',
       tabActiveFg: '#BD93F9',
@@ -467,9 +467,9 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     type: 'dark',
     colors: {
       appBg: '#242933',
-      titlebarBg: '#2E3440',
+      titlebarBg: '#1E222A',
       titlebarFg: '#D8DEE9',
-      titlebarBorder: '#1E222A',
+      titlebarBorder: '#16181F',
       tabbarBg: '#242933',
       tabActiveBg: '#2E3440',
       tabActiveFg: '#88C0D0',
@@ -542,9 +542,9 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     type: 'dark',
     colors: {
       appBg: '#1E1F1C',
-      titlebarBg: '#272822',
+      titlebarBg: '#19181A',
       titlebarFg: '#F8F8F2',
-      titlebarBorder: '#141411',
+      titlebarBorder: '#121113',
       tabbarBg: '#1E1F1C',
       tabActiveBg: '#272822',
       tabActiveFg: '#A6E22E',
@@ -617,9 +617,9 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     type: 'dark',
     colors: {
       appBg: '#0D1117',
-      titlebarBg: '#161B22',
+      titlebarBg: '#010409',
       titlebarFg: '#C9D1D9',
-      titlebarBorder: '#30363D',
+      titlebarBorder: '#21262D',
       tabbarBg: '#0D1117',
       tabActiveBg: '#161B22',
       tabActiveFg: '#58A6FF',
@@ -692,7 +692,7 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     type: 'light',
     colors: {
       appBg: '#F6F8FA',
-      titlebarBg: '#FFFFFF',
+      titlebarBg: '#EAEEF2',
       titlebarFg: '#24292F',
       titlebarBorder: '#D0D7DE',
       tabbarBg: '#F6F8FA',
@@ -767,9 +767,9 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     type: 'dark',
     colors: {
       appBg: '#002B36',
-      titlebarBg: '#073642',
+      titlebarBg: '#00141A',
       titlebarFg: '#93A1A1',
-      titlebarBorder: '#00212B',
+      titlebarBorder: '#000E13',
       tabbarBg: '#002B36',
       tabActiveBg: '#073642',
       tabActiveFg: '#268BD2',
@@ -842,6 +842,180 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
  */
 export function getThemeTokens(name: ThemeName): ThemeTokens {
   return THEMES[name] || THEMES['contextpad-dark'];
+}
+
+export interface MermaidThemeConfig {
+  theme: 'base';
+  darkMode: boolean;
+  background: string;
+  primaryColor: string;
+  primaryTextColor: string;
+  primaryBorderColor: string;
+  secondaryColor: string;
+  secondaryTextColor: string;
+  secondaryBorderColor: string;
+  tertiaryColor: string;
+  tertiaryTextColor: string;
+  tertiaryBorderColor: string;
+  lineColor: string;
+  defaultLinkColor: string;
+  edgeLabelBackground: string;
+  labelTextColor: string;
+  nodeBorder: string;
+  nodeTextColor: string;
+  clusterBkg: string;
+  clusterBorder: string;
+  titleColor: string;
+  fontFamily: string;
+  fontSize: string;
+}
+
+/**
+ * Returns tailored Mermaid diagram theme variables for a given ThemeName.
+ */
+export function getMermaidThemeConfig(name: ThemeName): MermaidThemeConfig {
+  const theme = getThemeTokens(name);
+  const c = theme.colors;
+  const isDark = theme.type === 'dark';
+
+  let nodeBg = c.cardSecondaryBg;
+  let nodeFg = c.textPrimary;
+  let nodeBorder = c.accentPrimary;
+  let lineColor = c.accentPrimary;
+  let labelBg = c.cardBg;
+  let labelFg = c.textPrimary;
+  let clusterBg = c.cardSecondaryBg;
+  let clusterBorder = c.borderPrimary;
+
+  switch (name) {
+    case 'google-material-3':
+      nodeBg = c.accentContainer;
+      nodeFg = c.onAccentContainer;
+      nodeBorder = c.accentPrimary;
+      lineColor = c.accentPrimary;
+      labelBg = '#FFFFFF';
+      labelFg = '#1F1F1F';
+      clusterBg = '#EDF2FA';
+      clusterBorder = '#CBD2DB';
+      break;
+    case 'parchment':
+      nodeBg = '#EFEAD8';
+      nodeFg = '#2C2518';
+      nodeBorder = c.accentPrimary;
+      lineColor = c.accentPrimary;
+      labelBg = '#FCFAF2';
+      labelFg = '#2C2518';
+      clusterBg = '#F3EEDC';
+      clusterBorder = '#DDD5BD';
+      break;
+    case 'github-light':
+      nodeBg = '#DDF4FF';
+      nodeFg = '#0969DA';
+      nodeBorder = '#0969DA';
+      lineColor = '#0969DA';
+      labelBg = '#FFFFFF';
+      labelFg = '#24292F';
+      clusterBg = '#F6F8FA';
+      clusterBorder = '#D0D7DE';
+      break;
+    case 'dracula':
+      nodeBg = '#343746';
+      nodeFg = '#F8F8F2';
+      nodeBorder = '#BD93F9';
+      lineColor = '#8BE9FD';
+      labelBg = '#21222C';
+      labelFg = '#F1FA8C';
+      clusterBg = '#282A36';
+      clusterBorder = '#6272A4';
+      break;
+    case 'nord':
+      nodeBg = '#3B4252';
+      nodeFg = '#ECEFF4';
+      nodeBorder = '#88C0D0';
+      lineColor = '#81A1C1';
+      labelBg = '#2E3440';
+      labelFg = '#D8DEE9';
+      clusterBg = '#242933';
+      clusterBorder = '#4C566A';
+      break;
+    case 'monokai':
+      nodeBg = '#3E3D32';
+      nodeFg = '#F8F8F2';
+      nodeBorder = '#A6E22E';
+      lineColor = '#66D9EF';
+      labelBg = '#272822';
+      labelFg = '#FD971F';
+      clusterBg = '#1E1F1C';
+      clusterBorder = '#75715E';
+      break;
+    case 'one-dark':
+      nodeBg = '#2C313C';
+      nodeFg = '#ABB2BF';
+      nodeBorder = '#61AFEF';
+      lineColor = '#61AFEF';
+      labelBg = '#21252B';
+      labelFg = '#98C379';
+      clusterBg = '#282C34';
+      clusterBorder = '#3E4451';
+      break;
+    case 'solarized-dark':
+      nodeBg = '#073642';
+      nodeFg = '#EEE8D5';
+      nodeBorder = '#268BD2';
+      lineColor = '#2AA198';
+      labelBg = '#002B36';
+      labelFg = '#859900';
+      clusterBg = '#00212B';
+      clusterBorder = '#586E75';
+      break;
+    case 'github-dark':
+      nodeBg = '#21262D';
+      nodeFg = '#E6EDF3';
+      nodeBorder = '#2F81F7';
+      lineColor = '#58A6FF';
+      labelBg = '#161B22';
+      labelFg = '#E6EDF3';
+      clusterBg = '#0D1117';
+      clusterBorder = '#30363D';
+      break;
+    case 'contextpad-dark':
+    default:
+      nodeBg = isDark ? '#2E2E38' : '#D3E3FD';
+      nodeFg = isDark ? '#EDEDED' : '#041E49';
+      nodeBorder = isDark ? '#007ACC' : '#0B57D0';
+      lineColor = isDark ? '#38BDF8' : '#0B57D0';
+      labelBg = isDark ? '#1E1E24' : '#FFFFFF';
+      labelFg = isDark ? '#D4D4D8' : '#1F1F1F';
+      clusterBg = isDark ? '#18181C' : '#F0F4F9';
+      clusterBorder = isDark ? '#33333D' : '#D3D7DC';
+      break;
+  }
+
+  return {
+    theme: 'base',
+    darkMode: isDark,
+    background: c.editorBg,
+    primaryColor: nodeBg,
+    primaryTextColor: nodeFg,
+    primaryBorderColor: nodeBorder,
+    secondaryColor: c.cardHoverBg,
+    secondaryTextColor: c.textSecondary,
+    secondaryBorderColor: c.borderPrimary,
+    tertiaryColor: c.cardSecondaryBg,
+    tertiaryTextColor: c.textMuted,
+    tertiaryBorderColor: c.borderSubtle,
+    lineColor,
+    defaultLinkColor: lineColor,
+    edgeLabelBackground: labelBg,
+    labelTextColor: labelFg,
+    nodeBorder,
+    nodeTextColor: nodeFg,
+    clusterBkg: clusterBg,
+    clusterBorder,
+    titleColor: c.textPrimary,
+    fontFamily: 'Plus Jakarta Sans, sans-serif',
+    fontSize: '13px'
+  };
 }
 
 /**
@@ -922,4 +1096,16 @@ export function applyThemeTokensToElement(name: ThemeName, element: HTMLElement)
   style.setProperty('--status-warning', c.statusWarning);
   style.setProperty('--status-error', c.statusError);
   style.setProperty('--status-info', c.statusInfo);
+
+  // Expose Mermaid-specific themed CSS custom properties
+  const m = getMermaidThemeConfig(name);
+  style.setProperty('--mermaid-canvas-bg', m.background);
+  style.setProperty('--mermaid-node-bg', m.primaryColor);
+  style.setProperty('--mermaid-node-fg', m.primaryTextColor);
+  style.setProperty('--mermaid-node-border', m.primaryBorderColor);
+  style.setProperty('--mermaid-line-color', m.lineColor);
+  style.setProperty('--mermaid-label-bg', m.edgeLabelBackground);
+  style.setProperty('--mermaid-label-fg', m.labelTextColor);
+  style.setProperty('--mermaid-cluster-bg', m.clusterBkg);
+  style.setProperty('--mermaid-cluster-border', m.clusterBorder);
 }

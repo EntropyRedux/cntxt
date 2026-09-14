@@ -58,6 +58,11 @@ export function createCanvas(width?: number, height?: number): HTMLCanvasElement
   return canvas;
 }
 
+export function getBodyElement(): HTMLElement | null {
+  if (typeof document === 'undefined') return null;
+  return document.body;
+}
+
 export function appendToBody(element: HTMLElement): void {
   document.body.appendChild(element);
 }
@@ -81,8 +86,12 @@ export function getCssCustomProperty(name: string, fallback: string = ''): strin
 
 export function isDarkTheme(): boolean {
   if (typeof document === 'undefined') return true;
+  const themeType = document.documentElement.getAttribute('data-theme-type');
+  if (themeType) return themeType === 'dark';
   const theme = document.documentElement.getAttribute('data-theme');
-  return !theme?.includes('light');
+  if (!theme) return true;
+  if (theme === 'google-material-3' || theme === 'parchment' || theme === 'github-light') return false;
+  return !theme.includes('light');
 }
 
 export async function copyText(text: string, bridge?: IRuntimeBridge): Promise<boolean> {
@@ -111,7 +120,7 @@ export function querySelector(selector: string): HTMLElement | null {
 }
 
 export function addDocumentListener(type: string, listener: (e: any) => void): () => void {
-  if (typeof document === 'undefined') return () => {};
+  if (typeof document === 'undefined') return () => { };
   document.addEventListener(type, listener);
   return () => {
     document.removeEventListener(type, listener);
@@ -119,11 +128,11 @@ export function addDocumentListener(type: string, listener: (e: any) => void): (
 }
 
 export function addWindowListener(
-  type: string, 
-  listener: (e: any) => void, 
+  type: string,
+  listener: (e: any) => void,
   options?: boolean | AddEventListenerOptions
 ): () => void {
-  if (typeof window === 'undefined') return () => {};
+  if (typeof window === 'undefined') return () => { };
   window.addEventListener(type, listener, options);
   return () => {
     window.removeEventListener(type, listener, options as any);

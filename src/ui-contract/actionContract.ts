@@ -24,6 +24,7 @@ export interface UiMenuGroup {
 
 export interface AppUiEvents {
   onOpenFile: () => void | Promise<void>;
+  onOpenFolder: () => void | Promise<void>;
   onSaveFile: () => void | Promise<void>;
   onSaveAs: () => void | Promise<void>;
   onNewWindow: () => void | Promise<void>;
@@ -34,4 +35,13 @@ export interface AppUiEvents {
   onOpenVariableModal: () => void;
   onOpenActionEditor: (actionId?: string) => void;
   onToggleEditorMode: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onCut?: () => void | Promise<void>;
+  onCopy?: () => void | Promise<void>;
+  onPaste?: () => void | Promise<void>;
+  onSelectAll?: () => void;
+  onFind?: () => void;
+  onReplace?: () => void;
 }
+

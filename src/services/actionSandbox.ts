@@ -4,6 +4,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useTemplateStore } from '../store/templateStore';
 import { FormulaEngine } from './formulaParser';
 import { copyText, BrowserRuntimeAdapter } from '../adapters';
+import { editorRegistry } from './editor/editorRegistry';
 
 /**
  * Executes an arbitrary user JavaScript action inside a protected sandbox scope.
@@ -40,7 +41,15 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
       };
 
       const getSelection = (): string => {
-        if (typeof rawApi?.getSelection === 'function') return rawApi.getSelection();
+        if (typeof rawApi?.getSelection === 'function') {
+          const s = rawApi.getSelection();
+          if (s) return s;
+        }
+        const active = getActiveTab();
+        if (active) {
+          const regText = editorRegistry.getSelectedText(active.id);
+          if (regText) return regText;
+        }
         if (typeof window !== 'undefined' && window.getSelection) {
           return window.getSelection()?.toString() || '';
         }
@@ -54,12 +63,23 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
         }
         const active = getActiveTab();
         if (!active) return;
-        const sel = getSelection();
-        if (sel && active.content.includes(sel)) {
-          useTabStore.getState().updateTabContent(active.id, active.content.replace(sel, replacement));
-        } else {
-          useTabStore.getState().insertTextAtCursor(active.id, replacement);
+        const handledInView = editorRegistry.replaceSelection(active.id, replacement);
+        if (handledInView) return;
+        useTabStore.getState().insertTextAtCursor(active.id, replacement, true);
+      };
+
+      const wrapSelection = (prefix: string, suffix: string = prefix): void => {
+        if (typeof rawApi?.wrapSelection === 'function') {
+          rawApi.wrapSelection(prefix, suffix);
+          return;
         }
+        const active = getActiveTab();
+        if (active) {
+          const handledInView = editorRegistry.wrapSelection(active.id, prefix, suffix);
+          if (handledInView) return;
+        }
+        const sel = getSelection();
+        replaceSelection(`${prefix}${sel}${suffix}`);
       };
 
       const insertText = (text: string): void => {
@@ -73,7 +93,7 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
         }
         const active = getActiveTab();
         if (active) {
-          useTabStore.getState().insertTextAtCursor(active.id, text);
+          useTabStore.getState().insertTextAtCursor(active.id, text, false);
         }
       };
 
@@ -151,10 +171,12 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
         }
         const active = getActiveTab();
         const content = active?.content || '';
+        const selectedText = getSelection();
         const formulaEngine = new FormulaEngine({
           lineCount: content.split('\n').length,
           charCount: content.length,
-          wordCount: (content.trim().match(/\S+/g) || []).length
+          wordCount: (content.trim().match(/\S+/g) || []).length,
+          selectedText
         });
         const res = formulaEngine.evaluate(formula);
         return res.success ? res.value : null;
@@ -168,6 +190,7 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
         setContent: setText,
         getSelection,
         replaceSelection,
+        wrapSelection,
         insertText,
         insertAtCursor: insertText,
         getCursor: () => typeof rawApi?.getCursor === 'function' ? rawApi.getCursor() : { line: getActiveTab()?.cursorLine || 1, col: getActiveTab()?.cursorCol || 1 },
@@ -220,10 +243,10 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
         }
       };
 
-      // Fix R-008: Multi-layer defensive regex scanner blocking constructor, prototype, and eval access
-      const FORBIDDEN_PATTERN = /\bconstructor\b|\[\s*['"`]constructor['"`]\s*\]|__proto__|prototype|\beval\b/i;
+      // Multi-layer defensive regex scanner blocking constructor, prototype, eval, and dynamic import
+      const FORBIDDEN_PATTERN = /\bconstructor\b|\[\s*['"`]constructor['"`]\s*\]|__proto__|prototype|\beval\b|\bimport\s*\(|\bimport\b/i;
       if (FORBIDDEN_PATTERN.test(code)) {
-        throw new Error('Security Error: Prototype and constructor access are prohibited in sandboxed actions.');
+        throw new Error('Security Error: Prototype, constructor, and dynamic import access are prohibited in sandboxed actions.');
       }
 
       // Freeze safeApi and nested objects to prevent prototype tampering

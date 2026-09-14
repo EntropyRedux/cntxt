@@ -12,10 +12,13 @@ import {
   IStorageBridge, 
   IPlatformBridge, 
   IThemeBridge, 
-  BridgeFileResult, 
+  BridgeFileResult,
+  BridgeDirectoryEntry, 
   SupportedLanguage 
 } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from './storageKeys';
+import { applyThemeTokensToElement } from '../../theme/index';
+import { ThemeName } from '../ui-contract/themeContract';
 
 export class TauriRuntimeAdapter implements IRuntimeBridge {
   private inMemoryFallback: Map<string, string> = new Map();
@@ -106,7 +109,19 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         const selectedPath = await this.invokeTauri<string | null>('open_folder_dialog');
         if (!selectedPath) return null;
 
-        const entries = await this.invokeTauri<any[]>('read_directory', { path: selectedPath }) || [];
+        const rawEntries = await this.invokeTauri<any[]>('read_directory', { path: selectedPath }) || [];
+        const mapFileNodes = (nodes: any[]): BridgeDirectoryEntry[] => {
+          return nodes.map(node => ({
+            id: node.path || `node_${Math.random().toString(36).substr(2, 7)}`,
+            name: node.name,
+            type: (node.is_dir ? 'folder' : 'file') as 'file' | 'folder',
+            path: node.path,
+            language: node.is_dir ? undefined : this.detectLanguage(node.name),
+            children: node.children ? mapFileNodes(node.children) : undefined
+          }));
+        };
+
+        const entries = mapFileNodes(rawEntries);
         const filename = selectedPath.split(/[/\\]/).pop() || 'Workspace';
         return {
           name: filename,
@@ -115,6 +130,39 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         };
       } catch (err) {
         console.error('[TauriRuntimeAdapter] openDirectory error:', err);
+        return null;
+      }
+    },
+
+    readDirectory: async (path: string): Promise<BridgeDirectoryEntry[] | null> => {
+      try {
+        const rawEntries = await this.invokeTauri<any[]>('read_directory', { path });
+        if (!rawEntries) return null;
+
+        const mapFileNodes = (nodes: any[]): BridgeDirectoryEntry[] => {
+          return nodes.map(node => ({
+            id: node.path || `node_${Math.random().toString(36).substr(2, 7)}`,
+            name: node.name,
+            type: (node.is_dir ? 'folder' : 'file') as 'file' | 'folder',
+            path: node.path,
+            language: node.is_dir ? undefined : this.detectLanguage(node.name),
+            children: node.children ? mapFileNodes(node.children) : undefined
+          }));
+        };
+
+        return mapFileNodes(rawEntries);
+      } catch (err) {
+        console.error('[TauriRuntimeAdapter] readDirectory error:', err);
+        return null;
+      }
+    },
+
+    readFile: async (path: string): Promise<string | null> => {
+      try {
+        const content = await this.invokeTauri<string>('read_file', { path });
+        return content;
+      } catch (err) {
+        console.error('[TauriRuntimeAdapter] readFile error:', err);
         return null;
       }
     },
@@ -287,20 +335,27 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   public platform: IPlatformBridge = {
     os: (() => {
-      const p = navigator.platform.toLowerCase();
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+      const p = typeof navigator !== 'undefined' ? navigator.platform.toLowerCase() : '';
+      if (ua.includes('android')) return 'android';
+      if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) return 'ios';
       if (p.includes('mac')) return 'macos';
       if (p.includes('win')) return 'windows';
       if (p.includes('linux')) return 'linux';
-      return 'linux';
+      return 'windows';
     })(),
     isTouch: typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints > 0)),
-    isMac: navigator.platform.toUpperCase().indexOf('MAC') >= 0,
-    isMobile: false
+    isMac: typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0,
+    isMobile: typeof window !== 'undefined' && (
+      /android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (('ontouchstart' in window || (navigator.maxTouchPoints > 0)) && window.innerWidth < 768)
+    )
   };
 
   public theme: IThemeBridge = {
     applyTheme: (theme: string) => {
       if (typeof document !== 'undefined') {
+        applyThemeTokensToElement(theme as ThemeName, document.documentElement);
         document.documentElement.setAttribute('data-theme', theme);
         document.body.setAttribute('data-theme', theme);
       }

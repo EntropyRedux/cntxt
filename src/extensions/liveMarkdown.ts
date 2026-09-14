@@ -1,5 +1,11 @@
-import { Extension, RangeSetBuilder, Text, StateField, EditorState } from '@codemirror/state';
+import { Extension, RangeSetBuilder, Text, StateField, EditorState, Facet, StateEffect } from '@codemirror/state';
 import { EditorView, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
+
+export const refreshLiveMarkdownEffect = StateEffect.define<void>();
+
+export const liveThemeFacet = Facet.define<string, string>({
+  combine: (values) => values[values.length - 1] || 'contextpad-dark'
+});
 import { renderLatex } from '../services/mathRenderer';
 import { renderMermaidDiagram } from '../services/mermaidRenderer';
 import { 
@@ -8,8 +14,10 @@ import {
   formatTableCellHtml, 
   ParsedTable 
 } from '../services/tableParser';
-import { createElement, createTextNode, appendToBody, removeFromBody, isDarkTheme, copyText } from '../adapters';
+import { createElement, createTextNode, appendToBody, removeFromBody, isDarkTheme, copyText, getDocumentTheme } from '../adapters';
 import { IRuntimeBridge } from '../ui-contract/bridgeContract';
+import { useActionStore } from '../store/actionStore';
+import { executeActionById } from '../services/actionExecutor';
 
 let activeBridge: IRuntimeBridge | null = null;
 
@@ -95,13 +103,18 @@ class MermaidBlockWidget extends WidgetType {
   constructor(
     readonly code: string,
     readonly startPos: number,
+    readonly themeName: string,
     readonly isDark: boolean
   ) {
     super();
   }
 
   eq(other: MermaidBlockWidget): boolean {
-    return this.code === other.code && this.isDark === other.isDark;
+    return (
+      this.code === other.code &&
+      this.themeName === other.themeName &&
+      this.isDark === other.isDark
+    );
   }
 
   toDOM(view: EditorView): HTMLElement {
@@ -151,7 +164,7 @@ class MermaidBlockWidget extends WidgetType {
     canvas.innerHTML = '<span class="text-xs text-[var(--text-muted)] animate-pulse">Rendering diagram...</span>';
     container.appendChild(canvas);
 
-    renderMermaidDiagram(this.code, this.isDark).then((res) => {
+    renderMermaidDiagram(this.code, this.themeName).then((res) => {
       if (res.isError) {
         canvas.innerHTML = `<div class="p-3 text-xs text-red-400 bg-red-950/20 rounded border border-red-800/40 w-full font-mono"><div class="font-bold mb-1">Mermaid Syntax Warning:</div><div class="text-[11px] opacity-80">${res.error || 'Check diagram syntax'}</div></div>`;
       } else {
@@ -536,7 +549,7 @@ class LinkWidget extends WidgetType {
 
   toDOM(): HTMLElement {
     const a = createElement('a', {
-      className: 'cm-live-link text-[#38BDF8] underline underline-offset-2 hover:text-[#7DD3FC] cursor-pointer inline-flex items-center gap-1 font-medium bg-[#38BDF8]/10 px-1.5 py-0.5 rounded text-[0.95em] transition-colors',
+      className: 'cm-live-link text-[var(--accent-primary)] underline underline-offset-2 hover:opacity-80 cursor-pointer inline-flex items-center gap-1 font-medium bg-[var(--accent-container)]/30 px-1.5 py-0.5 rounded text-[0.95em] transition-colors',
       href: this.url,
       target: '_blank',
       rel: 'noopener noreferrer',
@@ -554,6 +567,129 @@ class LinkWidget extends WidgetType {
       e.stopPropagation();
     });
     return a;
+  }
+
+  ignoreEvent(): boolean {
+    return true;
+  }
+}
+
+// =========================================================================
+// Action Button Widget: [[action:actionId]] or [[action:actionId|Label]]
+// =========================================================================
+
+class ActionButtonWidget extends WidgetType {
+  constructor(
+    readonly rawToken: string,
+    readonly actionId: string,
+    readonly customLabel: string | undefined,
+    readonly actionName: string,
+    readonly codeType: string | undefined,
+    readonly from: number,
+    readonly to: number
+  ) {
+    super();
+  }
+
+  eq(other: ActionButtonWidget): boolean {
+    return (
+      this.rawToken === other.rawToken &&
+      this.actionId === other.actionId &&
+      this.customLabel === other.customLabel &&
+      this.actionName === other.actionName &&
+      this.codeType === other.codeType
+    );
+  }
+
+  toDOM(view: EditorView): HTMLElement {
+    const action = useActionStore.getState().actions.find(a => a.id === this.actionId);
+    const label = this.customLabel || action?.name || this.actionId;
+    const isFormula = action?.codeType === 'formula' || action?.code?.startsWith('FORMULA:');
+    const isMissing = !action;
+
+    if (isMissing) {
+      const missingSpan = createElement('span', {
+        className: 'cm-action-missing-widget',
+        title: `Action "${this.actionId}" not found in Action Scripts library.\nClick to place cursor here to edit syntax.`
+      });
+      missingSpan.innerHTML = `<span class="opacity-75">⚠️</span><span class="cm-action-missing-name">${this.customLabel || this.rawToken}</span><span class="cm-action-missing-badge">(missing)</span>`;
+      missingSpan.addEventListener('mousedown', (e) => e.stopPropagation());
+      missingSpan.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        let targetPos = this.from;
+        try {
+          const domPos = view.posAtDOM(missingSpan);
+          if (domPos !== null && domPos !== undefined) targetPos = domPos;
+        } catch {}
+        view.dispatch({ selection: { anchor: targetPos } });
+        view.focus();
+      });
+      return missingSpan;
+    }
+
+    const btn = createElement('button', {
+      type: 'button',
+      className: 'cm-action-btn-widget group',
+      title: `Action: ${action.name}\n${action.description ? action.description + '\n' : ''}• Click to run action\n• Alt+Click to edit syntax`
+    });
+
+    const playIcon = createElement('span', {
+      className: 'cm-action-btn-icon'
+    });
+    playIcon.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg>`;
+    btn.appendChild(playIcon);
+
+    const labelSpan = createElement('span', {
+      className: 'cm-action-btn-label',
+      textContent: label
+    });
+    btn.appendChild(labelSpan);
+
+    if (isFormula) {
+      const fxBadge = createElement('span', {
+        className: 'cm-action-badge-fx',
+        textContent: 'fx'
+      });
+      btn.appendChild(fxBadge);
+    }
+
+    const typeBadge = createElement('span', {
+      className: 'cm-action-badge-type',
+      textContent: 'BTN'
+    });
+    btn.appendChild(typeBadge);
+
+    // Prevent losing text selection on mousedown
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (e.altKey || e.ctrlKey) {
+        let targetPos = this.from;
+        try {
+          const domPos = view.posAtDOM(btn);
+          if (domPos !== null && domPos !== undefined) targetPos = domPos;
+        } catch {}
+        view.dispatch({ selection: { anchor: targetPos } });
+        view.focus();
+        return;
+      }
+
+      btn.classList.add('is-running');
+      try {
+        await executeActionById(this.actionId, view);
+      } finally {
+        btn.classList.remove('is-running');
+      }
+    });
+
+    return btn;
   }
 
   ignoreEvent(): boolean {
@@ -980,8 +1116,10 @@ function buildDecorations(state: EditorState): DecorationSet {
     const builder = new RangeSetBuilder<Decoration>();
     const doc = state.doc;
 
-    // Detect whether current app theme is dark
-    const isDark = isDarkTheme();
+    // Detect whether current app theme is dark and get current theme name
+    const facetTheme = state.facet(liveThemeFacet);
+    const currentTheme = facetTheme || getDocumentTheme();
+    const isDark = currentTheme === 'google-material-3' || currentTheme === 'parchment' || currentTheme === 'github-light' ? false : isDarkTheme();
 
     // 1. Scan document structures
     const codeBlocksByLine = findCodeBlocks(doc);
@@ -1033,7 +1171,7 @@ function buildDecorations(state: EditorState): DecorationSet {
               startLineObj.from,
               endLineObj.to,
               Decoration.replace({
-                widget: new MermaidBlockWidget(block.codeContent, startLineObj.from, isDark),
+                widget: new MermaidBlockWidget(block.codeContent, startLineObj.from, currentTheme, isDark),
                 block: true
               })
             );
@@ -1336,6 +1474,31 @@ function buildDecorations(state: EditorState): DecorationSet {
           });
         }
 
+        // Action Buttons: [[action:actionId]] or [[action:actionId|Label]]
+        const actionButtonRegex = /\[\[action:([^\]|\n]+)(?:\|([^\]\n]+))?\]\]/g;
+        while ((match = actionButtonRegex.exec(lineText)) !== null) {
+          const start = line.from + match.index;
+          const end = start + match[0].length;
+          const actionId = match[1].trim();
+          const customLabel = match[2]?.trim();
+          const action = useActionStore.getState().actions.find(a => a.id === actionId);
+          rangeDecos.push({
+            from: start,
+            to: end,
+            deco: Decoration.replace({
+              widget: new ActionButtonWidget(
+                match[0],
+                actionId,
+                customLabel,
+                action?.name || actionId,
+                action?.codeType,
+                start,
+                end
+              )
+            })
+          });
+        }
+
         // Links: [text](url) - negative lookbehind prevents matching ![alt](url)
         const linkRegex = /(?<!\!)\[([^\]]+)\]\(([^)]+)\)/g;
         while ((match = linkRegex.exec(lineText)) !== null) {
@@ -1522,7 +1685,14 @@ export const liveMarkdownField = StateField.define<DecorationSet>({
     return buildDecorations(state);
   },
   update(decorations, tr) {
-    if (tr.docChanged || tr.selection) {
+    const prevTheme = tr.startState.facet(liveThemeFacet);
+    const nextTheme = tr.state.facet(liveThemeFacet);
+    if (
+      tr.docChanged || 
+      tr.selection || 
+      prevTheme !== nextTheme ||
+      tr.effects.some(e => e.is(refreshLiveMarkdownEffect))
+    ) {
       return buildDecorations(tr.state);
     }
     return decorations.map(tr.changes);
@@ -1530,10 +1700,14 @@ export const liveMarkdownField = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f)
 });
 
-export function liveMarkdownExtension(enabled: boolean, bridge?: IRuntimeBridge): Extension {
+export function liveMarkdownExtension(
+  enabled: boolean, 
+  bridge?: IRuntimeBridge, 
+  themeName: string = 'contextpad-dark'
+): Extension {
   if (bridge) {
     activeBridge = bridge;
   }
   if (!enabled) return [];
-  return [liveMarkdownField];
+  return [liveThemeFacet.of(themeName), liveMarkdownField];
 }

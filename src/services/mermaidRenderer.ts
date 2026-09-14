@@ -1,34 +1,82 @@
 import mermaid from 'mermaid';
-import { getElementById, getCssCustomProperty } from '../adapters';
+import { getElementById } from '../adapters';
+import { getMermaidThemeConfig } from '../theme/index';
+import { ThemeName } from '../contracts/data_shapes';
 
-let isInitialized = false;
+let lastInitializedTheme: string | null = null;
 
-export function initializeMermaid(isDark: boolean = true) {
+export function initializeMermaid(themeInput: ThemeName | string | boolean = 'contextpad-dark') {
   try {
-    const primaryColor = getCssCustomProperty('--accent-primary', '#007ACC');
-    const primaryTextColor = getCssCustomProperty('--text-primary', isDark ? '#EDEDED' : '#1F1F1F');
-    const primaryBorderColor = getCssCustomProperty('--card-border', isDark ? '#38BDF8' : '#007ACC');
-    const lineColor = getCssCustomProperty('--accent-info', isDark ? '#38BDF8' : '#007ACC');
-    const secondaryColor = getCssCustomProperty('--card-bg', isDark ? '#1F1F24' : '#F0F4F9');
-    const tertiaryColor = getCssCustomProperty('--bg-main', isDark ? '#25252A' : '#E9EEF6');
-    const background = getCssCustomProperty('--bg-main', isDark ? '#18181B' : '#FFFFFF');
+    let themeName: ThemeName = 'contextpad-dark';
+    if (typeof themeInput === 'boolean') {
+      themeName = themeInput ? 'contextpad-dark' : 'google-material-3';
+    } else if (typeof themeInput === 'string' && themeInput) {
+      themeName = themeInput as ThemeName;
+    }
+
+    const config = getMermaidThemeConfig(themeName);
+
+    const primaryColor = config.primaryColor;
+    const primaryTextColor = config.primaryTextColor;
+    const primaryBorderColor = config.primaryBorderColor;
+    const lineColor = config.lineColor;
+    const edgeLabelBackground = config.edgeLabelBackground;
+    const labelTextColor = config.labelTextColor;
+    const clusterBkg = config.clusterBkg;
+    const clusterBorder = config.clusterBorder;
+    const background = config.background;
 
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'loose',
-      theme: isDark ? 'dark' : 'default',
+      theme: 'base',
       themeVariables: {
+        darkMode: config.darkMode,
+        background,
+        mainBkg: primaryColor,
         primaryColor,
         primaryTextColor,
         primaryBorderColor,
+        secondaryColor: config.secondaryColor,
+        secondaryTextColor: config.secondaryTextColor,
+        secondaryBorderColor: config.secondaryBorderColor,
+        tertiaryColor: config.tertiaryColor,
+        tertiaryTextColor: config.tertiaryTextColor,
+        tertiaryBorderColor: config.tertiaryBorderColor,
         lineColor,
-        secondaryColor,
-        tertiaryColor,
-        background,
-        fontFamily: 'Plus Jakarta Sans, sans-serif'
-      }
+        defaultLinkColor: lineColor,
+        edgeLabelBackground,
+        labelTextColor,
+        nodeBorder: primaryBorderColor,
+        nodeTextColor: primaryTextColor,
+        clusterBkg,
+        clusterBorder,
+        titleColor: config.titleColor,
+        fontFamily: config.fontFamily,
+        fontSize: config.fontSize
+      },
+      themeCSS: `
+        .node rect, .node circle, .node ellipse, .node polygon, .node path {
+          rx: 6px;
+          ry: 6px;
+          stroke-width: 1.5px;
+        }
+        .edgeLabel {
+          border-radius: 4px;
+          padding: 2px 4px;
+        }
+        .edgeLabel rect {
+          rx: 4px;
+          ry: 4px;
+          opacity: 0.95;
+        }
+        .label {
+          font-family: ${config.fontFamily};
+        }
+      `
     });
-    isInitialized = true;
+
+    lastInitializedTheme = themeName;
   } catch (e) {
     console.warn('Failed to initialize mermaid', e);
   }
@@ -38,21 +86,32 @@ const diagramCache = new Map<string, { svg: string; isError: boolean; error?: st
 
 let renderCounter = 0;
 
+export function clearMermaidCache(): void {
+  diagramCache.clear();
+}
+
 export async function renderMermaidDiagram(
   code: string,
-  isDark: boolean = true
+  themeInput: ThemeName | string | boolean = 'contextpad-dark'
 ): Promise<{ svg: string; isError: boolean; error?: string }> {
   const trimmed = code.trim();
   if (!trimmed) {
     return { svg: '', isError: false };
   }
 
-  const cacheKey = `${isDark ? 'dark' : 'light'}:${trimmed}`;
+  let themeName: ThemeName = 'contextpad-dark';
+  if (typeof themeInput === 'boolean') {
+    themeName = themeInput ? 'contextpad-dark' : 'google-material-3';
+  } else if (typeof themeInput === 'string' && themeInput) {
+    themeName = themeInput as ThemeName;
+  }
+
+  const cacheKey = `${themeName}:${trimmed}`;
   if (diagramCache.has(cacheKey)) {
     return diagramCache.get(cacheKey)!;
   }
 
-  initializeMermaid(isDark);
+  initializeMermaid(themeName);
 
   const id = `mermaid-render-${Date.now()}-${++renderCounter}`;
 

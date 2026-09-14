@@ -106,10 +106,19 @@ export const ShellFrame: React.FC = () => {
       useSettingsStore.getState().toggleRibbon();
     } else if (modifier && e.key.toLowerCase() === 'b') {
       e.preventDefault();
-      toggleActivityBar();
-    } else if (modifier && e.shiftKey && e.key.toLowerCase() === 'o') {
+      if (e.shiftKey) {
+        const show = useSettingsStore.getState().settings.showSidebar;
+        useSettingsStore.getState().updateSettings({ showSidebar: !show });
+      } else {
+        toggleActivityBar();
+      }
+    } else if (modifier && e.key.toLowerCase() === 'o') {
       e.preventDefault();
-      useSettingsStore.getState().setActiveSidebarTab('outline');
+      if (e.shiftKey) {
+        useSettingsStore.getState().setActiveSidebarTab('outline');
+      } else {
+        events.onOpenFile();
+      }
     } else if (modifier && e.key.toLowerCase() === 'm') {
       e.preventDefault();
       toggleEditorMode();
@@ -126,6 +135,12 @@ export const ShellFrame: React.FC = () => {
     } else if (modifier && e.key === '/') {
       e.preventDefault();
       setIsShortcutsOpen(true);
+    } else if (modifier && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      events.onFind?.();
+    } else if (modifier && e.key.toLowerCase() === 'h') {
+      e.preventDefault();
+      events.onReplace?.();
     } else if (modifier && e.altKey && e.key.toLowerCase() === 'v') {
       e.preventDefault();
       openVariableModal();

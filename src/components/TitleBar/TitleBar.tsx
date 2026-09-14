@@ -11,7 +11,8 @@ import {
   Wrench,
   LayoutTemplate,
   Smartphone,
-  Laptop
+  Laptop,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -46,6 +47,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
     toggleSidebarOverlay,
     toggleActivityBar, 
     toggleEditorMode, 
+    toggleRibbon,
     toggleStatusBar, 
     toggleTouchMode, 
     updateSettings, 
@@ -137,10 +139,12 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       items: [
         { label: 'Undo', shortcut: 'Ctrl+Z', action: () => execUndo() },
         { label: 'Redo', shortcut: 'Ctrl+Y', action: () => execRedo(), divider: true },
-        { label: 'Fill Template Variables...', shortcut: 'Ctrl+Alt+V', action: () => openVariableModal() },
-        { label: 'Find & Replace in Editor', shortcut: 'Ctrl+F', action: () => {
-          const cm = querySelector('.cm-editor');
-          cm?.focus();
+        { label: 'Fill Template Variables...', shortcut: 'Ctrl+Alt+V', action: () => openVariableModal(), divider: true },
+        { label: 'Find in Editor', shortcut: 'Ctrl+F', action: () => {
+          window.dispatchEvent(new CustomEvent('open-search', { detail: { mode: 'find' } }));
+        }},
+        { label: 'Replace in Editor', shortcut: 'Ctrl+H', action: () => {
+          window.dispatchEvent(new CustomEvent('open-search', { detail: { mode: 'replace' } }));
         }}
       ]
     },
@@ -356,6 +360,21 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           ) : (
             <Code2 className="w-3.5 h-3.5" />
           )}
+        </button>
+
+        {/* Modular Ribbon Toggle */}
+        <button
+          onClick={toggleRibbon}
+          title={settings.showRibbon ? 'Hide Modular Ribbon (Ctrl+Shift+R)' : 'Show Modular Ribbon (Ctrl+Shift+R)'}
+          aria-label={settings.showRibbon ? 'Hide Modular Ribbon' : 'Show Modular Ribbon'}
+          aria-pressed={settings.showRibbon}
+          className={`w-7 h-7 flex items-center justify-center rounded-md transition-all border ${
+            settings.showRibbon
+              ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80 shadow-xs'
+              : 'hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border-transparent'
+          }`}
+        >
+          <SlidersHorizontal className={`w-3.5 h-3.5 ${settings.showRibbon ? 'text-[var(--accent-primary)]' : ''}`} />
         </button>
 
         {/* Shortcuts / Help */}

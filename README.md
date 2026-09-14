@@ -1,6 +1,6 @@
 # CNTXT
 
-**A reimagining of ContextPad** — a Tauri v2 desktop application for structured writing, prompt engineering, and workflow automation.
+**A reimagining of ContextPad** — a cross-platform application (Desktop, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
 **Status:** Active development (v0.1.0) — not yet production-ready. See [CHANGELOG.md](CHANGELOG.md) and the audit notes below.
 
@@ -8,9 +8,9 @@
 
 CNTXT builds on the ContextPad concept with a clean, portable frontend architecture:
 
-- **Portability-first** — a typed `IRuntimeBridge` contract (`src/ui-contract/bridgeContract.ts`) is the *only* boundary between the UI and the platform (Tauri desktop, web, or mock). No component, store, or service touches `window`, `navigator`, `localStorage`, or `indexedDB` directly; all platform access lives in `src/adapters/`.
-- **Modular shell architecture** — Classic / Prototype / Workbench shell modes with a typed design system (`src/design/`) and primitive component library (`src/primitives/`).
-- **Tauri v2 desktop runtime** — native Rust commands for file operations (`rfd` dialogs), window management, keyring secrets, and a live preview server (`axum` + WebSocket).
+- **Portability-first** — a typed `IRuntimeBridge` contract (`src/ui-contract/bridgeContract.ts`) is the *only* boundary between the UI and the platform (Tauri desktop, Android mobile, web, or mock). No component, store, or service touches `window`, `navigator`, `localStorage`, or `indexedDB` directly; all platform access lives in `src/adapters/`.
+- **Modular shell architecture** — Classic / Prototype / Workbench shell modes with a typed design system (`src/design/`), primitive component library (`src/primitives/`), and touch-friendly mobile accessory toolbar (`MobileAccessoryBar`).
+- **Tauri v2 runtime** — native Rust commands for file operations (`rfd` dialogs on desktop, Scoped Storage plugins on mobile), window management, keyring secrets, and a live preview server (`axum` + WebSocket).
 
 ## Repository Layout
 
@@ -75,13 +75,16 @@ are found.
 - Stores are persistence-agnostic; all persistence flows through `bridge.storage`.
 - Components use `bridge.clipboard` / `bridge.window` — never `navigator.clipboard` or `window.open` directly.
 
-## Current Status & Known Issues
+## Current Status & Verification
 
-- **Not production-ready.** A full audit (2026-09-08) identified critical issues to resolve before shipping:
-  - **CRITICAL:** action-sandbox bypass (`new Function()`), ~357 MB gzipped bundle, zero automated tests.
-  - **HIGH:** path-traversal validation flaw in Rust `validate_path`, CSP `unsafe-eval`, unused dependencies, no ESLint.
-  - A reconciliation plan for porting the redesigned AI Studio frontend into this repo is in progress.
-- **Roadmap:** see [CHANGELOG.md](CHANGELOG.md) for the pending work and release history.
+- **Under Active Development (v0.1.0)**:
+  - **Automated Test Coverage**: 86 unit tests passing across 10 suites via Vitest (`npm test`).
+  - **Platform Purity**: `npm run lint` scans 108 files with zero platform leaks outside `src/adapters/`.
+  - **Security Hardening**: Rust filesystem commands hardened with path canonicalization and whitelisting; dangerous shell injection eliminated in `open_external`; sandbox prototype-pollution defenses active.
+  - **Interactive Action System**: In-document action buttons (`[[action:id]]`), extensible `FormulaEngine` registry with 50+ built-ins, and tri-state selection behavior (`auto`, `replace`, `insert`).
+- **Living Context & Roadmap**:
+  - Full living context and architecture logs: `generated-documents/context/living_context.md`.
+  - Release history and change notes: [CHANGELOG.md](CHANGELOG.md).
 
 ## Related
 

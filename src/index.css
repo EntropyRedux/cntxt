@@ -7,9 +7,9 @@
 :root,
 [data-theme="contextpad-dark"] {
   --app-bg: #18181B;
-  --titlebar-bg: #1F1F24;
+  --titlebar-bg: #141417;
   --titlebar-fg: #D4D4D8;
-  --titlebar-border: #2B2B33;
+  --titlebar-border: #23232A;
   --tabbar-bg: #18181B;
   --tab-active-bg: #1E1E1E;
   --tab-active-fg: #FFFFFF;
@@ -80,12 +80,11 @@
    ========================================================================= */
 
 [data-theme="google-material-3"],
-[data-theme="github-light"],
 [data-theme="material-light"] {
   --app-bg: #EDF2FA;
-  --titlebar-bg: #F0F4F9;
+  --titlebar-bg: #DFE4EC;
   --titlebar-fg: #1F1F1F;
-  --titlebar-border: #D3D7DC;
+  --titlebar-border: #CBD2DB;
   --tabbar-bg: #E8EEF5;
   --tab-active-bg: #F8F9FA;
   --tab-active-fg: #0B57D0;
@@ -152,14 +151,88 @@
 }
 
 /* =========================================================================
+   GitHub Light Theme
+   ========================================================================= */
+
+[data-theme="github-light"] {
+  --app-bg: #F6F8FA;
+  --titlebar-bg: #EAEEF2;
+  --titlebar-fg: #24292F;
+  --titlebar-border: #D0D7DE;
+  --tabbar-bg: #F6F8FA;
+  --tab-active-bg: #FFFFFF;
+  --tab-active-fg: #0969DA;
+  --tab-active-border: #FD8C73;
+  --tab-inactive-bg: #F6F8FA;
+  --tab-inactive-fg: #57606A;
+  --tab-hover-bg: #EAEEF2;
+  --tab-border: #D0D7DE;
+  --editor-bg: #FFFFFF;
+  --editor-fg: #24292F;
+  --activitybar-bg: #F6F8FA;
+  --activitybar-fg: #57606A;
+  --activitybar-active-bg: #EAEEF2;
+  --activitybar-active-fg: #0969DA;
+  --activitybar-hover-bg: #FFFFFF;
+  --activitybar-border: #D0D7DE;
+  --sidebar-bg: #F6F8FA;
+  --sidebar-fg: #24292F;
+  --sidebar-header-bg: #FFFFFF;
+  --sidebar-border: #D0D7DE;
+  --statusbar-bg: #F6F8FA;
+  --statusbar-fg: #57606A;
+  --statusbar-border: #D0D7DE;
+  --card-bg: #FFFFFF;
+  --card-fg: #24292F;
+  --card-hover-bg: #F6F8FA;
+  --card-border: #D0D7DE;
+  --card-secondary-bg: #F6F8FA;
+  --input-bg: #FFFFFF;
+  --input-fg: #24292F;
+  --input-border: #D0D7DE;
+  --input-focus-border: #0969DA;
+  --input-placeholder: #57606A;
+  --modal-bg: #FFFFFF;
+  --modal-fg: #24292F;
+  --modal-border: #D0D7DE;
+  --modal-header-bg: #F6F8FA;
+  --modal-overlay: rgba(0, 0, 0, 0.45);
+  --dropdown-bg: #FFFFFF;
+  --dropdown-fg: #24292F;
+  --dropdown-hover-bg: #0969DA;
+  --dropdown-border: #D0D7DE;
+  --accent-primary: #0969DA;
+  --accent-primary-hover: #0854AF;
+  --accent-container: rgba(9, 105, 218, 0.1);
+  --on-accent-container: #0969DA;
+  --accent-ring: rgba(9, 105, 218, 0.25);
+  --border-primary: #D0D7DE;
+  --border-subtle: #EAEEF2;
+  --text-primary: #24292F;
+  --text-secondary: #57606A;
+  --text-muted: #6E7781;
+  --text-accent: #0969DA;
+  --codeblock-container-bg: #F6F8FA;
+  --codeblock-container-border: #D0D7DE;
+  --codeblock-header-bg: #FFFFFF;
+  --codeblock-header-border: #D0D7DE;
+  --scrollbar-thumb: #D0D7DE;
+  --scrollbar-thumb-hover: #AFB8C1;
+  --status-success: #1A7F37;
+  --status-warning: #9A6700;
+  --status-error: #CF222E;
+  --status-info: #0969DA;
+}
+
+/* =========================================================================
    Parchment Theme (Warm Editorial Linen with Terracotta & Espresso)
    ========================================================================= */
 
 [data-theme="parchment"] {
   --app-bg: #F3EDE1;
-  --titlebar-bg: #EAE2D2;
+  --titlebar-bg: #DFD5C2;
   --titlebar-fg: #1C1917;
-  --titlebar-border: #DFD4C0;
+  --titlebar-border: #D1C4AF;
   --tabbar-bg: #EAE2D2;
   --tab-active-bg: #FAF6EE;
   --tab-active-fg: #9C522B;
@@ -231,9 +304,9 @@
 
 [data-theme="one-dark"] {
   --app-bg: #21252B;
-  --titlebar-bg: #282C34;
+  --titlebar-bg: #1E2227;
   --titlebar-fg: #ABB2BF;
-  --titlebar-border: #181A1F;
+  --titlebar-border: #14161B;
   --tabbar-bg: #21252B;
   --tab-active-bg: #282C34;
   --tab-active-fg: #61AFEF;
@@ -305,9 +378,9 @@
 
 [data-theme="dracula"] {
   --app-bg: #21222C;
-  --titlebar-bg: #282A36;
+  --titlebar-bg: #191A21;
   --titlebar-fg: #F8F8F2;
-  --titlebar-border: #191A21;
+  --titlebar-border: #13141A;
   --tabbar-bg: #21222C;
   --tab-active-bg: #282A36;
   --tab-active-fg: #BD93F9;
@@ -379,9 +452,9 @@
 
 [data-theme="nord"] {
   --app-bg: #242933;
-  --titlebar-bg: #2E3440;
+  --titlebar-bg: #1E222A;
   --titlebar-fg: #ECEFF4;
-  --titlebar-border: #1E222A;
+  --titlebar-border: #16181F;
   --tabbar-bg: #242933;
   --tab-active-bg: #2E3440;
   --tab-active-fg: #88C0D0;
@@ -453,9 +526,9 @@
 
 [data-theme="monokai"] {
   --app-bg: #222222;
-  --titlebar-bg: #2D2A2E;
+  --titlebar-bg: #19181A;
   --titlebar-fg: #FCFCFA;
-  --titlebar-border: #19181A;
+  --titlebar-border: #121113;
   --tabbar-bg: #222222;
   --tab-active-bg: #2D2A2E;
   --tab-active-fg: #FFD866;
@@ -527,9 +600,9 @@
 
 [data-theme="github-dark"] {
   --app-bg: #090D13;
-  --titlebar-bg: #0D1117;
+  --titlebar-bg: #010409;
   --titlebar-fg: #E6EDF3;
-  --titlebar-border: #30363D;
+  --titlebar-border: #21262D;
   --tabbar-bg: #010409;
   --tab-active-bg: #0D1117;
   --tab-active-fg: #58A6FF;
@@ -601,9 +674,9 @@
 
 [data-theme="solarized-dark"] {
   --app-bg: #001E26;
-  --titlebar-bg: #002B36;
+  --titlebar-bg: #00141A;
   --titlebar-fg: #839496;
-  --titlebar-border: #073642;
+  --titlebar-border: #000E13;
   --tabbar-bg: #001E26;
   --tab-active-bg: #002B36;
   --tab-active-fg: #268BD2;
@@ -1063,7 +1136,9 @@
 }
 
 [data-theme="google-material-3"] .cm-live-code-pill,
-[data-theme="material-light"] .cm-live-code-pill {
+[data-theme="material-light"] .cm-live-code-pill,
+[data-theme="google-material-3"] .cm-live-table code,
+[data-theme="material-light"] .cm-live-table code {
   background-color: #EDF2FA !important;
   color: #0B57D0 !important;
   border: 1px solid #D3D7DC !important;
@@ -1268,6 +1343,20 @@
   color: var(--text-primary);
 }
 
+.cm-live-table code,
+.cm-live-table .cm-live-code-pill {
+  background-color: var(--card-secondary-bg) !important;
+  color: var(--accent-primary) !important;
+  padding: 1px 5px !important;
+  border-radius: 4px !important;
+  border: 1px solid var(--border-subtle) !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  font-size: 0.9em !important;
+  display: inline-block;
+  vertical-align: baseline;
+  line-height: normal;
+}
+
 .cm-live-table td:last-child {
   border-right: none;
 }
@@ -1319,14 +1408,28 @@
   justify-content: center;
   align-items: center;
   padding: 16px;
-  background-color: var(--editor-bg);
+  background-color: var(--mermaid-canvas-bg, var(--editor-bg));
   min-height: 100px;
   overflow-x: auto;
 }
 
-.cm-live-mermaid-canvas svg {
+.cm-live-mermaid-canvas svg,
+.live-preview-mermaid svg {
   max-width: 100%;
   height: auto;
+}
+
+.cm-live-mermaid-canvas svg .edgeLabel,
+.live-preview-mermaid svg .edgeLabel {
+  background-color: var(--mermaid-label-bg) !important;
+  color: var(--mermaid-label-fg) !important;
+}
+
+.cm-live-mermaid-canvas svg .edgeLabel rect,
+.live-preview-mermaid svg .edgeLabel rect {
+  fill: var(--mermaid-label-bg) !important;
+  stroke: var(--border-subtle) !important;
+  stroke-width: 1px !important;
 }
 
 /* =========================================================
@@ -1462,4 +1565,182 @@
 .custom-touch-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: var(--scrollbar-thumb-hover);
 }
+
+/* =========================================================================
+   CodeMirror Search Match & Selection Highlighting (Vivid & Theme-Resilient)
+   ========================================================================= */
+
+.cm-searchMatch {
+  background-color: rgba(234, 179, 8, 0.4) !important;
+  outline: 1px solid rgba(202, 138, 4, 0.8) !important;
+  border-radius: 2px !important;
+}
+
+.cm-searchMatch-selected,
+.cm-searchMatch.cm-searchMatch-selected {
+  background-color: rgba(14, 165, 233, 0.75) !important;
+  outline: 2px solid #0284c7 !important;
+  box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.5) !important;
+  border-radius: 2px !important;
+  color: #FFFFFF !important;
+}
+
+/* Ensure blurred editor selection doesn't disappear when typing in the search box */
+.cm-editor:not(.cm-focused) .cm-selectionBackground {
+  background-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* =========================================================================
+   Live Action Buttons (Rendered Mode & Preview Mode)
+   ========================================================================= */
+
+.cm-action-btn-widget,
+.live-preview-action-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  margin: 2px 4px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-primary);
+  background-color: var(--accent-container);
+  color: var(--on-accent-container);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  vertical-align: middle;
+  user-select: none;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.cm-action-btn-widget:hover,
+.live-preview-action-btn:hover {
+  background-color: var(--accent-primary);
+  color: #FFFFFF !important;
+  box-shadow: 0 3px 10px rgba(0, 122, 204, 0.35);
+  transform: translateY(-0.5px);
+}
+
+.cm-action-btn-widget:active,
+.live-preview-action-btn:active {
+  transform: scale(0.96);
+}
+
+.cm-action-btn-widget.is-running,
+.live-preview-action-btn.is-running {
+  opacity: 0.75;
+  animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  pointer-events: none;
+}
+
+.cm-action-btn-icon,
+.live-preview-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.cm-action-btn-widget:hover .cm-action-btn-icon,
+.live-preview-action-btn:hover .live-preview-action-icon {
+  transform: scale(1.15);
+}
+
+.cm-action-btn-label,
+.live-preview-action-label {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-action-badge-fx,
+.live-preview-action-badge-fx {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background-color: rgba(6, 182, 212, 0.2);
+  color: #06B6D4;
+  line-height: 1;
+}
+
+.cm-action-btn-widget:hover .cm-action-badge-fx,
+.live-preview-action-btn:hover .live-preview-action-badge-fx {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+
+.cm-action-badge-type,
+.live-preview-action-badge {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background-color: rgba(0, 0, 0, 0.1);
+  color: currentColor;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+[data-theme="contextpad-dark"] .cm-action-badge-type,
+[data-theme="contextpad-dark"] .live-preview-action-badge,
+[data-theme="github-dark"] .cm-action-badge-type,
+[data-theme="github-dark"] .live-preview-action-badge {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.cm-action-missing-widget,
+.live-preview-action-missing {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  margin: 2px 4px;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #D97706;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  vertical-align: middle;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+[data-theme="contextpad-dark"] .cm-action-missing-widget,
+[data-theme="contextpad-dark"] .live-preview-action-missing,
+[data-theme="github-dark"] .cm-action-missing-widget,
+[data-theme="github-dark"] .live-preview-action-missing {
+  color: #FBBF24;
+}
+
+.cm-action-missing-widget:hover,
+.live-preview-action-missing:hover {
+  background-color: rgba(245, 158, 11, 0.2);
+  border-color: #F59E0B;
+}
+
+.cm-action-missing-name,
+.live-preview-action-missing-name {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cm-action-missing-badge,
+.live-preview-action-missing-badge {
+  font-size: 9px;
+  opacity: 0.75;
+}
+
 

@@ -34,6 +34,8 @@ export interface BridgeFolderResult {
 export interface IFileSystemBridge {
   openFile: () => Promise<BridgeFileResult | null>;
   openDirectory?: () => Promise<BridgeFolderResult | null>;
+  readDirectory?: (path: string) => Promise<BridgeDirectoryEntry[] | null>;
+  readFile?: (path: string) => Promise<string | null>;
   saveFile: (path: string, content: string) => Promise<boolean>;
   saveFileAs: (suggestedName: string, content: string) => Promise<string | null>;
   exportWorkspace: () => Promise<string>;
@@ -76,11 +78,13 @@ export interface IStorageBridge {
   hasItem?: (key: string) => Promise<boolean>;
 }
 
+export type PlatformOS = 'macos' | 'windows' | 'linux' | 'android' | 'ios' | 'web';
+
 /**
  * Platform & Device Detection Contract
  */
 export interface IPlatformBridge {
-  os: 'macos' | 'windows' | 'linux' | 'web';
+  os: PlatformOS;
   isTouch: boolean;
   isMac: boolean;
   isMobile: boolean;

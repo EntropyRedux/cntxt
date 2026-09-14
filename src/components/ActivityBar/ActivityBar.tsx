@@ -5,8 +5,6 @@ import {
   LayoutTemplate, 
   Terminal, 
   Workflow, 
-  Coins, 
-  Calculator, 
   Settings
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -25,8 +23,6 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertica
     { id: 'templates', label: 'Templates & Variables (Ctrl+Alt+T)', ariaLabel: 'Templates & Variables', icon: LayoutTemplate },
     { id: 'actions', label: 'Action Scripts & Prompts', ariaLabel: 'Action Scripts', icon: Terminal },
     { id: 'workflows', label: 'Workflows & Multi-Step Blueprints', ariaLabel: 'Workflows', icon: Workflow },
-    { id: 'tokens', label: 'Token & Cost Analytics', ariaLabel: 'Token Analytics', icon: Coins },
-    { id: 'formulas', label: 'Formula & Math Playground', ariaLabel: 'Formula Playground', icon: Calculator },
   ];
 
   const handleTabClick = (tabId: ViewSettings['activeSidebarTab']) => {
@@ -99,9 +95,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertica
   return (
     <aside 
       aria-label="Activity Bar"
-      className={`theme-activitybar w-11 sm:w-12 flex flex-col items-center py-2 justify-between shrink-0 select-none relative z-30 overflow-y-auto no-scrollbar ${
-        !settings.showRibbon ? 'pt-10' : ''
-      }`}
+      className="theme-activitybar w-11 sm:w-12 flex flex-col items-center py-2 justify-between shrink-0 select-none relative z-30 overflow-y-auto no-scrollbar"
     >
       {/* Top Section */}
       <div className="flex flex-col items-center space-y-1.5 w-full">

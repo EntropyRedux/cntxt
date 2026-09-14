@@ -1,150 +1,9 @@
 import React from 'react';
-import {
-  Variable,
-  Zap,
-  Calculator,
-  FileCode2,
-  Eye,
-  Sparkles,
-  FileText,
-  Play,
-  Sliders,
-  SlidersHorizontal,
-  FolderOpen,
-  ListTree,
-  Terminal,
-  Layers,
-  Code,
-  Code2,
-  Save,
-  Plus,
-  Copy,
-  Scissors,
-  Share2,
-  Trash2,
-  CheckCircle,
-  Clock,
-  Cpu,
-  Bookmark,
-  Search,
-  Wand2,
-  Settings,
-  HelpCircle,
-  Hash,
-  FileSpreadsheet,
-  Globe,
-  Bot,
-  Braces,
-  Bold,
-  Italic,
-  Strikethrough,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Heading,
-  Quote,
-  List,
-  ListOrdered,
-  ListTodo,
-  Link,
-  Image,
-  Table,
-  Minus,
-  Highlighter,
-  Subscript,
-  Superscript,
-  Undo2,
-  Redo2,
-  Indent,
-  Outdent,
-  Slash,
-  Info,
-  AlertCircle,
-  MessageSquare,
-  CheckSquare,
-  Type,
-  Columns,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Sparkle,
-  type LucideIcon
-} from 'lucide-react';
+import { APP_ICON_MAP, ALL_APP_ICONS, DEFAULT_APP_ICON } from '../../constants/iconCatalog';
+import { AppIcon } from '../Common/AppIcon';
 
-export const ICON_MAP: Record<string, LucideIcon> = {
-  Variable,
-  Zap,
-  Calculator,
-  FileCode2,
-  Eye,
-  Sparkles,
-  FileText,
-  Play,
-  Sliders,
-  SlidersHorizontal,
-  FolderOpen,
-  ListTree,
-  Terminal,
-  Layers,
-  Code,
-  Code2,
-  Save,
-  Plus,
-  Copy,
-  Scissors,
-  Share2,
-  Trash2,
-  CheckCircle,
-  Clock,
-  Cpu,
-  Bookmark,
-  Search,
-  Wand2,
-  Settings,
-  HelpCircle,
-  Hash,
-  FileSpreadsheet,
-  Globe,
-  Bot,
-  Braces,
-  Bold,
-  Italic,
-  Strikethrough,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Heading,
-  Quote,
-  List,
-  ListOrdered,
-  ListTodo,
-  Link,
-  Image,
-  Table,
-  Minus,
-  Highlighter,
-  Subscript,
-  Superscript,
-  Undo2,
-  Redo2,
-  Indent,
-  Outdent,
-  Slash,
-  Info,
-  AlertCircle,
-  MessageSquare,
-  CheckSquare,
-  Type,
-  Columns,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Sparkle
-};
-
-export const AVAILABLE_ICONS = Object.keys(ICON_MAP);
+export const ICON_MAP = APP_ICON_MAP;
+export const AVAILABLE_ICONS = ALL_APP_ICONS;
 
 export interface RibbonIconProps {
   name: string;
@@ -152,7 +11,17 @@ export interface RibbonIconProps {
   strokeWidth?: number;
 }
 
-export const RibbonIcon: React.FC<RibbonIconProps> = ({ name, className = 'w-3.5 h-3.5', strokeWidth = 2.2 }) => {
-  const IconComponent = ICON_MAP[name] || Sparkles;
-  return <IconComponent className={className} strokeWidth={strokeWidth} />;
+export const RibbonIcon: React.FC<RibbonIconProps> = ({
+  name,
+  className = 'w-3.5 h-3.5',
+  strokeWidth = 2.2
+}) => {
+  return (
+    <AppIcon
+      name={name}
+      fallbackIcon={DEFAULT_APP_ICON}
+      className={className}
+      strokeWidth={strokeWidth}
+    />
+  );
 };

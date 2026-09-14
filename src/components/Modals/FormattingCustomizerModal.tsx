@@ -4,6 +4,7 @@ import { Button } from '../../primitives/Button';
 import { Badge } from '../../primitives/Badge';
 import { Input } from '../../primitives/Input';
 import { RibbonIcon, AVAILABLE_ICONS } from '../Ribbon/RibbonIcon';
+import { IconPicker } from '../Common/IconPicker';
 import { useFormattingStore, PRESET_FORMATTING_BUTTONS } from '../../store/formattingStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { MarkdownFormatButton, MarkdownFormatType, FormattingButtonSize } from '../../types';
@@ -72,7 +73,6 @@ export const FormattingCustomizerModal: React.FC = () => {
   const [customSuffix, setCustomSuffix] = useState('**');
   const [customTitle, setCustomTitle] = useState('');
   const [customIsAccent, setCustomIsAccent] = useState(false);
-  const [iconSearch, setIconSearch] = useState('');
 
   const activeButtons = useMemo(() => buttons.filter(b => b.enabled), [buttons]);
 
@@ -87,11 +87,6 @@ export const FormattingCustomizerModal: React.FC = () => {
       return matchesCat && matchesSearch;
     });
   }, [selectedCategory, searchQuery]);
-
-  const filteredIcons = useMemo(() => {
-    if (!iconSearch.trim()) return AVAILABLE_ICONS.slice(0, 32);
-    return AVAILABLE_ICONS.filter(ic => ic.toLowerCase().includes(iconSearch.toLowerCase())).slice(0, 32);
-  }, [iconSearch]);
 
   if (!isCustomizerOpen) return null;
 
@@ -654,40 +649,13 @@ export const FormattingCustomizerModal: React.FC = () => {
                 </label>
               </div>
 
-              {/* Icon selector with search */}
-              <div className="p-2.5 bg-[var(--titlebar-bg)]/50 border border-[var(--border-subtle)] rounded-lg space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--text-muted)]">Selected:</span>
-                  <div className="w-6 h-6 rounded bg-[var(--card-bg)] border border-[var(--border-primary)] flex items-center justify-center text-[var(--accent-primary)]">
-                    <RibbonIcon name={customIcon} className="w-3.5 h-3.5" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Filter icons..."
-                    value={iconSearch}
-                    onChange={(e) => setIconSearch(e.target.value)}
-                    className="flex-1 px-2 py-1 rounded text-xs bg-[var(--card-bg)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-8 sm:grid-cols-12 gap-1 max-h-24 overflow-y-auto p-1 bg-[var(--card-bg)] rounded border border-[var(--border-subtle)]">
-                  {filteredIcons.map((ic) => (
-                    <button
-                      key={ic}
-                      type="button"
-                      onClick={() => setCustomIcon(ic)}
-                      className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-                        customIcon === ic
-                          ? 'bg-[var(--accent-primary)] text-white shadow-2xs'
-                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
-                      }`}
-                      title={ic}
-                    >
-                      <RibbonIcon name={ic} className="w-3.5 h-3.5" />
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Unified Visual Icon Picker */}
+              <IconPicker
+                value={customIcon}
+                onChange={setCustomIcon}
+                label="Button Icon"
+                gridMaxHeight="max-h-24"
+              />
             </div>
 
             {/* Output Preview */}

@@ -36,6 +36,12 @@ export const MobileAccessoryBar: React.FC = () => {
     }).catch(err => console.warn('[MobileAccessoryBar] Failed to load stored state', err));
   }, [bridge.storage]);
 
+  useEffect(() => {
+    if (settings.showMobileAccessoryBar) {
+      setIsExpanded(true);
+    }
+  }, [settings.showMobileAccessoryBar]);
+
   const handleToggleExpanded = (expanded: boolean) => {
     setIsExpanded(expanded);
     safePersist(bridge.storage, 'contextpad_accessory_bar_expanded', String(expanded), 'accessory bar state');
@@ -184,10 +190,11 @@ export const MobileAccessoryBar: React.FC = () => {
     return (
       <button
         type="button"
+        id="markdown-formatting-expand-btn"
         onClick={() => handleToggleExpanded(true)}
-        title="Show Quick Markdown & Action Bar"
-        aria-label="Show Quick Markdown & Action Bar"
-        className="absolute bottom-2.5 left-2.5 z-30 w-8 h-8 rounded-full bg-[var(--card-bg)]/95 backdrop-blur-md border border-[var(--border-primary)] text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:border-[var(--accent-primary)]/50 hover:bg-[var(--card-hover-bg)] shadow-md flex items-center justify-center transition-all active:scale-95"
+        title="Show Markdown Formatting quick buttons"
+        aria-label="Show Markdown Formatting quick buttons"
+        className="absolute bottom-2.5 left-2.5 z-30 w-8 h-8 rounded-full bg-[var(--card-bg)]/95 backdrop-blur-md border border-[var(--border-primary)] text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:border-[var(--accent-primary)]/50 hover:bg-[var(--card-hover-bg)] shadow-md flex items-center justify-center transition-all active:scale-95 cursor-pointer"
       >
         <ChevronUp className="w-4 h-4" />
       </button>
@@ -241,9 +248,10 @@ export const MobileAccessoryBar: React.FC = () => {
           {/* Toggle chevron button: hides the entire bar */}
           <button
             type="button"
+            id="markdown-formatting-collapse-btn"
             onClick={() => handleToggleExpanded(false)}
-            title="Hide toolbar"
-            aria-label="Hide toolbar"
+            title="Hide Markdown Formatting quick buttons"
+            aria-label="Hide Markdown Formatting quick buttons"
             aria-expanded={true}
             className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-[var(--border-primary)] active:scale-95 shadow-2xs cursor-pointer`}
           >

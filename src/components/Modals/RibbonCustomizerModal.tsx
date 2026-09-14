@@ -5,6 +5,7 @@ import { Badge } from '../../primitives/Badge';
 import { Card } from '../../primitives/Card';
 import { Input, Toggle } from '../../primitives/Input';
 import { RibbonIcon, AVAILABLE_ICONS } from '../Ribbon/RibbonIcon';
+import { IconPicker } from '../Common/IconPicker';
 import { useRibbonStore } from '../../store/ribbonStore';
 import { useActionStore } from '../../store/actionStore';
 import { useWorkflowStore } from '../../store/workflowStore';
@@ -20,7 +21,6 @@ import {
   Sparkles,
   Zap,
   Variable,
-  Calculator,
   ListTree,
   FileText,
   FolderOpen,
@@ -32,7 +32,8 @@ import {
   Command,
   Search,
   Check,
-  Palette
+  Palette,
+  Minus
 } from 'lucide-react';
 
 const COLOR_OPTIONS = [
@@ -48,7 +49,6 @@ const COLOR_OPTIONS = [
 const BUILT_IN_TOOLS = [
   { id: 'variable-modal', label: 'Fill Variables', icon: 'Variable', color: 'accent', shortcut: 'Alt+V', desc: 'Opens dynamic variable replacement form' },
   { id: 'tokens', label: 'Token Inspector', icon: 'Zap', color: 'amber', desc: 'Inspects token consumption & model budget' },
-  { id: 'formulas', label: 'Formulas', icon: 'Calculator', color: 'emerald', desc: 'Evaluates dynamic prompt calculations' },
   { id: 'outline', label: 'Outline', icon: 'ListTree', color: 'cyan', shortcut: 'Ctrl+Shift+O', desc: 'Navigates markdown document headings' },
   { id: 'templates', label: 'Templates', icon: 'FileText', color: 'purple', desc: 'Context prompt templates browser' },
   { id: 'explorer', label: 'File Explorer', icon: 'FolderOpen', color: 'blue', desc: 'Workspace files & document tree' },
@@ -68,6 +68,7 @@ export const RibbonCustomizerModal: React.FC = () => {
     updateItem,
     removeItem,
     toggleItem,
+    addSeparator,
     moveItemUp,
     moveItemDown,
     resetToDefaults
@@ -162,6 +163,12 @@ export const RibbonCustomizerModal: React.FC = () => {
             <div className="h-3 w-px bg-[var(--border-subtle)] mx-0.5" />
 
             {items.filter(i => i.enabled).map((item) => {
+              if (item.type === 'separator') {
+                return (
+                  <div key={item.id} className="h-4 w-px bg-[var(--border-subtle)] mx-1 shrink-0" />
+                );
+              }
+
               const colorClass = 
                 item.color === 'amber' ? 'text-amber-500' :
                 item.color === 'emerald' ? 'text-emerald-500' :
@@ -295,18 +302,93 @@ export const RibbonCustomizerModal: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
               <span>Reorder, enable/disable, or customize buttons in your ribbon</span>
-              <Button
-                variant="accent"
-                size="xs"
-                icon={Plus}
-                onClick={() => setActiveTab('add_tools')}
-              >
-                Add Buttons
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  icon={Minus}
+                  onClick={addSeparator}
+                >
+                  Add Separator
+                </Button>
+                <Button
+                  variant="accent"
+                  size="xs"
+                  icon={Plus}
+                  onClick={() => setActiveTab('add_tools')}
+                >
+                  Add Buttons
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-1.5">
               {items.map((item, index) => {
+                if (item.type === 'separator') {
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-2 rounded-lg border transition-all flex items-center justify-between gap-3 ${
+                        item.enabled 
+                          ? 'bg-[var(--card-bg)] border-[var(--border-subtle)]' 
+                          : 'bg-[var(--app-bg)] border-[var(--border-primary)] opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => moveItemUp(item.id)}
+                            className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-20 hover:bg-[var(--card-hover-bg)]"
+                            title="Move Up"
+                          >
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === items.length - 1}
+                            onClick={() => moveItemDown(item.id)}
+                            className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-20 hover:bg-[var(--card-hover-bg)]"
+                            title="Move Down"
+                          >
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="w-7 h-7 rounded-md bg-[var(--app-bg)] border border-[var(--border-subtle)] flex items-center justify-center shrink-0">
+                          <Minus className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-[var(--text-secondary)]">
+                            Visual Separator
+                          </span>
+                          <Badge size="xs" variant="outline">
+                            Divider
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Toggle
+                          checked={item.enabled}
+                          onChange={() => toggleItem(item.id)}
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => removeItem(item.id)}
+                          className="p-1.5 rounded text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                          title="Remove from Ribbon"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
                 const colorClass = 
                   item.color === 'amber' ? 'text-amber-500' :
                   item.color === 'emerald' ? 'text-emerald-500' :
@@ -416,7 +498,7 @@ export const RibbonCustomizerModal: React.FC = () => {
                     {/* Inline Edit Panel */}
                     {isEditing && (
                       <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] space-y-2.5">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div>
                             <label className="text-[10px] uppercase font-semibold text-[var(--text-muted)] block mb-1">Label</label>
                             <Input
@@ -438,20 +520,15 @@ export const RibbonCustomizerModal: React.FC = () => {
                               ))}
                             </select>
                           </div>
-
-                          <div>
-                            <label className="text-[10px] uppercase font-semibold text-[var(--text-muted)] block mb-1">Icon</label>
-                            <select
-                              value={item.icon}
-                              onChange={(e) => updateItem(item.id, { icon: e.target.value })}
-                              className="w-full h-8 px-2 text-xs rounded-md bg-[var(--app-bg)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
-                            >
-                              {AVAILABLE_ICONS.map(ic => (
-                                <option key={ic} value={ic}>{ic}</option>
-                              ))}
-                            </select>
-                          </div>
                         </div>
+
+                        {/* Visual Icon Selection */}
+                        <IconPicker
+                          value={item.icon}
+                          onChange={(newIcon) => updateItem(item.id, { icon: newIcon })}
+                          label="Change Icon"
+                          gridMaxHeight="max-h-24"
+                        />
 
                         <div className="flex items-center justify-between p-2 rounded bg-[var(--app-bg)] border border-[var(--border-subtle)]">
                           <div>
@@ -755,21 +832,6 @@ export const RibbonCustomizerModal: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">
-                    Icon
-                  </label>
-                  <select
-                    value={customIcon}
-                    onChange={(e) => setCustomIcon(e.target.value)}
-                    className="w-full h-8 px-2 text-xs rounded-md bg-[var(--app-bg)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
-                  >
-                    {AVAILABLE_ICONS.map(ic => (
-                      <option key={ic} value={ic}>{ic}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">
                     Accent Color
                   </label>
                   <select
@@ -782,7 +844,27 @@ export const RibbonCustomizerModal: React.FC = () => {
                     ))}
                   </select>
                 </div>
+
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">
+                    Target ID / Command (Optional)
+                  </label>
+                  <Input
+                    value={customTarget}
+                    onChange={(e) => setCustomTarget(e.target.value)}
+                    placeholder="e.g. variable-modal or command id"
+                    inputSize="sm"
+                  />
+                </div>
               </div>
+
+              {/* Visual Icon Picker */}
+              <IconPicker
+                value={customIcon}
+                onChange={setCustomIcon}
+                label="Button Icon"
+                gridMaxHeight="max-h-28"
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

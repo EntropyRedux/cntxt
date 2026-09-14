@@ -135,6 +135,7 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   showActivityBar: boolean;
   showSidebar: boolean;
   showRibbon?: boolean;
+  showMenuBar?: boolean;
   activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'workflows' | 'tokens' | 'formulas' | 'settings';
   showLivePreview: boolean;
   editorMode: 'raw' | 'rendered';
@@ -180,20 +181,31 @@ export type ActionCategory =
   | 'Custom' 
   | string;
 
+export type ActionSelectionBehavior = 'auto' | 'replace' | 'insert';
+
 export interface Action {
   id: string;
   name: string;
   description: string;
   type?: 'button' | 'command';
-  code: string; // JavaScript code executed in sandbox
+  codeType?: 'formula' | 'javascript';
+  code: string; // JavaScript or FORMULA: executed in sandbox / formula engine
   category: ActionCategory;
+  selectionBehavior?: ActionSelectionBehavior;
   enabled?: boolean;
+  isPinned?: boolean;
   isDefault?: boolean;
   icon?: string;
   color?: string;
   shortcut?: string;
   createdAt?: number;
   updatedAt?: number;
+}
+
+export interface PersistedActionUIState {
+  collapsedCategories: string[];
+  categoryOrder: string[];
+  pinnedActionIds: string[];
 }
 
 export interface ActionExecutionContext {
@@ -212,6 +224,7 @@ export interface SandboxAPI {
   setContent: (newContent: string) => void;
   getSelection: () => string;
   replaceSelection: (replacement: string) => void;
+  wrapSelection?: (prefix: string, suffix?: string) => void;
   insertText: (text: string) => void;
   insertAtCursor: (text: string) => void;
   getCursor?: () => { line: number; col: number };
@@ -266,6 +279,13 @@ export interface Template {
   isPinned?: boolean;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface PersistedTemplateUIState {
+  collapsedCategories: string[];
+  categoryOrder: string[];
+  pinnedTemplateIds: string[];
+  showHidden?: boolean;
 }
 
 // ==========================================
@@ -357,7 +377,7 @@ export interface VirtualFileTree {
 // 8. Ribbon, Formatting & Formula Shapes
 // ==========================================
 
-export type RibbonItemType = 'tool' | 'action' | 'workflow' | 'template' | 'command' | 'formatting';
+export type RibbonItemType = 'tool' | 'action' | 'workflow' | 'template' | 'command' | 'formatting' | 'separator';
 
 export type MarkdownFormatType = 'wrap' | 'line-prefix' | 'block' | 'insert' | 'command';
 
@@ -429,3 +449,18 @@ export interface OpenedFileRecord {
   content?: string;
   openedAt: number;
 }
+
+// ==========================================
+// 9. Platform & Device Domain Shapes
+// ==========================================
+
+export type SupportedPlatformOS = 'windows' | 'macos' | 'linux' | 'android' | 'ios' | 'web';
+
+export interface DeviceProfile {
+  os: SupportedPlatformOS;
+  isMobile: boolean;
+  isTouch: boolean;
+  hasHardwareKeyboard: boolean;
+  showMobileAccessoryBar: boolean;
+}
+

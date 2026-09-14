@@ -97,6 +97,13 @@ export const SettingsPanel: React.FC = () => {
       accent: '#58A6FF' 
     },
     { 
+      id: 'github-light', 
+      name: 'GitHub Light', 
+      mode: 'light', 
+      bg: '#FFFFFF', 
+      accent: '#0969DA' 
+    },
+    { 
       id: 'solarized-dark', 
       name: 'Solarized Dark', 
       mode: 'dark', 
@@ -148,7 +155,7 @@ export const SettingsPanel: React.FC = () => {
             <span>Application Theme Engine</span>
           </div>
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent-container)] text-[var(--on-accent-container)] font-semibold">
-            {settings.theme === 'parchment' ? 'Parchment' : settings.theme === 'google-material-3' ? 'M3 Light' : 'Dark Mode'}
+            {settings.theme === 'parchment' ? 'Parchment' : settings.theme === 'google-material-3' ? 'M3 Light' : settings.theme === 'github-light' ? 'GitHub Light' : 'Dark Mode'}
           </span>
         </div>
 
@@ -167,6 +174,7 @@ export const SettingsPanel: React.FC = () => {
                 type="button"
                 onClick={() => {
                   updateSettings({ theme: t.id, fontFamily: themeDefaultFontFamily });
+                  bridge.theme.applyTheme(t.id);
                   addNotification('Theme & Font Applied', `Switched to ${t.name} (Font: ${matchingFont.name})`, 'info');
                 }}
                 title={`Theme: ${t.name} (Default Font: ${matchingFont.name})`}

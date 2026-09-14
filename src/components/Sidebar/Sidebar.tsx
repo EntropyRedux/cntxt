@@ -8,7 +8,6 @@ import { TemplateManager } from './TemplateManager';
 import { ActionManager } from './ActionManager';
 import { WorkflowManager } from './WorkflowManager';
 import { TokenAnalytics } from './TokenAnalytics';
-import { FormulaPlayground } from './FormulaPlayground';
 import { SettingsPanel } from './SettingsPanel';
 import { 
   PanelRightClose, 
@@ -18,10 +17,15 @@ import {
   Terminal, 
   Workflow, 
   Coins, 
-  Calculator, 
   Settings,
-  Sparkles
+  Sparkles,
+  Upload,
+  Download
 } from 'lucide-react';
+import { useTemplateStore } from '../../store/templateStore';
+import { useActionStore } from '../../store/actionStore';
+import { useNotificationStore } from '../../store/notificationStore';
+import { triggerFileDownload, triggerFileInput } from '../../adapters';
 
 const STORAGE_KEY = 'contextpad_sidepanel_width';
 const DEFAULT_DESKTOP_WIDTH = 340;
@@ -32,6 +36,71 @@ export const Sidebar: React.FC = () => {
   const { width: windowWidth } = useWindowDimensions();
   const panelRef = useRef<HTMLElement>(null);
   const isOverlay = !!settings.sidebarOverlay;
+
+  const { exportTemplates, previewImportTemplates, commitImportTemplates } = useTemplateStore();
+  const { exportActions, importActions } = useActionStore();
+  const { addNotification } = useNotificationStore();
+
+  const handleExportActions = () => {
+    const json = exportActions();
+    const dateStr = new Date().toISOString().split('T')[0];
+    triggerFileDownload(`contextpad-actions-${dateStr}.json`, json);
+    addNotification('Export Complete', 'Actions JSON exported', 'success');
+  };
+
+  const handleImportActions = () => {
+    triggerFileInput('.json', (text) => {
+      try {
+        const count = importActions(text);
+        if (count === 0) {
+          addNotification('Import Error', 'No valid actions found in file', 'error');
+          return;
+        }
+        addNotification(
+          'Import Complete',
+          `Successfully imported ${count} action(s)`,
+          'success'
+        );
+      } catch {
+        addNotification('Import Error', 'Invalid or unreadable action JSON', 'error');
+      }
+    });
+  };
+
+  const handleExportTemplates = () => {
+    const json = exportTemplates();
+    const dateStr = new Date().toISOString().split('T')[0];
+    triggerFileDownload(`contextpad-templates-${dateStr}.json`, json);
+    addNotification('Export Complete', 'Templates JSON exported', 'success');
+  };
+
+  const handleImportTemplates = () => {
+    triggerFileInput('.json', (text) => {
+      try {
+        const preview = previewImportTemplates(text);
+        if (preview.addedCount === 0 && preview.duplicates.length === 0) {
+          addNotification('Import Error', 'No valid templates found in file', 'error');
+          return;
+        }
+
+        if (preview.duplicates.length > 0) {
+          const proceed = window.confirm(
+            `Duplicate template names found:\n${preview.duplicates.join(', ')}\n\nImport anyway? (Duplicate items will be added with new unique IDs)`
+          );
+          if (!proceed) return;
+        }
+
+        commitImportTemplates(preview.newTemplates);
+        addNotification(
+          'Import Complete',
+          `Successfully imported ${preview.newTemplates.length} template(s)`,
+          'success'
+        );
+      } catch {
+        addNotification('Import Error', 'Invalid or unreadable template JSON', 'error');
+      }
+    });
+  };
 
   // Initialize width from bridge storage or screen dimensions
   const [width, setWidth] = useState<number>(() => {
@@ -174,8 +243,6 @@ export const Sidebar: React.FC = () => {
         return { title: 'Workflows', icon: Workflow };
       case 'tokens':
         return { title: 'Token Analytics', icon: Coins };
-      case 'formulas':
-        return { title: 'Formula Playground', icon: Calculator };
       case 'settings':
         return { title: 'Preferences', icon: Settings };
       default:
@@ -197,8 +264,6 @@ export const Sidebar: React.FC = () => {
         return <WorkflowManager />;
       case 'tokens':
         return <TokenAnalytics />;
-      case 'formulas':
-        return <FormulaPlayground />;
       case 'settings':
         return <SettingsPanel />;
       default:
@@ -273,6 +338,54 @@ export const Sidebar: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          {settings.activeSidebarTab === 'templates' && (
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={handleImportTemplates}
+                title="Import Templates JSON"
+                aria-label="Import Templates JSON"
+                className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors active:scale-95 cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleExportTemplates}
+                title="Export Templates JSON"
+                aria-label="Export Templates JSON"
+                className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors active:scale-95 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+              </button>
+              <div className="w-px h-3.5 bg-[var(--border-subtle)] mx-0.5" />
+            </div>
+          )}
+
+          {settings.activeSidebarTab === 'actions' && (
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={handleImportActions}
+                title="Import Actions JSON"
+                aria-label="Import Actions JSON"
+                className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors active:scale-95 cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleExportActions}
+                title="Export Actions JSON"
+                aria-label="Export Actions JSON"
+                className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors active:scale-95 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+              </button>
+              <div className="w-px h-3.5 bg-[var(--border-subtle)] mx-0.5" />
+            </div>
+          )}
+
           {/* Close Panel Button */}
           <button
             type="button"

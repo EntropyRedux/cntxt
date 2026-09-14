@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { EditorState, Extension, Compartment } from '@codemirror/state';
 import { EditorView, keymap, highlightActiveLineGutter, highlightActiveLine } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { bracketMatching, foldGutter, foldKeymap, indentOnInput } from '@codemirror/language';
-import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
-import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
+import { search, highlightSelectionMatches } from '@codemirror/search';
+import { closeBrackets, closeBracketsKeymap, startCompletion } from '@codemirror/autocomplete';
 
 import { markdown } from '@codemirror/lang-markdown';
 import { javascript } from '@codemirror/lang-javascript';
@@ -18,12 +18,15 @@ import { getEditorThemeExtension } from '../../themes';
 import { slashCommandExtension } from '../../extensions/slashCommands';
 import { templateVariablesExtension, variableTabKeymap } from '../../extensions/templateVariables';
 import { inlineFormulasExtension } from '../../extensions/inlineFormulas';
-import { liveMarkdownExtension } from '../../extensions/liveMarkdown';
+import { liveMarkdownExtension, refreshLiveMarkdownEffect } from '../../extensions/liveMarkdown';
+import { useActionStore } from '../../store/actionStore';
 import { lineCounterSelectionExtension } from '../../extensions/lineNumberSelection';
 import { imageDropPasteExtension } from '../../extensions/imageDropPasteExtension';
 import { SupportedLanguage } from '../../types';
 import { editorRegistry } from '../../services/editor/editorRegistry';
+import { searchHighlighterExtension } from './searchHighlighter';
 import { useRuntimeBridge } from '../../adapters';
+import { FloatingSearch } from './FloatingSearch';
 
 interface EditorProps {
   tabId: string;
@@ -35,6 +38,8 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
   const bridge = useRuntimeBridge();
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchMode, setSearchMode] = useState<'find' | 'replace'>('find');
   const liveMarkdownCompartmentRef = useRef<Compartment>(new Compartment());
   const templateVariablesCompartmentRef = useRef<Compartment>(new Compartment());
   const inlineFormulasCompartmentRef = useRef<Compartment>(new Compartment());
@@ -107,15 +112,40 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       indentOnInput(),
       settings.enableBracketMatching ? bracketMatching() : [],
       closeBrackets(),
+      search({
+        top: true,
+        scrollToMatch: (range) => EditorView.scrollIntoView(range, { y: 'center', x: 'nearest' })
+      }),
+      searchHighlighterExtension(),
       highlightSelectionMatches(),
       EditorView.lineWrapping,
 
       // Keymaps
       keymap.of([
+        {
+          key: 'Ctrl-Space',
+          run: (view) => {
+            startCompletion(view);
+            return true;
+          }
+        },
+        {
+          key: 'Mod-Space',
+          run: (view) => {
+            startCompletion(view);
+            return true;
+          }
+        },
+        {
+          key: 'Alt-/',
+          run: (view) => {
+            startCompletion(view);
+            return true;
+          }
+        },
         ...variableTabKeymap(),
         ...closeBracketsKeymap,
         ...defaultKeymap,
-        ...searchKeymap,
         ...historyKeymap,
         ...foldKeymap,
         indentWithTab
@@ -137,7 +167,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       ),
       imageDropPasteExtension(),
       liveMarkdownCompartmentRef.current.of(
-        liveMarkdownExtension(isRenderedMode && isMarkdownOrText, bridge)
+        liveMarkdownExtension(isRenderedMode && isMarkdownOrText, bridge, settings.theme || 'contextpad-dark')
       ),
 
       // Custom font size and line height styling
@@ -245,7 +275,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       inlineFormulasExtension(isRenderedMode && isMarkdownOrText)
     );
     const markdownEffect = liveMarkdownCompartmentRef.current.reconfigure(
-      liveMarkdownExtension(isRenderedMode && isMarkdownOrText, bridge)
+      liveMarkdownExtension(isRenderedMode && isMarkdownOrText, bridge, settings.theme || 'contextpad-dark')
     );
     const guttersEffect = guttersCompartmentRef.current.reconfigure(
       getGuttersExtension(
@@ -267,7 +297,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     } else {
       applyEffects();
     }
-  }, [settings.editorMode, language, settings.showLineNumbers, settings.enableFoldGutter]);
+  }, [settings.editorMode, language, settings.showLineNumbers, settings.enableFoldGutter, settings.theme]);
 
   // Keep editor content synchronized with external updates without losing cursor
   useEffect(() => {
@@ -298,6 +328,30 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     }
   }, [content]);
 
+  // Listen for open-search events from menu, command palette, or global shortcuts
+  useEffect(() => {
+    const handleOpenSearch = (e: CustomEvent<{ mode?: 'find' | 'replace' }>) => {
+      const activeTabId = useTabStore.getState().activeTabId;
+      if (activeTabId && activeTabId !== tabId) return;
+
+      setSearchMode(e.detail?.mode || 'find');
+      setShowSearch(true);
+    };
+
+    window.addEventListener('open-search', handleOpenSearch as EventListener);
+    return () => window.removeEventListener('open-search', handleOpenSearch as EventListener);
+  }, [tabId]);
+
+  // Refresh live rendered markdown widgets when action store actions change
+  useEffect(() => {
+    const unsub = useActionStore.subscribe((state, prevState) => {
+      if (state.actions !== prevState.actions && viewRef.current) {
+        viewRef.current.dispatch({ effects: [refreshLiveMarkdownEffect.of()] });
+      }
+    });
+    return unsub;
+  }, []);
+
   return (
     <div className="w-full h-full relative overflow-hidden bg-[var(--editor-bg)] flex flex-col">
       {/* Main CodeMirror Canvas */}
@@ -306,6 +360,13 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
         className="w-full h-full flex-1 overflow-hidden" 
         style={{ fontFamily: settings.fontFamily }}
       />
+      {showSearch && viewRef.current && (
+        <FloatingSearch
+          view={viewRef.current}
+          mode={searchMode}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
     </div>
   );
 };

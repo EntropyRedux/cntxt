@@ -77,9 +77,13 @@ async fn open_external(
 #[tauri::command]
 async fn new_window(app_handle: tauri::AppHandle) -> Result<(), String> {
     let new_label = format!("window-{}", Uuid::new_v4());
-    WebviewWindowBuilder::new(&app_handle, &new_label, WebviewUrl::App("index.html".into()))
+    WebviewWindowBuilder::new(&app_handle, &new_label, WebviewUrl::default())
         .title("CNTXT")
-        .inner_size(1200.0, 800.0)
+        .inner_size(1280.0, 800.0)
+        .min_inner_size(400.0, 350.0)
+        .decorations(false)
+        .transparent(false)
+        .shadow(true)
         .build()
         .map_err(|e| format!("Failed to create window: {}", e))?;
     Ok(())

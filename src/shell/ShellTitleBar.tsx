@@ -11,11 +11,11 @@ import {
   Command, 
   Code2, 
   Smartphone,
-  SlidersHorizontal,
-  Variable,
-  Terminal,
   Check,
-  Search
+  Search,
+  PanelTop,
+  Menu,
+  X
 } from 'lucide-react';
 import { useTabStore } from '../store/tabStore';
 import { useSettingsStore } from '../store/settingsStore';
@@ -58,6 +58,8 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
     setTheme, 
     toggleActivityBar, 
     toggleRibbon,
+    toggleMenuBar,
+    toggleMobileAccessoryBar,
     toggleEditorMode, 
     toggleSidebarOverlay,
     setActiveSidebarTab,
@@ -75,6 +77,10 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setOpenMenu(null);
+      }
+      if (event.altKey && (event.key === 'm' || event.key === 'M')) {
+        event.preventDefault();
+        toggleMenuBar();
       }
     };
 
@@ -108,6 +114,8 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
         { label: 'New Tab', shortcut: 'Ctrl+N', action: () => createTab() },
         { label: 'New Window', shortcut: 'Ctrl+Shift+N', action: events.onNewWindow },
         { label: 'Open File...', shortcut: 'Ctrl+O', action: events.onOpenFile },
+        { label: 'Open Folder...', shortcut: 'Ctrl+K Ctrl+O', action: events.onOpenFolder },
+        { isDivider: true },
         { label: 'Save Document', shortcut: 'Ctrl+S', action: events.onSaveFile },
         { label: 'Save As...', shortcut: 'Ctrl+Shift+S', action: events.onSaveAs },
         { 
@@ -125,11 +133,15 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
       label: 'Edit',
       icon: Edit3,
       items: [
-        { label: 'Insert Variable...', shortcut: 'Alt+V', action: events.onOpenVariableModal },
-        { label: 'Action Scripts Editor...', action: () => events.onOpenActionEditor() },
+        { label: 'Undo', shortcut: 'Ctrl+Z', action: events.onUndo || (() => {}) },
+        { label: 'Redo', shortcut: 'Ctrl+Y', action: events.onRedo || (() => {}) },
         { isDivider: true },
-        { label: 'Command Palette', shortcut: 'Ctrl+K', action: events.onOpenCommandPalette },
-        { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+/', action: events.onOpenShortcuts },
+        { label: 'Cut', shortcut: 'Ctrl+X', action: events.onCut || (() => {}) },
+        { label: 'Copy', shortcut: 'Ctrl+C', action: events.onCopy || (() => {}) },
+        { label: 'Paste', shortcut: 'Ctrl+V', action: events.onPaste || (() => {}) },
+        { label: 'Select All', shortcut: 'Ctrl+A', action: events.onSelectAll || (() => {}) },
+        { isDivider: true },
+        { label: 'Find / Replace', shortcut: 'Ctrl+F', action: events.onFind || (() => {}) }
       ]
     },
     {
@@ -143,8 +155,23 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           action: toggleActivityBar 
         },
         { 
-          label: settings.showRibbon ? 'Hide Formatting Ribbon' : 'Show Formatting Ribbon', 
+          label: settings.showSidebar ? 'Hide Right Tools Panel' : 'Show Right Tools Panel', 
+          shortcut: 'Ctrl+Shift+B', 
+          action: () => updateSettings({ showSidebar: !settings.showSidebar }) 
+        },
+        { 
+          label: settings.showRibbon ? 'Hide Modular Ribbon' : 'Show Modular Ribbon', 
+          shortcut: 'Ctrl+Shift+R',
           action: toggleRibbon 
+        },
+        { 
+          label: settings.showMenuBar !== false ? 'Hide Menu Bar' : 'Show Menu Bar', 
+          shortcut: 'Alt+M',
+          action: toggleMenuBar 
+        },
+        { 
+          label: (settings.showMobileAccessoryBar ?? true) ? 'Hide Markdown Formatting quick buttons' : 'Show Markdown Formatting quick buttons', 
+          action: toggleMobileAccessoryBar 
         },
         { 
           label: settings.sidebarOverlay ? 'Right Panel: Switch to Docked' : 'Right Panel: Switch to Overlay', 
@@ -262,7 +289,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
         data-tauri-drag-region
         onMouseDown={handleWindowDrag}
         onDoubleClick={handleTitleBarDoubleClick}
-        className="h-9 bg-[var(--titlebar-bg)] border-b border-[var(--border-primary)] flex items-center justify-between px-2 sm:px-3 shrink-0 gap-2 min-w-0 relative overflow-visible cursor-default select-none"
+        className="h-9 bg-[var(--titlebar-bg)] border-b border-[var(--titlebar-border)] flex items-center justify-between px-2 sm:px-3 shrink-0 gap-2 min-w-0 relative overflow-visible cursor-default select-none"
       >
         {/* Left: Brand */}
         <div className="flex items-center gap-1.5 shrink-0">
@@ -283,7 +310,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           onDoubleClick={handleTitleBarDoubleClick}
         />
 
-        {/* Center: Rail Toggle, Search, Render MODE, Command Palette, Touch Mode, Theme Selection */}
+        {/* Center: Rail Toggle, Menu Toggle, Search, Render MODE, Ribbon, Touch Mode, Theme Selection */}
         <div className="flex items-center justify-center gap-1 sm:gap-1.5 shrink-0">
           {/* Hide / Show Left Rail Toggle Button */}
           <button
@@ -299,6 +326,22 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
             }`}
           >
             <PanelLeft className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Menu Bar Toggle Button (Hamburger icon beside Search) */}
+          <button
+            type="button"
+            onClick={toggleMenuBar}
+            title={settings.showMenuBar !== false ? "Hide Menu Bar (Alt+M)" : "Show Menu Bar (Alt+M)"}
+            aria-label={settings.showMenuBar !== false ? "Hide Menu Bar" : "Show Menu Bar"}
+            aria-pressed={settings.showMenuBar !== false}
+            className={`h-6 w-6 flex items-center justify-center rounded-md transition-colors shrink-0 cursor-pointer ${
+              settings.showMenuBar !== false
+                ? 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+                : 'bg-[var(--accent-container)] text-[var(--accent-primary)] border border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80 shadow-2xs'
+            }`}
+          >
+            <Menu className="w-3.5 h-3.5" />
           </button>
 
           {/* Quick Search / Command Palette Bar */}
@@ -342,6 +385,23 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
                 <span className="font-medium text-[10.5px] hidden sm:inline">Raw</span>
               </>
             )}
+          </button>
+
+          {/* Modular Ribbon Quick Toggle */}
+          <button
+            type="button"
+            onClick={toggleRibbon}
+            title={settings.showRibbon ? 'Hide Modular Ribbon (Ctrl+Shift+R)' : 'Show Modular Ribbon (Ctrl+Shift+R)'}
+            aria-label={settings.showRibbon ? 'Hide Modular Ribbon' : 'Show Modular Ribbon'}
+            aria-pressed={settings.showRibbon}
+            className={`h-6 px-1.5 sm:px-2 flex items-center gap-1 rounded-md transition-all border text-xs cursor-pointer ${
+              settings.showRibbon
+                ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border-transparent'
+            }`}
+          >
+            <PanelTop className={`w-3.5 h-3.5 ${settings.showRibbon ? 'text-[var(--accent-primary)]' : ''}`} />
+            <span className="font-medium text-[10.5px] hidden sm:inline">{settings.showRibbon ? 'Ribbon' : 'Show Ribbon'}</span>
           </button>
 
           {/* Touch Mode Quick Toggle */}
@@ -396,6 +456,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
                       type="button"
                       onClick={() => {
                         setTheme(t.id);
+                        bridge.theme.applyTheme(t.id);
                         setOpenMenu(null);
                       }}
                       aria-label={`Theme: ${t.name}`}
@@ -433,76 +494,93 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
       </div>
 
       {/* Row 2: Compact Menu Bar (File, Edit, View, Tools, Help) */}
-      <nav 
-        data-tauri-drag-region
-        onMouseDown={handleWindowDrag}
-        onDoubleClick={handleTitleBarDoubleClick}
-        className={`bg-[var(--titlebar-bg)]/85 border-b border-[var(--border-subtle)] flex items-center px-2 sm:px-3 shrink-0 gap-0.5 sm:gap-1 select-none relative z-30 transition-all cursor-default overflow-x-auto no-scrollbar ${
-          settings.touchOptimized ? 'h-8.5' : 'h-7'
-        }`}
-        aria-label="Menu bar"
-      >
-        {menuGroups.map((menu) => {
-          const MenuIcon = menu.icon;
-          const isOpen = openMenu === menu.id;
+      {settings.showMenuBar !== false && (
+        <nav 
+          className={`bg-[var(--titlebar-bg)] border-b border-[var(--titlebar-border)] flex items-center px-2 sm:px-3 shrink-0 gap-0.5 sm:gap-1 select-none relative z-40 transition-all cursor-default overflow-visible ${
+            settings.touchOptimized ? 'h-8.5' : 'h-7'
+          }`}
+          aria-label="Menu bar"
+        >
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 overflow-visible">
+          {menuGroups.map((menu) => {
+            const MenuIcon = menu.icon;
+            const isOpen = openMenu === menu.id;
 
-          return (
-            <div key={menu.id} className="relative">
-              <button
-                type="button"
-                onClick={() => setOpenMenu(prev => prev === menu.id ? null : menu.id)}
-                onMouseEnter={() => {
-                  if (openMenu !== null && openMenu !== 'theme') {
-                    setOpenMenu(menu.id);
-                  }
-                }}
-                title={`${menu.label} Menu`}
-                aria-label={`${menu.label} Menu`}
-                aria-expanded={isOpen}
-                className={`${
-                  settings.touchOptimized ? 'h-7 px-2.5 text-xs' : 'h-5.5 px-2 text-[11.5px]'
-                } font-medium rounded transition-colors flex items-center gap-1 cursor-pointer select-none ${
-                  isOpen
-                    ? 'bg-[var(--accent-primary)] text-white shadow-xs'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
-                }`}
-              >
-                <MenuIcon className={`${settings.touchOptimized ? 'w-3.5 h-3.5' : 'w-3 h-3'} shrink-0`} />
-                <span>{menu.label}</span>
-              </button>
-
-              {isOpen && (
-                <div className="absolute left-0 top-full mt-1 w-56 sm:w-60 bg-[var(--dropdown-bg)] border border-[var(--border-primary)] rounded-lg shadow-2xl py-1 z-50 animate-in fade-in-50 zoom-in-95 duration-100">
-                  {menu.items.map((item, idx) => {
-                    if (item.isDivider) {
-                      return <div key={idx} className="my-1 border-t border-[var(--border-subtle)]" />;
+            return (
+              <div key={menu.id} className="relative">
+                <button
+                  type="button"
+                  data-no-drag
+                  data-tauri-drag-region="false"
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenu(prev => prev === menu.id ? null : menu.id);
+                  }}
+                  onMouseEnter={() => {
+                    if (openMenu !== null && openMenu !== 'theme') {
+                      setOpenMenu(menu.id);
                     }
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          item.action?.();
-                          setOpenMenu(null);
-                        }}
-                        aria-label={item.label}
-                        title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
-                        className="w-full px-3 py-1.5 text-xs text-left flex items-center justify-between text-[var(--text-primary)] hover:bg-[var(--accent-primary)] hover:text-white transition-colors cursor-pointer"
-                      >
-                        <span className="truncate">{item.label}</span>
-                        {item.shortcut && (
-                          <span className="text-[10px] font-mono opacity-60 ml-2 shrink-0">
-                            {item.shortcut}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+                  }}
+                  title={`${menu.label} Menu`}
+                  aria-label={`${menu.label} Menu`}
+                  aria-expanded={isOpen}
+                  className={`${
+                    settings.touchOptimized ? 'h-7 px-2.5 text-xs' : 'h-5.5 px-2 text-[11.5px]'
+                  } font-medium rounded transition-colors flex items-center gap-1 cursor-pointer select-none ${
+                    isOpen
+                      ? 'bg-[var(--accent-primary)] text-white shadow-xs'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+                  }`}
+                >
+                  <MenuIcon className={`${settings.touchOptimized ? 'w-3.5 h-3.5' : 'w-3 h-3'} shrink-0`} />
+                  <span>{menu.label}</span>
+                </button>
+
+                {isOpen && (
+                  <div 
+                    data-no-drag
+                    data-tauri-drag-region="false"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="absolute left-0 top-full mt-1 w-56 sm:w-60 bg-[var(--dropdown-bg)] border border-[var(--border-primary)] rounded-lg shadow-2xl py-1 z-50 animate-in fade-in-50 zoom-in-95 duration-100"
+                  >
+                    {menu.items.map((item, idx) => {
+                      if (item.isDivider) {
+                        return <div key={idx} className="my-1 border-t border-[var(--border-subtle)]" />;
+                      }
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          data-no-drag
+                          data-tauri-drag-region="false"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            item.action?.();
+                            setOpenMenu(null);
+                          }}
+                          aria-label={item.label}
+                          title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
+                          className="w-full px-3 py-1.5 text-xs text-left flex items-center justify-between text-[var(--text-primary)] hover:bg-[var(--accent-primary)] hover:text-white transition-colors cursor-pointer"
+                        >
+                          <span className="truncate">{item.label}</span>
+                          {item.shortcut && (
+                            <span className="text-[10px] font-mono opacity-60 ml-2 shrink-0">
+                              {item.shortcut}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {/* Trailing Drag Region for Menu Bar */}
         <div 
@@ -511,7 +589,23 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           onMouseDown={handleWindowDrag}
           onDoubleClick={handleTitleBarDoubleClick}
         />
+
+        {/* Right: Quick button on MenuBar to Hide Menu Bar */}
+        <div className="flex items-center shrink-0 pr-1">
+          <button
+            type="button"
+            data-no-drag
+            data-tauri-drag-region="false"
+            onClick={toggleMenuBar}
+            title="Hide Menu Bar (Alt+M)"
+            aria-label="Hide Menu Bar"
+            className="h-5 w-5 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
       </nav>
+      )}
     </header>
   );
 };

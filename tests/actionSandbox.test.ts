@@ -46,4 +46,16 @@ describe('executeInSandbox Security Hardening', () => {
     const checkProcess = await executeInSandbox('return typeof process;', mockApi);
     expect(checkProcess).toBe('undefined');
   });
+
+  it('rejects dynamic import(...) attempts', async () => {
+    await expect(
+      executeInSandbox('return import("/src/store/settingsStore");', mockApi)
+    ).rejects.toThrow(/Security Error: Prototype, constructor, and dynamic import access/);
+  });
+
+  it('rejects import statements or expressions', async () => {
+    await expect(
+      executeInSandbox('import("data:text/javascript,console.log(1)");', mockApi)
+    ).rejects.toThrow(/Security Error/);
+  });
 });

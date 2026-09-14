@@ -15,8 +15,10 @@ import { useNotificationStore } from '../../store/notificationStore';
 import { FormulaEngine } from '../../services/formulaParser';
 import { renderLatex } from '../../services/mathRenderer';
 import { renderMermaidDiagram } from '../../services/mermaidRenderer';
-import { useRuntimeBridge, isDarkTheme } from '../../adapters';
+import { useRuntimeBridge, isDarkTheme, getDocumentTheme } from '../../adapters';
 import { highlightCodeSnippet } from '../../services/codeLanguages';
+import { useActionStore } from '../../store/actionStore';
+import { executeActionById } from '../../services/actionExecutor';
 
 // Configure marked with custom code renderer using CodeMirror native syntax highlighting
 marked.use({
@@ -39,6 +41,7 @@ interface LivePreviewProps {
 export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
   const bridge = useRuntimeBridge();
   const { settings, updateSettings } = useSettingsStore();
+  const { actions } = useActionStore();
   const { addNotification } = useNotificationStore();
   const [copied, setCopied] = useState(false);
   const [showToc, setShowToc] = useState(false);
@@ -108,17 +111,44 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
 
   // 3. Convert markdown to HTML with marked (GFM tables, breaks enabled)
   const renderedHtml = useMemo(() => {
+    let html = '';
     try {
-      return marked.parse(processedMarkdown, { gfm: true, breaks: true }) as string;
+      html = marked.parse(processedMarkdown, { gfm: true, breaks: true }) as string;
     } catch {
-      return processedMarkdown;
+      html = processedMarkdown;
     }
-  }, [processedMarkdown]);
+
+    // Transform [[action:id]] or [[action:id|label]] into interactive buttons
+    const actionRegex = /\[\[action:([^\]|\n]+)(?:\|([^\]\n]+))?\]\]/g;
+    html = html.replace(actionRegex, (match, rawId, rawCustomLabel) => {
+      const actionId = rawId.trim();
+      const customLabel = rawCustomLabel?.trim();
+      const action = actions.find(a => a.id === actionId);
+      const isMissing = !action;
+      const label = customLabel || action?.name || actionId;
+      const isFormula = action?.codeType === 'formula' || action?.code?.startsWith('FORMULA:');
+
+      if (isMissing) {
+        return `<span class="live-preview-action-missing" title="Action &quot;${actionId}&quot; not found in Action Scripts library">
+          <span class="opacity-75">⚠️</span><span class="live-preview-action-missing-name">${customLabel || match}</span><span class="live-preview-action-missing-badge">(missing)</span>
+        </span>`;
+      }
+
+      return `<button type="button" class="live-preview-action-btn" data-action-id="${actionId}" title="Action: ${action.name}&#10;Click to execute">
+        <span class="live-preview-action-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg></span>
+        <span class="live-preview-action-label">${label}</span>
+        ${isFormula ? '<span class="live-preview-action-badge-fx">fx</span>' : ''}
+        <span class="live-preview-action-badge">BTN</span>
+      </button>`;
+    });
+
+    return html;
+  }, [processedMarkdown, actions]);
 
   // 4. Asynchronously render Mermaid diagrams in preview
   useEffect(() => {
     if (!previewRef.current) return;
-    const isDark = isDarkTheme();
+    const currentTheme = settings.theme || getDocumentTheme();
     const mermaidContainers = previewRef.current.querySelectorAll<HTMLDivElement>('.live-preview-mermaid');
 
     mermaidContainers.forEach(async (container) => {
@@ -126,7 +156,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
       if (!code) return;
       try {
         const decoded = decodeURIComponent(code);
-        const res = await renderMermaidDiagram(decoded, isDark);
+        const res = await renderMermaidDiagram(decoded, currentTheme);
         if (res.isError) {
           container.innerHTML = `
             <div class="p-3 text-xs text-red-400 bg-red-950/20 rounded border border-red-800/40 font-mono">
@@ -148,6 +178,28 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
       } catch (err) {
         console.warn('Failed to render preview mermaid diagram', err);
       }
+    });
+  }, [renderedHtml, settings.theme]);
+
+  // 5. Attach click event listeners to live preview action buttons
+  useEffect(() => {
+    if (!previewRef.current) return;
+    const actionBtns = previewRef.current.querySelectorAll<HTMLButtonElement>('.live-preview-action-btn');
+
+    actionBtns.forEach((btn) => {
+      const actionId = btn.getAttribute('data-action-id');
+      if (!actionId) return;
+
+      btn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        btn.classList.add('is-running');
+        try {
+          await executeActionById(actionId);
+        } finally {
+          btn.classList.remove('is-running');
+        }
+      };
     });
   }, [renderedHtml]);
 

@@ -1,0 +1,195 @@
+/* VS Code-like Find and Replace widget */
+.floatingSearch {
+  position: fixed;
+  top: var(--floating-search-top, 74px);
+  right: 16px;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  background: var(--card-bg, #25252A);
+  border: 1px solid var(--border-primary, #2B2B33);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  padding: 5px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-primary, #EDEDED);
+  animation: slideDown 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.toggleReplace {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #71717A);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s;
+  margin-top: 1px;
+}
+
+.toggleReplace:hover {
+  background: var(--card-hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary, #EDEDED);
+}
+
+.toggleReplace svg { transition: transform 0.15s ease; }
+.rotated { transform: rotate(90deg); }
+
+.searchContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.searchRow, .replaceRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--input-bg, #18181C);
+  border: 1px solid var(--input-border, #3C3C44);
+  border-radius: 4px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--accent-primary, #007ACC);
+  box-shadow: 0 0 0 1px var(--accent-primary, #007ACC);
+}
+
+.searchInput {
+  width: 220px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary, #EDEDED);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+.searchInput::placeholder { color: var(--input-placeholder, #71717A); }
+
+.inputOptions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 4px;
+}
+
+.optionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--text-muted, #71717A);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.optionBtn:hover {
+  background: var(--card-hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary, #EDEDED);
+}
+
+.optionBtn.active {
+  background: var(--accent-container, rgba(0, 122, 204, 0.2));
+  border-color: var(--accent-primary, #007ACC);
+  color: var(--on-accent-container, #38BDF8);
+}
+
+.matchInfo { min-width: 72px; text-align: center; }
+.matchCount { font-size: 11px; color: var(--text-muted, #71717A); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.navButtons { display: flex; align-items: center; gap: 2px; }
+
+.navBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary, #EDEDED);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.navBtn:hover:not(:disabled) { background: var(--card-hover-bg, rgba(255, 255, 255, 0.08)); }
+.navBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.selectAllIcon { font-size: 13px; line-height: 1; }
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary, #EDEDED);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.closeBtn:hover {
+  background: var(--card-hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--status-error, #EF4444);
+}
+
+.replaceRow .inputWrapper { flex: 1; }
+.replaceRow .searchInput { width: 220px; }
+
+.replaceButtons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.replaceBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary, #EDEDED);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.replaceBtn:hover:not(:disabled) { background: var(--card-hover-bg, rgba(255, 255, 255, 0.08)); }
+.replaceBtn:disabled { opacity: 0.3; cursor: not-allowed; }

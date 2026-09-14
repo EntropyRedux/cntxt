@@ -55,6 +55,16 @@ fn is_system_root(canonical: &Path) -> bool {
     false
 }
 
+/// Helper to strip Windows UNC verbatim prefix (\\?\) so paths remain clean standard paths.
+pub fn strip_verbatim_prefix(path: &Path) -> PathBuf {
+    let s = path.to_string_lossy();
+    if let Some(stripped) = s.strip_prefix(r"\\?\") {
+        PathBuf::from(stripped)
+    } else {
+        path.to_path_buf()
+    }
+}
+
 /// Canonicalize and validate a path against traversal and system root access.
 pub fn validate_path(path: &str) -> Result<PathBuf, String> {
     if path.trim().is_empty() {
@@ -75,7 +85,7 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
         if is_system_root(&canonical) {
             return Err("Access to system root directory is denied".to_string());
         }
-        return Ok(canonical);
+        return Ok(strip_verbatim_prefix(&canonical));
     }
 
     // If file doesn't exist yet (e.g. target of write_file), validate parent directory
@@ -87,7 +97,7 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
                 return Err("Access to system root directory is denied".to_string());
             }
             if let Some(file_name) = path_buf.file_name() {
-                return Ok(canonical_parent.join(file_name));
+                return Ok(strip_verbatim_prefix(&canonical_parent.join(file_name)));
             }
         }
     }
@@ -96,7 +106,7 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
         return Err("Access to system root directory is denied".to_string());
     }
 
-    Ok(path_buf)
+    Ok(strip_verbatim_prefix(&path_buf))
 }
 
 #[tauri::command]
@@ -232,7 +242,7 @@ pub async fn open_folder_dialog(_window: Window) -> Result<Option<String>, Strin
     Ok(folder_path.map(|p| p.to_string_lossy().to_string()))
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Debug)]
 pub struct FileNode {
     pub name: String,
     pub path: String,
@@ -240,36 +250,62 @@ pub struct FileNode {
     pub children: Option<Vec<FileNode>>,
 }
 
-#[tauri::command]
-pub fn read_directory(path: String) -> Result<Vec<FileNode>, String> {
-    let dir_path = validate_path(&path)?;
-
-    if !dir_path.is_dir() {
-        return Err("Path is not a directory".to_string());
+fn read_dir_internal(dir_path: &Path, depth: usize, max_depth: usize) -> Result<Vec<FileNode>, String> {
+    if depth > max_depth {
+        return Ok(Vec::new());
     }
+
+    let read_dir = match fs::read_dir(dir_path) {
+        Ok(rd) => rd,
+        Err(e) => {
+            eprintln!("[read_dir_internal] Failed to read directory {:?}: {}", dir_path, e);
+            return Err(format!("Failed to read directory: {}", e));
+        }
+    };
 
     let mut entries: Vec<FileNode> = Vec::new();
 
-    let read_dir = fs::read_dir(&dir_path)
-        .map_err(|e| format!("Failed to read directory: {}", e))?;
+    // Skip bulky cache/build directories from deep recursion
+    const IGNORED_FOLDERS: &[&str] = &[
+        "node_modules", ".git", "target", "dist", "build", ".next", ".cache", ".gemini", ".idea", ".vscode"
+    ];
 
     for entry in read_dir {
-        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
-        let entry_path = entry.path();
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let raw_entry_path = entry.path();
+        let entry_path = strip_verbatim_prefix(&raw_entry_path);
         let file_name = entry.file_name().to_string_lossy().to_string();
 
-        // Skip hidden files (starting with .)
-        if file_name.starts_with('.') {
+        // Skip hidden files/directories (except .env and .gitignore)
+        if file_name.starts_with('.') && file_name != ".env" && file_name != ".gitignore" {
             continue;
         }
 
         let is_dir = entry_path.is_dir();
+        let children = if is_dir {
+            if depth >= max_depth || IGNORED_FOLDERS.iter().any(|&f| file_name.eq_ignore_ascii_case(f)) {
+                None // Will be loaded on-demand when expanded in explorer
+            } else {
+                match read_dir_internal(&entry_path, depth + 1, max_depth) {
+                    Ok(kids) => Some(kids),
+                    Err(e) => {
+                        eprintln!("[read_dir_internal] Error reading subfolder {:?}: {}", entry_path, e);
+                        None
+                    }
+                }
+            }
+        } else {
+            None
+        };
 
         entries.push(FileNode {
             name: file_name,
             path: entry_path.to_string_lossy().to_string(),
             is_dir,
-            children: None, // Will be loaded lazily
+            children,
         });
     }
 
@@ -283,6 +319,18 @@ pub fn read_directory(path: String) -> Result<Vec<FileNode>, String> {
     });
 
     Ok(entries)
+}
+
+#[tauri::command]
+pub fn read_directory(path: String) -> Result<Vec<FileNode>, String> {
+    let dir_path = validate_path(&path)?;
+
+    if !dir_path.is_dir() {
+        return Err("Path is not a directory".to_string());
+    }
+
+    // Depth 0: direct entries, depth 1: immediate subfolders pre-populated
+    read_dir_internal(&dir_path, 0, 1)
 }
 
 #[tauri::command]

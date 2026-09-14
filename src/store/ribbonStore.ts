@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { RibbonItem } from '../types';
+import { RibbonItem, RibbonItemType } from '../types';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
@@ -33,18 +33,6 @@ export const DEFAULT_RIBBON_ITEMS: RibbonItem[] = [
     order: 1,
   },
   {
-    id: 'rb_formulas',
-    label: 'Formulas',
-    icon: 'Calculator',
-    type: 'tool',
-    targetId: 'formulas',
-    color: 'emerald',
-    tooltip: 'Evaluate dynamic prompt formulas ($COUNT, $SUM, $JOIN)',
-    enabled: true,
-    showLabel: false,
-    order: 2,
-  },
-  {
     id: 'rb_outline',
     label: 'Outline',
     icon: 'ListTree',
@@ -54,7 +42,7 @@ export const DEFAULT_RIBBON_ITEMS: RibbonItem[] = [
     tooltip: 'Jump between headings in document structure',
     enabled: true,
     showLabel: false,
-    order: 3,
+    order: 2,
   },
   {
     id: 'rb_templates',
@@ -64,6 +52,15 @@ export const DEFAULT_RIBBON_ITEMS: RibbonItem[] = [
     targetId: 'templates',
     color: 'purple',
     tooltip: 'Browse and insert context prompt templates',
+    enabled: true,
+    showLabel: false,
+    order: 3,
+  },
+  {
+    id: 'rb_sep_1',
+    label: 'Separator',
+    icon: 'Minus',
+    type: 'separator',
     enabled: true,
     showLabel: false,
     order: 4,
@@ -93,6 +90,15 @@ export const DEFAULT_RIBBON_ITEMS: RibbonItem[] = [
     order: 6,
   },
   {
+    id: 'rb_sep_2',
+    label: 'Separator',
+    icon: 'Minus',
+    type: 'separator',
+    enabled: true,
+    showLabel: false,
+    order: 7,
+  },
+  {
     id: 'rb_insert_image',
     label: 'Insert Image',
     icon: 'Image',
@@ -102,7 +108,7 @@ export const DEFAULT_RIBBON_ITEMS: RibbonItem[] = [
     tooltip: 'Insert image from local file or web URL (or paste with Ctrl+V)',
     enabled: true,
     showLabel: false,
-    order: 7,
+    order: 8,
   }
 ];
 
@@ -118,7 +124,10 @@ interface RibbonState {
   addItem: (itemData: Omit<RibbonItem, 'id' | 'order'>) => RibbonItem;
   updateItem: (id: string, updates: Partial<RibbonItem>) => void;
   removeItem: (id: string) => void;
+  removeItemByTarget: (targetId: string, type?: RibbonItemType) => void;
   toggleItem: (id: string) => void;
+  toggleItemLabel: (id: string) => void;
+  addSeparator: () => RibbonItem;
   reorderItems: (sourceIndex: number, destinationIndex: number) => void;
   moveItemUp: (id: string) => void;
   moveItemDown: (id: string) => void;
@@ -190,12 +199,47 @@ export const useRibbonStore = create<RibbonState>((set, get) => ({
     saveRibbonToStorage(reordered);
   },
 
+  removeItemByTarget: (targetId, type) => {
+    const filtered = get().items.filter(item => {
+      if (type) return !(item.targetId === targetId && item.type === type);
+      return item.targetId !== targetId;
+    });
+    const reordered = filtered.map((item, idx) => ({ ...item, order: idx }));
+    set({ items: reordered });
+    saveRibbonToStorage(reordered);
+  },
+
   toggleItem: (id) => {
     const updated = get().items.map((item) =>
       item.id === id ? { ...item, enabled: !item.enabled } : item
     );
     set({ items: updated });
     saveRibbonToStorage(updated);
+  },
+
+  toggleItemLabel: (id) => {
+    const updated = get().items.map((item) =>
+      item.id === id ? { ...item, showLabel: !item.showLabel } : item
+    );
+    set({ items: updated });
+    saveRibbonToStorage(updated);
+  },
+
+  addSeparator: () => {
+    const current = get().items;
+    const newSeparator: RibbonItem = {
+      id: `rb_sep_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      label: 'Separator',
+      icon: 'Minus',
+      type: 'separator',
+      order: current.length,
+      enabled: true,
+      showLabel: false
+    };
+    const updated = [...current, newSeparator].sort((a, b) => a.order - b.order);
+    set({ items: updated });
+    saveRibbonToStorage(updated);
+    return newSeparator;
   },
 
   reorderItems: (sourceIndex, destinationIndex) => {

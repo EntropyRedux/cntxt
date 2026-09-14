@@ -17,11 +17,12 @@ export interface ShellEditorContainerProps {
 
 export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
   className = '',
-  showAccessoryBar = true
+  showAccessoryBar
 }) => {
   const { tabs, activeTabId, createTab } = useTabStore();
   const { settings } = useSettingsStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
+  const isAccessoryBarVisible = showAccessoryBar !== undefined ? showAccessoryBar : (settings.showMobileAccessoryBar !== false);
 
   return (
     <main className={`flex-1 flex flex-col min-w-0 bg-[var(--editor-bg)] overflow-hidden relative z-0 ${className}`}>
@@ -75,7 +76,7 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
       </div>
 
       {/* Quick Markdown Formatting Toolbar */}
-      {activeTab && showAccessoryBar && <MobileAccessoryBar />}
+      {activeTab && isAccessoryBarVisible && <MobileAccessoryBar />}
     </main>
   );
 };

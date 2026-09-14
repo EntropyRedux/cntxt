@@ -6,6 +6,7 @@ import { editorRegistry } from '../services/editor/editorRegistry';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { useSettingsStore } from './settingsStore';
+import { useNotificationStore } from './notificationStore';
 import { safePersist, safeRemove } from '../services/storageHelper';
 
 let activeStorage: IStorageBridge | null = null;
@@ -16,14 +17,14 @@ interface TabState {
   isSaving: boolean;
   
   // Actions
-  createTab: (title?: string, content?: string, language?: SupportedLanguage, filePath?: string | null) => string;
+  createTab: (title?: string, content?: string, language?: SupportedLanguage, filePath?: string | null, pinnedTabId?: string) => string;
   closeTab: (tabId: string) => void;
   closeOtherTabs: (keepTabId: string) => void;
   closeAllTabs: () => void;
   setActiveTabId: (tabId: string) => void;
   updateTabContent: (tabId: string, content: string) => void;
   updateTabMetadata: (tabId: string, updates: Partial<Tab>) => void;
-  insertTextAtCursor: (tabId: string, textToInsert: string) => void;
+  insertTextAtCursor: (tabId: string, textToInsert: string, replaceSelection?: boolean) => void;
   reorderTabs: (sourceIndex: number, destinationIndex: number) => void;
   saveCurrentTab: () => Promise<void>;
   saveTabAs: (tabId: string, newTitle: string, newPath?: string) => Promise<void>;
@@ -114,7 +115,7 @@ export const useTabStore = create<TabState>((set, get) => ({
     }
   },
 
-  createTab: (title = 'Untitled.md', content = '', language: SupportedLanguage = 'markdown', filePath = null) => {
+  createTab: (title = 'Untitled.md', content = '', language: SupportedLanguage = 'markdown', filePath = null, pinnedTabId?: string) => {
     const id = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     const newTab: Tab = {
       id,
@@ -126,7 +127,8 @@ export const useTabStore = create<TabState>((set, get) => ({
       language,
       lastModifiedTime: Date.now(),
       cursorLine: 1,
-      cursorCol: 1
+      cursorCol: 1,
+      pinnedTabId
     };
 
     const newTabs = [...get().tabs, newTab];
@@ -241,9 +243,9 @@ export const useTabStore = create<TabState>((set, get) => ({
     saveTabsMeta(updated, activeTabId);
   },
 
-  insertTextAtCursor: (tabId: string, textToInsert: string) => {
+  insertTextAtCursor: (tabId: string, textToInsert: string, replaceSelection = false) => {
     // 1. Try to dispatch directly through the active CodeMirror view if mounted
-    const insertedInView = editorRegistry.insertTextAtCursor(tabId, textToInsert);
+    const insertedInView = editorRegistry.insertTextAtCursor(tabId, textToInsert, replaceSelection);
     if (insertedInView) {
       return;
     }
@@ -264,8 +266,9 @@ export const useTabStore = create<TabState>((set, get) => ({
       ? tab.selectionTo
       : offset;
 
-    const newContent = currentContent.slice(0, offset) + textToInsert + currentContent.slice(selTo);
-    const newOffset = offset + textToInsert.length;
+    const insertAt = replaceSelection ? offset : selTo;
+    const newContent = currentContent.slice(0, insertAt) + textToInsert + currentContent.slice(replaceSelection ? selTo : insertAt);
+    const newOffset = insertAt + textToInsert.length;
 
     // Calculate line & col from newOffset
     const linesBefore = newContent.slice(0, newOffset).split('\n');
@@ -321,6 +324,12 @@ export const useTabStore = create<TabState>((set, get) => ({
       return t;
     });
     set({ tabs: updated });
+    if (activeStorage) {
+      const target = updated.find(t => t.id === tabId);
+      if (target) {
+        await activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, target.content);
+      }
+    }
     saveTabsMeta(updated, activeTabId);
   },
 
@@ -348,7 +357,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 function saveTabsMeta(tabs: Tab[], activeTabId: string) {
   if (!activeStorage) return;
   try {
-    const metaOnly = tabs.map(({ id, title, filePath, folderPath, isDirty, language, lastModifiedTime, isPinned }) => ({
+    const metaOnly = tabs.map(({ id, title, filePath, folderPath, isDirty, language, lastModifiedTime, isPinned, pinnedTabId }) => ({
       id,
       title,
       filePath,
@@ -356,12 +365,14 @@ function saveTabsMeta(tabs: Tab[], activeTabId: string) {
       isDirty,
       language,
       lastModifiedTime,
-      isPinned
+      isPinned,
+      pinnedTabId
     }));
     safePersist(activeStorage, STORAGE_KEYS.TABS_META, JSON.stringify(metaOnly), 'tabs metadata');
     safePersist(activeStorage, STORAGE_KEYS.ACTIVE_TAB_ID, activeTabId, 'active tab id');
   } catch (e) {
     console.error('Failed to save tab metadata', e);
+    useNotificationStore.getState().addNotification('Persistence Warning', 'Failed to save tab metadata to storage', 'warning');
   }
 }
 

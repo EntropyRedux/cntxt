@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Action, ActionCategory } from '../../contracts/data_shapes';
+import { Action, ActionCategory, PersistedActionUIState } from '../../contracts/data_shapes';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
@@ -10,8 +10,19 @@ export { DEFAULT_ACTIONS };
 
 let activeStorage: IStorageBridge | null = null;
 
+export interface CategorySummary {
+  name: string;
+  count: number;
+}
+
 interface ActionState {
   actions: Action[];
+  collapsedCategories: string[];
+  categoryOrder: string[];
+  pinnedActionIds: string[];
+  showHidden: boolean;
+  bulkMode: boolean;
+  selectedActionIds: string[];
   searchQuery: string;
   selectedCategory: ActionCategory;
   isActionEditorOpen: boolean;
@@ -21,16 +32,38 @@ interface ActionState {
   initializeActions: (storage?: IStorageBridge) => Promise<void>;
   setSearchQuery: (query: string) => void;
   setSelectedCategory: (category: ActionCategory) => void;
+  setShowHidden: (show: boolean | ((prev: boolean) => boolean)) => void;
+  toggleShowHidden: () => void;
+  setBulkMode: (bulk: boolean) => void;
+  toggleBulkMode: () => void;
+  toggleSelection: (id: string) => void;
+  clearSelection: () => void;
+  selectAll: () => void;
+  
   openActionEditor: (action?: Action | null) => void;
   closeActionEditor: () => void;
   saveAction: (action: Omit<Action, 'id'> & { id?: string }) => void;
   createAction: (action: Omit<Action, 'id' | 'createdAt' | 'updatedAt'>) => string;
   updateAction: (id: string, updates: Partial<Action>) => void;
+  renameActionId: (oldId: string, newId: string) => boolean;
   duplicateAction: (id: string) => void;
   toggleActionEnabled: (id: string) => void;
+  toggleActionsEnabledBulk: (ids: string[], enabled: boolean) => void;
   executeAction: (id: string, context?: any) => Promise<void>;
   deleteAction: (id: string) => void;
+  deleteActionsBulk: (ids: string[]) => void;
   runAction: (action: Action, sandboxApi: any) => Promise<void>;
+  
+  toggleActionPin: (id: string) => void;
+  isActionPinned: (id: string) => boolean;
+  toggleCategoryCollapse: (category: string) => void;
+  collapseAllCategories: () => void;
+  expandAllCategories: () => void;
+  moveCategory: (category: string, direction: 'up' | 'down') => void;
+  
+  getEnabledActions: () => Action[];
+  getAllCategories: () => CategorySummary[];
+  
   importActions: (jsonString: string) => number;
   exportActions: () => string;
   resetToDefaults: () => void;
@@ -38,6 +71,12 @@ interface ActionState {
 
 export const useActionStore = create<ActionState>((set, get) => ({
   actions: [],
+  collapsedCategories: [],
+  categoryOrder: [],
+  pinnedActionIds: [],
+  showHidden: true,
+  bulkMode: false,
+  selectedActionIds: [],
   searchQuery: '',
   selectedCategory: 'All',
   isActionEditorOpen: false,
@@ -65,6 +104,21 @@ export const useActionStore = create<ActionState>((set, get) => ({
       } else {
         set({ actions: [] });
       }
+
+      // Load UI State
+      const storedUI = await activeStorage.getItem(STORAGE_KEYS.ACTIONS_UI);
+      if (storedUI) {
+        try {
+          const parsedUI: PersistedActionUIState = JSON.parse(storedUI);
+          set({
+            collapsedCategories: parsedUI.collapsedCategories || [],
+            categoryOrder: parsedUI.categoryOrder || [],
+            pinnedActionIds: parsedUI.pinnedActionIds || []
+          });
+        } catch (e) {
+          console.error('Failed to parse persisted action UI state', e);
+        }
+      }
     } catch {
       if (IS_PROTOTYPE_DEMO_MODE) {
         set({ actions: DEFAULT_ACTIONS });
@@ -76,6 +130,48 @@ export const useActionStore = create<ActionState>((set, get) => ({
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setSelectedCategory: (selectedCategory) => set({ selectedCategory }),
+
+  setShowHidden: (show) => {
+    set(state => ({
+      showHidden: typeof show === 'function' ? show(state.showHidden) : show
+    }));
+  },
+
+  toggleShowHidden: () => set(state => ({ showHidden: !state.showHidden })),
+
+  setBulkMode: (bulkMode) => {
+    set({
+      bulkMode,
+      selectedActionIds: bulkMode ? get().selectedActionIds : []
+    });
+  },
+
+  toggleBulkMode: () => {
+    const next = !get().bulkMode;
+    set({
+      bulkMode: next,
+      selectedActionIds: next ? get().selectedActionIds : []
+    });
+  },
+
+  toggleSelection: (id) => {
+    set(state => {
+      const exists = state.selectedActionIds.includes(id);
+      return {
+        selectedActionIds: exists
+          ? state.selectedActionIds.filter(i => i !== id)
+          : [...state.selectedActionIds, id]
+      };
+    });
+  },
+
+  clearSelection: () => set({ selectedActionIds: [] }),
+
+  selectAll: () => {
+    set(state => ({
+      selectedActionIds: state.actions.map(a => a.id)
+    }));
+  },
 
   openActionEditor: (action = null) => {
     set({ isActionEditorOpen: true, editingAction: action });
@@ -90,10 +186,8 @@ export const useActionStore = create<ActionState>((set, get) => ({
     let updated: Action[];
 
     if (actionData.id) {
-      // Update existing
-      updated = current.map(a => a.id === actionData.id ? { ...a, ...actionData } as Action : a);
+      updated = current.map(a => a.id === actionData.id ? { ...a, ...actionData, updatedAt: Date.now() } as Action : a);
     } else {
-      // Create new
       const newAction: Action = {
         ...actionData,
         id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -126,6 +220,17 @@ export const useActionStore = create<ActionState>((set, get) => ({
     saveActions(updated);
   },
 
+  renameActionId: (oldId, newId) => {
+    if (!newId || oldId === newId) return true;
+    const actions = get().actions;
+    if (actions.some(a => a.id === newId)) return false;
+
+    const updated = actions.map(a => a.id === oldId ? { ...a, id: newId, updatedAt: Date.now() } : a);
+    set({ actions: updated });
+    saveActions(updated);
+    return true;
+  },
+
   duplicateAction: (id) => {
     const target = get().actions.find(a => a.id === id);
     if (!target) return;
@@ -147,10 +252,17 @@ export const useActionStore = create<ActionState>((set, get) => ({
     saveActions(updated);
   },
 
+  toggleActionsEnabledBulk: (ids, enabled) => {
+    const updated = get().actions.map(a => ids.includes(a.id) ? { ...a, enabled } : a);
+    set({ actions: updated });
+    saveActions(updated);
+  },
+
   executeAction: async (id: string, context?: any) => {
     const action = get().actions.find(a => a.id === id);
     if (!action) return;
-    await get().runAction(action, context);
+    const { executeActionById } = await import('../services/actionExecutor');
+    await executeActionById(id, context?.view);
   },
 
   deleteAction: (id) => {
@@ -159,11 +271,25 @@ export const useActionStore = create<ActionState>((set, get) => ({
     saveActions(updated);
   },
 
+  deleteActionsBulk: (ids) => {
+    const updated = get().actions.filter(a => !ids.includes(a.id));
+    set({
+      actions: updated,
+      selectedActionIds: get().selectedActionIds.filter(id => !ids.includes(id))
+    });
+    saveActions(updated);
+  },
+
   runAction: async (action, sandboxApi) => {
     set({ isRunningAction: true });
     try {
-      const { executeInSandbox } = await import('../services/actionSandbox');
-      await executeInSandbox(action.code, sandboxApi);
+      if (action.code && action.code.startsWith('FORMULA:')) {
+        const { executeActionById } = await import('../services/actionExecutor');
+        await executeActionById(action.id, sandboxApi?.view);
+      } else {
+        const { executeInSandbox } = await import('../services/actionSandbox');
+        await executeInSandbox(action.code, sandboxApi);
+      }
     } catch (e: any) {
       console.error('Action execution failed', e);
       const errorMsg = e?.message || 'Error executing action';
@@ -178,6 +304,127 @@ export const useActionStore = create<ActionState>((set, get) => ({
     } finally {
       set({ isRunningAction: false });
     }
+  },
+
+  toggleActionPin: (id) => {
+    set(state => {
+      const isPinned = state.pinnedActionIds.includes(id);
+      const newPinned = isPinned
+        ? state.pinnedActionIds.filter(pId => pId !== id)
+        : [...state.pinnedActionIds, id];
+
+      const updatedActions = state.actions.map(a =>
+        a.id === id ? { ...a, isPinned: !isPinned } : a
+      );
+
+      persistUIState({
+        collapsedCategories: state.collapsedCategories,
+        categoryOrder: state.categoryOrder,
+        pinnedActionIds: newPinned
+      });
+
+      return {
+        pinnedActionIds: newPinned,
+        actions: updatedActions
+      };
+    });
+  },
+
+  isActionPinned: (id) => {
+    return get().pinnedActionIds.includes(id);
+  },
+
+  toggleCategoryCollapse: (category) => {
+    set(state => {
+      const isCollapsed = state.collapsedCategories.includes(category);
+      const newCollapsed = isCollapsed
+        ? state.collapsedCategories.filter(c => c !== category)
+        : [...state.collapsedCategories, category];
+
+      persistUIState({
+        collapsedCategories: newCollapsed,
+        categoryOrder: state.categoryOrder,
+        pinnedActionIds: state.pinnedActionIds
+      });
+
+      return { collapsedCategories: newCollapsed };
+    });
+  },
+
+  collapseAllCategories: () => {
+    const cats = get().getAllCategories().map(c => c.name);
+    set({ collapsedCategories: cats });
+    persistUIState({
+      collapsedCategories: cats,
+      categoryOrder: get().categoryOrder,
+      pinnedActionIds: get().pinnedActionIds
+    });
+  },
+
+  expandAllCategories: () => {
+    set({ collapsedCategories: [] });
+    persistUIState({
+      collapsedCategories: [],
+      categoryOrder: get().categoryOrder,
+      pinnedActionIds: get().pinnedActionIds
+    });
+  },
+
+  moveCategory: (category, direction) => {
+    const categories = get().getAllCategories().map(c => c.name);
+    const order = get().categoryOrder.length > 0 ? [...get().categoryOrder] : [...categories];
+    categories.forEach(c => {
+      if (!order.includes(c)) order.push(c);
+    });
+
+    const index = order.indexOf(category);
+    if (index === -1) return;
+
+    if (direction === 'up' && index > 0) {
+      [order[index], order[index - 1]] = [order[index - 1], order[index]];
+    } else if (direction === 'down' && index < order.length - 1) {
+      [order[index], order[index + 1]] = [order[index + 1], order[index]];
+    }
+
+    set({ categoryOrder: order });
+    persistUIState({
+      collapsedCategories: get().collapsedCategories,
+      categoryOrder: order,
+      pinnedActionIds: get().pinnedActionIds
+    });
+  },
+
+  getEnabledActions: () => {
+    return get().actions.filter(a => a.enabled !== false);
+  },
+
+  getAllCategories: () => {
+    const counts = new Map<string, number>();
+    get().actions.forEach(a => {
+      const cat = a.category || 'General';
+      counts.set(cat, (counts.get(cat) || 0) + 1);
+    });
+
+    const categories: CategorySummary[] = Array.from(counts.entries()).map(([name, count]) => ({
+      name,
+      count
+    }));
+
+    const order = get().categoryOrder;
+    if (order.length > 0) {
+      categories.sort((a, b) => {
+        const aIndex = order.indexOf(a.name);
+        const bIndex = order.indexOf(b.name);
+        if (aIndex === -1 && bIndex === -1) return a.name.localeCompare(b.name);
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      });
+    } else {
+      categories.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return categories;
   },
 
   importActions: (jsonString: string) => {
@@ -204,12 +451,18 @@ export const useActionStore = create<ActionState>((set, get) => ({
   },
 
   resetToDefaults: () => {
-    set({ actions: DEFAULT_ACTIONS });
-    saveActions(DEFAULT_ACTIONS);
+    const resetActions = IS_PROTOTYPE_DEMO_MODE ? DEFAULT_ACTIONS : [];
+    set({ actions: resetActions });
+    saveActions(resetActions);
   }
 }));
 
 function saveActions(actions: Action[]) {
   if (!activeStorage) return;
   safePersist(activeStorage, STORAGE_KEYS.ACTIONS, JSON.stringify(actions), 'actions');
+}
+
+function persistUIState(uiState: PersistedActionUIState) {
+  if (!activeStorage) return;
+  safePersist(activeStorage, STORAGE_KEYS.ACTIONS_UI, JSON.stringify(uiState), 'actions UI state');
 }
