@@ -17,6 +17,10 @@ All background processes (live token estimation, autosave loop, live markdown sy
 - Live Token Estimation: Configured in `TokenAnalytics.tsx` and `TokenEstimator.ts`.
 - Experimental Settings Visibility: Controlled by `settings.enableExperimentalSettings` (default: `false`).
 
+### E2E Verification (FG-05)
+- Playwright 1.63.0 suite (`npm run test:e2e`): 21 Chromium tests green across 5 spec files (`e2e/editor`, `e2e/empty-state`, `e2e/preview`, `e2e/ribbon`, `e2e/slash-menu`), driven by `e2e/fixtures.ts` demo-mode bootstrap (`window.__CONTEXTPAD_DEMO__`).
+- Unit suite: 121 Vitest tests across 14 suites (`npm test`). Playwright artifacts gitignored.
+
 ---
 
 ## 2. Component Directory & Contracts

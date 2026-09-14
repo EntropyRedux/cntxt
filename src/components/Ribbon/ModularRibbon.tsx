@@ -270,13 +270,10 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
   // Exclude toggle-view from ribbon items since it is now permanently in the top bar
   const activeItems = items.filter(i => i.enabled && i.targetId !== 'toggle-view');
 
-  // Clean collapse: Return null when ribbon is hidden (toggled via top bar or Ctrl+Shift+R)
-  if (!settings.showRibbon) {
-    return null;
-  }
-
-  // Detect horizontal overflow in single-row mode
+  // Detect horizontal overflow in single-row mode (must execute before any early return to satisfy Rules of Hooks)
   useEffect(() => {
+    if (!settings.showRibbon) return;
+
     const checkOverflow = () => {
       if (!scrollContainerRef.current) return;
       const el = scrollContainerRef.current;
@@ -300,7 +297,12 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
       resizeObserver.disconnect();
       window.removeEventListener('resize', checkOverflow);
     };
-  }, [activeItems, isMultiRow]);
+  }, [activeItems, isMultiRow, settings.showRibbon]);
+
+  // Clean collapse: Return null when ribbon is hidden (toggled via top bar or Ctrl+Shift+R)
+  if (!settings.showRibbon) {
+    return null;
+  }
 
   return (
     <div 

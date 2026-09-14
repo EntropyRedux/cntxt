@@ -18,6 +18,9 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
     envPrefix: ['VITE_', 'TAURI_'],
+    test: {
+      exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+    },
     build: {
       target: ['chrome120', 'firefox120', 'safari17'],
       rollupOptions: {

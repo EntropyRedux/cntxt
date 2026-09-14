@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.8
-Last Updated: 2026-09-14
-Last Updated By: Production Implementation Agent (Full Codebase Remediation Complete — Batches 1-4)
+Version: v1.10
+Last Updated: 2026-09-15
+Last Updated By: Production Implementation Agent (FG-05 Playwright E2E Test Suite)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -12,14 +12,14 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (Full Codebase Audit Remediation: Batches 1-4 Complete)
+  [x] Feature Implementation (FG-01..FG-05 Complete)
   [ ] Refactor
-  [ ] Testing
+  [x] Testing (Playwright E2E Suite Live)
   [ ] Sync-Back
 
-Current Feature Group: Full Codebase Remediation (Batches 1-4: Security, Purity, Resilient Error Handling, Dependencies)
-Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-14.md
-Last Git Checkpoint: 2026-09-14 — Full Codebase Remediation Complete (120/120 automated unit tests passing across 14 test suites; 0 platform leaks across 113 files; 100% Option B contract sync; Vite build passing)
+Current Feature Group: FG-05: Playwright E2E Test Suite
+Active Plan: /generated-documents/plans/feature_group_e2e_playwright_2026-09-14.md
+Last Git Checkpoint: 2026-09-15 — FG-05 Playwright E2E Suite Complete (21/21 Chromium tests green via `npm run test:e2e`; Vitest 121/121 across 14 suites; Vite build passing; playwright artifacts gitignored)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
@@ -95,6 +95,18 @@ Background Processes: none (event-driven file tree refresh)
 Unit Tests: written [x] passing [x] (6 tests in fileOps)
 Notes: Native file commands secured with canonicalization and system root whitelisting (R-009). Shell injection eliminated in open_external using open = "5.3" crate (R-010). Runtime token and origin scoping enforced (R-012).
 
+Feature Group: FG-05: Playwright E2E Test Suite
+Status: completed / verified (2026-09-15)
+Background Processes: none (test-time vite dev server via playwright webServer)
+E2E Tests: 21/21 green in headless Chromium via `npm run test:e2e`
+Unit Tests: verified 121/121 across 14 suites (0 regressions)
+Spec Files: editor (5), empty-state (3), preview (4), ribbon (5), slash-menu (3), fixtures (demo-mode bootstrap)
+Notes:
+- Playwright 1.63.0; single worker; `baseURL http://localhost:5173`; repo root `playwright.config.ts` + `npm run test:e2e` script.
+- Playwright artifacts (`playwright-report/`, `test-results/`) gitignored.
+- Demo mode toggled via `e2e/fixtures.ts` using `window.__CONTEXTPAD_DEMO__` (mirrors `mocks/index.ts` quarantine gate).
+- Known production defect FLAGGED (deferred, zero FG-05 code impact): CodeMirror `closeBrackets()` (Editor.tsx:118) auto-inserts `]]`, racing the live-markdown `[[action:...]]` decoration regex so char-by-char typed tokens render mangled/missing. Pending production fix (e.g., disable closeBrackets on `[[action:` sequences or exempt the token from bracket pairing).
+
 ━━━ ARCHITECTURAL DECISIONS LOG ━━━
 
 Decision: Decoupled Runtime Bridge Architecture (`IRuntimeBridge`)
@@ -122,6 +134,9 @@ Reasoning: All synthetic sample data is strictly isolated in `mocks/index.ts`. A
 
 Decision: Cross-Platform Expansion: Targeting Android via Tauri v2 Mobile Architecture with Scoped Storage & Virtual Keyboard Ergonomics
 Reasoning: Tauri v2 provides first-class native Android compilation (via cargo-ndk and Android Studio scaffolding). By maintaining Universal Presenter Purity (IRuntimeBridge), over 95% of the existing React 19 + TypeScript + Zustand + CodeMirror codebase runs directly in Android System WebView without rewriting the business logic or stores. Mobile touch ergonomics are preserved through MobileAccessoryBar (virtual keyboard Markdown action bar), MobileBottomNav, and touchDensity settings. File system I/O on Android delegates through Tauri's official plugins (@tauri-apps/plugin-fs and @tauri-apps/plugin-dialog) adhering to Android Scoped Storage (SAF content:// URIs). Option B Data Shapes mirroring ensures cross-language domain models remain in strict synchronization.
+
+Decision: Dedicated Tester Agent Role & Tiered Quality Verification Protocol
+Reasoning: To prevent production regressions that escape static typing and headless unit tests (such as React Rules of Hooks violations and visual presenter unmounting crashes), test creation and maintenance is delegated to a dedicated Tester Agent role. The Tester role owns unit/contract tests, component lifecycle smoke tests, and Playwright E2E suites. Fast tests run on every feature checkpoint, while long-running, resource-heavy, and physical multiscreen tests are gated behind explicit human approval.
 
 
 ━━━ RECONCILED TRADEOFF HISTORY ━━━

@@ -10,6 +10,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit && node scripts/check-platform-leaks.mjs && node scripts/check-contract-sync.mjs",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
@@ -46,6 +47,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tauri-apps/cli": "^2",
     "@types/canvas-confetti": "^1.9.0",
     "@types/katex": "^0.16.8",

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] — 2026-09-15
+
+### Playwright E2E Test Suite (FG-05)
+- Introduced the first Playwright E2E layer (`npm run test:e2e`), running against the live Vite dev server in headless Chromium (single worker) with strict-mode locators and 15s navigation timeouts.
+- Added `playwright.config.ts`, the `e2e/fixtures.ts` demo-mode bootstrap (sets `window.__CONTEXTPAD_DEMO__` in `beforeEach`, mirroring the `mocks/index.ts` quarantine gate so tests exercise only quarantine-gated demo state), and 5 spec files covering:
+  - `e2e/editor.spec.ts` — 5 tests: welcome-doc render, tab title, typing, valid `[[action:format-json-and-sort]]` widget, missing-token widget (`[[action:nonexistent-action-id]]`).
+  - `e2e/empty-state.spec.ts` — 3 tests: demo-off boot, zero tabs, ribbon still present.
+  - `e2e/preview.spec.ts` — 4 tests: palette toggling of split preview, KaTeX glyph rendering (`.cm-live-math-block .katex`), XSS neutralization for `<script>` tags and inline event handlers.
+  - `e2e/ribbon.spec.ts` — 5 tests: ribbon visibility, expand/collapse multi-row mode, rendered action/tool buttons, Customize Ribbon modal.
+  - `e2e/slash-menu.spec.ts` — 4 tests: popup on "/" at line start, expected command list, arrow-key navigation (waiting out CodeMirror autocomplete's 75ms `interactionDelay` before ArrowDown), Enter inserts the selected command.
+- **E2E verification**: 21/21 green (order-stable single worker). Unit suite reconfirmed at **121/121** across 14 suites; `npm run build` clean.
+- Playwright artifacts (`playwright-report/`, `test-results/`, `blob-report/`) gitignored; test docs tracked in `generated-documents/plans/feature_group_e2e_playwright_2026-09-14.md`.
+- **Flagged production defect (deferred, out of FG-05 scope)**: CodeMirror `closeBrackets()` auto-inserts `]]`, racing the live-markdown `[[action:...]]` decoration regex — char-by-char typed action tokens render mangled/missing at any typing speed. E2E uses `insertText` (paste-equivalent input) which renders correctly; production fix pending (exempt `[[action:` sequences or relax the bracket pair).
+
 ## [0.2.0] — 2026-09-14
 
 ### Full-Codebase Security Remediation & Architecture Hardening

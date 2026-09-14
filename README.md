@@ -78,7 +78,7 @@ are found.
 ## Current Status & Verification
 
 - **Under Active Development (v0.2.0)**:
-  - **Automated Test Coverage**: 120 unit tests passing across 14 suites via Vitest (`npm test`).
+  - **Automated Test Coverage**: 121 unit tests passing across 14 suites via Vitest (`npm test`); 21 Playwright E2E tests green in headless Chromium (`npm run test:e2e`).
   - **Platform Purity**: `npm run lint` scans 113 files with zero platform leaks outside `src/adapters/`.
   - **Security Hardening**: Rust commands gated to the `main` window; path canonicalization and canonical system root whitelisting; dangerous shell injection eliminated in `open_external`; sandbox prototype-pollution defenses active.
   - **Interactive Action System**: In-document action buttons (`[[action:id]]`), extensible `FormulaEngine` registry with 50+ built-ins, and tri-state selection behavior (`auto`, `replace`, `insert`).

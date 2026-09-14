@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useRibbonStore, DEFAULT_RIBBON_ITEMS } from '../src/store/ribbonStore';
+import { useSettingsStore } from '../src/store/settingsStore';
 
 describe('RibbonStore Operations', () => {
   beforeEach(() => {
@@ -126,5 +127,22 @@ describe('RibbonStore Operations', () => {
 
     store.closeCustomizer();
     expect(useRibbonStore.getState().isCustomizerOpen).toBe(false);
+  });
+
+  it('supports toggling modular ribbon visibility via settingsStore', () => {
+    const settings = useSettingsStore.getState();
+    const initialVisibility = settings.settings.showRibbon;
+
+    settings.toggleRibbon();
+    expect(useSettingsStore.getState().settings.showRibbon).toBe(!initialVisibility);
+
+    settings.toggleRibbon();
+    expect(useSettingsStore.getState().settings.showRibbon).toBe(initialVisibility);
+
+    settings.setRibbonVisible(false);
+    expect(useSettingsStore.getState().settings.showRibbon).toBe(false);
+
+    settings.setRibbonVisible(true);
+    expect(useSettingsStore.getState().settings.showRibbon).toBe(true);
   });
 });

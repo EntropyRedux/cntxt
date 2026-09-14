@@ -26,3 +26,8 @@ assets/
 # Solo Dev AI-Assisted Workflow Ephemeral Directories
 /generated-documents/handoffs/
 /generated-documents/audits/
+
+# Playwright test artifacts
+playwright-report/
+test-results/
+blob-report/
