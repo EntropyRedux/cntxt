@@ -1,10 +1,12 @@
+import type React from 'react';
+
 export interface UiActionItem {
   id: string;
   name: string;
   description: string;
   category?: string;
   shortcut?: string;
-  icon?: any;
+  icon?: React.ComponentType<{ className?: string }> | string;
   action: () => void | Promise<void>;
   isAccent?: boolean;
   disabled?: boolean;
@@ -12,7 +14,7 @@ export interface UiActionItem {
 
 export interface UiMenuGroup {
   label: string;
-  icon?: any;
+  icon?: React.ComponentType<{ className?: string }>;
   items: {
     label: string;
     shortcut?: string;

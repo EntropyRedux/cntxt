@@ -141,7 +141,9 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
                     path: currentPath,
                     language: this.detectLanguage(entry.name)
                   });
-                } catch {}
+                } catch (err) {
+                  console.warn(`[BrowserRuntimeAdapter] Failed to read file ${entry.name}:`, err);
+                }
               } else if (entry.kind === 'directory') {
                 const children = await readDirectoryHandle(entry, currentPath);
                 list.push({
@@ -221,7 +223,8 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
                 path: relPath,
                 language: this.detectLanguage(fileName)
               });
-            } catch {
+            } catch (err) {
+              console.warn(`[BrowserRuntimeAdapter] Failed reading file text for ${fileName}:`, err);
               currentMap.set(fileName, {
                 id: `f_${Math.random().toString(36).substr(2, 6)}_${fileName}`,
                 name: fileName,

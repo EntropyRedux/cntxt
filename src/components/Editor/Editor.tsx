@@ -28,6 +28,10 @@ import { searchHighlighterExtension } from './searchHighlighter';
 import { useRuntimeBridge } from '../../adapters';
 import { FloatingSearch } from './FloatingSearch';
 
+interface EditorViewInternal extends EditorView {
+  updating?: boolean;
+}
+
 interface EditorProps {
   tabId: string;
   content: string;
@@ -292,7 +296,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       }
     };
 
-    if ((view as any).updating) {
+    if ((view as EditorViewInternal).updating) {
       queueMicrotask(applyEffects);
     } else {
       applyEffects();
@@ -321,7 +325,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       }
     };
 
-    if ((view as any).updating) {
+    if ((view as EditorViewInternal).updating) {
       queueMicrotask(syncContent);
     } else {
       syncContent();

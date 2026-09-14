@@ -621,7 +621,9 @@ class ActionButtonWidget extends WidgetType {
         try {
           const domPos = view.posAtDOM(missingSpan);
           if (domPos !== null && domPos !== undefined) targetPos = domPos;
-        } catch {}
+        } catch (err) {
+          console.debug('[liveMarkdown] posAtDOM fallback to this.from:', err);
+        }
         view.dispatch({ selection: { anchor: targetPos } });
         view.focus();
       });
@@ -675,7 +677,9 @@ class ActionButtonWidget extends WidgetType {
         try {
           const domPos = view.posAtDOM(btn);
           if (domPos !== null && domPos !== undefined) targetPos = domPos;
-        } catch {}
+        } catch (err) {
+          console.debug('[liveMarkdown] posAtDOM fallback to this.from:', err);
+        }
         view.dispatch({ selection: { anchor: targetPos } });
         view.focus();
         return;

@@ -78,18 +78,23 @@ export class BrowserIndexedDBStorage {
     }
 
     if (this.db) {
-      await new Promise<void>((resolve) => {
-        try {
-          const tx = this.db!.transaction('app_state', 'readwrite');
-          const store = tx.objectStore('app_state');
-          store.put({ key, value, updatedAt: Date.now() });
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => resolve();
-        } catch {
-          resolve();
-        }
-      });
-      ok = true;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          try {
+            const tx = this.db!.transaction('app_state', 'readwrite');
+            const store = tx.objectStore('app_state');
+            const req = store.put({ key, value, updatedAt: Date.now() });
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
+            req.onerror = () => reject(req.error || new Error('IndexedDB put request failed'));
+          } catch (err) {
+            reject(err);
+          }
+        });
+        ok = true;
+      } catch (err) {
+        console.error('[browserIndexedDB] Failed to setItem in IndexedDB:', err);
+      }
     }
 
     return ok;
@@ -99,20 +104,28 @@ export class BrowserIndexedDBStorage {
     await this.isReadyPromise;
     try {
       localStorage.removeItem(key);
-    } catch {}
+    } catch (err) {
+      console.warn('[browserIndexedDB] localStorage.removeItem failed:', err);
+    }
 
     if (this.db) {
-      await new Promise<void>((resolve) => {
-        try {
-          const tx = this.db!.transaction('app_state', 'readwrite');
-          const store = tx.objectStore('app_state');
-          store.delete(key);
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => resolve();
-        } catch {
-          resolve();
-        }
-      });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          try {
+            const tx = this.db!.transaction('app_state', 'readwrite');
+            const store = tx.objectStore('app_state');
+            const req = store.delete(key);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
+            req.onerror = () => reject(req.error || new Error('IndexedDB delete request failed'));
+          } catch (err) {
+            reject(err);
+          }
+        });
+      } catch (err) {
+        console.error('[browserIndexedDB] Failed to removeItem in IndexedDB:', err);
+        return false;
+      }
     }
 
     return true;

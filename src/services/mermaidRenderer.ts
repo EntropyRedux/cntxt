@@ -28,7 +28,7 @@ export function initializeMermaid(themeInput: ThemeName | string | boolean = 'co
 
     mermaid.initialize({
       startOnLoad: false,
-      securityLevel: 'loose',
+      securityLevel: 'strict',
       theme: 'base',
       themeVariables: {
         darkMode: config.darkMode,

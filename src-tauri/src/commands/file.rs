@@ -71,12 +71,12 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
         return Err("Path cannot be empty".to_string());
     }
 
-    // Unconditionally reject directory traversal sequences
-    if path.contains("..") {
+    let path_buf = PathBuf::from(path);
+
+    // Reject true directory traversal sequences (ParentDir components)
+    if path_buf.components().any(|c| c == std::path::Component::ParentDir) {
         return Err("Path traversal sequence '..' is prohibited".to_string());
     }
-
-    let path_buf = PathBuf::from(path);
 
     // If path exists, canonicalize directly
     if path_buf.exists() {
@@ -110,21 +110,30 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-pub async fn read_file(path: String) -> Result<String, String> {
+pub async fn read_file(window: Window, path: String) -> Result<String, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     let safe_path = validate_path(&path)?;
     fs::read_to_string(&safe_path)
         .map_err(|e| format!("Failed to read file: {}", e))
 }
 
 #[tauri::command]
-pub async fn write_file(path: String, content: String) -> Result<(), String> {
+pub async fn write_file(window: Window, path: String, content: String) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     let safe_path = validate_path(&path)?;
     fs::write(&safe_path, content)
         .map_err(|e| format!("Failed to write file: {}", e))
 }
 
 #[tauri::command]
-pub async fn open_file_dialog(_window: Window) -> Result<Option<String>, String> {
+pub async fn open_file_dialog(window: Window) -> Result<Option<String>, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     use rfd::FileDialog;
 
     let file_path = FileDialog::new()
@@ -146,7 +155,10 @@ pub async fn open_file_dialog(_window: Window) -> Result<Option<String>, String>
 }
 
 #[tauri::command]
-pub async fn save_file_dialog(_window: Window, default_name: Option<String>) -> Result<Option<String>, String> {
+pub async fn save_file_dialog(window: Window, default_name: Option<String>) -> Result<Option<String>, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     use rfd::FileDialog;
 
     let mut dialog = FileDialog::new()
@@ -218,7 +230,10 @@ pub fn detect_language_from_path(path: String) -> String {
 }
 
 #[tauri::command]
-pub fn get_file_modified_time(path: String) -> Result<u64, String> {
+pub fn get_file_modified_time(window: Window, path: String) -> Result<u64, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     let safe_path = validate_path(&path)?;
     let metadata = fs::metadata(&safe_path)
         .map_err(|e| format!("Failed to get file metadata: {}", e))?;
@@ -233,7 +248,10 @@ pub fn get_file_modified_time(path: String) -> Result<u64, String> {
 }
 
 #[tauri::command]
-pub async fn open_folder_dialog(_window: Window) -> Result<Option<String>, String> {
+pub async fn open_folder_dialog(window: Window) -> Result<Option<String>, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     use rfd::FileDialog;
 
     let folder_path = FileDialog::new()
@@ -322,7 +340,10 @@ fn read_dir_internal(dir_path: &Path, depth: usize, max_depth: usize) -> Result<
 }
 
 #[tauri::command]
-pub fn read_directory(path: String) -> Result<Vec<FileNode>, String> {
+pub fn read_directory(window: Window, path: String) -> Result<Vec<FileNode>, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     let dir_path = validate_path(&path)?;
 
     if !dir_path.is_dir() {
@@ -334,7 +355,10 @@ pub fn read_directory(path: String) -> Result<Vec<FileNode>, String> {
 }
 
 #[tauri::command]
-pub async fn rename_file(old_path: String, new_path: String) -> Result<(), String> {
+pub async fn rename_file(window: Window, old_path: String, new_path: String) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     let safe_old = validate_path(&old_path)?;
     let safe_new = validate_path(&new_path)?;
     fs::rename(&safe_old, &safe_new)

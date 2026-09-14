@@ -3,7 +3,7 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         State,
     },
-    http::{header, HeaderValue},
+    http::{header, HeaderMap, HeaderValue, StatusCode},
     response::{Html, IntoResponse},
     routing::get,
     Router,
@@ -105,9 +105,35 @@ impl PreviewServer {
     }
 }
 
-async fn index_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+/// Validate that the connection originates strictly from local loopback (localhost or 127.0.0.1)
+fn is_local_origin(headers: &HeaderMap) -> bool {
+    if let Some(host) = headers.get(header::HOST).and_then(|v| v.to_str().ok()) {
+        let host_name = host.split(':').next().unwrap_or("");
+        if host_name != "localhost" && host_name != "127.0.0.1" {
+            return false;
+        }
+    }
+    if let Some(origin) = headers.get(header::ORIGIN).and_then(|v| v.to_str().ok()) {
+        if !origin.starts_with("http://localhost")
+            && !origin.starts_with("http://127.0.0.1")
+            && !origin.starts_with("tauri://")
+            && !origin.starts_with("asset://")
+        {
+            return false;
+        }
+    }
+    true
+}
+
+async fn index_handler(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    if !is_local_origin(&headers) {
+        return (StatusCode::FORBIDDEN, "Forbidden: Invalid origin").into_response();
+    }
     let content = state.content.read().unwrap().clone();
-    Html(content)
+    Html(content).into_response()
 }
 
 async fn script_handler() -> impl IntoResponse {
@@ -118,10 +144,14 @@ async fn script_handler() -> impl IntoResponse {
 }
 
 async fn ws_handler(
+    headers: HeaderMap,
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(|socket| handle_socket(socket, state))
+    if !is_local_origin(&headers) {
+        return (StatusCode::FORBIDDEN, "Forbidden: Invalid origin").into_response();
+    }
+    ws.on_upgrade(|socket| handle_socket(socket, state)).into_response()
 }
 
 async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {

@@ -15,6 +15,7 @@ import { useFormattingStore } from '../store/formattingStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useFileHistoryStore } from '../store/fileHistoryStore';
 import { compressAndConvertToDataUrl, generateImageAlt } from '../services/imageService';
+import { SupportedLanguage } from '../types';
 
 export const ShellFrame: React.FC = () => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -196,8 +197,8 @@ export const ShellFrame: React.FC = () => {
 
         const content = await file.text();
         const ext = file.name.split('.').pop()?.toLowerCase();
-        const lang = ext === 'json' ? 'json' : ext === 'js' ? 'javascript' : ext === 'py' ? 'python' : 'markdown';
-        createTab(file.name, content, lang as any);
+        const lang: SupportedLanguage = ext === 'json' ? 'json' : ext === 'js' ? 'javascript' : ext === 'py' ? 'python' : 'markdown';
+        createTab(file.name, content, lang);
       }
     }
   };

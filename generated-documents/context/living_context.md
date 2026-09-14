@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.7
+Version: v1.8
 Last Updated: 2026-09-14
-Last Updated By: Production Implementation Agent (Pass 2 Plan Audit Reconciliation & Tradeoff Alignment)
+Last Updated By: Production Implementation Agent (Full Codebase Remediation Complete — Batches 1-4)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -12,14 +12,14 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-02 & FG-03 Re-architecture, Document Embed System, & Mobile Specification)
+  [x] Feature Implementation (Full Codebase Audit Remediation: Batches 1-4 Complete)
   [ ] Refactor
   [ ] Testing
   [ ] Sync-Back
 
-Current Feature Group: FG-02 & FG-03: Action Execution, Extensible Formulas & In-Doc Automation
-Active Plan: /generated-documents/plans/feature_group_fg04_native_file_ops_2026-09-13.md
-Last Git Checkpoint: 2026-09-14 — Prod Agent Full Codebase Audit reconciled, Option B contract sync verified, 112/112 automated tests passing across 13 test suites; 0 platform leaks across 113 files
+Current Feature Group: Full Codebase Remediation (Batches 1-4: Security, Purity, Resilient Error Handling, Dependencies)
+Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-14.md
+Last Git Checkpoint: 2026-09-14 — Full Codebase Remediation Complete (120/120 automated unit tests passing across 14 test suites; 0 platform leaks across 113 files; 100% Option B contract sync; Vite build passing)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
@@ -196,4 +196,12 @@ Finding Source: F-20 (Pass 1 Full Codebase Audit)
 Pillar: Pillar 9 (Validation)
 Decision: Settings object shallow spread merge without Zod schema validation in settingsStore.ts.
 Reasoning: App-owned single-user local storage with predictable default fallback keys.
+Status: APPROVED TRADEOFF
+
+Tradeoff ID: TR-010
+Date: 2026-09-14
+Finding Source: F-2.4 (Pass 1 Refactor Completion Audit)
+Pillar: Pillar 8 (Deep Security)
+Decision: Tauri CSP connect-src permits http://localhost:5173 and ws://localhost:* in tauri.conf.json.
+Reasoning: Required for local desktop development (tauri dev) with Vite dev server and HMR WebSocket, and connects to internal dynamic-port preview server (127.0.0.1:*). Host/Origin validation in preview_server.rs prevents unauthorized cross-origin access.
 Status: APPROVED TRADEOFF

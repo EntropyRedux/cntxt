@@ -17,7 +17,7 @@ export function renderLatex(latex: string, displayMode: boolean = false): MathRe
       throwOnError: false,
       output: 'htmlAndMathml',
       strict: false,
-      trust: true
+      trust: false
     });
     return { html, isError: false };
   } catch (err: any) {

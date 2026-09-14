@@ -15,7 +15,7 @@ import { useNotificationStore } from '../../store/notificationStore';
 import { FormulaEngine } from '../../services/formulaParser';
 import { renderLatex } from '../../services/mathRenderer';
 import { renderMermaidDiagram } from '../../services/mermaidRenderer';
-import { useRuntimeBridge, isDarkTheme, getDocumentTheme } from '../../adapters';
+import { useRuntimeBridge, isDarkTheme, getDocumentTheme, escapeHtml, sanitizePreviewHtml } from '../../adapters';
 import { highlightCodeSnippet } from '../../services/codeLanguages';
 import { useActionStore } from '../../store/actionStore';
 import { executeActionById } from '../../services/actionExecutor';
@@ -128,15 +128,20 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
       const label = customLabel || action?.name || actionId;
       const isFormula = action?.codeType === 'formula' || action?.code?.startsWith('FORMULA:');
 
+      const safeActionId = escapeHtml(actionId);
+      const safeLabel = escapeHtml(label);
+      const safeCustomLabel = escapeHtml(customLabel || match);
+      const safeActionName = escapeHtml(action?.name || '');
+
       if (isMissing) {
-        return `<span class="live-preview-action-missing" title="Action &quot;${actionId}&quot; not found in Action Scripts library">
-          <span class="opacity-75">⚠️</span><span class="live-preview-action-missing-name">${customLabel || match}</span><span class="live-preview-action-missing-badge">(missing)</span>
+        return `<span class="live-preview-action-missing" title="Action &quot;${safeActionId}&quot; not found in Action Scripts library">
+          <span class="opacity-75">⚠️</span><span class="live-preview-action-missing-name">${safeCustomLabel}</span><span class="live-preview-action-missing-badge">(missing)</span>
         </span>`;
       }
 
-      return `<button type="button" class="live-preview-action-btn" data-action-id="${actionId}" title="Action: ${action.name}&#10;Click to execute">
+      return `<button type="button" class="live-preview-action-btn" data-action-id="${safeActionId}" title="Action: ${safeActionName}&#10;Click to execute">
         <span class="live-preview-action-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg></span>
-        <span class="live-preview-action-label">${label}</span>
+        <span class="live-preview-action-label">${safeLabel}</span>
         ${isFormula ? '<span class="live-preview-action-badge-fx">fx</span>' : ''}
         <span class="live-preview-action-badge">BTN</span>
       </button>`;
@@ -158,12 +163,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
         const decoded = decodeURIComponent(code);
         const res = await renderMermaidDiagram(decoded, currentTheme);
         if (res.isError) {
+          const safeError = escapeHtml(res.error || 'Check diagram syntax');
           container.innerHTML = `
             <div class="p-3 text-xs text-red-400 bg-red-950/20 rounded border border-red-800/40 font-mono">
               <div class="font-bold mb-1">Mermaid Syntax Warning:</div>
-              <div class="text-[11px] opacity-80">${res.error || 'Check diagram syntax'}</div>
+              <div class="text-[11px] opacity-80">${safeError}</div>
             </div>`;
         } else {
+          const safeSvg = sanitizePreviewHtml(res.svg);
           container.innerHTML = `
             <div class="flex items-center justify-between px-3 py-1.5 bg-[var(--codeblock-header-bg)] border-b border-[var(--border-subtle)] text-[11px] text-[#EC4899] font-medium">
               <span class="flex items-center gap-1.5">
@@ -172,7 +179,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
               </span>
             </div>
             <div class="p-4 flex justify-center items-center overflow-x-auto bg-[var(--editor-bg)]">
-              ${res.svg}
+              ${safeSvg}
             </div>`;
         }
       } catch (err) {
@@ -342,7 +349,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
         >
           <div className={`mx-auto ${getMaxWidthClass()} contextpad-preview-prose`}>
             {formulaEvaluated.trim() ? (
-              <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
+              <div dangerouslySetInnerHTML={{ __html: sanitizePreviewHtml(renderedHtml) }} />
             ) : (
               <div className="h-64 flex flex-col items-center justify-center text-[var(--text-muted)] text-xs">
                 <Eye className="w-8 h-8 mb-2 opacity-25" />

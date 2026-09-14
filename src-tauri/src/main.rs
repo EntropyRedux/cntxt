@@ -21,18 +21,24 @@ impl Default for AppState {
 }
 
 #[tauri::command]
-async fn get_app_info(state: tauri::State<'_, Mutex<AppState>>) -> Result<Value, String> {
+async fn get_app_info(window: tauri::Window, state: tauri::State<'_, Mutex<AppState>>) -> Result<Value, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for application metadata".into());
+    }
     let state = state.lock().await;
     Ok(json!({
         "name": "CNTXT",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "session_id": state.session_id,
         "platform": std::env::consts::OS,
     }))
 }
 
 #[tauri::command]
-async fn get_system_info() -> Result<Value, String> {
+async fn get_system_info(window: tauri::Window) -> Result<Value, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for system metadata".into());
+    }
     Ok(json!({
         "os": std::env::consts::OS,
         "arch": std::env::consts::ARCH,
@@ -75,7 +81,10 @@ async fn open_external(
 }
 
 #[tauri::command]
-async fn new_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+async fn new_window(window: tauri::Window, app_handle: tauri::AppHandle) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for window creation".into());
+    }
     let new_label = format!("window-{}", Uuid::new_v4());
     WebviewWindowBuilder::new(&app_handle, &new_label, WebviewUrl::default())
         .title("CNTXT")
@@ -90,34 +99,49 @@ async fn new_window(app_handle: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn start_preview_server(state: tauri::State<'_, Mutex<preview_server::PreviewServer>>) -> Result<u16, String> {
+async fn start_preview_server(window: tauri::Window, state: tauri::State<'_, Mutex<preview_server::PreviewServer>>) -> Result<u16, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for preview server".into());
+    }
     let mut server = state.lock().await;
     server.start().await
 }
 
 #[tauri::command]
-async fn stop_preview_server(state: tauri::State<'_, Mutex<preview_server::PreviewServer>>) -> Result<(), String> {
+async fn stop_preview_server(window: tauri::Window, state: tauri::State<'_, Mutex<preview_server::PreviewServer>>) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for preview server".into());
+    }
     let mut server = state.lock().await;
     server.stop();
     Ok(())
 }
 
 #[tauri::command]
-async fn update_preview_content(state: tauri::State<'_, Mutex<preview_server::PreviewServer>>, html: String) -> Result<(), String> {
+async fn update_preview_content(window: tauri::Window, state: tauri::State<'_, Mutex<preview_server::PreviewServer>>, html: String) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for preview server".into());
+    }
     let server = state.lock().await;
     server.update_content(html);
     Ok(())
 }
 
 #[tauri::command]
-async fn update_preview_settings(state: tauri::State<'_, Mutex<preview_server::PreviewServer>>, json: String) -> Result<(), String> {
+async fn update_preview_settings(window: tauri::Window, state: tauri::State<'_, Mutex<preview_server::PreviewServer>>, json: String) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for preview server".into());
+    }
     let server = state.lock().await;
     server.update_settings(json);
     Ok(())
 }
 
 #[tauri::command]
-async fn get_pending_files(state: tauri::State<'_, Mutex<Vec<String>>>) -> Result<Vec<String>, String> {
+async fn get_pending_files(window: tauri::Window, state: tauri::State<'_, Mutex<Vec<String>>>) -> Result<Vec<String>, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin for file parameters".into());
+    }
     let mut files = state.lock().await;
     let to_return = files.clone();
     files.clear();

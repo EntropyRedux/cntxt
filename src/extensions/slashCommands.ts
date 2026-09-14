@@ -15,10 +15,12 @@ import { processTemplateVariables } from '../services/editor/templateVariableSer
 import { copyText } from '../adapters/domHelper';
 
 export interface SlashCommandItem {
+  id?: string;
   label: string;
   detail?: string;
   info?: string;
   type: string;
+  category?: string;
   apply: string | ((view: EditorView, completion: Completion, from: number, to: number) => void);
 }
 
@@ -113,6 +115,65 @@ export const STATIC_SLASH_COMMANDS: SlashCommandItem[] = [
     apply: '[[{{field_name:default_value}}]]'
   }
 ];
+
+export class SlashCommandRegistry {
+  private commands = new Map<string, SlashCommandItem>();
+
+  constructor() {
+    this.resetCommands();
+  }
+
+  resetCommands(): void {
+    this.commands.clear();
+    for (const cmd of STATIC_SLASH_COMMANDS) {
+      const id = cmd.id || cmd.label;
+      this.commands.set(id, { ...cmd, id });
+    }
+  }
+
+  registerCommand(cmd: SlashCommandItem): void {
+    const id = cmd.id || cmd.label;
+    this.commands.set(id, { ...cmd, id });
+  }
+
+  unregisterCommand(idOrLabel: string): boolean {
+    if (this.commands.has(idOrLabel)) {
+      return this.commands.delete(idOrLabel);
+    }
+    for (const [id, cmd] of this.commands.entries()) {
+      if (cmd.label === idOrLabel) {
+        return this.commands.delete(id);
+      }
+    }
+    return false;
+  }
+
+  getCommands(): SlashCommandItem[] {
+    return Array.from(this.commands.values());
+  }
+
+  getCommandById(idOrLabel: string): SlashCommandItem | undefined {
+    const direct = this.commands.get(idOrLabel);
+    if (direct) return direct;
+    for (const cmd of this.commands.values()) {
+      if (cmd.label === idOrLabel) return cmd;
+    }
+    return undefined;
+  }
+
+  getCatalog(): Array<{ id: string; label: string; detail?: string; info?: string; type: string; category?: string }> {
+    return this.getCommands().map(c => ({
+      id: c.id || c.label,
+      label: c.label,
+      detail: c.detail,
+      info: c.info,
+      type: c.type,
+      category: c.category || c.detail || 'General'
+    }));
+  }
+}
+
+export const slashCommandEngine = new SlashCommandRegistry();
 
 /**
  * Autocompletion source that generates unified options for Actions, Templates, and Slash Commands.
@@ -214,8 +275,13 @@ export function completionSource(context: CompletionContext): CompletionResult |
           `Inserted "${template.name}"`,
           'success'
         );
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error applying template:', err);
+        useNotificationStore.getState().addNotification(
+          'Template Error',
+          err instanceof Error ? err.message : `Failed to apply template "${template.name}"`,
+          'error'
+        );
       }
     };
 
@@ -245,8 +311,8 @@ export function completionSource(context: CompletionContext): CompletionResult |
     }
   });
 
-  // 3. Static Slash Commands & Snippets
-  STATIC_SLASH_COMMANDS.forEach(cmd => {
+  // 3. Dynamic Slash Commands & Snippets from engine
+  slashCommandEngine.getCommands().forEach(cmd => {
     options.push({
       label: cmd.label,
       detail: cmd.detail,

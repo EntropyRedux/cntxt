@@ -1,3 +1,5 @@
+import type React from 'react';
+
 export type SidebarPanelId = 
   | 'explorer' 
   | 'outline' 
@@ -11,7 +13,7 @@ export type SidebarPanelId =
 export interface UiPanelDescriptor {
   id: SidebarPanelId;
   name: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   badgeCount?: number;
   shortcut?: string;
   description?: string;

@@ -1,7 +1,7 @@
 {
   "name": "cntxt",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -40,7 +40,6 @@
     "lucide-react": "^0.546.0",
     "marked": "^18.0.10",
     "mermaid": "^11.17.2",
-    "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "vite": "^6.2.3",

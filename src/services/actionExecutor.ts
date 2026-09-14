@@ -1,4 +1,5 @@
 import { EditorView } from '@codemirror/view';
+import { SandboxAPI } from '../types';
 import { useActionStore } from '../store/actionStore';
 import { useTabStore } from '../store/tabStore';
 import { useNotificationStore } from '../store/notificationStore';
@@ -136,7 +137,7 @@ export async function executeActionById(actionId: string, view?: EditorView): Pr
         return false;
       }
     } else {
-      const rawApi: any = {
+      const rawApi: Partial<SandboxAPI> = {
         getText: () => {
           if (targetView) return targetView.state.doc.toString();
           const tab = useTabStore.getState().tabs.find(t => t.id === activeTabId);
@@ -149,8 +150,8 @@ export async function executeActionById(actionId: string, view?: EditorView): Pr
             useTabStore.getState().updateTabContent(activeTabId, newText);
           }
         },
-        getContent: () => rawApi.getText(),
-        setContent: (newText: string) => rawApi.setText(newText),
+        getContent: () => rawApi.getText?.() || '',
+        setContent: (newText: string) => rawApi.setText?.(newText),
         getSelection: () => {
           if (targetView) {
             const sel = targetView.state.selection.main;
@@ -172,7 +173,7 @@ export async function executeActionById(actionId: string, view?: EditorView): Pr
           }
         },
         wrapSelection: (prefix: string, suffix: string = prefix) => {
-          const selText = rawApi.getSelection();
+          const selText = rawApi.getSelection?.() || '';
           const wrapped = `${prefix}${selText}${suffix}`;
           if (targetView) {
             const sel = targetView.state.selection.main;
@@ -205,7 +206,7 @@ export async function executeActionById(actionId: string, view?: EditorView): Pr
           }
         },
         insertAtCursor: (text: string) => {
-          rawApi.insertText(text);
+          rawApi.insertText?.(text);
         },
         evaluateFormula: (formulaStr: string) => {
           const res = formulaEngine.evaluate(formulaStr);
@@ -221,8 +222,9 @@ export async function executeActionById(actionId: string, view?: EditorView): Pr
       notify('Action Executed', `Ran action "${action.name}"`, 'success');
       return true;
     }
-  } catch (err: any) {
-    notify('Action Failed', err?.message || `Error executing action "${action.name}"`, 'error');
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    notify('Action Failed', errorMsg || `Error executing action "${action.name}"`, 'error');
     return false;
   }
 }

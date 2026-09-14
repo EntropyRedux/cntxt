@@ -3,7 +3,7 @@ import { useTabStore } from '../store/tabStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useTemplateStore } from '../store/templateStore';
 import { FormulaEngine } from './formulaParser';
-import { copyText, BrowserRuntimeAdapter } from '../adapters';
+import { copyText, BrowserRuntimeAdapter, getCurrentSelectionText } from '../adapters';
 import { editorRegistry } from './editor/editorRegistry';
 
 /**
@@ -11,7 +11,7 @@ import { editorRegistry } from './editor/editorRegistry';
  * Prevents access to dangerous platform APIs and globals while providing
  * comprehensive access to editor contents, selections, tabs, and notifications.
  */
-export async function executeInSandbox(code: string, rawApi: any): Promise<any> {
+export async function executeInSandbox(code: string, rawApi?: Partial<SandboxAPI>): Promise<unknown> {
   return new Promise(async (resolve, reject) => {
     try {
       const getActiveTab = () => {
@@ -51,7 +51,7 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
           if (regText) return regText;
         }
         if (typeof window !== 'undefined' && window.getSelection) {
-          return window.getSelection()?.toString() || '';
+          return getCurrentSelectionText();
         }
         return '';
       };
@@ -274,9 +274,9 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
 
       // Safe console wrapper for sandbox logs
       const safeConsole = Object.freeze({
-        log: (...args: any[]) => console.log('[ContextPad Action]', ...args),
-        warn: (...args: any[]) => console.warn('[ContextPad Action]', ...args),
-        error: (...args: any[]) => console.error('[ContextPad Action]', ...args)
+        log: (...args: unknown[]) => console.log('[ContextPad Action]', ...args),
+        warn: (...args: unknown[]) => console.warn('[ContextPad Action]', ...args),
+        error: (...args: unknown[]) => console.error('[ContextPad Action]', ...args)
       });
 
       const runner = new Function(
@@ -299,7 +299,7 @@ export async function executeInSandbox(code: string, rawApi: any): Promise<any> 
       ]);
 
       resolve(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       reject(error);
     }
   });

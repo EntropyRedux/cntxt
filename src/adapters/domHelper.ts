@@ -97,20 +97,22 @@ export function isDarkTheme(): boolean {
 export async function copyText(text: string, bridge?: IRuntimeBridge): Promise<boolean> {
   if (bridge?.clipboard) {
     try {
-      await bridge.clipboard.writeText(text);
-      return true;
-    } catch {
-      // Fall through to adapter native
+      const ok = await bridge.clipboard.writeText(text);
+      if (ok) return true;
+    } catch (err) {
+      console.warn('[domHelper] bridge.clipboard.writeText failed:', err);
     }
   }
   if (typeof navigator !== 'undefined' && navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(text);
       return true;
-    } catch {
+    } catch (err) {
+      console.warn('[domHelper] navigator.clipboard.writeText failed:', err);
       return false;
     }
   }
+  console.warn('[domHelper] copyText failed: no supported clipboard provider');
   return false;
 }
 
@@ -252,6 +254,102 @@ export function useWindowDrag(bridge: IRuntimeBridge) {
   };
 
   return { handleMouseDown };
+}
+
+/**
+ * Escape HTML special characters for safe attribute and text interpolation.
+ */
+export function escapeHtml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Retrieve current window text selection without unmediated direct window reach in presenters.
+ */
+export function getCurrentSelectionText(): string {
+  if (typeof window === 'undefined') return '';
+  return window.getSelection()?.toString() || '';
+}
+
+/**
+ * Sanitize Markdown preview HTML, stripping executable tags, inline event handlers,
+ * and dangerous URI schemes (including file:, javascript:, vbscript:).
+ */
+export function sanitizePreviewHtml(dirtyHtml: string): string {
+  if (!dirtyHtml) return '';
+
+  if (typeof DOMParser === 'undefined') {
+    // Regex fallback for non-DOM environments
+    return dirtyHtml
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+      .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
+      .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '')
+      .replace(/\s+on[a-zA-Z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+      .replace(/href\s*=\s*["']?\s*(?:javascript|file|vbscript):[^"'>\s]*/gi, 'href="#"');
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(dirtyHtml, 'text/html');
+
+    const FORBIDDEN_TAGS = ['script', 'iframe', 'object', 'embed', 'form', 'base'];
+    FORBIDDEN_TAGS.forEach(tag => {
+      const elements = doc.querySelectorAll(tag);
+      elements.forEach(el => el.remove());
+    });
+
+    const allElements = doc.querySelectorAll('*');
+    allElements.forEach(el => {
+      // Strip event handlers (on*)
+      const attrsToRemove: string[] = [];
+      for (let i = 0; i < el.attributes.length; i++) {
+        const attrName = el.attributes[i].name;
+        if (attrName.toLowerCase().startsWith('on')) {
+          attrsToRemove.push(attrName);
+        }
+      }
+      attrsToRemove.forEach(attr => el.removeAttribute(attr));
+
+      // Sanitize href
+      if (el.hasAttribute('href')) {
+        const href = (el.getAttribute('href') || '').trim();
+        const lower = href.toLowerCase();
+        if (
+          lower.startsWith('javascript:') ||
+          lower.startsWith('file:') ||
+          lower.startsWith('vbscript:') ||
+          lower.startsWith('data:')
+        ) {
+          el.setAttribute('href', '#');
+        }
+      }
+
+      // Sanitize src
+      if (el.hasAttribute('src')) {
+        const src = (el.getAttribute('src') || '').trim();
+        const lower = src.toLowerCase();
+        if (
+          lower.startsWith('javascript:') ||
+          lower.startsWith('file:') ||
+          lower.startsWith('vbscript:')
+        ) {
+          el.removeAttribute('src');
+        }
+      }
+    });
+
+    return doc.body.innerHTML;
+  } catch {
+    return escapeHtml(dirtyHtml);
+  }
 }
 
 

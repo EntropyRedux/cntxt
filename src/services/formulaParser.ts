@@ -574,13 +574,25 @@ export class FormulaEngine {
 
       // --- Encoding & Hashing ---
       case 'BASE64':
-        try { return btoa(unescape(encodeURIComponent(strArg(0)))); } catch { return ''; }
+        try {
+          return btoa(unescape(encodeURIComponent(strArg(0))));
+        } catch (e) {
+          throw new Error(`BASE64 encode failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
       case 'BASE64D':
-        try { return decodeURIComponent(escape(atob(strArg(0)))); } catch { return ''; }
+        try {
+          return decodeURIComponent(escape(atob(strArg(0))));
+        } catch (e) {
+          throw new Error(`BASE64 decode failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
       case 'URLENCODE':
         return encodeURIComponent(strArg(0));
       case 'URLDECODE':
-        try { return decodeURIComponent(strArg(0)); } catch { return strArg(0); }
+        try {
+          return decodeURIComponent(strArg(0));
+        } catch (e) {
+          throw new Error(`URL decode failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
       case 'HTMLESCAPE':
         return strArg(0)
           .replace(/&/g, '&amp;')

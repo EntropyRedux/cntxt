@@ -20,6 +20,7 @@ import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useRuntimeBridge, execUndo, execRedo, querySelector } from '../../adapters';
+import { editorRegistry } from '../../services/editor/editorRegistry';
 
 interface TitleBarProps {
   onOpenCommandPalette: () => void;
@@ -185,10 +186,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           action: () => {
             const active = tabs.find(tab => tab.id === activeTabId);
             if (active) {
-              const cm = (window as any).__cmEditorView;
-              if (cm) {
-                cm.dispatch(cm.state.replaceSelection(`\n\n${t.content}\n\n`));
-              } else {
+              const inserted = editorRegistry.replaceSelection(active.id, `\n\n${t.content}\n\n`);
+              if (!inserted) {
                 useTabStore.getState().updateTabContent(active.id, `${active.content}\n\n${t.content}`);
               }
               addNotification('Template Inserted', t.name, 'success');

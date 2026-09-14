@@ -429,7 +429,9 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
       if (sizeStored === 'small' || sizeStored === 'medium' || sizeStored === 'large') {
         set({ buttonSize: sizeStored as FormattingButtonSize });
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[formattingStore] Failed to load persisted formatting settings:', err);
+    }
   },
 
   openCustomizer: () => set({ isCustomizerOpen: true }),

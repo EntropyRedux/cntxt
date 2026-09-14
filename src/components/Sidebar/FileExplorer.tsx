@@ -36,6 +36,32 @@ const formatRelativeTime = (timestamp: number): string => {
   return `${days}d ago`;
 };
 
+export function validateFilename(name: string): { valid: boolean; error?: string } {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return { valid: false, error: 'Filename cannot be empty' };
+  }
+  if (trimmed.length > 255) {
+    return { valid: false, error: 'Filename exceeds maximum length of 255 characters' };
+  }
+  if (trimmed.includes('..') || trimmed === '.' || trimmed === '..') {
+    return { valid: false, error: 'Directory traversal sequence ".." is not allowed in filename' };
+  }
+  // eslint-disable-next-line no-control-regex
+  if (/[<>:"/\\|?*\x00-\x1F]/.test(trimmed)) {
+    return { valid: false, error: 'Filename contains illegal characters (< > : " / \\ | ? *)' };
+  }
+  if (/[. ]$/.test(trimmed)) {
+    return { valid: false, error: 'Filename cannot end with a period or space' };
+  }
+  const baseName = trimmed.split('.')[0].toUpperCase();
+  const reservedPattern = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+  if (reservedPattern.test(baseName)) {
+    return { valid: false, error: `"${baseName}" is a reserved system device name` };
+  }
+  return { valid: true };
+}
+
 const findFileInTree = (tree: VirtualFile[], name: string): VirtualFile | null => {
   for (const item of tree) {
     if (item.type === 'file' && item.name === name) return item;
@@ -188,11 +214,16 @@ export const FileExplorer: React.FC = () => {
     if (fileContent === undefined && file.path && bridge.fs.readFile) {
       try {
         const diskContent = await bridge.fs.readFile(file.path);
-        if (diskContent !== null) {
+        if (diskContent !== null && diskContent !== undefined) {
           fileContent = diskContent;
+        } else {
+          addNotification('File Error', `Unable to read content of ${file.name}`, 'error');
+          return;
         }
       } catch (err) {
         console.warn('Could not read file from disk:', err);
+        addNotification('File Error', `Failed to read ${file.name}: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        return;
       }
     }
 
@@ -282,8 +313,14 @@ export const FileExplorer: React.FC = () => {
   };
 
   const handleCreateNewFile = () => {
-    const name = prompt('Enter new file name:', 'new_prompt.md');
-    if (!name) return;
+    const rawName = prompt('Enter new file name:', 'new_prompt.md');
+    if (!rawName) return;
+    const name = rawName.trim();
+    const validation = validateFilename(name);
+    if (!validation.valid) {
+      addNotification('Invalid Filename', validation.error || 'Please provide a valid filename', 'error');
+      return;
+    }
 
     const newFile: VirtualFile = {
       id: `file_${Date.now()}`,

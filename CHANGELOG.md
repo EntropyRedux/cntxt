@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.2.0] — 2026-09-14
+
+### Full-Codebase Security Remediation & Architecture Hardening
+- Reconciled all 17 valid defects (F-01..F-20) from the Full Codebase Audit (`raw_findings_full_codebase_2026-09-14.md`) across 4 implementation batches.
+- **Native Command Authorization (F-2.1, F-8.x)**:
+  - Scoped Tauri capability `default.json` from `windows: ["*"]` to `windows: ["main"]`.
+  - Gated **every** native IPC command on main-window origin — `file.rs`, `storage.rs`, `secrets.rs`, `clipboard.rs`, and all `main.rs` commands (`get_app_info`, `get_system_info`, `new_window`, preview server, `get_pending_files`).
+  - Sensitive commands (`delete_file`, `open_file_explorer`, `open_external`) retain mandatory `X-Nodus-Auth-Token` session validation (`main.rs:59-64`).
+- **Path Traversal Hardening (F-09)**: `validate_path` now rejects true `ParentDir` components instead of a naive `..` substring scan (`file.rs:74-79`).
+- **Preview Server Origin Validation (F-07)**: Host/origin checks in `preview_server.rs`; `preview.json` capability removed.
+- **Mock Quarantine & Data Integrity (Pillar 1)**: All stores demogated — collections initialize empty and populate strictly from runtime events.
+- **Presenter Purity & Strict Typing (Pillars 2, 3)**: Zero direct IPC in visual presenters; eliminated remaining `as any` (e.g. `ShellFrame.tsx:200` now typed `SupportedLanguage`).
+- **Resilient Error Handling (Pillar 9)**: Template-apply failures dispatch toasts; `copyText` surfaces failures instead of silent fallback; unhandled-promise and silent-`catch` sweeps.
+- **Open Extensibility (Pillar 4)**: New runtime `SlashCommandRegistry` with `registerCommand` / `unregisterCommand` / metadata catalog reflection; parser delegates to registered handlers.
+- **Preview Hardening**: LivePreview sanitizes via `sanitizePreviewHtml` on all innerHTML sinks; KaTeX disables trust; Mermaid `securityLevel: strict`.
+- **Sandbox Hardening (Pillar 8)**: Regex-based import/constructor scanner and frozen `safeApi` in the action sandbox; verified by `tests/actionSandbox.test.ts`.
+- **Resource Lifecycle (R-011)**: `useInterval`-style timers tracked and cleared on unmount.
+- **Verification**: `npm test` **120/120** across 14 suites · `npm run lint` clean (113 files, zero platform leaks, contract sync 100%) · `npm run build` exit 0 · `cargo check` PASS.
 
 ### 2026-09-14 — Mobile Platform Target Specification & Cross-Platform Canonical Data Shapes
 - **Mobile (Android) Target Platform Specification**:
@@ -274,6 +291,7 @@ Then promote to a release version when ready.
 
 | Version | Date       | Status      | Modules | Key Change |
 | :------ | :--------- | :---------- | ------: | :---------- |
+| 0.2.0   | 2026-09-14 | Active Dev | 120    | Full-codebase security remediation, command authorization, open extensibility | 
 | 0.1.0   | 2026-09-02 | Stable      | 1879    | Initial refactored AI Studio baseline with modular shell architecture |
 | -       | Ongoing    | Development | *       | Tracking changes in [Unreleased] section above |
 
@@ -300,6 +318,6 @@ Built artifacts are placed in `dist/` within the build directory and can be move
 
 ---
 
-**Last Updated**: 2026-09-09  
+**Last Updated**: 2026-09-14  
 **Maintained By**: CNTXT Development Team  
 **Status**: Active Development

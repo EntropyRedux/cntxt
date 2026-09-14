@@ -376,7 +376,7 @@ function saveTabsMeta(tabs: Tab[], activeTabId: string) {
   }
 }
 
-const saveTimers: Record<string, any> = {};
+const saveTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 function debouncedContentSave(tabId: string, content: string) {
   if (saveTimers[tabId]) {
     clearTimeout(saveTimers[tabId]);

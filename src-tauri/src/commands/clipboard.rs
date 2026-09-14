@@ -1,8 +1,13 @@
+use tauri::Window;
+
 /// Clipboard access via `arboard`.
 /// On Windows, arboard requires its own thread with a message loop,
 /// so clipboard calls run inside a dedicated thread.
 #[tauri::command]
-pub fn clipboard_read_text() -> Result<String, String> {
+pub fn clipboard_read_text(window: Window) -> Result<String, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     std::thread::spawn(|| -> Result<String, String> {
         let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
         clipboard.get_text().map_err(|e| e.to_string())
@@ -12,7 +17,10 @@ pub fn clipboard_read_text() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn clipboard_write_text(text: String) -> Result<(), String> {
+pub fn clipboard_write_text(window: Window, text: String) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     std::thread::spawn(move || -> Result<(), String> {
         let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
         clipboard.set_text(text).map_err(|e| e.to_string())

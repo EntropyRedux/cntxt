@@ -36,28 +36,42 @@ async fn save(app: &tauri::AppHandle, data: &Mutex<HashMap<String, String>>) -> 
     fs::write(&path, raw).map_err(|e| format!("Failed to persist kv store: {}", e))
 }
 
+use tauri::Window;
+
 #[tauri::command]
-pub async fn kv_get(app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<Option<String>, String> {
+pub async fn kv_get(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<Option<String>, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     load(&app, &state.0).await;
     Ok(state.0.lock().await.get(&key).cloned())
 }
 
 #[tauri::command]
-pub async fn kv_set(app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String, value: String) -> Result<(), String> {
+pub async fn kv_set(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String, value: String) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     load(&app, &state.0).await;
     state.0.lock().await.insert(key, value);
     save(&app, &state.0).await
 }
 
 #[tauri::command]
-pub async fn kv_remove(app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<(), String> {
+pub async fn kv_remove(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     load(&app, &state.0).await;
     state.0.lock().await.remove(&key);
     save(&app, &state.0).await
 }
 
 #[tauri::command]
-pub async fn kv_has(app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<bool, String> {
+pub async fn kv_has(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<bool, String> {
+    if window.label() != "main" {
+        return Err("Unauthorized window origin".into());
+    }
     load(&app, &state.0).await;
     Ok(state.0.lock().await.contains_key(&key))
 }

@@ -1,7 +1,7 @@
 # ContextPad Component Manifest
 
 - **Project:** CNTXT (ContextPad) — Modular Frontend UI Development Platform
-- **Version:** 0.1.0
+- **Version:** 0.2.0
 - **Generated:** 2026-09-13
 - **Specification:** Solo Dev AI-Assisted Workflow Stage 2/3 Handoff Manifest
 

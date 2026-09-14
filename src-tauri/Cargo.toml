@@ -1,6 +1,6 @@
 [package]
 name = "cntxt"
-version = "0.1.0"
+version = "0.2.0"
 description = "CNTXT - Modular Frontend UI Development Platform"
 authors = ["CNTXT Development Team"]
 edition = "2021"

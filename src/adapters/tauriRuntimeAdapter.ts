@@ -234,7 +234,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       try {
         await this.invokeTauri('new_window');
         return true;
-      } catch {
+      } catch (err) {
+        console.error('[TauriRuntimeAdapter] newWindow error:', err);
         return false;
       }
     },
@@ -250,7 +251,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     isMaximized: async (): Promise<boolean> => {
       try {
         return await this.invokeTauri<boolean>('is_maximized');
-      } catch {
+      } catch (err) {
+        console.warn('[TauriRuntimeAdapter] isMaximized error:', err);
         return false;
       }
     },
@@ -270,7 +272,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       try {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         await getCurrentWindow().startDragging();
-      } catch {
+      } catch (err) {
+        console.debug('[TauriRuntimeAdapter] startDragging window API fallback:', err);
         try {
           await this.invokeTauri('start_dragging');
         } catch (err) {
@@ -302,7 +305,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         if (result !== null) return true;
         await navigator.clipboard.writeText(text);
         return true;
-      } catch {
+      } catch (err) {
+        console.error('[TauriRuntimeAdapter] writeText error:', err);
         return false;
       }
     }
