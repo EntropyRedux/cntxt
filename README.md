@@ -35,11 +35,6 @@ CNTXT/
 └── tsconfig.json
 ```
 
-> **Not in this repo:** `contextpad_replica_ai-studio/` (the AI Studio UI/UX design source) and
-> `generated_documents/` (audit/reconciliation working papers) are intentionally excluded.
-> The AI Studio build is the frontend design source and is ported into this repo via the
-> typed bridge contract.
-
 ## Getting Started
 
 ### Prerequisites
