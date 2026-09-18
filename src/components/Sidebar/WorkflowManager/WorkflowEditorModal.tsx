@@ -272,6 +272,8 @@ export const WorkflowEditorModal: React.FC<WorkflowEditorModalProps> = ({
                 Name <span className="text-[var(--status-error)]">*</span>
               </label>
               <input
+                id="workflow-editor-name"
+                name="workflowEditorName"
                 type="text"
                 required
                 value={name}
@@ -286,6 +288,8 @@ export const WorkflowEditorModal: React.FC<WorkflowEditorModalProps> = ({
                 Category
               </label>
               <input
+                id="workflow-editor-category"
+                name="workflowEditorCategory"
                 type="text"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
@@ -340,6 +344,8 @@ export const WorkflowEditorModal: React.FC<WorkflowEditorModalProps> = ({
               </label>
               <div className="flex gap-2">
                 <input
+                  id="workflow-editor-filepath"
+                  name="workflowEditorFilePath"
                   type="text"
                   required={type === 'bookmark'}
                   value={filePath}
@@ -369,6 +375,8 @@ export const WorkflowEditorModal: React.FC<WorkflowEditorModalProps> = ({
                 <span className="text-[10px] text-[var(--text-muted)]">{content.length} characters</span>
               </div>
               <textarea
+                id="workflow-editor-content"
+                name="workflowEditorContent"
                 required={type === 'workflow'}
                 rows={6}
                 value={content}

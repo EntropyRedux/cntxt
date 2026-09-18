@@ -527,6 +527,8 @@ export const TemplateManager: React.FC = () => {
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-2.5 top-2 pointer-events-none" />
               <input
+                id="template-search-input"
+                name="templateSearch"
                 autoFocus
                 type="text"
                 value={searchQuery}
@@ -578,6 +580,8 @@ export const TemplateManager: React.FC = () => {
               Template Name <span className="text-[var(--status-error)]">*</span>
             </label>
             <input
+              id="template-name-input"
+              name="templateName"
               type="text"
               required
               autoFocus
@@ -594,6 +598,8 @@ export const TemplateManager: React.FC = () => {
                 Template ID
               </label>
               <input
+                id="template-id-input"
+                name="templateId"
                 type="text"
                 placeholder="Unique ID identifier"
                 value={formData.id}
@@ -620,6 +626,8 @@ export const TemplateManager: React.FC = () => {
                 Description
               </label>
               <input
+                id="template-description-input"
+                name="templateDescription"
                 type="text"
                 placeholder="Optional summary"
                 value={formData.description}
@@ -651,6 +659,8 @@ export const TemplateManager: React.FC = () => {
             </div>
 
             <textarea
+              id="template-content-textarea"
+              name="templateContent"
               ref={textareaRef}
               required
               rows={5}

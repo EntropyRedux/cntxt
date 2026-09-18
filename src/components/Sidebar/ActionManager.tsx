@@ -528,6 +528,8 @@ export const ActionManager: React.FC = () => {
           <div className="relative">
             <Search className="w-3 h-3 text-[var(--text-muted)] absolute left-2.5 top-2" />
             <input
+              id="action-search-input"
+              name="actionSearch"
               autoFocus
               type="text"
               value={searchQuery}
@@ -700,6 +702,8 @@ export const ActionManager: React.FC = () => {
 
           {/* Name Input */}
           <input
+            id="action-name-input"
+            name="actionName"
             type="text"
             placeholder="Action Name..."
             value={formData.name}
@@ -709,6 +713,8 @@ export const ActionManager: React.FC = () => {
 
           {/* Description Textarea */}
           <textarea
+            id="action-description-textarea"
+            name="actionDescription"
             rows={2}
             placeholder="Description (optional summary)..."
             value={formData.description}
@@ -781,6 +787,8 @@ export const ActionManager: React.FC = () => {
               </span>
             </label>
             <textarea
+              id="action-code-textarea"
+              name="actionCode"
               rows={5}
               placeholder={formData.codeType === 'formula' ? 'UPPER(selection)' : '// Action JavaScript\napi.insertAtCursor("Hello world!");'}
               value={formData.code}

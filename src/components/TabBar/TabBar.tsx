@@ -547,6 +547,8 @@ export const TabBar: React.FC = () => {
               <div className="px-2.5 py-1.5 border-b border-[var(--border-primary)] flex items-center gap-1.5 bg-[var(--card-bg)] shrink-0 animate-in fade-in slide-in-from-top-1 duration-150">
                 <Search className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
                 <input
+                  id="tab-filter-input"
+                  name="tabFilter"
                   type="text"
                   placeholder="Filter open tabs..."
                   value={tabFilterText}

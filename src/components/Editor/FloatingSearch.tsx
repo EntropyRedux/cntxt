@@ -379,6 +379,8 @@ export const FloatingSearch: React.FC<FloatingSearchProps> = ({ view, onClose: o
         <div className={styles.searchRow}>
           <div className={styles.inputWrapper}>
             <input
+              id="floating-search-find-input"
+              name="floatingSearchFind"
               ref={searchInputRef}
               type="text"
               className={styles.searchInput}
@@ -467,6 +469,8 @@ export const FloatingSearch: React.FC<FloatingSearchProps> = ({ view, onClose: o
           <div className={styles.replaceRow}>
             <div className={styles.inputWrapper}>
               <input
+                id="floating-search-replace-input"
+                name="floatingSearchReplace"
                 type="text"
                 className={styles.searchInput}
                 placeholder="Replace"

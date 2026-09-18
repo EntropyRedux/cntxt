@@ -49,6 +49,8 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
     return (
       <div className="flex items-center gap-1 w-full animate-in fade-in duration-150">
         <input
+          id="custom-category-input"
+          name="customCategory"
           autoFocus
           type="text"
           placeholder="New category name..."

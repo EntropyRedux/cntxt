@@ -50,6 +50,8 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         <div className="relative w-full sm:w-44">
           <Search size={12} className="absolute left-2.5 top-2 text-[var(--text-muted)] pointer-events-none" />
           <input
+            id="icon-picker-search-input"
+            name="iconPickerSearch"
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

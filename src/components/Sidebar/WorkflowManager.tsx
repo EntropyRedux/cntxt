@@ -260,6 +260,8 @@ export const WorkflowManager: React.FC = () => {
         <div className="relative">
           <Search size={13} className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-2.5 top-2" />
           <input
+            id="workflow-search-input"
+            name="workflowSearch"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

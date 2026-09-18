@@ -107,6 +107,8 @@ export const FontSelectorModal: React.FC<FontSelectorModalProps> = ({
           <div className="relative flex-1 min-w-[220px]">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
             <input
+              id="font-search-input"
+              name="fontSearch"
               type="text"
               placeholder="Search fonts by name, feature (ligatures, x-height, dyslexia), or research focus..."
               value={searchQuery}

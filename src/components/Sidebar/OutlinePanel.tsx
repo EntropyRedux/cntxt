@@ -302,6 +302,8 @@ export const OutlinePanel: React.FC = () => {
         <div className="relative">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
+            id="outline-filter-input"
+            name="outlineFilter"
             type="text"
             placeholder="Search outline symbols..."
             value={searchQuery}

@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.13
-Last Updated: 2026-09-18
-Last Updated By: Production Implementation Agent (Full Codebase Audit Remediation & PASS Upgrade)
+Version: v1.14
+Last Updated: 2026-09-19
+Last Updated By: Production Implementation Agent (Dev Launch Optimization & Form Accessibility Hardening)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -12,15 +12,15 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-05 Complete)
-  [x] Refactor (UI Layering, Dev Launch Performance & Audit Remediation Complete)
+  [ ] Feature Implementation (FG-01..FG-05 Complete)
+  [x] Refactor (Dev Launch Optimization & Form Accessibility Hardening Complete)
   [x] Testing (Vitest 126/126 Live, Playwright 21/21 E2E Live)
   [ ] Sync-Back
 
-Current Feature Group: REMED-01: Full Codebase Audit Remediation (All 12 Valid Defects Resolved)
-Active Plan: /generated-documents/plans/refactor_plan_e2e_stability_2026-09-18.md
+Current Feature Group: REMED-01: Full Codebase Audit Remediation & Performance Hardening
+Active Plan: /generated-documents/plans/refactor_plan_dev_launch_optimization_2026-09-19.md
 Last Audit Reconciliation: 2026-09-18 — PASS (Post-Refactor PERF-1 Closeout Audit: raw_findings_post_refactor_perf1_closeout_2026-09-18.md, 0 valid defects, TR-DEV-1 approved)
-Last Git Checkpoint: 2026-09-18 — PERF-1 Modulepreload Closeout (commit 25dfc87)
+Last Git Checkpoint: 2026-09-18 — E2E Test Suite Stability & Action Widget Boundary (commit facd2e4)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
@@ -374,13 +374,15 @@ The 12.7s TTFB is Vite processing and transforming the module graph on demand �
   3. Row 1 had `z-index: auto` while Row 2 had `z-40`, causing Row 1's theme dropdown to paint behind Row 2.
 - **Remediation**: Adjust `index.css` to allow natural/min-height sizing (64px desktop / 70px touch) and `overflow: visible; contain: none;`. Add stacking context rules (`z-50` for open Row 1 dropdowns) in `ShellTitleBar.tsx`.
 
-### 2. Slow Launch Loading Identified
+### 2. Slow Launch Loading & Form Accessibility Resolved (2026-09-19)
 - **Root Causes**:
-  1. Vite dev-server on-demand module graph compilation overhead (~12.7s TTFB).
-  2. Missing `optimizeDeps.include` in `vite.config.ts` for heavy libraries (`lucide-react`, `@codemirror/*`, `zustand`, `cytoscape`, `katex`).
-  3. Synchronous import of 20+ separate Fontsource CSS files in `main.tsx`.
-  4. Cold-start IPC read storm in `src-tauri/src/commands/storage.rs`: every `kv_get` unconditionally executes `tokio::fs::read_to_string` on `kv_store.json`.
-- **Remediation**: Configure `optimizeDeps.include` in `vite.config.ts`, cache KV state in-memory in `storage.rs` to avoid redundant file reads, and load non-essential fonts asynchronously.
+  1. Vite dev-server on-demand module graph compilation overhead and dependency crawling holding initial `GET /` connection (~18–19s TTFB).
+  2. Missing `optimizeDeps.include` in `vite.config.ts` for heavy third-party vendor libraries (`@codemirror/*`, `zustand`, `lucide-react`, `canvas-confetti`, `marked`, `katex`, `@tauri-apps/api/*`).
+  3. Form input elements lacking `id` and `name` attributes across sidebar and modal components triggering DevTools accessibility/autofill audit flags.
+- **Resolution**:
+  1. Configured comprehensive `optimizeDeps.include` and `server.warmup` in `vite.config.ts`.
+  2. Measured real-world TTFB drop: initial dev boot TTFB reduced from **19,156 ms to 851.6 ms** (95.5% reduction), with warm navigation responding in **27.8 ms**.
+  3. Updated all `<input>` and `<textarea>` elements across `TemplateManager.tsx`, `ActionManager.tsx`, `OutlinePanel.tsx`, `WorkflowManager.tsx`, `FloatingSearch.tsx`, `TabBar.tsx`, `CommandPalette.tsx`, `FontSelectorModal.tsx`, `CategorySelector.tsx`, and `IconPicker.tsx` with explicit semantic `id` and `name` attributes.
 
 ### 3. Active Priority 2 Functional Defects Queued
 - **F-08**: RESOLVED (2026-09-18). CodeMirror action token cursor-boundary condition rectified in `liveMarkdown.ts` (`r.head > start && r.head < end`); Playwright test timeout increased to 60s in `playwright.config.ts`. All 21/21 E2E tests passing green.

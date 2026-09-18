@@ -447,6 +447,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
         <div className="p-3 sm:p-3.5 border-b border-[var(--border-primary)] bg-[var(--sidebar-header-bg)] flex items-center gap-2.5 shrink-0">
           <Search className="w-5 h-5 text-[var(--accent-primary)] shrink-0 ml-1" />
           <input
+            id="command-palette-search-input"
+            name="commandPaletteSearch"
             ref={inputRef}
             type="text"
             value={query}
