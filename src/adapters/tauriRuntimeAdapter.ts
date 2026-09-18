@@ -19,6 +19,8 @@ import {
 import { STORAGE_KEYS } from './storageKeys';
 import { applyThemeTokensToElement } from '../../theme/index';
 import { ThemeName } from '../ui-contract/themeContract';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+
 
 export class TauriRuntimeAdapter implements IRuntimeBridge {
   private inMemoryFallback: Map<string, string> = new Map();
@@ -270,15 +272,12 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     },
     startDragging: async (): Promise<void> => {
       try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        // getCurrentWindow() is pre-imported at module load — no async gap
+        // that would lose the synchronous mousedown gesture context.
         await getCurrentWindow().startDragging();
-      } catch (err) {
-        console.debug('[TauriRuntimeAdapter] startDragging window API fallback:', err);
-        try {
-          await this.invokeTauri('start_dragging');
-        } catch (err) {
-          console.error('[TauriRuntimeAdapter] startDragging error:', err);
-        }
+      } catch {
+        // Fallback for secondary windows if capability isn't matched yet
+        await this.invokeTauri('start_dragging');
       }
     },
     close: async (): Promise<void> => {

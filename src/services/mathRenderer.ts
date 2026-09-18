@@ -1,18 +1,52 @@
-import katex from 'katex';
+import { escapeHtml } from '../adapters';
 
 export interface MathRenderResult {
   html: string;
   isError: boolean;
   error?: string;
+  isPending?: boolean;
+}
+
+let katexInstance: any = null;
+let katexLoadingPromise: Promise<any> | null = null;
+
+export async function getKatex(): Promise<any> {
+  if (katexInstance) return katexInstance;
+  if (!katexLoadingPromise) {
+    katexLoadingPromise = Promise.all([
+      import('katex'),
+      import('katex/dist/katex.min.css')
+    ]).then(([mod]) => {
+      katexInstance = mod.default || mod;
+      return katexInstance;
+    });
+  }
+  return katexLoadingPromise;
+}
+
+export function isKatexLoaded(): boolean {
+  return katexInstance !== null;
 }
 
 export function renderLatex(latex: string, displayMode: boolean = false): MathRenderResult {
+  const trimmed = latex.trim();
+  if (!trimmed) {
+    return { html: '', isError: false };
+  }
+
+  if (!katexInstance) {
+    const safe = escapeHtml(trimmed);
+    return {
+      html: displayMode
+        ? `<div class="katex-loading-placeholder text-center text-xs text-[var(--text-muted)] font-mono py-2 opacity-80 select-none">$$ ${safe} $$</div>`
+        : `<span class="katex-loading-placeholder text-xs text-[var(--text-muted)] font-mono opacity-80 select-none">$${safe}$</span>`,
+      isError: false,
+      isPending: true
+    };
+  }
+
   try {
-    const trimmed = latex.trim();
-    if (!trimmed) {
-      return { html: '', isError: false };
-    }
-    const html = katex.renderToString(trimmed, {
+    const html = katexInstance.renderToString(trimmed, {
       displayMode,
       throwOnError: false,
       output: 'htmlAndMathml',

@@ -45,16 +45,18 @@ export const ShellFrame: React.FC = () => {
   const { toggleActivityBar, toggleEditorMode, initializeSettings } = useSettingsStore();
   const { initializeFileHistory, recordOpenedFile } = useFileHistoryStore();
 
-  // Initialize data stores on mount with bridge
+  // Initialize data stores concurrently on mount with bridge
   useEffect(() => {
-    initializeSettings(bridge.storage, bridge.platform);
-    initializeTabs(bridge.storage);
-    initializeTemplates(bridge.storage);
-    initializeActions(bridge.storage);
-    initializeWorkflows(bridge.storage);
-    initializeRibbon(bridge.storage);
-    initializeFormattingStore(bridge.storage);
-    initializeFileHistory(bridge.storage);
+    Promise.allSettled([
+      initializeSettings(bridge.storage, bridge.platform),
+      initializeTabs(bridge.storage),
+      initializeTemplates(bridge.storage),
+      initializeActions(bridge.storage),
+      initializeWorkflows(bridge.storage),
+      initializeRibbon(bridge.storage),
+      initializeFormattingStore(bridge.storage),
+      initializeFileHistory(bridge.storage),
+    ]);
   }, [bridge, initializeSettings, initializeTabs, initializeTemplates, initializeActions, initializeWorkflows, initializeRibbon, initializeFormattingStore, initializeFileHistory]);
 
   // Sync theme via bridge
@@ -72,8 +74,7 @@ export const ShellFrame: React.FC = () => {
           id: active.id,
           name: active.title,
           path: active.filePath,
-          language: active.language,
-          content: active.content
+          language: active.language
         });
       }
     }
@@ -191,6 +192,7 @@ export const ShellFrame: React.FC = () => {
             addNotification('Image Added', `Loaded ${file.name} into document`, 'success');
           } catch (err) {
             console.error('Failed to load dropped image', err);
+            addNotification('Image Import Failed', (err as Error)?.message || 'Failed to process dropped image', 'error');
           }
           continue;
         }

@@ -13,7 +13,7 @@ import {
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { FormulaEngine } from '../../services/formulaParser';
-import { renderLatex } from '../../services/mathRenderer';
+import { renderLatex, getKatex, isKatexLoaded } from '../../services/mathRenderer';
 import { renderMermaidDiagram } from '../../services/mermaidRenderer';
 import { useRuntimeBridge, isDarkTheme, getDocumentTheme, escapeHtml, sanitizePreviewHtml } from '../../adapters';
 import { highlightCodeSnippet } from '../../services/codeLanguages';
@@ -78,6 +78,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
     }
   }, [isLiveSync, content, syncedContent]);
 
+  const [katexLoaded, setKatexLoaded] = useState(isKatexLoaded());
+
+  useEffect(() => {
+    if (katexLoaded) return;
+    const hasMath = /\$\$|(?<!\$)\$(?!\$)[^\$\n]+?(?<!\$)\$(?!\$)|(```+|~~~+)(?:latex|math|katex)\b/i.test(formulaEvaluated);
+    if (hasMath) {
+      getKatex().then(() => setKatexLoaded(true)).catch(() => {});
+    }
+  }, [formulaEvaluated, katexLoaded]);
+
   // 2. Pre-process LaTeX Math & Mermaid blocks before passing to marked
   const processedMarkdown = useMemo(() => {
     let md = formulaEvaluated;
@@ -107,7 +117,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
     });
 
     return md;
-  }, [formulaEvaluated]);
+  }, [formulaEvaluated, katexLoaded]);
 
   // 3. Convert markdown to HTML with marked (GFM tables, breaks enabled)
   const renderedHtml = useMemo(() => {

@@ -1,0 +1,17 @@
+/* Local font bundles — optimized essential weights */
+/* Variable fonts: single compact file covers all weights (300–800) */
+@import '@fontsource-variable/plus-jakarta-sans';
+@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/jetbrains-mono/wght-italic.css';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/fira-code';
+@import '@fontsource-variable/inconsolata';
+@import '@fontsource-variable/literata';
+
+/* Curated static fonts (regular 400 & bold 700) */
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/700.css';
+@import '@fontsource/source-code-pro/400.css';
+@import '@fontsource/source-code-pro/700.css';
+@import '@fontsource/atkinson-hyperlegible/400.css';
+@import '@fontsource/atkinson-hyperlegible/700.css';

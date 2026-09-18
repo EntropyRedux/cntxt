@@ -6,4 +6,3 @@ export * from './ShellStatusBar';
 export * from './ShellNotificationLayer';
 export * from './ShellModalLayer';
 export * from './ClassicShell';
-export * from './PrototypeShell';

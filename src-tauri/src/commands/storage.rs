@@ -7,7 +7,21 @@ use tokio::sync::Mutex;
 /// File-backed KV store persisted under the app data directory.
 /// The on-disk file is the source of truth, so multiple windows and
 /// app restarts all observe the same state.
-pub struct KvStore(pub Mutex<HashMap<String, String>>);
+pub struct KvStoreState {
+    pub is_loaded: bool,
+    pub data: HashMap<String, String>,
+}
+
+pub struct KvStore(pub Mutex<KvStoreState>);
+
+impl Default for KvStore {
+    fn default() -> Self {
+        Self(Mutex::new(KvStoreState {
+            is_loaded: false,
+            data: HashMap::new(),
+        }))
+    }
+}
 
 impl KvStore {
     fn store_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -17,23 +31,19 @@ impl KvStore {
     }
 }
 
-async fn load(app: &tauri::AppHandle, data: &Mutex<HashMap<String, String>>) {
-    let Ok(path) = KvStore::store_path(app) else {
-        return;
-    };
-    let Ok(raw) = fs::read_to_string(&path) else {
-        return;
-    };
-    if let Ok(parsed) = serde_json::from_str::<HashMap<String, String>>(&raw) {
-        *data.lock().await = parsed;
+async fn ensure_loaded<'a>(app: &tauri::AppHandle, state: &'a Mutex<KvStoreState>) -> tokio::sync::MutexGuard<'a, KvStoreState> {
+    let mut lock = state.lock().await;
+    if !lock.is_loaded {
+        if let Ok(path) = KvStore::store_path(app) {
+            if let Ok(raw) = fs::read_to_string(&path) {
+                if let Ok(parsed) = serde_json::from_str::<HashMap<String, String>>(&raw) {
+                    lock.data = parsed;
+                }
+            }
+        }
+        lock.is_loaded = true;
     }
-}
-
-async fn save(app: &tauri::AppHandle, data: &Mutex<HashMap<String, String>>) -> Result<(), String> {
-    let path = KvStore::store_path(app)?;
-    let snapshot = data.lock().await.clone();
-    let raw = serde_json::to_string_pretty(&snapshot).map_err(|e| e.to_string())?;
-    fs::write(&path, raw).map_err(|e| format!("Failed to persist kv store: {}", e))
+    lock
 }
 
 use tauri::Window;
@@ -43,8 +53,8 @@ pub async fn kv_get(window: Window, app: tauri::AppHandle, state: tauri::State<'
     if window.label() != "main" {
         return Err("Unauthorized window origin".into());
     }
-    load(&app, &state.0).await;
-    Ok(state.0.lock().await.get(&key).cloned())
+    let lock = ensure_loaded(&app, &state.0).await;
+    Ok(lock.data.get(&key).cloned())
 }
 
 #[tauri::command]
@@ -52,9 +62,16 @@ pub async fn kv_set(window: Window, app: tauri::AppHandle, state: tauri::State<'
     if window.label() != "main" {
         return Err("Unauthorized window origin".into());
     }
-    load(&app, &state.0).await;
-    state.0.lock().await.insert(key, value);
-    save(&app, &state.0).await
+    let path = KvStore::store_path(&app)?;
+    let snapshot = {
+        let mut lock = ensure_loaded(&app, &state.0).await;
+        lock.data.insert(key, value);
+        lock.data.clone()
+    };
+    tokio::task::spawn_blocking(move || {
+        let raw = serde_json::to_string_pretty(&snapshot).map_err(|e| e.to_string())?;
+        fs::write(&path, raw).map_err(|e| format!("Failed to persist kv store: {}", e))
+    }).await.map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -62,9 +79,16 @@ pub async fn kv_remove(window: Window, app: tauri::AppHandle, state: tauri::Stat
     if window.label() != "main" {
         return Err("Unauthorized window origin".into());
     }
-    load(&app, &state.0).await;
-    state.0.lock().await.remove(&key);
-    save(&app, &state.0).await
+    let path = KvStore::store_path(&app)?;
+    let snapshot = {
+        let mut lock = ensure_loaded(&app, &state.0).await;
+        lock.data.remove(&key);
+        lock.data.clone()
+    };
+    tokio::task::spawn_blocking(move || {
+        let raw = serde_json::to_string_pretty(&snapshot).map_err(|e| e.to_string())?;
+        fs::write(&path, raw).map_err(|e| format!("Failed to persist kv store: {}", e))
+    }).await.map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -72,6 +96,6 @@ pub async fn kv_has(window: Window, app: tauri::AppHandle, state: tauri::State<'
     if window.label() != "main" {
         return Err("Unauthorized window origin".into());
     }
-    load(&app, &state.0).await;
-    Ok(state.0.lock().await.contains_key(&key))
+    let lock = ensure_loaded(&app, &state.0).await;
+    Ok(lock.data.contains_key(&key))
 }

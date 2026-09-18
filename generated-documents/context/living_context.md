@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.10
-Last Updated: 2026-09-15
-Last Updated By: Production Implementation Agent (FG-05 Playwright E2E Test Suite)
+Version: v1.12
+Last Updated: 2026-09-18
+Last Updated By: Production Implementation Agent (Pass 2 Audit Reconciliation)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -13,13 +13,14 @@ Active Stage:
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-05 Complete)
-  [ ] Refactor
-  [x] Testing (Playwright E2E Suite Live)
+  [x] Refactor (UI Layering, Dev Launch Performance & Priority 2 Remediation)
+  [x] Testing (Vitest 126/126 Live, Playwright E2E Live)
   [ ] Sync-Back
 
-Current Feature Group: FG-05: Playwright E2E Test Suite
-Active Plan: /generated-documents/plans/feature_group_e2e_playwright_2026-09-14.md
-Last Git Checkpoint: 2026-09-15 — FG-05 Playwright E2E Suite Complete (21/21 Chromium tests green via `npm run test:e2e`; Vitest 121/121 across 14 suites; Vite build passing; playwright artifacts gitignored)
+Current Feature Group: REMED-01: UI Layering, Dev Launch Performance & Priority 2 Defects
+Active Plan: /generated-documents/plans/remediation_plan_ui_perf_p2_2026-09-18.md
+Last Audit Reconciliation: 2026-09-18 — CONDITIONAL PASS (Full Codebase Audit 2026-09-18)
+Last Git Checkpoint: 2026-09-16 — Full Codebase Audit P1 Resolved (preview_server tokio RwLock, tabSessionCache adapter move, Vitest 121/121, lint clean)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
@@ -220,3 +221,166 @@ Pillar: Pillar 8 (Deep Security)
 Decision: Tauri CSP connect-src permits http://localhost:5173 and ws://localhost:* in tauri.conf.json.
 Reasoning: Required for local desktop development (tauri dev) with Vite dev server and HMR WebSocket, and connects to internal dynamic-port preview server (127.0.0.1:*). Host/Origin validation in preview_server.rs prevents unauthorized cross-origin access.
 Status: APPROVED TRADEOFF
+
+Tradeoff ID: TR-011
+Date: 2026-09-18
+Finding Source: BG-2 (Pass 1 Full Codebase Audit 2026-09-18)
+Pillar: Pillar 7 (Background Processes)
+Decision: In-editor live markdown decorations (liveMarkdown.ts) are treated as active editor view state (gated by editorMode === 'rendered'), distinct from background DOM syncing to LivePreview (enableLiveDomSync).
+Reasoning: Selecting 'rendered' mode is an intentional, foreground presentation choice by the user for active editing, not an autonomous background worker or daemon. Syncing the separate LivePreview pane remains independently gated by enableLiveDomSync in Settings -> Experimental.
+Status: APPROVED TRADEOFF
+
+━━━ OPERATIONAL & TROUBLESHOOTING NOTES ━━━
+
+### Native Linker Lock / Build Cache Troubleshooting
+If you ever see this linker lock error again during long `npm run tauri dev` sessions (`error: could not compile cntxt (bin "cntxt")` with a stack backtrace):
+A quick clean clears any locked cache and resolves binary file locking:
+```powershell
+cd C:\Projects\LocalActive\Repo\Active\CNTXT\src-tauri
+cargo clean
+```
+
+### Test Command Conventions
+Always run tests using the npm script runner:
+```powershell
+# From project root C:\Projects\LocalActive\Repo\Active\CNTXT:
+npm test          # Run Vitest unit & integration test suites
+npm run test:e2e  # Run Playwright end-to-end browser test suites
+```
+*(Note: Also remember to use `npm test` instead of bare `test` when running test suites in PowerShell, as `test` is not a native PowerShell cmdlet).*
+━━━ FULL CODEBASE AUDIT — 2026-09-18 ━━━
+
+Audit Report: /generated-documents/audits/raw_findings_full_codebase_2026-09-18.md
+Pass 2 Reconciliation: COMPLETE (appended to same report, Section "PASS 2: PROD AGENT RECONCILIATION & VERDICT")
+Verification Audit: /generated-documents/audits/pass2_reconciliation_verification_2026-09-18.md (CONDITIONAL PASS UPHELD with R2-1..R2-5 corrections)
+Final Verdict: CONDITIONAL PASS (Pending Priority 1 & 2 remediation)
+- 29 findings evaluated:
+  - 8 COMPLIANT / CLEARED (PRES-1, LIFECYCLE-1, MOD-1, DEPS-1 [canvas-confetti verified used in VariableFillerModal.tsx], DEPS-2, BG-1, SEC-1, ERR-1)
+  - 8 APPROVED TRADEOFF (PERF-3 fonts via LCD Phase A, PERF-8 spawn_blocking storage, PRES-2 ShellFrame container, TYPE-1 adapter/event any, SCOPE-1 productivity defaults via TR-006, BG-2 editor rendered mode via TR-011, SEC-2 new Function via TR-003/004, VAL-1 local storage boundary via TR-009)
+  - 1 QUARANTINED MOCK (MOCK-1)
+  - 0 UNDOCUMENTED ISSUES (TR-011 formally registered)
+  - 12 VALID DEFECTS (PERF-1, PERF-2, PERF-4, PERF-5, PERF-6, PERF-7, PERF-9, MOCK-2, MOD-2, SCOPE-2, SEC-3, ERR-2)
+- Priority Remediation Backlog:
+  - Priority 1: Decouple tabStore from CodeMirror (PERF-1/MOD-2), KaTeX chunk deduplication (PERF-2), dead code pruning (SCOPE-2, MOCK-2), concurrent store init (PERF-4)
+  - Priority 2: Token estimator 300ms debounce wiring (PERF-5), LivePreview 250ms debounce (PERF-7), liveMarkdown optimization (PERF-6)
+  - Priority 3: CSP meta tag for index.html (SEC-3), toast feedback for dropped images & preview errors (ERR-2), dynamic import cleanup (PERF-9)
+- Verification Gates: npm run lint (exit 0) · Vitest 126/126 (14 suites) · cargo check OK · npm run build OK
+
+━━━ FULL CODEBASE AUDIT — 2026-09-16 ━━━
+
+Audit Report: /generated-documents/audits/raw_findings_full_codebase_2026-09-16.md
+Pass 2 Reconciliation: COMPLETE (same report, PASS 2 section)
+Final Verdict: CONDITIONAL PASS
+- 27 findings: 17 VALID DEFECT, 4 APPROVED TRADEOFF (F-12 via TR-003/TR-004, F-18 proposed TR-011, F-24, F-26), plus UNDOCUMENTED/deferred (F-08, F-21)
+- Remediation backlog R-01..R-21; Priority 1 (CRITICAL) RESOLVED 2026-09-16: R-01 RwLock unwrap (tokio RwLock migration removes poisoning), R-02 std→tokio RwLock (update_content/update_settings now async, callers awaited), R-03 tabSessionCache.ts moved src/services/ → src/adapters/ (human-approved path) + tabStore.ts import/comment updated
+- Verification 2026-09-16: npm run lint exit 0 · Vitest 121/121 (14 suites) · npm run build 21.23s · cargo check OK
+- Verdict upgraded CONDITIONAL → PASS per reconciliation criteria (Priority 1 cleared + lint exit 0). Priority 2–4 backlog (R-04..R-21) remains tracked as debt.
+- Remaining human decisions: TR-011 approval, F-08 fast-track, F-21 memoization scheduling
+
+
+━━━ PERFORMANCE OPTIMIZATION SESSION — 2026-09-15/16 ━━━
+
+### Context
+After completing the FG-01..FG-05 feature groups and E2E suite, a performance pass was initiated to address Lighthouse-reported LCP and CLS scores.
+
+---
+
+### Phase A — LCP/CLS Quick Wins (COMPLETE ✅)
+
+**CLS Fix — Resolved (0.06, Good)**
+- Added `contain: layout style` + explicit heights on TitleBar (38px), Ribbon (min-height 0), and StatusBar (24px) via CSS `data-shell-*` attribute selectors in `index.css`.
+- Added `data-shell-titlebar`, `data-shell-ribbon`, `data-shell-statusbar` attributes to respective shell components.
+- CLS went from reportable to **0.06 (Good)** — 3 remaining micro-shifts are from Sidebar resize handle initialization (acceptable, below threshold).
+
+**LCP — Font Network Requests Eliminated**
+- Removed 3 Google Fonts `<link>` tags (2 preconnects + 1 mega-CSS) from `index.html`.
+- Installed 9 Fontsource packages (`@fontsource-variable/*` for variable-axis, `@fontsource/*` for static weights) and imported them in `main.tsx`.
+- Vite bundles the WOFF2 files into `dist/assets/` — **0 external font network requests** at runtime.
+
+---
+
+### Phase B — Lazy Editor Code-Splitting (COMPLETE ✅)
+
+**What was done:**
+- Converted `Editor` and `LivePreview` from static imports to `React.lazy()` + `Suspense` in `ShellEditorContainer.tsx`.
+- Created `src/components/Editor/EditorSkeleton.tsx` — pure CSS shimmer placeholder, zero CodeMirror dependencies, renders in first frame.
+- Extended `vite.config.ts` `manualChunks` with `mermaid` and `katex` entries.
+
+**Bundle impact:**
+- Main entry: **2,268 KB → 810 KB (−64%)**
+- `Editor-*.js`: now a separate lazy 100 KB chunk
+- `LivePreview-*.js`: now a separate lazy 52 KB chunk
+- `mermaid-*.js`: now a separate lazy 737 KB chunk
+
+**Known follow-up:** KaTeX appears as two chunks (261 KB × 2). The `katex/dist/katex.min.css` import in `main.tsx` causes a second KaTeX JS association. Fix: move that CSS import inside the lazy `LivePreview` module.
+
+---
+
+### Phase C — localStorage Tab Cache / IPC Hydration (COMPLETE ✅)
+
+**Root cause discovered:** `storage.getItem()` goes through `invoke('kv_get', ...)` — a Tauri IPC bridge crossing the JS→Rust boundary. With N tabs, this is N+1 async round-trips before any tab can render, blocking the editor mount.
+
+**What was built:**
+- `src/services/tabSessionCache.ts` — write-through localStorage cache with djb2 checksum validation. All three functions guard `typeof localStorage === 'undefined'` for clean Vitest/Node.js degradation.
+- `tabStore.ts` — reads cache synchronously on init (zero IPC on warm launch); parallelizes the 2 initial IPC calls into `Promise.all`; adds `isHydrating: boolean` state; writes cache on 9 mutation sites (create/close/save/pin/reorder).
+- `ShellEditorContainer.tsx` — shows `EditorSkeleton` when `isHydrating: true` and no tab is active (cold-start), so LCP element shifts to shell chrome rather than `div.cm-line`.
+
+**Verified:** `npm test` — **121/121 passing**, zero stderr noise.
+
+---
+
+### CRITICAL FINDING: Dev-Mode Measurement Environment
+
+**All LCP measurements during this session were taken against the Vite dev server (`localhost:5173`), not the production Tauri binary.**
+
+The final Lighthouse breakdown revealed:
+```
+Time to first byte:    12,691 ms  ← Vite dev-server compilation overhead
+Resource load delay:       0 ms
+Resource load duration:    0 ms
+Element render delay:  2,717 ms
+```
+
+The 12.7s TTFB is Vite processing and transforming the module graph on demand — this is inherent to dev-mode and has nothing to do with our optimizations. **All three phases of work are production optimizations** that will show their full impact in `npm run tauri:build` or `npm run build` output, not in `npm run dev`.
+
+**Rule for future performance measurement:** Always profile against `npm run build` + serve, or the compiled Tauri binary. Use `npm run dev` only for functional testing.
+
+---
+
+### Deferred Performance Items (Future Work)
+
+| Item | Effort | Impact |
+|:---|:---:|:---:|
+| KaTeX CSS import deduplication (move into `LivePreview`) | Small | Removes 261 KB duplicate chunk |
+| Tauri `kv_get` batched IPC endpoint (fetch all keys in one call) | Medium | Eliminates cold-start N+1 IPC even without cache |
+| Measure LCP against production Tauri build to establish baseline | Small | Confirms actual user-facing improvement |
+| Vite `optimizeDeps.include` for faster dev-mode cold start | Small | Reduces dev TTFB from ~13s toward ~2–3s |
+
+---
+
+━━━ REMEDIATION & PERFORMANCE INVESTIGATION — 2026-09-18 ━━━
+
+### 1. TitleBar & Menu Bar Clipping Regression Identified
+- **Root Cause**: In `src/index.css`, `header[data-shell-titlebar]` was styled with `height: 38px; overflow: hidden; contain: layout style;` as part of the CLS fix.
+- **Consequence**:
+  1. Truncated the 2-row `ShellTitleBar` (Row 1 TitleBar 36px + Row 2 MenuBar 28px/34px = 64px–70px total). Row 2 (File, Edit, View, Tools, Help) was clipped and invisible.
+  2. Any `absolute top-full` dropdown originating from Row 1 (Theme Picker) or Row 2 (Menus) was clipped at the 38px line by `overflow: hidden`.
+  3. Row 1 had `z-index: auto` while Row 2 had `z-40`, causing Row 1's theme dropdown to paint behind Row 2.
+- **Remediation**: Adjust `index.css` to allow natural/min-height sizing (64px desktop / 70px touch) and `overflow: visible; contain: none;`. Add stacking context rules (`z-50` for open Row 1 dropdowns) in `ShellTitleBar.tsx`.
+
+### 2. Slow Launch Loading Identified
+- **Root Causes**:
+  1. Vite dev-server on-demand module graph compilation overhead (~12.7s TTFB).
+  2. Missing `optimizeDeps.include` in `vite.config.ts` for heavy libraries (`lucide-react`, `@codemirror/*`, `zustand`, `cytoscape`, `katex`).
+  3. Synchronous import of 20+ separate Fontsource CSS files in `main.tsx`.
+  4. Cold-start IPC read storm in `src-tauri/src/commands/storage.rs`: every `kv_get` unconditionally executes `tokio::fs::read_to_string` on `kv_store.json`.
+- **Remediation**: Configure `optimizeDeps.include` in `vite.config.ts`, cache KV state in-memory in `storage.rs` to avoid redundant file reads, and load non-essential fonts asynchronously.
+
+### 3. Active Priority 2 Functional Defects Queued
+- **F-08**: CodeMirror `closeBrackets()` racing `[[action:...]]` syntax during live typing.
+- **F-11**: Tab autosave debounce unflushed on exit (`beforeunload`), and `closeTab()` resurrecting tab content from pending timer.
+- **F-05**: FileExplorer active state name collision across directories (`activeFileName === item.name`).
+- **F-07**: `enableBracketMatching` setting dead until editor reload (missing `Compartment`).
+- **F-04**: React anti-pattern (`safePersist` inside `setFiles` updater in `FileExplorer.tsx`).
+- **F-06**: FileExplorer stale infinite loading spinner on missing paths.
+- **F-10**: File history store serializing 1.25MB full document content redundantly.

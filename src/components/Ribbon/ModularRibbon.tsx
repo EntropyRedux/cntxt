@@ -307,6 +307,7 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
   return (
     <div 
       id="modular-ribbon"
+      data-shell-ribbon
       onContextMenu={(e) => handleContextMenu(e, null)}
       className={`${
         isMultiRow 

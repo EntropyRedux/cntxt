@@ -1,12 +1,21 @@
-import mermaid from 'mermaid';
 import { getElementById } from '../adapters';
 import { getMermaidThemeConfig } from '../theme/index';
 import { ThemeName } from '../contracts/data_shapes';
 
 let lastInitializedTheme: string | null = null;
+let mermaidModule: any = null;
 
-export function initializeMermaid(themeInput: ThemeName | string | boolean = 'contextpad-dark') {
+async function getMermaidInstance() {
+  if (!mermaidModule) {
+    const mod = await import('mermaid');
+    mermaidModule = mod.default || mod;
+  }
+  return mermaidModule;
+}
+
+export async function initializeMermaid(themeInput: ThemeName | string | boolean = 'contextpad-dark') {
   try {
+    const mermaid = await getMermaidInstance();
     let themeName: ThemeName = 'contextpad-dark';
     if (typeof themeInput === 'boolean') {
       themeName = themeInput ? 'contextpad-dark' : 'google-material-3';
@@ -111,7 +120,8 @@ export async function renderMermaidDiagram(
     return diagramCache.get(cacheKey)!;
   }
 
-  initializeMermaid(themeName);
+  await initializeMermaid(themeName);
+  const mermaid = await getMermaidInstance();
 
   const id = `mermaid-render-${Date.now()}-${++renderCounter}`;
 

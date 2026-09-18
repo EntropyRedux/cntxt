@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/fonts.css";
 
 /* =========================================================================
    Universal Theme Variables Engine (Dark & Material 3 Light Support)
@@ -1743,4 +1744,42 @@
   opacity: 0.75;
 }
 
+/* =========================================================================
+   Phase A — CLS Layout Containment
+   Prevents layout shift during React hydration for the three fixed chrome
+   regions. Heights match design-system token values; contain:layout style
+   stops child mutations from bubbling up to the root paint layer.
+   ========================================================================= */
 
+/* TitleBar chrome — natural 1 or 2-row sizing with overflow visible for dropdowns */
+header[data-shell-titlebar],
+.shell-titlebar {
+  min-height: 36px;
+  height: auto;
+  overflow: visible;
+}
+
+/* Ribbon toolbox — collapses to 0 when hidden, overflow visible for menus */
+[data-shell-ribbon],
+.shell-ribbon {
+  min-height: 0;
+  overflow: visible;
+}
+
+/* StatusBar chrome */
+footer[data-shell-statusbar],
+.shell-statusbar {
+  contain: layout style;
+  min-height: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+
+/* Prevent FOUT flash — variable font fallback is always present after bundle */
+@supports (font-variation-settings: normal) {
+  :root {
+    /* Fontsource variable fonts load synchronously from bundle;
+       this ensures the cascade never falls back to system fonts mid-paint. */
+    font-synthesis: none;
+  }
+}

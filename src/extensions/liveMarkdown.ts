@@ -6,7 +6,7 @@ export const refreshLiveMarkdownEffect = StateEffect.define<void>();
 export const liveThemeFacet = Facet.define<string, string>({
   combine: (values) => values[values.length - 1] || 'contextpad-dark'
 });
-import { renderLatex } from '../services/mathRenderer';
+import { renderLatex, getKatex } from '../services/mathRenderer';
 import { renderMermaidDiagram } from '../services/mermaidRenderer';
 import { 
   parseMarkdownTableLines, 
@@ -233,9 +233,18 @@ class DisplayMathWidget extends WidgetType {
       view.focus();
     });
 
-    requestAnimationFrame(() => {
-      view.requestMeasure();
-    });
+    if (rendered.isPending) {
+      getKatex().then(() => {
+        const fullRender = renderLatex(this.latex, true);
+        container.innerHTML = fullRender.html;
+        container.appendChild(copyBtn);
+        view.requestMeasure();
+      });
+    } else {
+      requestAnimationFrame(() => {
+        view.requestMeasure();
+      });
+    }
 
     return container;
   }
@@ -258,10 +267,19 @@ class InlineMathWidget extends WidgetType {
     return this.latex === other.latex;
   }
 
-  toDOM(): HTMLElement {
+  toDOM(view: EditorView): HTMLElement {
     const span = createElement('span', { className: 'cm-live-math-inline' });
     const rendered = renderLatex(this.latex, false);
     span.innerHTML = rendered.html;
+
+    if (rendered.isPending) {
+      getKatex().then(() => {
+        const fullRender = renderLatex(this.latex, false);
+        span.innerHTML = fullRender.html;
+        view.requestMeasure();
+      });
+    }
+
     return span;
   }
 
@@ -1486,6 +1504,18 @@ function buildDecorations(state: EditorState): DecorationSet {
           const actionId = match[1].trim();
           const customLabel = match[2]?.trim();
           const action = useActionStore.getState().actions.find(a => a.id === actionId);
+
+          // Prevent bracket-closing race: if cursor is actively inside the token, show syntax highlight instead of replacing with widget
+          const isEditingAction = state.selection.ranges.some(r => r.head >= start && r.head <= end);
+          if (isEditingAction) {
+            rangeDecos.push({
+              from: start,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-action-token text-[var(--accent-primary)] font-mono text-xs bg-[var(--card-hover-bg)] px-1 rounded' })
+            });
+            continue;
+          }
+
           rangeDecos.push({
             from: start,
             to: end,

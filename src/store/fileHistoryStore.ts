@@ -86,7 +86,6 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
       type: item.type || 'file',
       path: item.path || null,
       language: item.language || 'markdown',
-      content: item.content,
       openedAt: Date.now()
     };
 

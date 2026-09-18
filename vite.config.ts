@@ -25,13 +25,16 @@ export default defineConfig(() => {
       target: ['chrome120', 'firefox120', 'safari17'],
       rollupOptions: {
         output: {
-          manualChunks: {
-            codemirror: [
-              '@codemirror/view',
-              '@codemirror/state',
-              '@codemirror/commands',
-              '@codemirror/language',
-            ],
+          manualChunks(id) {
+            if (id.includes('node_modules/katex')) {
+              return 'katex';
+            }
+            if (id.includes('node_modules/mermaid')) {
+              return 'mermaid';
+            }
+            if (id.includes('node_modules/@codemirror') || id.includes('node_modules/@lezer')) {
+              return 'codemirror';
+            }
           },
         },
       },

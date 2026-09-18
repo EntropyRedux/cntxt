@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DOM Helper for Adapter Layer
  * Quarantines direct DOM interactions (document, window, navigator) inside src/adapters/.
  */
@@ -250,7 +250,7 @@ export function useWindowDrag(bridge: IRuntimeBridge) {
       return;
     }
 
-    bridge.window.startDragging?.();
+    (async () => { try { bridge.window.startDragging?.(); } catch (e) { console.warn("[domHelper] startDragging failed:", e); } })();
   };
 
   return { handleMouseDown };

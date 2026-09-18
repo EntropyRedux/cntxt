@@ -1,9 +1,21 @@
-import { EditorView } from '@codemirror/view';
-import { undo, redo, selectAll } from '@codemirror/commands';
+import type { EditorView } from '@codemirror/view';
 import { processTemplateVariables } from './templateVariableService';
+
+export type EditorCommandFn = (view: EditorView) => boolean;
+
+export interface EditorCommands {
+  undo: EditorCommandFn;
+  redo: EditorCommandFn;
+  selectAll: EditorCommandFn;
+}
 
 class EditorRegistry {
   private views = new Map<string, EditorView>();
+  private commands: EditorCommands | null = null;
+
+  registerCommands(commands: EditorCommands) {
+    this.commands = commands;
+  }
 
   register(tabId: string, view: EditorView) {
     this.views.set(tabId, view);
@@ -91,8 +103,8 @@ class EditorRegistry {
 
   undo(tabId: string): boolean {
     const view = this.views.get(tabId);
-    if (view) {
-      const result = undo(view);
+    if (view && this.commands?.undo) {
+      const result = this.commands.undo(view);
       view.focus();
       return result;
     }
@@ -101,8 +113,8 @@ class EditorRegistry {
 
   redo(tabId: string): boolean {
     const view = this.views.get(tabId);
-    if (view) {
-      const result = redo(view);
+    if (view && this.commands?.redo) {
+      const result = this.commands.redo(view);
       view.focus();
       return result;
     }
@@ -111,8 +123,8 @@ class EditorRegistry {
 
   selectAll(tabId: string): boolean {
     const view = this.views.get(tabId);
-    if (view) {
-      const result = selectAll(view);
+    if (view && this.commands?.selectAll) {
+      const result = this.commands.selectAll(view);
       view.focus();
       return result;
     }

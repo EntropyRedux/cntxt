@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { EditorState, Extension, Compartment } from '@codemirror/state';
 import { EditorView, keymap, highlightActiveLineGutter, highlightActiveLine } from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, selectAll } from '@codemirror/commands';
 import { bracketMatching, foldGutter, foldKeymap, indentOnInput } from '@codemirror/language';
 import { search, highlightSelectionMatches } from '@codemirror/search';
 import { closeBrackets, closeBracketsKeymap, startCompletion } from '@codemirror/autocomplete';
@@ -10,7 +10,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { json } from '@codemirror/lang-json';
-import { resolveCodeLanguage, preloadCommonLanguages } from '../../services/codeLanguages';
+import { resolveCodeLanguage } from '../../services/codeLanguages';
 
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -48,6 +48,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
   const templateVariablesCompartmentRef = useRef<Compartment>(new Compartment());
   const inlineFormulasCompartmentRef = useRef<Compartment>(new Compartment());
   const guttersCompartmentRef = useRef<Compartment>(new Compartment());
+  const bracketMatchingCompartmentRef = useRef<Compartment>(new Compartment());
   const updatingFromStoreRef = useRef(false);
   const isFirstRenderRef = useRef(true);
 
@@ -65,7 +66,6 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
         return json();
       case 'markdown':
       default:
-        preloadCommonLanguages();
         return markdown({ codeLanguages: resolveCodeLanguage });
     }
   };
@@ -114,7 +114,9 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       highlightActiveLine(),
       history(),
       indentOnInput(),
-      settings.enableBracketMatching ? bracketMatching() : [],
+      bracketMatchingCompartmentRef.current.of(
+        settings.enableBracketMatching ? bracketMatching() : []
+      ),
       closeBrackets(),
       search({
         top: true,
@@ -251,6 +253,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     });
 
     viewRef.current = view;
+    editorRegistry.registerCommands({ undo, redo, selectAll });
     editorRegistry.register(tabId, view);
 
     return () => {
@@ -289,10 +292,13 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
         settings.enableFoldGutter
       )
     );
+    const bracketMatchingEffect = bracketMatchingCompartmentRef.current.reconfigure(
+      settings.enableBracketMatching ? bracketMatching() : []
+    );
 
     const applyEffects = () => {
       if (viewRef.current) {
-        viewRef.current.dispatch({ effects: [templateVarEffect, formulasEffect, markdownEffect, guttersEffect] });
+        viewRef.current.dispatch({ effects: [templateVarEffect, formulasEffect, markdownEffect, guttersEffect, bracketMatchingEffect] });
       }
     };
 
@@ -301,7 +307,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     } else {
       applyEffects();
     }
-  }, [settings.editorMode, language, settings.showLineNumbers, settings.enableFoldGutter, settings.theme]);
+  }, [settings.editorMode, language, settings.showLineNumbers, settings.enableFoldGutter, settings.theme, settings.enableBracketMatching]);
 
   // Keep editor content synchronized with external updates without losing cursor
   useEffect(() => {

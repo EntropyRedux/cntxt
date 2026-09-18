@@ -23,7 +23,6 @@ import { VirtualFile } from '../../../contracts/data_shapes';
 // MOCK: quarantined synthetic sample data for prototype demo mode
 import { INITIAL_PROJECT_FILES, IS_PROTOTYPE_DEMO_MODE } from '../../../mocks/index';
 
-export type { VirtualFile };
 
 const formatRelativeTime = (timestamp: number): string => {
   const diff = Date.now() - timestamp;
@@ -36,7 +35,7 @@ const formatRelativeTime = (timestamp: number): string => {
   return `${days}d ago`;
 };
 
-export function validateFilename(name: string): { valid: boolean; error?: string } {
+function validateFilename(name: string): { valid: boolean; error?: string } {
   const trimmed = name.trim();
   if (!trimmed) {
     return { valid: false, error: 'Filename cannot be empty' };
@@ -86,14 +85,41 @@ const findFolderInTree = (tree: VirtualFile[], idOrNameOrPath: string): VirtualF
   return null;
 };
 
+export function computeRelativePath(targetPath?: string | null, workspacePath?: string | null): string {
+  if (!targetPath) return '';
+  if (!workspacePath) return targetPath;
+
+  const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '');
+  const normTarget = normalize(targetPath);
+  const normWorkspace = normalize(workspacePath);
+
+  if (normTarget.toLowerCase() === normWorkspace.toLowerCase()) {
+    return '.';
+  }
+
+  const prefix = normWorkspace.toLowerCase() + '/';
+  if (normTarget.toLowerCase().startsWith(prefix)) {
+    return normTarget.slice(normWorkspace.length + 1);
+  }
+
+  return targetPath;
+}
+
 export const FileExplorer: React.FC = () => {
   const bridge = useRuntimeBridge();
   const [files, setFiles] = useState<VirtualFile[]>([]);
+  const [workspacePath, setWorkspacePath] = useState<string | null>(null);
 
   useEffect(() => {
     const loadFiles = async () => {
       try {
-        const saved = await bridge.storage.getItem('contextpad_virtual_files');
+        const [saved, storedWorkspace] = await Promise.all([
+          bridge.storage.getItem('contextpad_virtual_files'),
+          bridge.storage.getItem('contextpad_workspace_path')
+        ]);
+        if (storedWorkspace) {
+          setWorkspacePath(storedWorkspace);
+        }
         if (saved) {
           try {
             setFiles(JSON.parse(saved));
@@ -116,15 +142,15 @@ export const FileExplorer: React.FC = () => {
       loadFiles();
     };
 
-    window.addEventListener('focus', handleStorageRefresh);
     window.addEventListener('storage', handleStorageRefresh);
     window.addEventListener('contextpad_files_updated', handleStorageRefresh);
     return () => {
-      window.removeEventListener('focus', handleStorageRefresh);
       window.removeEventListener('storage', handleStorageRefresh);
       window.removeEventListener('contextpad_files_updated', handleStorageRefresh);
     };
   }, [bridge.storage]);
+
+  const activeWorkspacePath = workspacePath || files.find(f => f.type === 'folder' && f.path)?.path || null;
 
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     'folder-specs': true
@@ -144,6 +170,9 @@ export const FileExplorer: React.FC = () => {
   };
 
   const { createTab, tabs, activeTabId, setActiveTabId } = useTabStore();
+  const activeTab = tabs.find(t => t.id === activeTabId);
+  const activeFilePath = activeTab?.filePath;
+  const activeFileName = activeTab?.title;
   const { 
     pinnedItems, 
     openedHistory, 
@@ -166,44 +195,48 @@ export const FileExplorer: React.FC = () => {
       const node = findFolderInTree(files, folderId);
       const targetPath = node?.path || folderPath;
 
+      if (!targetPath) {
+        setExpandedFolders(prev => ({ ...prev, [folderId]: false }));
+        addNotification('Folder Error', 'Folder path is missing', 'warning');
+        return;
+      }
+
       // If node has no loaded children (undefined or empty), fetch them live from disk
-      if (targetPath && (!node?.children || node.children.length === 0)) {
+      if (!node?.children || node.children.length === 0) {
         try {
           const rawKids = await bridge.fs.readDirectory(targetPath);
-          if (rawKids && rawKids.length > 0) {
-            const mapKidsToVirtual = (entries: BridgeDirectoryEntry[]): VirtualFile[] => {
-              return entries.map(entry => ({
-                id: entry.id || entry.path || `item_${Math.random().toString(36).substr(2, 7)}`,
-                name: entry.name,
-                type: entry.type,
-                content: entry.content,
-                language: entry.language,
-                path: entry.path,
-                children: entry.children ? mapKidsToVirtual(entry.children) : undefined
-              }));
-            };
+          const mapKidsToVirtual = (entries: BridgeDirectoryEntry[]): VirtualFile[] => {
+            return entries.map(entry => ({
+              id: entry.id || entry.path || `item_${Math.random().toString(36).substr(2, 7)}`,
+              name: entry.name,
+              type: entry.type,
+              content: entry.content,
+              language: entry.language,
+              path: entry.path,
+              children: entry.children ? mapKidsToVirtual(entry.children) : undefined
+            }));
+          };
 
-            const mappedKids = mapKidsToVirtual(rawKids);
-            const updateTreeRecursively = (list: VirtualFile[]): VirtualFile[] => {
-              return list.map(item => {
-                if (item.id === folderId || (item.path && item.path === targetPath)) {
-                  return { ...item, children: mappedKids };
-                }
-                if (item.children) {
-                  return { ...item, children: updateTreeRecursively(item.children) };
-                }
-                return item;
-              });
-            };
-
-            setFiles(prev => {
-              const updated = updateTreeRecursively(prev);
-              safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'workspace files');
-              return updated;
+          const mappedKids = rawKids ? mapKidsToVirtual(rawKids) : [];
+          const updateTreeRecursively = (list: VirtualFile[]): VirtualFile[] => {
+            return list.map(item => {
+              if (item.id === folderId || (item.path && item.path === targetPath)) {
+                return { ...item, children: mappedKids };
+              }
+              if (item.children) {
+                return { ...item, children: updateTreeRecursively(item.children) };
+              }
+              return item;
             });
-          }
+          };
+
+          const updated = updateTreeRecursively(files);
+          setFiles(updated);
+          safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'workspace files');
         } catch (err) {
           console.warn('[FileExplorer] Could not read subfolder:', targetPath, err);
+          setExpandedFolders(prev => ({ ...prev, [folderId]: false }));
+          addNotification('Error Opening Folder', `Could not read directory: ${targetPath}`, 'error');
         }
       }
     }
@@ -389,23 +422,22 @@ export const FileExplorer: React.FC = () => {
         children: mapEntriesToVirtual(dirResult.entries)
       };
 
-      // Add to files state (replace existing folder with same name or prepend)
-      const filtered = files.filter(f => f.name !== dirResult.name);
-      const updated = [newFolder, ...filtered];
+      // Replace the entire workspace with the newly selected folder (single workspace at a time)
+      const updated = [newFolder];
       setFiles(updated);
       safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'workspace files');
 
-      // Automatically expand this workspace folder
-      setExpandedFolders(prev => ({
-        ...prev,
-        [folderId]: true
-      }));
+      // Automatically expand this workspace folder and clear stale expanded state
+      setExpandedFolders({ [folderId]: true });
 
       // Ensure workspace section itself is visible/expanded
       setCollapsedSections(prev => ({
         ...prev,
         workspace: false
       }));
+
+      setWorkspacePath(dirResult.path);
+      safePersist(bridge.storage, 'contextpad_workspace_path', dirResult.path, 'workspace path');
 
       // Add folder to top of opened folders/files history section
       recordOpenedFile({
@@ -415,7 +447,7 @@ export const FileExplorer: React.FC = () => {
         path: dirResult.path
       });
 
-      addNotification('Folder Workspace Added', `"${dirResult.name}" expanded in Workspace Files`, 'success');
+      addNotification('Workspace Opened', `"${dirResult.name}" set as active workspace`, 'success');
     } catch (e: any) {
       if (e?.name !== 'AbortError') {
         addNotification('Could not open folder', e?.message || 'Unknown error', 'error');
@@ -423,7 +455,19 @@ export const FileExplorer: React.FC = () => {
     }
   };
 
-  const activeTab = tabs.find(t => t.id === activeTabId);
+  const handleRemoveWorkspace = (folderId: string, folderName: string) => {
+    const updated = files.filter(f => f.id !== folderId);
+    setFiles(updated);
+    setWorkspacePath(null);
+    bridge.storage.removeItem('contextpad_workspace_path');
+    safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'workspace files');
+    setExpandedFolders(prev => {
+      const next = { ...prev };
+      delete next[folderId];
+      return next;
+    });
+    addNotification('Workspace Closed', `"${folderName}" removed from workspace`, 'info');
+  };
 
   return (
     <div className="theme-sidebar flex flex-col h-full text-xs select-none">
@@ -510,12 +554,15 @@ export const FileExplorer: React.FC = () => {
                   <FileTreeNode
                     key={item.id}
                     item={item}
-                    activeFileName={activeTab?.title}
+                    activeFileName={activeFileName}
+                    activeFilePath={activeFilePath}
                     expandedFolders={expandedFolders}
                     toggleFolder={toggleFolder}
                     onOpenFile={handleOpenFile}
                     isPinned={isPinned}
                     onTogglePin={handleTogglePin}
+                    isRoot={true}
+                    onRemoveWorkspace={handleRemoveWorkspace}
                   />
                 ))
               )}
@@ -556,13 +603,28 @@ export const FileExplorer: React.FC = () => {
                 <div className="flex flex-col gap-0.5 mt-1">
                   {pinnedItems.map(item => {
                     const isFolder = item.type === 'folder';
-                    const isActive = !isFolder && activeTab?.title === item.name;
+                    const isActive = !isFolder && ((item.path && activeFilePath) ? item.path === activeFilePath : activeFileName === item.name);
                     const strokeColor = getFileIconColor(item.name);
+                    const relativePath = computeRelativePath(item.path, activeWorkspacePath);
+                    const tooltipText = relativePath
+                      ? (relativePath === '.' ? `Workspace Root (.)` : relativePath)
+                      : (item.path || item.name);
+                    const ariaLabel = `${item.name}, ${isFolder ? 'folder' : 'file'}, path: ${tooltipText}`;
 
                     return (
                       <div
                         key={item.id || item.name}
                         onClick={() => handleOpenPinnedItem(item)}
+                        title={tooltipText}
+                        aria-label={ariaLabel}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleOpenPinnedItem(item);
+                          }
+                        }}
                         className={`group/pin relative text-xs flex items-center gap-2 p-1.5 rounded cursor-pointer transition-colors ${
                           isActive
                             ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-semibold'
@@ -578,7 +640,7 @@ export const FileExplorer: React.FC = () => {
                           </svg>
                         )}
 
-                        <span className="truncate flex-1 pr-6">{item.name}</span>
+                        <span className="truncate flex-1 pr-6" title={tooltipText}>{item.name}</span>
 
                         {isFolder && (
                           <span className="text-[9px] px-1 py-0.2 rounded bg-[var(--card-bg)] text-[var(--text-muted)] border border-[var(--border-subtle)] mr-6">
@@ -655,14 +717,29 @@ export const FileExplorer: React.FC = () => {
                 <div className="flex flex-col gap-0.5 mt-1">
                   {openedHistory.map(record => {
                     const isFolder = record.type === 'folder';
-                    const isActive = !isFolder && activeTab?.title === record.name;
+                    const isActive = !isFolder && ((record.path && activeFilePath) ? record.path === activeFilePath : activeFileName === record.name);
                     const strokeColor = getFileIconColor(record.name);
                     const pinned = isPinned(record.id) || isPinned(record.name);
+                    const relativePath = computeRelativePath(record.path, activeWorkspacePath);
+                    const tooltipText = relativePath
+                      ? (relativePath === '.' ? `Workspace Root (.)` : relativePath)
+                      : (record.path || record.name);
+                    const ariaLabel = `${record.name}, ${isFolder ? 'folder' : 'file'}, relative path: ${tooltipText}`;
 
                     return (
                       <div
                         key={record.id}
                         onClick={() => handleOpenHistoryItem(record)}
+                        title={tooltipText}
+                        aria-label={ariaLabel}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleOpenHistoryItem(record);
+                          }
+                        }}
                         className={`group/hist relative text-xs flex items-center gap-2 p-1.5 rounded cursor-pointer transition-colors ${
                           isActive
                             ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-semibold'
@@ -679,9 +756,14 @@ export const FileExplorer: React.FC = () => {
                         )}
 
                         <div className="flex flex-col min-w-0 flex-1 pr-14">
-                          <span className="truncate text-xs">{record.name}</span>
-                          <span className="text-[10px] text-[var(--text-muted)] opacity-70 truncate flex items-center gap-1">
+                          <span className="truncate text-xs font-medium" title={tooltipText}>{record.name}</span>
+                          <span className="text-[10px] text-[var(--text-muted)] opacity-70 truncate flex items-center gap-1" title={tooltipText}>
                             {isFolder && <span className="font-semibold text-[9px] uppercase tracking-wider text-[var(--accent-primary)]">Folder ·</span>}
+                            {relativePath && relativePath !== '.' && relativePath !== record.name && (
+                              <span className="truncate max-w-[130px] font-mono text-[9px] text-[var(--text-secondary)] opacity-80" title={tooltipText}>
+                                {relativePath.includes('/') ? relativePath.slice(0, relativePath.lastIndexOf('/') + 1) : ''}
+                              </span>
+                            )}
                             <span>{formatRelativeTime(record.openedAt)}</span>
                           </span>
                         </div>
@@ -751,12 +833,15 @@ const getFileIconColor = (name: string) => {
 const FileTreeNode: React.FC<{
   item: VirtualFile;
   activeFileName?: string;
+  activeFilePath?: string | null;
   expandedFolders: Record<string, boolean>;
   toggleFolder: (id: string, path?: string) => void;
   onOpenFile: (file: VirtualFile) => void;
   isPinned: (idOrName: string) => boolean;
   onTogglePin: (item: PinnedItem) => void;
-}> = ({ item, activeFileName, expandedFolders, toggleFolder, onOpenFile, isPinned, onTogglePin }) => {
+  isRoot?: boolean;
+  onRemoveWorkspace?: (id: string, name: string) => void;
+}> = ({ item, activeFileName, activeFilePath, expandedFolders, toggleFolder, onOpenFile, isPinned, onTogglePin, isRoot, onRemoveWorkspace }) => {
   const pinned = isPinned(item.id) || isPinned(item.name);
 
   if (item.type === 'folder') {
@@ -766,27 +851,42 @@ const FileTreeNode: React.FC<{
         <div className="group/folder relative flex items-center">
           <button
             onClick={() => toggleFolder(item.id, item.path)}
-            className="w-full flex items-center gap-1.5 p-1.5 hover:bg-[var(--card-hover-bg)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-left pr-7 cursor-pointer"
+            className={`w-full flex items-center gap-1.5 p-1.5 hover:bg-[var(--card-hover-bg)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-left cursor-pointer ${isRoot ? 'pr-14' : 'pr-7'}`}
           >
             {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />}
             <Folder className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
             <span className="truncate font-medium text-xs text-[var(--text-primary)] flex-1">{item.name}</span>
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onTogglePin({ id: item.id, name: item.name, type: 'folder', path: item.path });
-            }}
-            title={pinned ? "Unpin folder" : "Pin folder to quick access"}
-            aria-label={pinned ? "Unpin folder" : "Pin folder to quick access"}
-            className={`absolute right-1 p-1 rounded transition-all cursor-pointer ${
-              pinned 
-                ? 'text-[var(--accent-primary)] opacity-100 hover:bg-[var(--accent-container)]' 
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover/folder:opacity-100 hover:bg-[var(--card-hover-bg)]'
-            }`}
-          >
-            {pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
-          </button>
+          <div className="absolute right-1 flex items-center gap-0.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePin({ id: item.id, name: item.name, type: 'folder', path: item.path });
+              }}
+              title={pinned ? "Unpin folder" : "Pin folder to quick access"}
+              aria-label={pinned ? "Unpin folder" : "Pin folder to quick access"}
+              className={`p-1 rounded transition-all cursor-pointer ${
+                pinned 
+                  ? 'text-[var(--accent-primary)] opacity-100 hover:bg-[var(--accent-container)]' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover/folder:opacity-100 hover:bg-[var(--card-hover-bg)]'
+              }`}
+            >
+              {pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+            </button>
+            {isRoot && onRemoveWorkspace && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveWorkspace(item.id, item.name);
+                }}
+                title={`Close workspace "${item.name}"`}
+                aria-label={`Close workspace "${item.name}"`}
+                className="p-1 text-[var(--text-muted)] hover:text-red-400 opacity-0 group-hover/folder:opacity-100 hover:bg-[var(--card-hover-bg)] rounded transition-all cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Nested folders: clicking any nested folder expands or collapses it recursively */}
@@ -798,6 +898,7 @@ const FileTreeNode: React.FC<{
                   key={child.id}
                   item={child}
                   activeFileName={activeFileName}
+                  activeFilePath={activeFilePath}
                   expandedFolders={expandedFolders}
                   toggleFolder={toggleFolder}
                   onOpenFile={onOpenFile}
@@ -821,7 +922,9 @@ const FileTreeNode: React.FC<{
     );
   }
 
-  const isActive = activeFileName === item.name;
+  const isActive = (item.path && activeFilePath) 
+    ? item.path === activeFilePath 
+    : activeFileName === item.name;
   const strokeColor = getFileIconColor(item.name);
 
   return (

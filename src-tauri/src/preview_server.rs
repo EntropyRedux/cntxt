@@ -8,8 +8,8 @@ use axum::{
     routing::get,
     Router,
 };
-use std::sync::{Arc, RwLock};
-use tokio::sync::broadcast;
+use std::sync::Arc;
+use tokio::sync::{broadcast, RwLock};
 use tower_http::set_header::SetResponseHeaderLayer;
 
 /// Strict CSP for the preview document. The preview runner is served as an
@@ -82,16 +82,18 @@ impl PreviewServer {
         Ok(port)
     }
 
-    pub fn update_content(&self, html: String) {
-        if let Ok(mut content) = self.state.content.write() {
-            *content = html.clone();
-        }
+    pub async fn update_content(&self, html: String) {
         let payload = serde_json::json!({ "type": "content", "value": html });
+        {
+            let mut content = self.state.content.write().await;
+            *content = html;
+        }
         let _ = self.state.tx.send(payload.to_string());
     }
 
-    pub fn update_settings(&self, json: String) {
-        if let Ok(mut settings) = self.state.settings.write() {
+    pub async fn update_settings(&self, json: String) {
+        {
+            let mut settings = self.state.settings.write().await;
             *settings = Some(json.clone());
         }
         let payload = format!(r#"{{"type":"settings","value":{}}}"#, json);
@@ -132,7 +134,7 @@ async fn index_handler(
     if !is_local_origin(&headers) {
         return (StatusCode::FORBIDDEN, "Forbidden: Invalid origin").into_response();
     }
-    let content = state.content.read().unwrap().clone();
+    let content = state.content.read().await.clone();
     Html(content).into_response()
 }
 
@@ -159,18 +161,14 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
 
     // Send current state on connect so late joiners render the latest view
     // without waiting for the next content/settings push.
-    let pending_settings = state
-        .settings
-        .read()
-        .ok()
-        .and_then(|guard| guard.clone());
+    let pending_settings = state.settings.read().await.clone();
     if let Some(json) = pending_settings {
         let payload = format!(r#"{{"type":"settings","value":{}}}"#, json);
         if socket.send(Message::Text(payload)).await.is_err() {
             return;
         }
     }
-    let content = state.content.read().unwrap().clone();
+    let content = state.content.read().await.clone();
     let payload = serde_json::json!({ "type": "content", "value": content });
     if socket.send(Message::Text(payload.to_string())).await.is_err() {
         return;

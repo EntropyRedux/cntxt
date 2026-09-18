@@ -8,6 +8,7 @@ import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { useSettingsStore } from './settingsStore';
 import { useNotificationStore } from './notificationStore';
 import { safePersist, safeRemove } from '../services/storageHelper';
+import { writeTabCache, readTabCache, clearTabCache } from '../adapters/tabSessionCache';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -15,7 +16,9 @@ interface TabState {
   tabs: Tab[];
   activeTabId: string;
   isSaving: boolean;
-  
+  /** True until initializeTabs resolves; used to show EditorSkeleton instead of empty state. */
+  isHydrating: boolean;
+
   // Actions
   createTab: (title?: string, content?: string, language?: SupportedLanguage, filePath?: string | null, pinnedTabId?: string) => string;
   closeTab: (tabId: string) => void;
@@ -37,6 +40,7 @@ export const useTabStore = create<TabState>((set, get) => ({
   tabs: [],
   activeTabId: '',
   isSaving: false,
+  isHydrating: true,
 
   initializeTabs: async (storage?: IStorageBridge) => {
     if (storage) {
@@ -56,23 +60,45 @@ export const useTabStore = create<TabState>((set, get) => ({
       isPinned: true
     };
 
+    // ── Layer 1: Synchronous tabSessionCache read ───────────────────────
+    // Attempt to hydrate from the write-through cache before any IPC call.
+    // On a cache hit the Editor mounts in the first frame; the IPC load
+    // runs in the background and patches any diverged content afterwards.
+    const cached = readTabCache();
+    if (cached && cached.tabs.length > 0) {
+      const cachedActiveId = cached.tabs.some(t => t.id === cached.activeTabId)
+        ? cached.activeTabId
+        : cached.tabs[0].id;
+      set({ tabs: cached.tabs, activeTabId: cachedActiveId, isHydrating: false });
+      // Continue IPC load silently to refresh stale content
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     if (!activeStorage) {
-      if (IS_PROTOTYPE_DEMO_MODE) {
-        set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId });
-      } else {
-        set({ tabs: [], activeTabId: '' });
+      if (!cached) {
+        if (IS_PROTOTYPE_DEMO_MODE) {
+          set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
+        } else {
+          set({ tabs: [], activeTabId: '', isHydrating: false });
+        }
       }
       return;
     }
 
     try {
-      const storedMeta = await activeStorage.getItem(STORAGE_KEYS.TABS_META);
-      const storedActiveId = await activeStorage.getItem(STORAGE_KEYS.ACTIVE_TAB_ID);
+      // ── Layer 2: Parallel IPC calls ────────────────────────────────────
+      // Batch the two independent reads into a single Promise.all instead of
+      // sequential awaits — halves the minimum cold-start IPC wait.
+      const [storedMeta, storedActiveId] = await Promise.all([
+        activeStorage.getItem(STORAGE_KEYS.TABS_META),
+        activeStorage.getItem(STORAGE_KEYS.ACTIVE_TAB_ID),
+      ]);
+      // ─────────────────────────────────────────────────────────────────
 
       if (storedMeta) {
         const metaList: Tab[] = JSON.parse(storedMeta);
         if (metaList.length > 0) {
-          // Load content from storage bridge for each tab
+          // Load content from storage bridge for each tab (parallel)
           const fullTabs: Tab[] = await Promise.all(
             metaList.map(async (meta) => {
               const content = await activeStorage!.getItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${meta.id}`);
@@ -87,7 +113,9 @@ export const useTabStore = create<TabState>((set, get) => ({
             ? storedActiveId
             : fullTabs[0].id;
 
-          set({ tabs: fullTabs, activeTabId: activeId });
+          set({ tabs: fullTabs, activeTabId: activeId, isHydrating: false });
+          // Refresh the cache with authoritative IPC data
+          writeTabCache(fullTabs, activeId);
           return;
         }
       }
@@ -98,19 +126,32 @@ export const useTabStore = create<TabState>((set, get) => ({
         await activeStorage.setItem(STORAGE_KEYS.TABS_META, JSON.stringify([defaultWelcomeTab]));
         await activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, initialTabId);
 
-        set({
-          tabs: [defaultWelcomeTab],
-          activeTabId: initialTabId
-        });
+        set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
+        writeTabCache([defaultWelcomeTab], initialTabId);
       } else {
-        set({ tabs: [], activeTabId: '' });
+        if (!cached) {
+          set({ tabs: [], activeTabId: '', isHydrating: false });
+          // No cached data and IPC returned nothing authoritative — clear any stray
+          // cache entry so a stale Layer-1 hydration can't survive a cleared workspace.
+          clearTabCache();
+        } else {
+          // Cache exists (Layer 1 hydrated it into state for this session), but IPC
+          // returned no authoritative meta. Keep the cached tabs as the user's
+          // last-session state — do NOT clearTabCache() here, because doing so would
+          // silently discard what we just displayed (F-P1-03 fix).
+          set({ isHydrating: false });
+        }
       }
     } catch (e) {
       console.error('Error initializing tabs:', e);
-      if (IS_PROTOTYPE_DEMO_MODE) {
-        set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId });
+      if (!cached) {
+        if (IS_PROTOTYPE_DEMO_MODE) {
+          set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
+        } else {
+          set({ tabs: [], activeTabId: '', isHydrating: false });
+        }
       } else {
-        set({ tabs: [], activeTabId: '' });
+        set({ isHydrating: false });
       }
     }
   },
@@ -133,6 +174,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
     const newTabs = [...get().tabs, newTab];
     set({ tabs: newTabs, activeTabId: id });
+    writeTabCache(newTabs, id);
 
     // Save to bridge storage & meta
     if (activeStorage) {
@@ -144,12 +186,14 @@ export const useTabStore = create<TabState>((set, get) => ({
   },
 
   closeTab: (tabId: string) => {
+    cancelPendingSave(tabId);
     const { tabs, activeTabId } = get();
     if (tabs.length === 1) {
       // Create a fresh untitled tab when closing the last one
       const newId = get().createTab('Untitled.md', '', 'markdown');
       const filtered = get().tabs.filter(t => t.id !== tabId);
       set({ tabs: filtered, activeTabId: newId });
+      writeTabCache(filtered, newId);
       if (activeStorage) {
         safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, `tab ${tabId}`);
       }
@@ -167,6 +211,7 @@ export const useTabStore = create<TabState>((set, get) => ({
     }
 
     set({ tabs: newTabs, activeTabId: nextActiveId });
+    writeTabCache(newTabs, nextActiveId);
     if (activeStorage) {
       safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, `tab ${tabId}`);
     }
@@ -178,15 +223,18 @@ export const useTabStore = create<TabState>((set, get) => ({
     const toDelete = tabs.filter(t => t.id !== keepTabId);
     const remaining = tabs.filter(t => t.id === keepTabId);
 
+    toDelete.forEach(t => cancelPendingSave(t.id));
     if (activeStorage) {
       toDelete.forEach(t => safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`, `tab ${t.id}`));
     }
     set({ tabs: remaining, activeTabId: keepTabId });
+    writeTabCache(remaining, keepTabId);
     saveTabsMeta(remaining, keepTabId);
   },
 
   closeAllTabs: () => {
     const { tabs } = get();
+    tabs.forEach(t => cancelPendingSave(t.id));
     if (activeStorage) {
       tabs.forEach(t => safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`, `tab ${t.id}`));
     }
@@ -206,6 +254,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       safePersist(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${newId}`, '', 'new tab content');
     }
     set({ tabs: [freshTab], activeTabId: newId });
+    writeTabCache([freshTab], newId);
     saveTabsMeta([freshTab], newId);
   },
 
@@ -291,6 +340,7 @@ export const useTabStore = create<TabState>((set, get) => ({
     const [removed] = result.splice(sourceIndex, 1);
     result.splice(destinationIndex, 0, removed);
     set({ tabs: result });
+    writeTabCache(result, activeTabId);
     saveTabsMeta(result, activeTabId);
   },
 
@@ -306,6 +356,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
     const updated = tabs.map(t => t.id === activeTabId ? { ...t, isDirty: false, lastModifiedTime: Date.now() } : t);
     set({ tabs: updated, isSaving: false });
+    writeTabCache(updated, activeTabId);
     saveTabsMeta(updated, activeTabId);
   },
 
@@ -324,6 +375,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       return t;
     });
     set({ tabs: updated });
+    writeTabCache(updated, activeTabId);
     if (activeStorage) {
       const target = updated.find(t => t.id === tabId);
       if (target) {
@@ -349,6 +401,7 @@ export const useTabStore = create<TabState>((set, get) => ({
     const { tabs, activeTabId } = get();
     const updated = tabs.map(t => t.id === tabId ? { ...t, isPinned: !t.isPinned } : t);
     set({ tabs: updated });
+    writeTabCache(updated, activeTabId);
     saveTabsMeta(updated, activeTabId);
   }
 }));
@@ -377,6 +430,36 @@ function saveTabsMeta(tabs: Tab[], activeTabId: string) {
 }
 
 const saveTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+const pendingContents: Record<string, string> = {};
+
+function cancelPendingSave(tabId: string) {
+  if (saveTimers[tabId]) {
+    clearTimeout(saveTimers[tabId]);
+    delete saveTimers[tabId];
+  }
+  delete pendingContents[tabId];
+}
+
+export function flushPendingSaves() {
+  for (const tabId of Object.keys(saveTimers)) {
+    if (saveTimers[tabId]) {
+      clearTimeout(saveTimers[tabId]);
+      delete saveTimers[tabId];
+    }
+    const content = pendingContents[tabId];
+    if (content !== undefined && activeStorage) {
+      safePersist(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, content, `flush save for tab ${tabId}`);
+      delete pendingContents[tabId];
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    flushPendingSaves();
+  });
+}
+
 function debouncedContentSave(tabId: string, content: string) {
   if (saveTimers[tabId]) {
     clearTimeout(saveTimers[tabId]);
@@ -386,10 +469,12 @@ function debouncedContentSave(tabId: string, content: string) {
     return;
   }
   const interval = settings.autosaveIntervalMs ?? 1000;
+  pendingContents[tabId] = content;
   saveTimers[tabId] = setTimeout(() => {
     if (activeStorage) {
       safePersist(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, content, `autosave for tab ${tabId}`);
     }
     delete saveTimers[tabId];
+    delete pendingContents[tabId];
   }, interval);
 }

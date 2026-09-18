@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useTabStore } from '../src/store/tabStore';
 import { createUiEventDispatcher } from '../src/adapters/eventDispatcher';
 import { IRuntimeBridge } from '../src/ui-contract/bridgeContract';
+import { computeRelativePath } from '../src/components/Sidebar/FileExplorer';
 
 describe('Native File Operations & Event Dispatcher (FG-04)', () => {
   let mockBridge: IRuntimeBridge;
@@ -144,5 +145,33 @@ describe('Native File Operations & Event Dispatcher (FG-04)', () => {
     expect(children).toHaveLength(1);
     expect(children?.[0].name).toBe('nested.ts');
     expect(children?.[0].path).toBe('C:/project/src/nested.ts');
+  });
+
+  describe('computeRelativePath (File Explorer History & Pinned Tooltips)', () => {
+    it('computes relative path for nested files inside active workspace', () => {
+      expect(computeRelativePath('C:/project/src/index.ts', 'C:/project')).toBe('src/index.ts');
+      expect(computeRelativePath('C:\\project\\docs\\readme.md', 'C:\\project')).toBe('docs/readme.md');
+      expect(computeRelativePath('/home/user/workspace/src/App.tsx', '/home/user/workspace')).toBe('src/App.tsx');
+    });
+
+    it('returns "." when target path matches workspace root', () => {
+      expect(computeRelativePath('C:/project', 'C:/project')).toBe('.');
+      expect(computeRelativePath('C:\\project\\', 'C:\\project')).toBe('.');
+    });
+
+    it('preserves target path if target is outside active workspace', () => {
+      expect(computeRelativePath('D:/other/file.txt', 'C:/project')).toBe('D:/other/file.txt');
+      expect(computeRelativePath('/var/log/syslog', '/home/user/workspace')).toBe('/var/log/syslog');
+    });
+
+    it('handles case-insensitivity on Windows paths gracefully', () => {
+      expect(computeRelativePath('c:/Project/src/file.ts', 'C:/project')).toBe('src/file.ts');
+    });
+
+    it('returns empty string or target if targetPath or workspacePath is missing', () => {
+      expect(computeRelativePath(undefined, 'C:/project')).toBe('');
+      expect(computeRelativePath(null, 'C:/project')).toBe('');
+      expect(computeRelativePath('notes.md', null)).toBe('notes.md');
+    });
   });
 });

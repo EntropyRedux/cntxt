@@ -123,7 +123,7 @@ async fn update_preview_content(window: tauri::Window, state: tauri::State<'_, M
         return Err("Unauthorized window origin for preview server".into());
     }
     let server = state.lock().await;
-    server.update_content(html);
+    server.update_content(html).await;
     Ok(())
 }
 
@@ -133,7 +133,7 @@ async fn update_preview_settings(window: tauri::Window, state: tauri::State<'_, 
         return Err("Unauthorized window origin for preview server".into());
     }
     let server = state.lock().await;
-    server.update_settings(json);
+    server.update_settings(json).await;
     Ok(())
 }
 
@@ -148,13 +148,7 @@ async fn get_pending_files(window: tauri::Window, state: tauri::State<'_, Mutex<
     Ok(to_return)
 }
 
-#[tauri::command]
-fn confirm_close(window: tauri::Window) {
-    if let Some(flag) = window.try_state::<std::sync::Mutex<bool>>() {
-        *flag.lock().unwrap() = true;
-    }
-    let _ = window.close();
-}
+
 
 fn main() {
     tauri::Builder::default()
@@ -180,8 +174,7 @@ fn main() {
         .setup(|app| {
             app.manage(Mutex::new(preview_server::PreviewServer::new()));
             app.manage(Mutex::new(AppState::default()));
-            app.manage(commands::storage::KvStore(tokio::sync::Mutex::new(std::collections::HashMap::new())));
-            app.manage(std::sync::Mutex::new(false));
+            app.manage(commands::storage::KvStore::default());
 
             let args: Vec<String> = std::env::args().collect();
             let file_paths: Vec<String> = args
@@ -194,21 +187,6 @@ fn main() {
 
             app.manage(Mutex::new(file_paths));
             Ok(())
-        })
-        .on_window_event(|window, event| {
-            if window.label() == "main" {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    let allow = if let Some(flag) = window.try_state::<std::sync::Mutex<bool>>() {
-                        *flag.lock().unwrap()
-                    } else {
-                        false
-                    };
-                    if !allow {
-                        api.prevent_close();
-                        let _ = window.emit("app-close-requested", ());
-                    }
-                }
-            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::window::minimize_window,
@@ -246,7 +224,7 @@ fn main() {
             update_preview_content,
             update_preview_settings,
             get_pending_files,
-            confirm_close,
+
             get_app_info,
             get_system_info,
             open_external,
