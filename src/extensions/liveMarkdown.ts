@@ -635,10 +635,10 @@ class ActionButtonWidget extends WidgetType {
       missingSpan.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        let targetPos = this.from;
+        let targetPos = this.from + 2;
         try {
           const domPos = view.posAtDOM(missingSpan);
-          if (domPos !== null && domPos !== undefined) targetPos = domPos;
+          if (domPos !== null && domPos !== undefined) targetPos = Math.max(domPos, this.from + 2);
         } catch (err) {
           console.debug('[liveMarkdown] posAtDOM fallback to this.from:', err);
         }
@@ -691,10 +691,10 @@ class ActionButtonWidget extends WidgetType {
       e.stopPropagation();
 
       if (e.altKey || e.ctrlKey) {
-        let targetPos = this.from;
+        let targetPos = this.from + 2;
         try {
           const domPos = view.posAtDOM(btn);
-          if (domPos !== null && domPos !== undefined) targetPos = domPos;
+          if (domPos !== null && domPos !== undefined) targetPos = Math.max(domPos, this.from + 2);
         } catch (err) {
           console.debug('[liveMarkdown] posAtDOM fallback to this.from:', err);
         }
@@ -1506,7 +1506,7 @@ function buildDecorations(state: EditorState): DecorationSet {
           const action = useActionStore.getState().actions.find(a => a.id === actionId);
 
           // Prevent bracket-closing race: if cursor is actively inside the token, show syntax highlight instead of replacing with widget
-          const isEditingAction = state.selection.ranges.some(r => r.head >= start && r.head <= end);
+          const isEditingAction = state.selection.ranges.some(r => r.head > start && r.head < end);
           if (isEditingAction) {
             rangeDecos.push({
               from: start,

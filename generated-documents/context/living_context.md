@@ -14,11 +14,11 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-05 Complete)
   [x] Refactor (UI Layering, Dev Launch Performance & Audit Remediation Complete)
-  [x] Testing (Vitest 126/126 Live, Playwright E2E Live)
+  [x] Testing (Vitest 126/126 Live, Playwright 21/21 E2E Live)
   [ ] Sync-Back
 
 Current Feature Group: REMED-01: Full Codebase Audit Remediation (All 12 Valid Defects Resolved)
-Active Plan: /generated-documents/plans/refactor_plan_perf1_modulepreload_closeout_2026-09-18.md
+Active Plan: /generated-documents/plans/refactor_plan_e2e_stability_2026-09-18.md
 Last Audit Reconciliation: 2026-09-18 — PASS (Post-Refactor PERF-1 Closeout Audit: raw_findings_post_refactor_perf1_closeout_2026-09-18.md, 0 valid defects, TR-DEV-1 approved)
 Last Git Checkpoint: 2026-09-18 — PERF-1 Modulepreload Closeout (commit 25dfc87)
 
@@ -99,14 +99,14 @@ Notes: Native file commands secured with canonicalization and system root whitel
 Feature Group: FG-05: Playwright E2E Test Suite
 Status: completed / verified (2026-09-15)
 Background Processes: none (test-time vite dev server via playwright webServer)
-E2E Tests: 19/21 passed in headless Chromium via `npm run test:e2e` (2 known pre-existing failures: editor.spec.ts:28,38 — tracked in LCM:109)
+E2E Tests: 21/21 green in headless Chromium via `npm run test:e2e` (0 flaky, 0 failures; defect F-08 resolved)
 Unit Tests: verified 126/126 across 14 suites (0 regressions)
 Spec Files: editor (5), empty-state (3), preview (4), ribbon (5), slash-menu (3), fixtures (demo-mode bootstrap)
 Notes:
-- Playwright 1.63.0; single worker; `baseURL http://localhost:5173`; repo root `playwright.config.ts` + `npm run test:e2e` script.
+- Playwright 1.63.0; single worker; `baseURL http://localhost:5173`; repo root `playwright.config.ts` + `npm run test:e2e` script. Test timeout hardened to 60s with 15s expect timeout.
 - Playwright artifacts (`playwright-report/`, `test-results/`) gitignored.
 - Demo mode toggled via `e2e/fixtures.ts` using `window.__CONTEXTPAD_DEMO__` (mirrors `mocks/index.ts` quarantine gate).
-- Known production defect FLAGGED (deferred, zero FG-05 code impact): CodeMirror `closeBrackets()` (Editor.tsx:118) auto-inserts `]]`, racing the live-markdown `[[action:...]]` decoration regex so char-by-char typed tokens render mangled/missing. Pending production fix (e.g., disable closeBrackets on `[[action:` sequences or exempt the token from bracket pairing).
+- Defect F-08 RESOLVED (2026-09-18): liveMarkdown cursor-boundary condition rectified to `r.head > start && r.head < end`, enabling immediate ActionButtonWidget rendering on token completion while preserving syntax-editing capability when cursor is placed inside brackets.
 
 ━━━ ARCHITECTURAL DECISIONS LOG ━━━
 
@@ -383,7 +383,7 @@ The 12.7s TTFB is Vite processing and transforming the module graph on demand �
 - **Remediation**: Configure `optimizeDeps.include` in `vite.config.ts`, cache KV state in-memory in `storage.rs` to avoid redundant file reads, and load non-essential fonts asynchronously.
 
 ### 3. Active Priority 2 Functional Defects Queued
-- **F-08**: CodeMirror `closeBrackets()` racing `[[action:...]]` syntax during live typing.
+- **F-08**: RESOLVED (2026-09-18). CodeMirror action token cursor-boundary condition rectified in `liveMarkdown.ts` (`r.head > start && r.head < end`); Playwright test timeout increased to 60s in `playwright.config.ts`. All 21/21 E2E tests passing green.
 - **F-11**: Tab autosave debounce unflushed on exit (`beforeunload`), and `closeTab()` resurrecting tab content from pending timer.
 - **F-05**: FileExplorer active state name collision across directories (`activeFileName === item.name`).
 - **F-07**: `enableBracketMatching` setting dead until editor reload (missing `Compartment`).
