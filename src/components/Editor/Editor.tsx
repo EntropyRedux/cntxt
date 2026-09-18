@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { EditorState, Extension, Compartment } from '@codemirror/state';
 import { EditorView, keymap, highlightActiveLineGutter, highlightActiveLine } from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, selectAll } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, selectAll, indentMore, indentLess } from '@codemirror/commands';
 import { bracketMatching, foldGutter, foldKeymap, indentOnInput } from '@codemirror/language';
 import { search, highlightSelectionMatches } from '@codemirror/search';
 import { closeBrackets, closeBracketsKeymap, startCompletion } from '@codemirror/autocomplete';
@@ -253,7 +253,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     });
 
     viewRef.current = view;
-    editorRegistry.registerCommands({ undo, redo, selectAll });
+    editorRegistry.registerCommands({ undo, redo, selectAll, indentMore, indentLess });
     editorRegistry.register(tabId, view);
 
     return () => {

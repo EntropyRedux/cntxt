@@ -2,7 +2,6 @@ import { editorRegistry } from './editorRegistry';
 import { useTabStore } from '../../store/tabStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useImageModalStore } from '../../store/imageModalStore';
-import { undo, redo, indentMore, indentLess } from '@codemirror/commands';
 import { MarkdownFormatButton } from '../../types';
 
 /**
@@ -20,30 +19,18 @@ export const executeFormatting = (button: MarkdownFormatButton, targetTabId?: st
   if (button.type === 'command') {
     switch (button.commandId) {
       case 'undo':
-        if (view) {
-          undo(view);
-          view.focus();
-        }
+        editorRegistry.undo(activeTabId);
         return;
       case 'redo':
-        if (view) {
-          redo(view);
-          view.focus();
-        }
+        editorRegistry.redo(activeTabId);
         return;
       case 'indent':
-        if (view) {
-          indentMore(view);
-          view.focus();
-        } else {
+        if (!editorRegistry.indentMore(activeTabId)) {
           useTabStore.getState().insertTextAtCursor(activeTabId, '  ');
         }
         return;
       case 'outdent':
-        if (view) {
-          indentLess(view);
-          view.focus();
-        }
+        editorRegistry.indentLess(activeTabId);
         return;
       case 'variable-modal':
         useTemplateStore.getState().openVariableModal();

@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.12
+Version: v1.13
 Last Updated: 2026-09-18
-Last Updated By: Production Implementation Agent (Pass 2 Audit Reconciliation)
+Last Updated By: Production Implementation Agent (Full Codebase Audit Remediation & PASS Upgrade)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -13,14 +13,14 @@ Active Stage:
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-05 Complete)
-  [x] Refactor (UI Layering, Dev Launch Performance & Priority 2 Remediation)
+  [x] Refactor (UI Layering, Dev Launch Performance & Audit Remediation Complete)
   [x] Testing (Vitest 126/126 Live, Playwright E2E Live)
   [ ] Sync-Back
 
-Current Feature Group: REMED-01: UI Layering, Dev Launch Performance & Priority 2 Defects
-Active Plan: /generated-documents/plans/remediation_plan_ui_perf_p2_2026-09-18.md
-Last Audit Reconciliation: 2026-09-18 — CONDITIONAL PASS (Full Codebase Audit 2026-09-18)
-Last Git Checkpoint: 2026-09-16 — Full Codebase Audit P1 Resolved (preview_server tokio RwLock, tabSessionCache adapter move, Vitest 121/121, lint clean)
+Current Feature Group: REMED-01: Full Codebase Audit Remediation (All 12 Valid Defects Resolved)
+Active Plan: /generated-documents/plans/refactor_plan_full_audit_remediation_2026-09-18.md
+Last Audit Reconciliation: 2026-09-18 — PASS (Upgraded from CONDITIONAL PASS following 12/12 defect remediation)
+Last Git Checkpoint: 2026-09-18 — Pre-Refactor Snapshot (commit 327e0c3)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
@@ -222,7 +222,7 @@ Decision: Tauri CSP connect-src permits http://localhost:5173 and ws://localhost
 Reasoning: Required for local desktop development (tauri dev) with Vite dev server and HMR WebSocket, and connects to internal dynamic-port preview server (127.0.0.1:*). Host/Origin validation in preview_server.rs prevents unauthorized cross-origin access.
 Status: APPROVED TRADEOFF
 
-Tradeoff ID: TR-011
+Tradeoff ID: TR-012
 Date: 2026-09-18
 Finding Source: BG-2 (Pass 1 Full Codebase Audit 2026-09-18)
 Pillar: Pillar 7 (Background Processes)
@@ -252,19 +252,25 @@ npm run test:e2e  # Run Playwright end-to-end browser test suites
 
 Audit Report: /generated-documents/audits/raw_findings_full_codebase_2026-09-18.md
 Pass 2 Reconciliation: COMPLETE (appended to same report, Section "PASS 2: PROD AGENT RECONCILIATION & VERDICT")
-Verification Audit: /generated-documents/audits/pass2_reconciliation_verification_2026-09-18.md (CONDITIONAL PASS UPHELD with R2-1..R2-5 corrections)
-Final Verdict: CONDITIONAL PASS (Pending Priority 1 & 2 remediation)
+Verification Audit: /generated-documents/audits/pass2_reconciliation_verification_2026-09-18.md (All R2-1..R2-5 corrections addressed)
+Final Verdict: PASS (Upgraded from CONDITIONAL PASS on 2026-09-18)
 - 29 findings evaluated:
   - 8 COMPLIANT / CLEARED (PRES-1, LIFECYCLE-1, MOD-1, DEPS-1 [canvas-confetti verified used in VariableFillerModal.tsx], DEPS-2, BG-1, SEC-1, ERR-1)
-  - 8 APPROVED TRADEOFF (PERF-3 fonts via LCD Phase A, PERF-8 spawn_blocking storage, PRES-2 ShellFrame container, TYPE-1 adapter/event any, SCOPE-1 productivity defaults via TR-006, BG-2 editor rendered mode via TR-011, SEC-2 new Function via TR-003/004, VAL-1 local storage boundary via TR-009)
+  - 8 APPROVED TRADEOFF (PERF-3 fonts via LCD Phase A, PERF-8 spawn_blocking storage, PRES-2 ShellFrame container, TYPE-1 adapter/event any, SCOPE-1 productivity defaults via TR-006, BG-2 editor rendered mode via TR-012, SEC-2 new Function via TR-003/004, VAL-1 local storage boundary via TR-009)
   - 1 QUARANTINED MOCK (MOCK-1)
-  - 0 UNDOCUMENTED ISSUES (TR-011 formally registered)
-  - 12 VALID DEFECTS (PERF-1, PERF-2, PERF-4, PERF-5, PERF-6, PERF-7, PERF-9, MOCK-2, MOD-2, SCOPE-2, SEC-3, ERR-2)
-- Priority Remediation Backlog:
-  - Priority 1: Decouple tabStore from CodeMirror (PERF-1/MOD-2), KaTeX chunk deduplication (PERF-2), dead code pruning (SCOPE-2, MOCK-2), concurrent store init (PERF-4)
-  - Priority 2: Token estimator 300ms debounce wiring (PERF-5), LivePreview 250ms debounce (PERF-7), liveMarkdown optimization (PERF-6)
-  - Priority 3: CSP meta tag for index.html (SEC-3), toast feedback for dropped images & preview errors (ERR-2), dynamic import cleanup (PERF-9)
-- Verification Gates: npm run lint (exit 0) · Vitest 126/126 (14 suites) · cargo check OK · npm run build OK
+  - 0 UNDOCUMENTED ISSUES (TR-012 formally registered; TR-011 reserved for 09-16 pending F-18)
+  - 12 VALID DEFECTS RESOLVED & VERIFIED:
+    - `PERF-1` / `MOD-2`: CodeMirror commands decoupled from formattingService via editorRegistry delegation
+    - `PERF-2`: KaTeX chunk deduplicated into single 261KB asset via resolve.dedupe in vite.config.ts
+    - `SCOPE-2` / `MOCK-2`: Dead code pruned (PrototypeShell.tsx, defaultData.ts, unused exports)
+    - `PERF-4`: Store initializations concurrently batched via Promise.allSettled in ShellFrame.tsx
+    - `PERF-5`: Token estimation debounced by 300ms in StatusBar.tsx
+    - `PERF-7`: LivePreview live sync debounced by 250ms with parsing isolation
+    - `PERF-6`: LiveMarkdown skips full decoration rebuild on same-line cursor navigation
+    - `SEC-3`: Content-Security-Policy meta tag added to index.html (Tauri & Vite dev compatible)
+    - `ERR-2`: Observable toast notifications dispatched for dropped image failures and preview render errors
+    - `PERF-9`: Converted redundant dynamic imports in actionStore.ts to top-level static imports
+- Verification Gates: npm run lint (exit 0) · Vitest 126/126 (14 suites) · cargo check OK (24.46s) · npm run build OK (0 warnings)
 
 ━━━ FULL CODEBASE AUDIT — 2026-09-16 ━━━
 

@@ -40,16 +40,13 @@ export const StatusBar: React.FC = () => {
       return;
     }
 
-    const updateEst = async () => {
-      if (!activeTab) return;
-      const res = await tokenEstimatorService.estimateTokensAsync(
+    if (activeTab?.content !== undefined) {
+      tokenEstimatorService.scheduleEstimate(
         activeTab.content, 
-        settings.selectedModelId
+        settings.selectedModelId,
+        300
       );
-      if (isMounted) setEstimate(res);
-    };
-
-    updateEst();
+    }
 
     const unsub = tokenEstimatorService.subscribe((est) => {
       if (isMounted) setEstimate(est);

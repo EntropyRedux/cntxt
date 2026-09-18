@@ -52,7 +52,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
 
   useEffect(() => {
     if (isLiveSync) {
-      setSyncedContent(content);
+      const timer = setTimeout(() => {
+        setSyncedContent(content);
+      }, 250);
+      return () => clearTimeout(timer);
     }
   }, [content, isLiveSync]);
 
@@ -65,7 +68,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
 
   // 1. Evaluate custom inline formulas (e.g. {{lineCount}})
   const formulaEvaluated = useMemo(() => {
-    const activeText = isLiveSync ? content : syncedContent;
+    const activeText = syncedContent;
     try {
       const formulaEngine = new FormulaEngine({
         lineCount: activeText.split('\n').length,
@@ -76,7 +79,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
     } catch {
       return activeText;
     }
-  }, [isLiveSync, content, syncedContent]);
+  }, [syncedContent]);
 
   const [katexLoaded, setKatexLoaded] = useState(isKatexLoaded());
 
@@ -84,9 +87,11 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
     if (katexLoaded) return;
     const hasMath = /\$\$|(?<!\$)\$(?!\$)[^\$\n]+?(?<!\$)\$(?!\$)|(```+|~~~+)(?:latex|math|katex)\b/i.test(formulaEvaluated);
     if (hasMath) {
-      getKatex().then(() => setKatexLoaded(true)).catch(() => {});
+      getKatex().then(() => setKatexLoaded(true)).catch((err) => {
+        addNotification('Math Renderer Error', (err as Error)?.message || 'Failed to load math typesetting engine', 'warning');
+      });
     }
-  }, [formulaEvaluated, katexLoaded]);
+  }, [formulaEvaluated, katexLoaded, addNotification]);
 
   // 2. Pre-process LaTeX Math & Mermaid blocks before passing to marked
   const processedMarkdown = useMemo(() => {
@@ -194,9 +199,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ content }) => {
         }
       } catch (err) {
         console.warn('Failed to render preview mermaid diagram', err);
+        addNotification('Diagram Render Warning', 'Failed to render Mermaid diagram syntax', 'warning');
       }
     });
-  }, [renderedHtml, settings.theme]);
+  }, [renderedHtml, settings.theme, addNotification]);
 
   // 5. Attach click event listeners to live preview action buttons
   useEffect(() => {

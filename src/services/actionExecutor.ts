@@ -1,4 +1,4 @@
-import { EditorView } from '@codemirror/view';
+import type { EditorView } from '@codemirror/view';
 import { SandboxAPI } from '../types';
 import { useActionStore } from '../store/actionStore';
 import { useTabStore } from '../store/tabStore';

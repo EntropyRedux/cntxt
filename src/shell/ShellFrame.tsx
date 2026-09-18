@@ -56,7 +56,7 @@ export const ShellFrame: React.FC = () => {
       initializeRibbon(bridge.storage),
       initializeFormattingStore(bridge.storage),
       initializeFileHistory(bridge.storage),
-    ]);
+    ]).catch((e) => console.error('Store init batch failed', e));
   }, [bridge, initializeSettings, initializeTabs, initializeTemplates, initializeActions, initializeWorkflows, initializeRibbon, initializeFormattingStore, initializeFileHistory]);
 
   // Sync theme via bridge

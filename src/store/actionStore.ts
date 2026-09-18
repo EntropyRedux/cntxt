@@ -5,6 +5,9 @@ import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
 // MOCK: quarantined synthetic sample data for prototype demo mode
 import { DEFAULT_ACTIONS, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
+import { executeActionById } from '../services/actionExecutor';
+import { executeInSandbox } from '../services/actionSandbox';
+import { useNotificationStore } from './notificationStore';
 
 export { DEFAULT_ACTIONS };
 
@@ -261,7 +264,6 @@ export const useActionStore = create<ActionState>((set, get) => ({
   executeAction: async (id: string, context?: any) => {
     const action = get().actions.find(a => a.id === id);
     if (!action) return;
-    const { executeActionById } = await import('../services/actionExecutor');
     await executeActionById(id, context?.view);
   },
 
@@ -284,10 +286,8 @@ export const useActionStore = create<ActionState>((set, get) => ({
     set({ isRunningAction: true });
     try {
       if (action.code && action.code.startsWith('FORMULA:')) {
-        const { executeActionById } = await import('../services/actionExecutor');
         await executeActionById(action.id, sandboxApi?.view);
       } else {
-        const { executeInSandbox } = await import('../services/actionSandbox');
         await executeInSandbox(action.code, sandboxApi);
       }
     } catch (e: any) {
@@ -298,7 +298,6 @@ export const useActionStore = create<ActionState>((set, get) => ({
       } else if (sandboxApi && typeof sandboxApi.toast === 'function') {
         sandboxApi.toast(errorMsg, 'error');
       } else {
-        const { useNotificationStore } = await import('./notificationStore');
         useNotificationStore.getState().addNotification(action.name || 'Action Failed', errorMsg, 'error');
       }
     } finally {

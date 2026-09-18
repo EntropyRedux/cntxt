@@ -7,6 +7,8 @@ export interface EditorCommands {
   undo: EditorCommandFn;
   redo: EditorCommandFn;
   selectAll: EditorCommandFn;
+  indentMore: EditorCommandFn;
+  indentLess: EditorCommandFn;
 }
 
 class EditorRegistry {
@@ -125,6 +127,26 @@ class EditorRegistry {
     const view = this.views.get(tabId);
     if (view && this.commands?.selectAll) {
       const result = this.commands.selectAll(view);
+      view.focus();
+      return result;
+    }
+    return false;
+  }
+
+  indentMore(tabId: string): boolean {
+    const view = this.views.get(tabId);
+    if (view && this.commands?.indentMore) {
+      const result = this.commands.indentMore(view);
+      view.focus();
+      return result;
+    }
+    return false;
+  }
+
+  indentLess(tabId: string): boolean {
+    const view = this.views.get(tabId);
+    if (view && this.commands?.indentLess) {
+      const result = this.commands.indentLess(view);
       view.focus();
       return result;
     }

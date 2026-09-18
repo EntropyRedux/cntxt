@@ -1706,6 +1706,11 @@ function buildDecorations(state: EditorState): DecorationSet {
     return builder.finish();
   } catch (err) {
     console.warn('Live markdown decoration error:', err);
+    try {
+      window.dispatchEvent(new CustomEvent('live-markdown-render-error', { detail: { error: err } }));
+    } catch {
+      // fallback if window is unavailable
+    }
     return Decoration.none;
   }
 }
@@ -1721,14 +1726,25 @@ export const liveMarkdownField = StateField.define<DecorationSet>({
   update(decorations, tr) {
     const prevTheme = tr.startState.facet(liveThemeFacet);
     const nextTheme = tr.state.facet(liveThemeFacet);
-    if (
-      tr.docChanged || 
-      tr.selection || 
-      prevTheme !== nextTheme ||
-      tr.effects.some(e => e.is(refreshLiveMarkdownEffect))
-    ) {
+
+    if (tr.docChanged || prevTheme !== nextTheme || tr.effects.some(e => e.is(refreshLiveMarkdownEffect))) {
       return buildDecorations(tr.state);
     }
+
+    if (tr.selection) {
+      // Performance optimization: if cursor navigation stayed within the same line, reuse existing decorations
+      try {
+        const prevLine = tr.startState.doc.lineAt(tr.startState.selection.main.head).number;
+        const nextLine = tr.state.doc.lineAt(tr.state.selection.main.head).number;
+        if (prevLine === nextLine) {
+          return decorations;
+        }
+      } catch {
+        // If line resolution fails, rebuild safely
+      }
+      return buildDecorations(tr.state);
+    }
+
     return decorations.map(tr.changes);
   },
   provide: (f) => EditorView.decorations.from(f)
