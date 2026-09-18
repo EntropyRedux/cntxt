@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Variable } from 'lucide-react';
-import { EditorSelection } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useTabStore } from '../../store/tabStore';
 import { useTemplateStore } from '../../store/templateStore';
@@ -101,16 +99,10 @@ export const VariableFloatingNavigator: React.FC = () => {
       }
     }
 
-    // Dispatch selection with scroll effect
+    // Dispatch selection + scroll via native view.dispatch spec (no runtime @codemirror import)
     view.dispatch({
-      selection: EditorSelection.single(target.from, target.to),
-      effects: [
-        EditorView.scrollIntoView(target.from, {
-          y: 'center',
-          yMargin: 80,
-          x: 'nearest'
-        })
-      ]
+      selection: { anchor: target.from, head: target.to },
+      scrollIntoView: true
     });
 
     // If scrolling is required, ensure smooth centering in viewport
@@ -126,7 +118,7 @@ export const VariableFloatingNavigator: React.FC = () => {
             });
           }
         } catch {
-          // Handled by EditorView.scrollIntoView
+          // Handled by native view dispatch scrollIntoView
         }
       });
     }

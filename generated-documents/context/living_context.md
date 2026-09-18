@@ -99,8 +99,8 @@ Notes: Native file commands secured with canonicalization and system root whitel
 Feature Group: FG-05: Playwright E2E Test Suite
 Status: completed / verified (2026-09-15)
 Background Processes: none (test-time vite dev server via playwright webServer)
-E2E Tests: 21/21 green in headless Chromium via `npm run test:e2e`
-Unit Tests: verified 121/121 across 14 suites (0 regressions)
+E2E Tests: 19/21 passed in headless Chromium via `npm run test:e2e` (2 known pre-existing failures: editor.spec.ts:28,38 — tracked in LCM:109)
+Unit Tests: verified 126/126 across 14 suites (0 regressions)
 Spec Files: editor (5), empty-state (3), preview (4), ribbon (5), slash-menu (3), fixtures (demo-mode bootstrap)
 Notes:
 - Playwright 1.63.0; single worker; `baseURL http://localhost:5173`; repo root `playwright.config.ts` + `npm run test:e2e` script.
@@ -260,7 +260,7 @@ Final Verdict: PASS (Upgraded from CONDITIONAL PASS on 2026-09-18)
   - 1 QUARANTINED MOCK (MOCK-1)
   - 0 UNDOCUMENTED ISSUES (TR-012 formally registered; TR-011 reserved for 09-16 pending F-18)
   - 12 VALID DEFECTS RESOLVED & VERIFIED:
-    - `PERF-1` / `MOD-2`: CodeMirror commands decoupled from formattingService via editorRegistry delegation
+    - `PERF-1` / `MOD-2`: CodeMirror commands decoupled from formattingService via editorRegistry delegation; boot modulepreload eliminated by disabling polyfill helper and removing artificial manual chunk grouping (0 modulepreload links in dist/index.html)
     - `PERF-2`: KaTeX chunk deduplicated into single 261KB asset via resolve.dedupe in vite.config.ts
     - `SCOPE-2` / `MOCK-2`: Dead code pruned (PrototypeShell.tsx, defaultData.ts, unused exports)
     - `PERF-4`: Store initializations concurrently batched via Promise.allSettled in ShellFrame.tsx
@@ -270,7 +270,7 @@ Final Verdict: PASS (Upgraded from CONDITIONAL PASS on 2026-09-18)
     - `SEC-3`: Content-Security-Policy meta tag added to index.html (Tauri & Vite dev compatible)
     - `ERR-2`: Observable toast notifications dispatched for dropped image failures and preview render errors
     - `PERF-9`: Converted redundant dynamic imports in actionStore.ts to top-level static imports
-- Verification Gates: npm run lint (exit 0) · Vitest 126/126 (14 suites) · cargo check OK (24.46s) · npm run build OK (0 warnings)
+- Verification Gates: npm run lint (exit 0) · Vitest 126/126 (14 suites) · cargo check OK · npm run build OK (modulepreload polyfill disabled; 0 modulepreload links in dist/index.html; KaTeX single chunk preserved)
 
 ━━━ FULL CODEBASE AUDIT — 2026-09-16 ━━━
 

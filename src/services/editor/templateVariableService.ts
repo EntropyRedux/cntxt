@@ -83,3 +83,60 @@ export function extractTemplateVariables(content: string): string[] {
 
   return variables;
 }
+
+export interface ParsedVariableToken {
+  raw: string;
+  cleanName: string;
+  displayName: string;
+  defaultValue: string;
+  isRequired: boolean;
+  hasPipeModifier: boolean;
+  hasAsterisk: boolean;
+}
+
+/**
+ * Universal parser for ContextPad template variable placeholders.
+ * Supports:
+ * - Option 1: Asterisk prefix/suffix: {{*variable}}, {{*variable:default}}, {{variable*}}
+ * - Option 3: Pipe modifier: {{variable|required}}, {{variable:default|required}}
+ * - Standard optional placeholders: {{variable}}, {{variable:default}}
+ */
+export function parseVariableToken(content: string): ParsedVariableToken {
+  const raw = content.trim();
+
+  // Split by pipe for directives, e.g. "task:Fix auth|required" or "api_key|required"
+  const pipeParts = raw.split('|').map(p => p.trim());
+  const primary = pipeParts[0] || '';
+  const modifiers = pipeParts.slice(1).map(p => p.toLowerCase());
+
+  // Check Option 3: |required or |req
+  const hasPipeModifier = modifiers.some(m => m === 'required' || m === 'req');
+
+  // Parse primary segment into rawName and defaultValue
+  let rawName = primary;
+  let defaultValue = '';
+  const colonIdx = primary.indexOf(':');
+  if (colonIdx !== -1) {
+    rawName = primary.slice(0, colonIdx).trim();
+    defaultValue = primary.slice(colonIdx + 1).trim();
+  }
+
+  // Check Option 1: * prefix or * suffix
+  const hasAsterisk = rawName.startsWith('*') || rawName.endsWith('*');
+
+  const isRequired = hasPipeModifier || hasAsterisk;
+
+  // Clean name by removing leading/trailing asterisks
+  const cleanName = rawName.replace(/^\*+|\*+$/g, '').trim();
+
+  return {
+    raw,
+    cleanName,
+    displayName: cleanName,
+    defaultValue,
+    isRequired,
+    hasPipeModifier,
+    hasAsterisk
+  };
+}
+

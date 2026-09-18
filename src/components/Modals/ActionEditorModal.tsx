@@ -26,6 +26,7 @@ import {
   FormulaEngine 
 } from '../../services/formulaParser';
 import { editorRegistry } from '../../services/editor/editorRegistry';
+import { executeInSandbox } from '../../services/actionSandbox';
 
 export const ActionEditorModal: React.FC = () => {
   const { 
@@ -156,7 +157,6 @@ export const ActionEditorModal: React.FC = () => {
           });
         }
       } else {
-        const { executeInSandbox } = await import('../../services/actionSandbox');
         let capturedOutput = '';
         const mockApi = {
           getText: () => 'Sample Document Content',

@@ -33,6 +33,7 @@ import { FormulaEngine, getFormulaFunctionsByCategory, FormulaFunctionInfo } fro
 import { CategorySelector } from './TemplateManager/CategorySelector';
 import { ActionRowItem } from './ActionManager/ActionRowItem';
 import { useRuntimeBridge, getSelectionText } from '../../adapters';
+import { executeActionById } from '../../services/actionExecutor';
 
 export const ActionManager: React.FC = () => {
   const bridge = useRuntimeBridge();
@@ -186,7 +187,6 @@ export const ActionManager: React.FC = () => {
       return;
     }
 
-    const { executeActionById } = await import('../../services/actionExecutor');
     await executeActionById(action.id);
   };
 

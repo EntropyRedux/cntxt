@@ -11,8 +11,7 @@ import {
   Check 
 } from 'lucide-react';
 import { Template } from '../../../../contracts/data_shapes';
-import { isSystemVariable } from '../../../services/editor/templateVariableService';
-import { parseVariableToken } from '../../../extensions/templateVariables';
+import { isSystemVariable, parseVariableToken } from '../../../services/editor/templateVariableService';
 import { copyText } from '../../../adapters';
 import { useNotificationStore } from '../../../store/notificationStore';
 

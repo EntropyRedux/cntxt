@@ -13,6 +13,7 @@ import { useTemplateStore } from '../store/templateStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { processTemplateVariables } from '../services/editor/templateVariableService';
 import { copyText } from '../adapters/domHelper';
+import { executeActionById } from '../services/actionExecutor';
 
 export interface SlashCommandItem {
   id?: string;
@@ -217,7 +218,6 @@ export function completionSource(context: CompletionContext): CompletionResult |
             selection: { anchor: applyFrom }
           });
 
-          const { executeActionById } = await import('../services/actionExecutor');
           await executeActionById(action.id, view);
         }
       } catch (err: any) {

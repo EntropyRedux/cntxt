@@ -24,17 +24,12 @@ export default defineConfig(() => {
     },
     build: {
       target: ['chrome120', 'firefox120', 'safari17'],
+      modulePreload: { polyfill: false },
       rollupOptions: {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules/katex')) {
               return 'katex';
-            }
-            if (id.includes('node_modules/mermaid')) {
-              return 'mermaid';
-            }
-            if (id.includes('node_modules/@codemirror') || id.includes('node_modules/@lezer')) {
-              return 'codemirror';
             }
           },
         },

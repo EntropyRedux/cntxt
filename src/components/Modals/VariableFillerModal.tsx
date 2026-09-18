@@ -15,7 +15,7 @@ import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import confetti from 'canvas-confetti';
 import { useRuntimeBridge } from '../../adapters';
-import { parseVariableToken, ParsedVariableToken } from '../../extensions/templateVariables';
+import { parseVariableToken, ParsedVariableToken } from '../../services/editor/templateVariableService';
 
 export const VariableFillerModal: React.FC = () => {
   const bridge = useRuntimeBridge();

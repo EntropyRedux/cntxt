@@ -65,6 +65,18 @@ export const ShellFrame: React.FC = () => {
     bridge.theme.applyTheme(currentTheme);
   }, [settings.theme, bridge.theme]);
 
+  // Surface user-visible notification on live markdown decoration rendering errors
+  useEffect(() => {
+    const handleMarkdownError = (e: Event) => {
+      const custom = e as CustomEvent<{ error?: unknown }>;
+      const msg = (custom.detail?.error as Error)?.message || 'Syntax error encountered during markdown decoration rendering';
+      addNotification('Live Markdown Rendering Error', msg, 'error');
+    };
+    window.addEventListener('live-markdown-render-error', handleMarkdownError);
+    return () => window.removeEventListener('live-markdown-render-error', handleMarkdownError);
+  }, [addNotification]);
+
+
   // Track active tab in opened file history
   useEffect(() => {
     if (activeTabId && tabs.length > 0) {
