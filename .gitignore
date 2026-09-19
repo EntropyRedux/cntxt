@@ -16,7 +16,6 @@ coverage/
 *.bak
 .DS_Store
 .env*
-!.env.example
 
 # Tauri / Rust build artifacts
 src-tauri/target/
