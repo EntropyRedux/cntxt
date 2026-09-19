@@ -22,7 +22,7 @@ export const ClassicShell: React.FC<ShellLayoutProps> = ({
   const showActivityBar = settings.showActivityBar !== false;
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden select-none bg-[var(--app-bg)] font-sans">
+    <div className="flex flex-col h-full w-full overflow-hidden select-none bg-[var(--app-bg)] font-sans">
       {/* 1. Desktop Title Bar */}
       <ShellTitleBar 
         events={events}

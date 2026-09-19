@@ -187,6 +187,7 @@ fn main() {
 
             app.manage(Mutex::new(file_paths));
 
+            #[cfg(debug_assertions)]
             if let Some(window) = app.get_webview_window("main") {
                 window.open_devtools();
             }

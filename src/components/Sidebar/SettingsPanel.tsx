@@ -247,30 +247,11 @@ export const SettingsPanel: React.FC = () => {
         </p>
 
         <div className="space-y-2.5 pt-1">
-          {/* UI Density */}
+          {/* Touch-Optimized Mode Toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-[var(--text-primary)] block font-medium">UI Layout Density</span>
-              <span className="text-[10px] text-[var(--text-muted)]">Spacing & target sizing</span>
-            </div>
-            <select
-              value={settings.uiDensity === 'touch' ? 'touch' : 'desktop'}
-              onChange={(e: any) => updateSettings({ 
-                uiDensity: e.target.value,
-                touchOptimized: e.target.value === 'touch'
-              })}
-              className="theme-input font-medium rounded px-2 py-1 text-xs text-[var(--accent-primary)] font-semibold"
-            >
-              <option value="desktop">Desktop Mode</option>
-              <option value="touch">Touchscreen (Large 44px+)</option>
-            </select>
-          </div>
-
-          {/* Quick Touch Mode Toggle */}
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[var(--text-primary)] block">Touchscreen Friendly Mode</span>
-              <span className="text-[10px] text-[var(--text-muted)]">Increases button & tab hit targets</span>
+              <span className="text-[var(--text-primary)] block font-medium">Touch-Optimized Mode</span>
+              <span className="text-[10px] text-[var(--text-muted)]">Increases button & tab hit targets (44px+)</span>
             </div>
             <input
               type="checkbox"
@@ -430,25 +411,6 @@ export const SettingsPanel: React.FC = () => {
                 </option>
               ))}
             </select>
-            {(() => {
-              const activeFont = getCuratedFontByFamily(settings.fontFamily);
-              const themeDefaultFont = THEME_DEFAULT_FONTS[settings.theme];
-              const isThemeDefault = activeFont && activeFont.fontFamily === themeDefaultFont;
-              return activeFont ? (
-                <div className="text-[10px] text-[var(--text-muted)] bg-[var(--card-secondary-bg)] p-1.5 rounded border border-[var(--border-subtle)] flex items-center justify-between">
-                  <span className="truncate">{activeFont.researchFocus}</span>
-                  {isThemeDefault ? (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0 ml-1 font-semibold">
-                      Theme Default
-                    </span>
-                  ) : (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--accent-container)] text-[var(--on-accent-container)] shrink-0 ml-1">
-                      {activeFont.badge}
-                    </span>
-                  )}
-                </div>
-              ) : null;
-            })()}
           </div>
 
           <div className="flex items-center justify-between">
@@ -548,8 +510,13 @@ export const SettingsPanel: React.FC = () => {
               <input
                 type="number"
                 step={5000}
+                min={0}
+                max={10000000}
                 value={settings.budgetThreshold}
-                onChange={(e) => updateSettings({ budgetThreshold: Number(e.target.value) })}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  updateSettings({ budgetThreshold: Number.isFinite(val) ? Math.max(0, val) : 0 });
+                }}
                 className="w-24 h-6 px-2 theme-input rounded font-mono text-[var(--status-warning)] text-xs text-right font-medium"
               />
               <span className="text-[10px] text-[var(--text-muted)]">tok</span>
@@ -683,13 +650,13 @@ export const SettingsPanel: React.FC = () => {
           Backup & Reset
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           <button
             type="button"
             onClick={handleExportBackup}
             title="Export Backup"
             aria-label="Export Backup"
-            className="h-8 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center transition-colors font-medium"
+            className="h-8 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center transition-colors font-medium cursor-pointer"
           >
             <Download className="w-4 h-4 text-[var(--accent-primary)]" />
           </button>
@@ -698,26 +665,25 @@ export const SettingsPanel: React.FC = () => {
             onClick={handleImportBackup}
             title="Import Backup"
             aria-label="Import Backup"
-            className="h-8 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center transition-colors font-medium"
+            className="h-8 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center transition-colors font-medium cursor-pointer"
           >
             <Upload className="w-4 h-4 text-[var(--accent-primary)]" />
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm('Reset all settings to default values?')) {
+                resetSettings();
+                addNotification('Settings Reset', 'Default settings restored', 'info');
+              }
+            }}
+            title="Reset Settings to Default"
+            aria-label="Reset Settings to Default"
+            className="h-8 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-md flex items-center justify-center transition-colors font-medium cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm('Reset all settings to default values?')) {
-              resetSettings();
-              addNotification('Settings Reset', 'Default settings restored', 'info');
-            }
-          }}
-          title="Reset Settings to Default"
-          aria-label="Reset Settings to Default"
-          className="w-full h-8 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-md flex items-center justify-center transition-colors font-medium"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );

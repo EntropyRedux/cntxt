@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { Tab, SupportedLanguage } from '../../contracts/data_shapes';
 // MOCK: quarantined synthetic sample data for prototype demo mode
 import { WELCOME_DOCUMENT, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
+import { MARKDOWN_GUIDE_DOCUMENT } from '../constants/markdownGuideDoc';
+import { POWER_USER_GUIDE_DOCUMENT } from '../constants/powerUserGuideDoc';
 import { editorRegistry } from '../services/editor/editorRegistry';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
@@ -9,6 +11,7 @@ import { useSettingsStore } from './settingsStore';
 import { useNotificationStore } from './notificationStore';
 import { safePersist, safeRemove } from '../services/storageHelper';
 import { writeTabCache, readTabCache, clearTabCache } from '../adapters/tabSessionCache';
+import { editorStateCache } from '../services/editor/editorStateCache';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -20,11 +23,11 @@ interface TabState {
   isHydrating: boolean;
 
   // Actions
-  createTab: (title?: string, content?: string, language?: SupportedLanguage, filePath?: string | null, pinnedTabId?: string) => string;
+  setActiveTabId: (id: string) => void;
+  createTab: (title?: string, content?: string, language?: SupportedLanguage, filePath?: string | null, pinnedTabId?: string | null) => string;
   closeTab: (tabId: string) => void;
-  closeOtherTabs: (keepTabId: string) => void;
   closeAllTabs: () => void;
-  setActiveTabId: (tabId: string) => void;
+  closeOtherTabs: (keepTabId: string) => void;
   updateTabContent: (tabId: string, content: string, isExternal?: boolean) => void;
   updateTabMetadata: (tabId: string, updates: Partial<Tab>) => void;
   insertTextAtCursor: (tabId: string, textToInsert: string, replaceSelection?: boolean) => void;
@@ -35,6 +38,8 @@ interface TabState {
   togglePinTab: (tabId: string) => void;
   openWelcomeTab: () => string;
   resetWelcomeTab: () => Promise<void>;
+  openMarkdownGuideTab: () => string;
+  openPowerUserGuideTab: () => string;
   initializeTabs: (storage?: IStorageBridge) => Promise<void>;
 }
 
@@ -74,11 +79,15 @@ export const useTabStore = create<TabState>((set, get) => ({
       set({ tabs: cached.tabs, activeTabId: cachedActiveId, isHydrating: false });
       // Continue IPC load silently to refresh stale content
     }
-    // ─────────────────────────────────────────────────────────────────────
+    const isExplicitlyNoDemo = typeof window !== 'undefined' && (window as any).__CONTEXTPAD_DEMO__ === false;
 
     if (!activeStorage) {
       if (!cached) {
-        set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
+        if (isExplicitlyNoDemo) {
+          set({ tabs: [], activeTabId: '', isHydrating: false });
+        } else {
+          set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
+        }
       }
       return;
     }
@@ -124,13 +133,17 @@ export const useTabStore = create<TabState>((set, get) => ({
       }
 
       if (!cached) {
-        // First run on clean workspace: Seed Welcome.md document with full CNTXT feature showcase
-        await activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${initialTabId}`, WELCOME_DOCUMENT);
-        await activeStorage.setItem(STORAGE_KEYS.TABS_META, JSON.stringify([defaultWelcomeTab]));
-        await activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, initialTabId);
+        if (isExplicitlyNoDemo) {
+          set({ tabs: [], activeTabId: '', isHydrating: false });
+        } else {
+          // First run on clean workspace: Seed Welcome.md document with full CNTXT feature showcase
+          await activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${initialTabId}`, WELCOME_DOCUMENT);
+          await activeStorage.setItem(STORAGE_KEYS.TABS_META, JSON.stringify([defaultWelcomeTab]));
+          await activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, initialTabId);
 
-        set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
-        writeTabCache([defaultWelcomeTab], initialTabId);
+          set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
+          writeTabCache([defaultWelcomeTab], initialTabId);
+        }
       } else {
         // Cache exists (Layer 1 hydrated it into state for this session), but IPC
         // returned no authoritative meta. Keep the cached tabs as the user's
@@ -182,6 +195,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
   closeTab: (tabId: string) => {
     cancelPendingSave(tabId);
+    editorStateCache.evictTabState(tabId);
     const { tabs, activeTabId } = get();
     if (tabs.length === 1) {
       // Create a fresh untitled tab when closing the last one
@@ -218,7 +232,10 @@ export const useTabStore = create<TabState>((set, get) => ({
     const toDelete = tabs.filter(t => t.id !== keepTabId);
     const remaining = tabs.filter(t => t.id === keepTabId);
 
-    toDelete.forEach(t => cancelPendingSave(t.id));
+    toDelete.forEach(t => {
+      cancelPendingSave(t.id);
+      editorStateCache.evictTabState(t.id);
+    });
     if (activeStorage) {
       toDelete.forEach(t => safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`, `tab ${t.id}`));
     }
@@ -230,6 +247,7 @@ export const useTabStore = create<TabState>((set, get) => ({
   closeAllTabs: () => {
     const { tabs } = get();
     tabs.forEach(t => cancelPendingSave(t.id));
+    editorStateCache.clearAllTabStates();
     if (activeStorage) {
       tabs.forEach(t => safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`, `tab ${t.id}`));
     }
@@ -319,6 +337,68 @@ export const useTabStore = create<TabState>((set, get) => ({
       await activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${welcomeId}`, WELCOME_DOCUMENT);
       saveTabsMeta(newTabs, welcomeId);
     }
+  },
+
+  openMarkdownGuideTab: () => {
+    const { tabs } = get();
+    const guideId = 'markdown-guide-doc';
+    const existing = tabs.find(t => t.id === guideId);
+    if (existing) {
+      set({ activeTabId: guideId });
+      return guideId;
+    }
+
+    const guideTab: Tab = {
+      id: guideId,
+      title: 'Markdown-Guide.md',
+      content: MARKDOWN_GUIDE_DOCUMENT,
+      filePath: null,
+      folderPath: null,
+      isDirty: false,
+      language: 'markdown',
+      lastModifiedTime: Date.now(),
+      isPinned: false
+    };
+
+    const newTabs = [...tabs, guideTab];
+    set({ tabs: newTabs, activeTabId: guideId });
+    writeTabCache(newTabs, guideId);
+    if (activeStorage) {
+      safePersist(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${guideId}`, MARKDOWN_GUIDE_DOCUMENT, 'markdown guide content');
+      saveTabsMeta(newTabs, guideId);
+    }
+    return guideId;
+  },
+
+  openPowerUserGuideTab: () => {
+    const { tabs } = get();
+    const guideId = 'power-user-guide-doc';
+    const existing = tabs.find(t => t.id === guideId);
+    if (existing) {
+      set({ activeTabId: guideId });
+      return guideId;
+    }
+
+    const guideTab: Tab = {
+      id: guideId,
+      title: 'Power-User-Guide.md',
+      content: POWER_USER_GUIDE_DOCUMENT,
+      filePath: null,
+      folderPath: null,
+      isDirty: false,
+      language: 'markdown',
+      lastModifiedTime: Date.now(),
+      isPinned: false
+    };
+
+    const newTabs = [...tabs, guideTab];
+    set({ tabs: newTabs, activeTabId: guideId });
+    writeTabCache(newTabs, guideId);
+    if (activeStorage) {
+      safePersist(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${guideId}`, POWER_USER_GUIDE_DOCUMENT, 'power user guide content');
+      saveTabsMeta(newTabs, guideId);
+    }
+    return guideId;
   },
 
   updateTabContent: (tabId: string, content: string, isExternal = true) => {

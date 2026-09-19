@@ -292,7 +292,7 @@ class InlineMathWidget extends WidgetType {
 // Markdown Table Block Widget
 // =========================================================================
 
-class TableBlockWidget extends WidgetType {
+export class TableBlockWidget extends WidgetType {
   constructor(
     readonly table: ParsedTable,
     readonly startPos: number
@@ -1175,12 +1175,20 @@ function buildDecorations(state: EditorState): DecorationSet {
         const { role, block } = codeBlockEntry;
         const lang = block.language.toLowerCase().trim();
 
-        // Check if cursor is anywhere inside this code block
+        // Check if cursor or active search selection is anywhere inside this code block
         let isBlockActive = false;
         for (let l = block.startLine; l <= block.endLine; l++) {
           if (activeLines.has(l)) {
             isBlockActive = true;
             break;
+          }
+        }
+        if (!isBlockActive) {
+          const mainSel = state.selection.main;
+          const selStartLine = doc.lineAt(mainSel.from).number;
+          const selEndLine = doc.lineAt(mainSel.to).number;
+          if (selStartLine <= block.endLine && selEndLine >= block.startLine) {
+            isBlockActive = true;
           }
         }
 
@@ -1293,6 +1301,14 @@ function buildDecorations(state: EditorState): DecorationSet {
             break;
           }
         }
+        if (!isBlockActive) {
+          const mainSel = state.selection.main;
+          const selStartLine = doc.lineAt(mainSel.from).number;
+          const selEndLine = doc.lineAt(mainSel.to).number;
+          if (selStartLine <= mathBlock.endLine && selEndLine >= mathBlock.startLine) {
+            isBlockActive = true;
+          }
+        }
 
         if (!isBlockActive) {
           if (line.number === mathBlock.startLine) {
@@ -1330,6 +1346,14 @@ function buildDecorations(state: EditorState): DecorationSet {
           if (activeLines.has(l)) {
             isTableActive = true;
             break;
+          }
+        }
+        if (!isTableActive) {
+          const mainSel = state.selection.main;
+          const selStartLine = doc.lineAt(mainSel.from).number;
+          const selEndLine = doc.lineAt(mainSel.to).number;
+          if (selStartLine <= tableBlock.endLine && selEndLine >= tableBlock.startLine) {
+            isTableActive = true;
           }
         }
 
@@ -1577,8 +1601,38 @@ function buildDecorations(state: EditorState): DecorationSet {
           }
         }
 
-        // Bold: **bold** or __bold__
-        const boldRegex = /(\*\*|__)(?!\s)(.+?)(?<!\s)\1/g;
+        // Bold + Italic: ***bold+italic*** or ___bold+italic___
+        const boldItalicRegex = /(\*\*\*|___)(?!\s)(.+?)(?<!\s)\1/g;
+        while ((match = boldItalicRegex.exec(lineText)) !== null) {
+          const start = line.from + match.index;
+          const end = start + match[0].length;
+          if (isLineActive) {
+            rangeDecos.push({
+              from: start,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-bold-italic' })
+            });
+          } else {
+            rangeDecos.push({
+              from: start,
+              to: start + 3,
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
+            });
+            rangeDecos.push({
+              from: start + 3,
+              to: end - 3,
+              deco: Decoration.mark({ class: 'cm-live-bold-italic' })
+            });
+            rangeDecos.push({
+              from: end - 3,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
+            });
+          }
+        }
+
+        // Bold: **bold** or __bold__ (not matching ***)
+        const boldRegex = /(?<!\*)(\*\*|__)(?!\s)(.+?)(?<!\s)\1(?!\*)/g;
         while ((match = boldRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
@@ -1608,7 +1662,7 @@ function buildDecorations(state: EditorState): DecorationSet {
         }
 
         // Italic: *italic* or _italic_
-        const italicRegex = /(?<!\*)\*([^*\n]+)\*(?!\*)|(?<!_)_([^_\n]+)_(?!_)/g;
+        const italicRegex = /(?<!\*)\*([^*\n]+?)\*(?!\*)|(?<!_)_([^_\n]+?)_(?!_)/g;
         while ((match = italicRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
@@ -1638,7 +1692,7 @@ function buildDecorations(state: EditorState): DecorationSet {
         }
 
         // Strikethrough: ~~strike~~
-        const strikeRegex = /~~([^~\n]+)~~/g;
+        const strikeRegex = /~~([^~\n]+?)~~/g;
         while ((match = strikeRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
@@ -1661,6 +1715,96 @@ function buildDecorations(state: EditorState): DecorationSet {
             });
             rangeDecos.push({
               from: end - 2,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
+            });
+          }
+        }
+
+        // Highlight: ==highlight==
+        const highlightRegex = /==([^=\n]+?)==/g;
+        while ((match = highlightRegex.exec(lineText)) !== null) {
+          const start = line.from + match.index;
+          const end = start + match[0].length;
+          if (isLineActive) {
+            rangeDecos.push({
+              from: start,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-highlight' })
+            });
+          } else {
+            rangeDecos.push({
+              from: start,
+              to: start + 2,
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
+            });
+            rangeDecos.push({
+              from: start + 2,
+              to: end - 2,
+              deco: Decoration.mark({ class: 'cm-live-highlight' })
+            });
+            rangeDecos.push({
+              from: end - 2,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
+            });
+          }
+        }
+
+        // Subscript: ~sub~ (must not match ~~)
+        const subRegex = /(?<!~)~([^~\s\n]+?)~(?!~)/g;
+        while ((match = subRegex.exec(lineText)) !== null) {
+          const start = line.from + match.index;
+          const end = start + match[0].length;
+          if (isLineActive) {
+            rangeDecos.push({
+              from: start,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-sub' })
+            });
+          } else {
+            rangeDecos.push({
+              from: start,
+              to: start + 1,
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
+            });
+            rangeDecos.push({
+              from: start + 1,
+              to: end - 1,
+              deco: Decoration.mark({ class: 'cm-live-sub' })
+            });
+            rangeDecos.push({
+              from: end - 1,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
+            });
+          }
+        }
+
+        // Superscript: ^sup^
+        const supRegex = /\^([^\^\s\n]+?)\^/g;
+        while ((match = supRegex.exec(lineText)) !== null) {
+          const start = line.from + match.index;
+          const end = start + match[0].length;
+          if (isLineActive) {
+            rangeDecos.push({
+              from: start,
+              to: end,
+              deco: Decoration.mark({ class: 'cm-live-sup' })
+            });
+          } else {
+            rangeDecos.push({
+              from: start,
+              to: start + 1,
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
+            });
+            rangeDecos.push({
+              from: start + 1,
+              to: end - 1,
+              deco: Decoration.mark({ class: 'cm-live-sup' })
+            });
+            rangeDecos.push({
+              from: end - 1,
               to: end,
               deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
             });

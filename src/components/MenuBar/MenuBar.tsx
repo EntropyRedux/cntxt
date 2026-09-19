@@ -158,10 +158,15 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       id: 'help',
       label: 'Help',
       items: [
-        { label: 'Command Palette', shortcut: 'Ctrl+K', action: onOpenCommandPalette },
         { label: 'Keyboard Shortcuts Guide', shortcut: 'Ctrl+/', action: onOpenShortcuts, divider: true },
-        { label: 'About ContextPad (Welcome Guide)', action: () => {
+        { label: 'About CNTXT', action: () => {
           useTabStore.getState().openWelcomeTab();
+        }},
+        { label: 'Markdown Formatting Guide', action: () => {
+          useTabStore.getState().openMarkdownGuideTab();
+        }},
+        { label: 'CNTXT Power User Guide', action: () => {
+          useTabStore.getState().openPowerUserGuideTab();
         }},
         { label: 'Restore Pristine Welcome Guide', action: async () => {
           await useTabStore.getState().resetWelcomeTab();

@@ -1,8 +1,8 @@
 # ContextPad Component Manifest
 
 - **Project:** CNTXT (ContextPad) — Modular Frontend UI Development Platform
-- **Version:** 0.2.1
-- **Generated:** 2026-09-19
+- **Version:** 0.3.0
+- **Generated:** 2026-09-20
 - **Specification:** Solo Dev AI-Assisted Workflow Stage 2/3 Handoff Manifest
 
 ---
@@ -17,9 +17,11 @@ All background processes (live token estimation, autosave loop, live markdown sy
 - Live Token Estimation: Configured in `TokenAnalytics.tsx` and `TokenEstimator.ts`.
 - Experimental Settings Visibility: Controlled by `settings.enableExperimentalSettings` (default: `false`).
 
-### E2E Verification (FG-05)
+### Quality & Verification Gates
 - Playwright 1.63.0 suite (`npm run test:e2e`): 21 Chromium tests green across 5 spec files (`e2e/editor`, `e2e/empty-state`, `e2e/preview`, `e2e/ribbon`, `e2e/slash-menu`), driven by `e2e/fixtures.ts` demo-mode bootstrap (`window.__CONTEXTPAD_DEMO__`).
-- Unit suite: 127 Vitest tests across 14 suites (`npm test`). Playwright artifacts gitignored.
+- Unit suite: 223 Vitest tests across 24 suites (`npm test`) 100% passing.
+- Platform Purity: 0 platform leaks across 118 files (`npm run lint`), 100% contract parity.
+- Signed Installers: Official NSIS setup (`dist-installer/CNTXT_0.3.0_x64-setup.exe`) and WiX MSI (`dist-installer/CNTXT_0.3.0_x64_en-US.msi`) signed with SHA256 Authenticode and DigiCert RFC 3161 timestamps. Standalone portable in `dist-portable/CNTXT-portable.exe`.
 
 ---
 

@@ -4,6 +4,8 @@ node_modules/
 build/
 dist/
 dist-portable/
+dist-installer/
+generated-documents/exportable-assets/
 coverage/
 *.tsbuildinfo
 *.log

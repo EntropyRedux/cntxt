@@ -35,7 +35,7 @@ const formatRelativeTime = (timestamp: number): string => {
   return `${days}d ago`;
 };
 
-function validateFilename(name: string): { valid: boolean; error?: string } {
+export function validateFilename(name: string): { valid: boolean; error?: string } {
   const trimmed = name.trim();
   if (!trimmed) {
     return { valid: false, error: 'Filename cannot be empty' };
@@ -50,7 +50,7 @@ function validateFilename(name: string): { valid: boolean; error?: string } {
   if (/[<>:"/\\|?*\x00-\x1F]/.test(trimmed)) {
     return { valid: false, error: 'Filename contains illegal characters (< > : " / \\ | ? *)' };
   }
-  if (/[. ]$/.test(trimmed)) {
+  if (/[. ]$/.test(name) || trimmed.endsWith('.')) {
     return { valid: false, error: 'Filename cannot end with a period or space' };
   }
   const baseName = trimmed.split('.')[0].toUpperCase();
@@ -61,7 +61,7 @@ function validateFilename(name: string): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-const findFileInTree = (tree: VirtualFile[], name: string): VirtualFile | null => {
+export const findFileInTree = (tree: VirtualFile[], name: string): VirtualFile | null => {
   for (const item of tree) {
     if (item.type === 'file' && item.name === name) return item;
     if (item.type === 'folder' && item.children) {
@@ -72,7 +72,7 @@ const findFileInTree = (tree: VirtualFile[], name: string): VirtualFile | null =
   return null;
 };
 
-const findFolderInTree = (tree: VirtualFile[], idOrNameOrPath: string): VirtualFile | null => {
+export const findFolderInTree = (tree: VirtualFile[], idOrNameOrPath: string): VirtualFile | null => {
   for (const item of tree) {
     if (item.type === 'folder' && (item.id === idOrNameOrPath || item.name === idOrNameOrPath || (item.path && item.path === idOrNameOrPath))) {
       return item;

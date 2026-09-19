@@ -1,7 +1,7 @@
 {
   "name": "cntxt",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,6 +15,7 @@
     "tauri:dev": "tauri dev --config src-tauri/tauri.dev.conf.json",
     "tauri:build": "tauri build",
     "build:portable": "node scripts/build-portable.mjs",
+    "package:sign": "powershell -ExecutionPolicy Bypass -File scripts/sign-installers.ps1",
     "tauri:cli": "cargo install tauri-cli --locked"
   },
   "dependencies": {
@@ -64,7 +65,6 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",

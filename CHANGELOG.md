@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] — 2026-09-20
+
+### FG-07 Editor Resiliency, Multi-Tab State Architecture, Extended Markdown & Power User Tools
+- **Per-Tab Undo/Redo & State Preservation Architecture**:
+  - Promoted all 12 CodeMirror dynamic Compartments to module-level singletons (\`===\`).
+  - Implemented in-memory \`editorStateCache\` maintaining full \`EditorState\`, undo/redo stacks, and scroll offsets (\`scrollTop\`, \`scrollLeft\`) per tab.
+  - Refactored \`Editor.tsx\` to maintain a single persistent \`EditorView\` and call \`view.setState(cachedState)\` on tab switch, completely eliminating DOM destruction/remount churn.
+  - Wired cache eviction to tab closing actions.
+- **Extended Markdown Syntax Parity (Option A)**:
+  - Added live syntax styling and parser support for \`***bold + italic***\`, \`==highlight==\` (\`.cm-live-highlight\`), \`~subscript~\` (\`.cm-live-sub\`), and \`^superscript^\` (\`.cm-live-sup\`).
+- **Base64 Image Gutter Fold Extension**:
+  - Implemented custom \`@codemirror/language\` \`foldService\` for large inline \`![alt](data:image/...)\` strings. Collapses them to a single visual row (\`.cm-raw-image-line\`) with gutter fold chevrons in RAW mode.
+- **Search-Unveil across Rendered Blocks**:
+  - When searching with \`Ctrl+F\`, matches inside rendered tables, code blocks, Mermaid diagrams, or KaTeX math blocks automatically unveil the raw Markdown source, allowing direct inline editing.
+- **Modular Ribbon & Mobile Accessory Bar Resiliency**:
+  - Resolved Minified React Error #185 ("Maximum update depth exceeded") caused by unmemoized array dependencies and synchronous \`ResizeObserver\` callbacks fluttering at sidebar boundary widths.
+  - Added \`useMemo\` caching, \`requestAnimationFrame\` scheduling, and a 10px hysteresis buffer (\`prev ? -2 : 8\`).
+  - Decoupled \`useTabStore\` subscriptions from Ribbon rendering, eliminating keystroke re-renders.
+- **Interactive Guides under Help Menu**:
+  - **CNTXT Power User Guide** (\`Power-User-Guide.md\`): Interactive masterclass covering in-document action widgets (\`[[action:id]]\`), embedded dynamic formulas (\`{=FORMULA()}\`), prompt template variables (\`{{*fast}}\`), JavaScript sandbox scripting APIs (\`api.replaceSelection\`, \`api.wrapSelection\`), ribbon customization, and keyboard mastery.
+  - **Markdown Formatting Guide** (\`Markdown-Guide.md\`): Comprehensive live syntax showcase.
+  - Added deduplicated tab openers (\`openWelcomeTab\`, \`openMarkdownGuideTab\`, \`openPowerUserGuideTab\`).
+- **Workspace & Chrome Refinements**:
+  - Streamlined Settings panel: unified touch toggle, removed font research box, 3-column Backup/Reset.
+  - Modernized Formatting Customizer modal with horizontal button size selector and category dropdown.
+  - Polished Help menu and removed redundant Hide Menu Bar button.
+  - Created standalone exportable assets bundle (\`generated-documents/exportable-assets/\`).
+- **Window Resize Edge-Dragging & White Canvas Remediation**:
+  - Eliminated white canvas flashing and layout freeze when resizing window boundaries rapidly.
+  - Added `"backgroundColor": "#141417"`, `"theme": "Dark"`, and `"shadow": true` to Tauri WebView2 window configuration so unpainted surfaces immediately match the app background during asynchronous rendering.
+  - Replaced throttled viewport units (`100vw 100vh`) with `w-full h-full` and configured root DOM percentage sizing in `index.css`.
+- **Official Signed Windows Installer Packages**:
+  - Generated and signed NSIS Setup (`dist-installer/CNTXT_0.3.0_x64-setup.exe`, 6.39 MB) and WiX Windows Installer (`dist-installer/CNTXT_0.3.0_x64_en-US.msi`, 7.61 MB).
+  - Authenticode signed with SHA256 and DigiCert RFC 3161 timestamps using `signtool.exe` and `CN=PCControlSuiteLocalTrust`.
+  - Added automated PowerShell signing pipeline in `scripts/sign-installers.ps1` and wired `"package:sign"` script.
+- **Full Codebase Audit & Quality Gates**:
+  - Reconciled full codebase audit (`raw_findings_full_codebase_2026-09-20.md`) with a final **PASS** verdict.
+  - 223/223 automated Vitest unit tests passing across 24 test suites (100% green).
+  - 0 lint errors, 0 platform leaks across 118 files, 100% canonical contract parity.
+
 ## [0.2.1] — 2026-09-19
 
 ### Production Build Parity, CSP Hardening & DevTools Integration

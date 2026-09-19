@@ -3,7 +3,6 @@ import {
   Coins,
   ChevronDown,
   Sparkles,
-  PanelRight,
   Check,
   Pause
 } from 'lucide-react';
@@ -278,7 +277,6 @@ export const StatusBar: React.FC = () => {
           }`}
         >
           <Coins className="w-3.5 h-3.5 text-[var(--status-success)]" />
-          <PanelRight className="w-3 h-3 opacity-70" />
         </button>
 
         <div className="h-3 w-px bg-[var(--border-primary)] mx-0.5 hidden sm:block" />

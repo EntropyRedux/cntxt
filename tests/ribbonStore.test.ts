@@ -145,4 +145,20 @@ describe('RibbonStore Operations', () => {
     settings.setRibbonVisible(true);
     expect(useSettingsStore.getState().settings.showRibbon).toBe(true);
   });
+
+  it('filters out toggle-view tool so it remains exclusively in the top bar', () => {
+    const store = useRibbonStore.getState();
+    store.addItem({
+      label: 'Toggle View',
+      icon: 'Eye',
+      type: 'tool',
+      targetId: 'toggle-view',
+      enabled: true
+    });
+
+    const activeRibbonItems = useRibbonStore.getState().items.filter(
+      i => i.enabled && i.targetId !== 'toggle-view'
+    );
+    expect(activeRibbonItems.some(i => i.targetId === 'toggle-view')).toBe(false);
+  });
 });

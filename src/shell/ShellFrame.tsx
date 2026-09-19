@@ -234,7 +234,7 @@ export const ShellFrame: React.FC = () => {
       data-theme={settings.theme || 'contextpad-dark'}
       data-density={settings.uiDensity === 'touch' ? 'touch' : 'desktop'}
       data-touch={settings.touchOptimized ? 'true' : 'false'}
-      className="flex flex-col h-screen w-screen theme-app font-sans overflow-hidden select-none"
+      className="flex flex-col h-full w-full theme-app font-sans overflow-hidden select-none"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useTabStore } from '../src/store/tabStore';
+import { useTabStore, flushPendingSaves } from '../src/store/tabStore';
 
 describe('TabStore', () => {
   beforeEach(() => {
@@ -72,5 +72,52 @@ describe('TabStore', () => {
     expect(tab?.content).not.toBe('corrupted user typing');
     expect(tab?.content).toContain('# 🚀 Welcome to ContextPad');
     expect(tab?.isPinned).toBe(true);
+  });
+
+  it('opens markdown formatting guide tab and re-focuses if already open', () => {
+    const guideId = useTabStore.getState().openMarkdownGuideTab();
+    expect(guideId).toBe('markdown-guide-doc');
+
+    let state = useTabStore.getState();
+    expect(state.activeTabId).toBe('markdown-guide-doc');
+    let tab = state.tabs.find(t => t.id === 'markdown-guide-doc');
+    expect(tab).toBeDefined();
+    expect(tab?.title).toBe('Markdown-Guide.md');
+    expect(tab?.content).toContain('# CNTXT Markdown Formatting Guide');
+
+    // Call again - should focus without duplicating
+    const secondId = useTabStore.getState().openMarkdownGuideTab();
+    expect(secondId).toBe('markdown-guide-doc');
+    state = useTabStore.getState();
+    expect(state.tabs.filter(t => t.id === 'markdown-guide-doc').length).toBe(1);
+  });
+
+  it('opens CNTXT power user guide tab and re-focuses if already open', () => {
+    const guideId = useTabStore.getState().openPowerUserGuideTab();
+    expect(guideId).toBe('power-user-guide-doc');
+
+    let state = useTabStore.getState();
+    expect(state.activeTabId).toBe('power-user-guide-doc');
+    let tab = state.tabs.find(t => t.id === 'power-user-guide-doc');
+    expect(tab).toBeDefined();
+    expect(tab?.title).toBe('Power-User-Guide.md');
+    expect(tab?.content).toContain('# ⚡ CNTXT Power User Guide');
+    expect(tab?.content).toContain('[[action:uppercase|UPPERCASE Selected Text]]');
+    expect(tab?.content).toContain('{=FORMULA()}');
+
+    // Call again - should focus without duplicating
+    const secondId = useTabStore.getState().openPowerUserGuideTab();
+    expect(secondId).toBe('power-user-guide-doc');
+    state = useTabStore.getState();
+    expect(state.tabs.filter(t => t.id === 'power-user-guide-doc').length).toBe(1);
+  });
+
+  it('flushes pending autosaves without error', () => {
+    const tabId = useTabStore.getState().createTab('AutosaveDoc.md', 'Initial Content');
+    useTabStore.getState().updateTabContent(tabId, 'Pending Content');
+
+    expect(() => {
+      flushPendingSaves();
+    }).not.toThrow();
   });
 });

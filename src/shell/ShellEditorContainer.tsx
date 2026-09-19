@@ -76,7 +76,6 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
               <ErrorBoundary fallbackTitle="Editor Canvas Error">
                 <Suspense fallback={<EditorSkeleton />}>
                   <Editor
-                    key={activeTab.id}
                     tabId={activeTab.id}
                     content={activeTab.content}
                     language={activeTab.language}

@@ -73,6 +73,7 @@ export const FormattingCustomizerModal: React.FC = () => {
   const [customSuffix, setCustomSuffix] = useState('**');
   const [customTitle, setCustomTitle] = useState('');
   const [customIsAccent, setCustomIsAccent] = useState(false);
+  const [customCategory, setCustomCategory] = useState<'format' | 'heading' | 'block' | 'list' | 'insert' | 'tool' | 'custom'>('custom');
 
   const activeButtons = useMemo(() => buttons.filter(b => b.enabled), [buttons]);
 
@@ -102,6 +103,7 @@ export const FormattingCustomizerModal: React.FC = () => {
       suffix: customType === 'wrap' || customType === 'block' ? customSuffix : undefined,
       type: customType,
       isAccent: customIsAccent,
+      category: customCategory,
       enabled: true
     });
 
@@ -112,6 +114,7 @@ export const FormattingCustomizerModal: React.FC = () => {
     setCustomTitle('');
     setCustomPrefix('');
     setCustomSuffix('');
+    setCustomCategory('custom');
     setActiveTab('manage');
   };
 
@@ -127,7 +130,7 @@ export const FormattingCustomizerModal: React.FC = () => {
       title="Customize Markdown Formatting Buttons"
       subtitle="Add, remove, reorder, or create custom syntax formatting buttons"
       icon={SlidersHorizontal}
-      maxWidth="xl"
+      maxWidth="4xl"
       footer={
         <div className="flex items-center justify-between w-full">
           <Button
@@ -276,21 +279,21 @@ export const FormattingCustomizerModal: React.FC = () => {
                 {(['small', 'medium', 'large'] as const).map((size) => {
                   const isSelected = buttonSize === size;
                   const label = size === 'small' ? 'Small' : size === 'medium' ? 'Medium' : 'Large';
-                  const subtitle = size === 'small' ? '28px · Compact' : size === 'medium' ? '36px · Standard' : '44px · Touch';
+                  const dim = size === 'small' ? '28px' : size === 'medium' ? '36px' : '44px';
                   return (
                     <button
                       key={size}
                       type="button"
                       onClick={() => setButtonSize(size)}
-                      className={`flex flex-col items-center justify-center py-2 px-1.5 rounded-md transition-all ${
+                      className={`flex items-center justify-center gap-1.5 py-1 px-2 rounded-md transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-[var(--accent-primary)] text-white shadow-xs font-semibold'
                           : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
                       }`}
                     >
                       <span className="text-xs font-medium">{label}</span>
-                      <span className={`text-[10px] mt-0.5 ${isSelected ? 'text-white/80' : 'text-[var(--text-muted)]'}`}>
-                        {subtitle}
+                      <span className={`text-[10px] ${isSelected ? 'text-white/80' : 'text-[var(--text-muted)]'}`}>
+                        ({dim})
                       </span>
                     </button>
                   );
@@ -434,21 +437,18 @@ export const FormattingCustomizerModal: React.FC = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 sm:pb-0 text-xs">
-                {CATEGORY_TABS.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-2.5 py-1 rounded-md whitespace-nowrap transition-colors ${
-                      selectedCategory === cat.id
-                        ? 'bg-[var(--accent-primary)] text-white font-medium shadow-2xs'
-                        : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
+              <div className="shrink-0">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-md text-xs bg-[var(--card-bg)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] font-medium cursor-pointer"
+                >
+                  {CATEGORY_TABS.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -540,7 +540,7 @@ export const FormattingCustomizerModal: React.FC = () => {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Button Label */}
               <div>
                 <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
@@ -568,6 +568,26 @@ export const FormattingCustomizerModal: React.FC = () => {
                   onChange={(e) => setCustomTitle(e.target.value)}
                   className="w-full px-3 py-1.5 rounded-md text-xs bg-[var(--card-bg)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)]"
                 />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
+                  Category
+                </label>
+                <select
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value as any)}
+                  className="w-full px-3 py-1.5 rounded-md text-xs bg-[var(--card-bg)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] font-medium cursor-pointer"
+                >
+                  <option value="custom">Custom</option>
+                  <option value="format">Text Styles</option>
+                  <option value="heading">Headings</option>
+                  <option value="list">Lists & Tasks</option>
+                  <option value="block">Blocks & Quotes</option>
+                  <option value="insert">Media & Tables</option>
+                  <option value="tool">Tools & Actions</option>
+                </select>
               </div>
             </div>
 

@@ -2,7 +2,15 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Active development (v0.2.1) — production rendering parity, CSP hardening, and DevTools integration complete. See [CHANGELOG.md](CHANGELOG.md) and the audit notes below.
+**Status:** Production Ready (v0.3.0) — FG-07 Editor Resiliency, multi-tab state preservation, extended markdown syntax, and power user tools complete. See [CHANGELOG.md](CHANGELOG.md) for full details.
+
+## Downloads (Windows v0.3.0)
+
+| Package | Format | Architecture | Download Link | Verification / Signature |
+|:---|:---:|:---:|:---:|:---:|
+| **Standard Setup** | `.exe` (NSIS) | x64 | [Download CNTXT_0.3.0_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT_0.3.0_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | x64 | [Download CNTXT_0.3.0_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT_0.3.0_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | x64 | [Download CNTXT-portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT-portable.exe) | Standalone (Zero-install executable) |
 
 ## What It Is
 
@@ -76,13 +84,18 @@ are found.
 - Components use `bridge.clipboard` / `bridge.window` — never `navigator.clipboard` or `window.open` directly.
 
 ## Current Status & Verification
-
-- **Under Active Development (v0.2.1)**:
-  - **Automated Test Coverage**: 127 unit tests passing across 14 suites via Vitest (`npm test`); 21 Playwright E2E tests green in headless Chromium (`npm run test:e2e`).
-  - **Platform Purity**: `npm run lint` scans 113 files with zero platform leaks outside `src/adapters/`.
-  - **Security Hardening**: Rust commands gated to the `main` window; path canonicalization and canonical system root whitelisting; dangerous shell injection eliminated in `open_external`; sandbox prototype-pollution defenses active.
-  - **Interactive Action System**: In-document action buttons (`[[action:id]]`), extensible `FormulaEngine` registry with 50+ built-ins, and tri-state selection behavior (`auto`, `replace`, `insert`).
-  - **Open Extensibility**: Runtime `SlashCommandRegistry` (`registerCommand` / `unregisterCommand` / metadata catalog) replaces the hardcoded static slash-command list.
+ 
+- **Production Release (v0.3.0)**:
+  - **Signed Installer Packages**: Official Windows NSIS installer (`dist-installer/CNTXT_0.3.0_x64-setup.exe`) and WiX MSI (`dist-installer/CNTXT_0.3.0_x64_en-US.msi`), signed with SHA256 Authenticode and DigiCert RFC 3161 timestamps via `npm run package:sign`. Standalone portable executable in `dist-portable/CNTXT-portable.exe`.
+  - **Automated Test Coverage**: 223 unit tests passing across 24 suites via Vitest (`npm test`); 21 Playwright E2E tests green in headless Chromium (`npm run test:e2e`).
+  - **Platform Purity**: `npm run lint` scans 118 files with zero platform leaks outside `src/adapters/` and 100% contract parity.
+  - **Window Resize Remediation**: Synchronous dark WebView2 background (`#141417`), dark theme, and percentage sizing eliminating resize drag lag and white canvas artifacts.
+  - **Per-Tab Undo/Redo & State Preservation**: Persistent single `EditorView` with isolated undo/redo history stacks and scroll offset caching across unlimited tab switches.
+  - **Extended Markdown Syntax**: Full support for `***bold+italic***`, `==highlight==`, `~subscript~`, and `^superscript^` in both RAW and Rendered modes.
+  - **Search-Unveil across Rendered Blocks**: Live search in tables, diagrams, and math blocks automatically unveils raw source markdown for instantaneous inline editing.
+  - **Security Hardening**: Main-window command gating, path canonicalization, system root whitelisting, dangerous shell metacharacter sanitization, and sandboxed JS execution.
+  - **Interactive Action System & Formulas**: Clickable in-document action buttons (`[[action:id]]`), extensible `FormulaEngine` registry with 50+ built-ins, and tri-state selection behavior (`auto`, `replace`, `insert`).
+  - **Built-in Power User & Markdown Guides**: Interactive tutorials accessible directly from the Help menu with live action buttons and formula calculators.
 - **Living Context & Roadmap**:
   - Full living context and architecture logs: `generated-documents/context/living_context.md`.
   - Release history and change notes: [CHANGELOG.md](CHANGELOG.md).

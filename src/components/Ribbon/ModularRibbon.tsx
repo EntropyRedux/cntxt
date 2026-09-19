@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useRibbonStore } from '../../store/ribbonStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useTabStore } from '../../store/tabStore';
@@ -18,14 +18,14 @@ import {
   SlidersHorizontal, 
   FileCode2, 
   Eye, 
-  ChevronDown,
-  ChevronUp,
-  Type,
-  ArrowLeft,
-  ArrowRight,
-  Trash2,
-  Minus,
-  EyeOff
+  ChevronDown, 
+  ChevronUp, 
+  Type, 
+  ArrowLeft, 
+  ArrowRight, 
+  Trash2, 
+  Minus, 
+  EyeOff 
 } from 'lucide-react';
 
 export interface ModularRibbonProps {
@@ -44,10 +44,7 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
     addSeparator 
   } = useRibbonStore();
   const { settings, toggleRibbon, toggleEditorMode, setActiveSidebarTab } = useSettingsStore();
-  const { tabs, activeTabId, createTab, updateTabContent, setActiveTabId, insertTextAtCursor } = useTabStore();
-  const { templates, openVariableModal } = useTemplateStore();
-  const { actions, executeAction } = useActionStore();
-  const { workflows } = useWorkflowStore();
+  const { openVariableModal } = useTemplateStore();
   const { addNotification } = useNotificationStore();
   const { openImageModal } = useImageModalStore();
 
@@ -59,10 +56,10 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
   const [hasOverflow, setHasOverflow] = useState(false);
   const [isMultiRow, setIsMultiRow] = useState(false);
 
-  const activeTab = tabs.find(t => t.id === activeTabId);
   const isTouch = settings.touchOptimized || settings.uiDensity === 'touch';
 
   // Close context menu on outside click or escape
@@ -103,6 +100,11 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
 
   const handleButtonClick = async (item: RibbonItem, e?: React.MouseEvent) => {
     if (item.type === 'separator') return;
+
+    const { tabs, activeTabId, createTab, setActiveTabId, insertTextAtCursor } = useTabStore.getState();
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    const { templates } = useTemplateStore.getState();
+    const { workflows } = useWorkflowStore.getState();
 
     switch (item.type) {
       case 'tool': {
@@ -246,6 +248,8 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
 
   const handleButtonDoubleClick = (item: RibbonItem) => {
     if (item.type === 'workflow') {
+      const { workflows } = useWorkflowStore.getState();
+      const { createTab } = useTabStore.getState();
       const wf = workflows.find(w => w.id === item.targetId);
       if (wf && wf.type !== 'bookmark') {
         const title = wf.name.endsWith('.md') ? wf.name : `${wf.name}.md`;
@@ -268,36 +272,60 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
   };
 
   // Exclude toggle-view from ribbon items since it is now permanently in the top bar
-  const activeItems = items.filter(i => i.enabled && i.targetId !== 'toggle-view');
+  const activeItems = useMemo(
+    () => items.filter(i => i.enabled && i.targetId !== 'toggle-view'),
+    [items]
+  );
+
+  const checkOverflow = useCallback(() => {
+    if (!scrollContainerRef.current) return;
+    const el = scrollContainerRef.current;
+    if (isMultiRow) {
+      setHasOverflow(prev => (prev ? false : prev));
+      return;
+    }
+
+    setHasOverflow(prev => {
+      // 10px hysteresis band: 8px to turn on, -2px to turn off.
+      // Prevents threshold fluttering / oscillation near border widths.
+      const threshold = prev ? -2 : 8;
+      const isOverflowing = el.scrollWidth > el.clientWidth + threshold;
+      return prev !== isOverflowing ? isOverflowing : prev;
+    });
+  }, [isMultiRow]);
 
   // Detect horizontal overflow in single-row mode (must execute before any early return to satisfy Rules of Hooks)
   useEffect(() => {
     if (!settings.showRibbon) return;
 
-    const checkOverflow = () => {
-      if (!scrollContainerRef.current) return;
-      const el = scrollContainerRef.current;
-      if (!isMultiRow) {
-        setHasOverflow(el.scrollWidth > el.clientWidth + 4);
+    const scheduleCheck = () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
       }
+      rafRef.current = requestAnimationFrame(() => {
+        checkOverflow();
+      });
     };
 
-    checkOverflow();
+    scheduleCheck();
 
     const resizeObserver = new ResizeObserver(() => {
-      checkOverflow();
+      scheduleCheck();
     });
 
     if (scrollContainerRef.current) {
       resizeObserver.observe(scrollContainerRef.current);
     }
 
-    window.addEventListener('resize', checkOverflow);
+    window.addEventListener('resize', scheduleCheck);
     return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
       resizeObserver.disconnect();
-      window.removeEventListener('resize', checkOverflow);
+      window.removeEventListener('resize', scheduleCheck);
     };
-  }, [activeItems, isMultiRow, settings.showRibbon]);
+  }, [items, isMultiRow, settings.showRibbon, checkOverflow]);
 
   // Clean collapse: Return null when ribbon is hidden (toggled via top bar or Ctrl+Shift+R)
   if (!settings.showRibbon) {

@@ -1,5 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 import { processTemplateVariables } from './templateVariableService';
+import { editorStateCache } from './editorStateCache';
 
 export type EditorCommandFn = (view: EditorView) => boolean;
 
@@ -43,6 +44,17 @@ class EditorRegistry {
           changes: { from: 0, to: currentDoc.length, insert: newContent },
           selection: { anchor: clampedAnchor, head: clampedHead }
         });
+      }
+      return true;
+    }
+    if (editorStateCache.hasTabState(tabId)) {
+      const cached = editorStateCache.getTabState(tabId)!;
+      const currentDoc = cached.state.doc.toString();
+      if (currentDoc !== newContent) {
+        const tr = cached.state.update({
+          changes: { from: 0, to: currentDoc.length, insert: newContent }
+        });
+        editorStateCache.saveTabState(tabId, tr.state, cached.scrollTop, cached.scrollLeft, cached.language);
       }
       return true;
     }

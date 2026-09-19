@@ -22,20 +22,26 @@ Address the 14-point audit findings from manual and production testing of CNTXT,
 ### B. Find & Replace in Rendered Markdown Tables (Option B - Search-Unveil)
 - **Problem:** Rendered tables use `Decoration.replace({ widget: new TableWidget(...) })`. CodeMirror's search finds text in the document model, but cannot apply highlight marks or pinpoint scroll coordinates inside opaque replacement widgets.
 - **Solution:**
-  1. In `liveMarkdown.ts`, check if the active search match falls within `[tableBlock.startLine, tableBlock.endLine]`.
-  2. If matched, temporarily unveil that table into raw Markdown pipe text.
+  1. In `liveMarkdown.ts`, check if the active selection/search match (`state.selection.main`) falls within `[tableBlock.startLine, tableBlock.endLine]`:
+     `const isSelectionInTable = (selStartLine <= tableBlock.endLine && selEndLine >= tableBlock.startLine);`
+  2. When true, treat the table as actively edited (`isTableActive = true`), rendering the raw Markdown pipe text.
   3. Native search highlighter displays the match, and `scrollIntoView` centers directly on the cell.
   4. Automatically re-folds to the rendered widget when search navigates away or closes.
 
-### C. Undo/Redo History Depth & In-Memory State Caching
+### C. Undo/Redo History Depth & Zero-Teardown Dynamic Editor
 - **Problem:**
   - Toggling RAW/Rendered mode destroys and recreates the `EditorView`, wiping the undo stack.
-  - Switching tabs destroys the view, losing undo history.
+  - Changing theme, font size, or font family recreates the view, losing undo history.
   - Default `newGroupDelay: 500` groups whole paragraphs into 1 undo step.
-- **Solution:**
-  1. Remove `settings.editorMode` and `settings.theme` from the view recreation `useEffect` dependency array in `Editor.tsx`.
-  2. Configure `history({ minDepth: 250, newGroupDelay: 300 })`.
-  3. Maintain an in-memory `tabStateCache: Map<string, EditorState>` so switching between tabs restores the exact `EditorState` with 0ms delay and 100% undo history intact.
+- **Solution (Definitive Resolution):**
+  1. Wrap all dynamic settings in CodeMirror Compartments:
+     - `themeCompartmentRef`: handles `settings.theme` dynamically.
+     - `fontThemeCompartmentRef`: handles `settings.fontFamily` and `settings.fontSize` dynamically.
+     - `layoutCompartmentRef` & `wordWrapCompartmentRef`: handles margins and word wrap dynamically.
+     - `liveMarkdownCompartmentRef` & `guttersCompartmentRef`: handles editor mode dynamically.
+  2. Remove `settings.editorMode`, `settings.theme`, `settings.fontSize`, and `settings.fontFamily` from the editor recreation `useEffect` dependency array in `Editor.tsx`. The `EditorView` is NEVER destroyed on mode, theme, font, margin, or wrap changes!
+  3. Configure `history({ minDepth: 250, newGroupDelay: 300 })` for deep, granular undo/redo.
+  4. Eliminate the fragile `tabStateCache` Map across unmounted views (avoiding compartment object-identity mismatches under F-07-12). Focus on pure zero-teardown editor compartments.
 
 ### D. Large Document Optimizations
 - **Problem:** `liveMarkdown.ts` iterates through the entire document length (`while (pos <= docLen)`) on every transaction, causing typing lag on documents with 5,000+ lines.

@@ -14,8 +14,7 @@ import {
   Check,
   Search,
   PanelTop,
-  Menu,
-  X
+  Menu
 } from 'lucide-react';
 import { useTabStore } from '../store/tabStore';
 import { useSettingsStore } from '../store/settingsStore';
@@ -296,11 +295,16 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
       label: 'Help',
       icon: HelpCircle,
       items: [
-        { label: 'Command Palette', shortcut: 'Ctrl+K', action: events.onOpenCommandPalette },
         { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+/', action: events.onOpenShortcuts },
         { isDivider: true },
-        { label: 'About ContextPad (Welcome Guide)', action: () => {
+        { label: 'About CNTXT', action: () => {
           useTabStore.getState().openWelcomeTab();
+        }},
+        { label: 'Markdown Formatting Guide', action: () => {
+          useTabStore.getState().openMarkdownGuideTab();
+        }},
+        { label: 'CNTXT Power User Guide', action: () => {
+          useTabStore.getState().openPowerUserGuideTab();
         }}
       ]
     }
@@ -631,21 +635,6 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           onMouseDown={handleWindowDrag}
           onDoubleClick={handleTitleBarDoubleClick}
         />
-
-        {/* Right: Quick button on MenuBar to Hide Menu Bar */}
-        <div className="flex items-center shrink-0 pr-1">
-          <button
-            type="button"
-            data-no-drag
-            data-tauri-drag-region="false"
-            onClick={toggleMenuBar}
-            title="Hide Menu Bar (Alt+M)"
-            aria-label="Hide Menu Bar"
-            className="h-5 w-5 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
       </nav>
       )}
     </header>

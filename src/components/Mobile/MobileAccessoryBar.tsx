@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { 
   ChevronUp,
   ChevronDown,
@@ -61,15 +61,25 @@ export const MobileAccessoryBar: React.FC = () => {
   const touchStartXRef = useRef(0);
   const touchHasDraggedRef = useRef(false);
 
-  const activeButtons = buttons.filter(b => b.enabled);
+  const activeButtons = useMemo(() => buttons.filter(b => b.enabled), [buttons]);
+  const rafRef = useRef<number | null>(null);
 
   const checkOverflowAndScroll = useCallback(() => {
     if (scrollContainerRef.current) {
       const el = scrollContainerRef.current;
-      const overflowing = el.scrollWidth > el.clientWidth + 2;
-      setHasOverflow(overflowing);
-      setCanScrollLeft(el.scrollLeft > 2);
-      setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+      setHasOverflow(prev => {
+        const threshold = prev ? -2 : 4;
+        const overflowing = el.scrollWidth > el.clientWidth + threshold;
+        return prev !== overflowing ? overflowing : prev;
+      });
+      setCanScrollLeft(prev => {
+        const canScroll = el.scrollLeft > 2;
+        return prev !== canScroll ? canScroll : prev;
+      });
+      setCanScrollRight(prev => {
+        const canScroll = el.scrollLeft < el.scrollWidth - el.clientWidth - 2;
+        return prev !== canScroll ? canScroll : prev;
+      });
     }
   }, []);
 
@@ -77,18 +87,27 @@ export const MobileAccessoryBar: React.FC = () => {
     const isNarrow = windowWidth < 768;
     const isMobileDevice = isTouchDevice();
     setIsNarrowOrMobile(isNarrow || isMobileDevice || settings.touchOptimized);
-    checkOverflowAndScroll();
+
+    const scheduleCheck = () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        checkOverflowAndScroll();
+      });
+    };
+
+    scheduleCheck();
 
     const el = scrollContainerRef.current;
     let observer: ResizeObserver | null = null;
     if (el && typeof ResizeObserver !== 'undefined') {
       observer = new ResizeObserver(() => {
-        checkOverflowAndScroll();
+        scheduleCheck();
       });
       observer.observe(el);
     }
 
     return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       if (observer) observer.disconnect();
     };
   }, [windowWidth, settings.touchOptimized, checkOverflowAndScroll, activeButtons.length, isMultiRowExpanded, buttonSize]);
