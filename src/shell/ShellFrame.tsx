@@ -172,6 +172,15 @@ export const ShellFrame: React.FC = () => {
         const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
         setActiveTabId(tabs[prevIndex].id);
       }
+    } else if (e.altKey && !modifier && e.key.toLowerCase() === 'z') {
+      // Alt+Z: toggle Word Wrap. Skip when the CodeMirror editor holds focus — the
+      // editor's own keymap owns Alt+Z there (prevents double-fire).
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.('.cm-editor')) {
+        return;
+      }
+      e.preventDefault();
+      useSettingsStore.getState().toggleWordWrap();
     } else if (e.key === 'F12' || (modifier && e.shiftKey && e.key.toLowerCase() === 'i')) {
       e.preventDefault();
       bridge.window.toggleDevTools?.();

@@ -27,8 +27,6 @@ export const FontSelectorModal: React.FC<FontSelectorModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [customSampleText, setCustomSampleText] = useState('');
 
-  if (!isOpen) return null;
-
   const currentFontFamily = settings.fontFamily;
   const themeDefaultFontFamily = THEME_DEFAULT_FONTS[settings.theme] || "'JetBrains Mono', monospace";
 
@@ -47,6 +45,8 @@ export const FontSelectorModal: React.FC<FontSelectorModalProps> = ({
       );
     });
   }, [searchQuery]);
+
+  if (!isOpen) return null;
 
   const handleSelectFont = (font: CuratedFont) => {
     updateSettings({ fontFamily: font.fontFamily });

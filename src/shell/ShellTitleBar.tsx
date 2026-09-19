@@ -182,6 +182,49 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           shortcut: 'Ctrl+M', 
           action: toggleEditorMode 
         },
+        { 
+          label: settings.wordWrap ? 'Disable Word Wrap (Continuous Text)' : 'Enable Word Wrap', 
+          shortcut: 'Alt+Z', 
+          checked: settings.wordWrap,
+          action: () => useSettingsStore.getState().toggleWordWrap() 
+        },
+        { isDivider: true },
+        { 
+          label: 'Width: Narrow (680px)', 
+          checked: settings.editorMaxWidth === 'narrow',
+          action: () => updateSettings({ editorMaxWidth: 'narrow' }) 
+        },
+        { 
+          label: 'Width: Standard (880px)', 
+          checked: settings.editorMaxWidth === 'standard',
+          action: () => updateSettings({ editorMaxWidth: 'standard' }) 
+        },
+        { 
+          label: 'Width: Wide (1160px)', 
+          checked: settings.editorMaxWidth === 'wide',
+          action: () => updateSettings({ editorMaxWidth: 'wide' }) 
+        },
+        { 
+          label: 'Width: Full (100%)', 
+          checked: settings.editorMaxWidth === 'full',
+          action: () => updateSettings({ editorMaxWidth: 'full' }) 
+        },
+        { isDivider: true },
+        { 
+          label: 'Padding: Compact (16px)', 
+          checked: settings.editorPadding === 'compact',
+          action: () => updateSettings({ editorPadding: 'compact' }) 
+        },
+        { 
+          label: 'Padding: Normal (32px)', 
+          checked: settings.editorPadding === 'normal',
+          action: () => updateSettings({ editorPadding: 'normal' }) 
+        },
+        { 
+          label: 'Padding: Spacious (64px)', 
+          checked: settings.editorPadding === 'spacious',
+          action: () => updateSettings({ editorPadding: 'spacious' }) 
+        },
         { isDivider: true },
         { 
           label: 'Density: Desktop', 
@@ -229,13 +272,6 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           action: () => {
             updateSettings({ showSidebar: true });
             setActiveSidebarTab('tokens');
-          } 
-        },
-        { 
-          label: 'Formula Playground', 
-          action: () => {
-            updateSettings({ showSidebar: true });
-            setActiveSidebarTab('formulas');
           } 
         },
         { 
@@ -567,7 +603,12 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
                           title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
                           className="w-full px-3 py-1.5 text-xs text-left flex items-center justify-between text-[var(--text-primary)] hover:bg-[var(--accent-primary)] hover:text-white transition-colors cursor-pointer"
                         >
-                          <span className="truncate">{item.label}</span>
+                          <span className="truncate flex items-center gap-1.5">
+                            {item.checked && (
+                              <Check className="w-3 h-3 text-[var(--accent-primary)] group-hover:text-white shrink-0" />
+                            )}
+                            {item.label}
+                          </span>
                           {item.shortcut && (
                             <span className="text-[10px] font-mono opacity-60 ml-2 shrink-0">
                               {item.shortcut}

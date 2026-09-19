@@ -16,7 +16,7 @@ import { addDocumentListener } from '../../adapters';
 
 export const StatusBar: React.FC = () => {
   const { tabs, activeTabId } = useTabStore();
-  const { settings, setActiveSidebarTab, toggleSidebar, setModel } = useSettingsStore();
+  const { settings, setActiveSidebarTab, toggleSidebar, setModel, toggleWordWrap } = useSettingsStore();
 
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [estimate, setEstimate] = useState<TokenEstimate | null>(null);
@@ -141,6 +141,21 @@ export const StatusBar: React.FC = () => {
         <span className="hidden md:inline font-mono text-[var(--text-secondary)] truncate">
           {wordCount} words <span className="text-[var(--text-muted)] opacity-40">/</span> {charCount} chars <span className="text-[var(--text-muted)] opacity-40">/</span> {lineCount} lines
         </span>
+
+        <button
+          type="button"
+          onClick={toggleWordWrap}
+          aria-label={settings.wordWrap ? 'Word wrap is enabled. Click to switch to continuous text.' : 'Word wrap is disabled (continuous text). Click to enable word wrap.'}
+          aria-pressed={settings.wordWrap}
+          title={settings.wordWrap ? 'Word Wrap (Alt+Z) — click to switch to Continuous Text' : 'Continuous Text (Alt+Z) — click to enable Word Wrap'}
+          className={`flex items-center font-mono text-[10px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+            settings.wordWrap
+              ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] border-[var(--accent-primary)]/40 font-medium'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border-transparent'
+          }`}
+        >
+          {settings.wordWrap ? 'Wrap' : 'Cont'}
+        </button>
       </div>
 
       {/* Right side metrics (Live Token Estimator & In-Depth Sidebar Toggle) */}

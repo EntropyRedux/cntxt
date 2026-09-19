@@ -115,8 +115,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         { label: 'Show Templates Library', action: () => setActiveSidebarTab('templates') },
         { label: 'Show Action Scripts', action: () => setActiveSidebarTab('actions') },
         { label: 'Show Workflows & Blueprints', action: () => setActiveSidebarTab('workflows') },
-        { label: 'Show Token Analytics', action: () => setActiveSidebarTab('tokens') },
-        { label: 'Show Formula Playground', action: () => setActiveSidebarTab('formulas'), divider: true },
+        { label: 'Show Token Analytics', action: () => setActiveSidebarTab('tokens'), divider: true },
         { label: 'Zoom In (Font +)', action: () => updateSettings({ fontSize: Math.min(24, settings.fontSize + 1) }) },
         { label: 'Zoom Out (Font -)', action: () => updateSettings({ fontSize: Math.max(10, settings.fontSize - 1) }) },
         { label: 'Toggle Word Wrap', action: () => updateSettings({ wordWrap: !settings.wordWrap }) }
@@ -161,7 +160,6 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       items: [
         { label: 'Command Palette', shortcut: 'Ctrl+K', action: onOpenCommandPalette },
         { label: 'Keyboard Shortcuts Guide', shortcut: 'Ctrl+/', action: onOpenShortcuts, divider: true },
-        { label: 'Documentation & Formula Reference', action: () => setActiveSidebarTab('formulas') },
         { label: 'About ContextPad (Welcome Guide)', action: () => {
           useTabStore.getState().openWelcomeTab();
         }},

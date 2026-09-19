@@ -1807,7 +1807,7 @@ footer[data-shell-statusbar],
   height: 100% !important;
   max-height: 100% !important;
   overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow-x: auto !important;
   outline: none !important;
   border: none !important;
   box-shadow: none !important;
@@ -1848,17 +1848,28 @@ footer[data-shell-statusbar],
   display: none !important;
 }
 
-/* Document Canvas Margins: Rendered Mode (centered prose) vs Raw Mode (code editor) */
+/* Document Canvas Margins: dynamic styling parameterized by CSS custom variables */
 .cm-rendered-canvas .cm-content {
-  max-width: 880px !important;
-  margin: 0 auto !important;
-  padding: 24px 32px 120px 32px !important;
+  max-width: var(--editor-max-width, 880px);
+  margin: 0 auto;
+  padding: 24px var(--editor-padding-x, 32px) 120px var(--editor-padding-x, 32px);
+}
+
+.cm-rendered-canvas.cm-wrap-off .cm-content {
+  max-width: 100%;
+  margin: 0;
+  padding: 24px var(--editor-padding-x, 32px) 120px var(--editor-padding-x, 32px);
+  min-width: max-content;
 }
 
 .cm-raw-canvas .cm-content {
-  max-width: 100% !important;
-  margin: 0 !important;
-  padding: 8px 16px 120px 16px !important;
+  max-width: var(--editor-max-width, 100%);
+  margin: 0;
+  padding: 8px var(--editor-padding-x, 16px) 120px var(--editor-padding-x, 16px);
+}
+
+.cm-raw-canvas.cm-wrap-off .cm-content {
+  min-width: max-content;
 }
 
 /* Prevent FOUT flash — variable font fallback is always present after bundle */

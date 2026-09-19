@@ -52,6 +52,15 @@ if (!fs.existsSync(portableDir)) {
 }
 
 if (fs.existsSync(releaseExe)) {
+  // If an old test instance is currently running, gracefully stop it to release the file lock
+  try {
+    if (process.platform === 'win32') {
+      execSync('taskkill /F /IM CNTXT-portable.exe /T 2>nul || exit 0', { stdio: 'ignore' });
+    }
+  } catch {
+    // Ignore if not running
+  }
+
   fs.copyFileSync(releaseExe, portableExe);
   const stats = fs.statSync(portableExe);
   const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
@@ -61,3 +70,4 @@ if (fs.existsSync(releaseExe)) {
   console.error(`❌ Build finished, but ${releaseExe} was not found.`);
   process.exit(1);
 }
+

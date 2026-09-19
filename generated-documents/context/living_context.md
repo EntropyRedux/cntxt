@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.15
+Version: v1.16
 Last Updated: 2026-09-19
-Last Updated By: Production Implementation Agent (Production Build Parity, CSP Nonce Unblocking & DevTools Integration)
+Last Updated By: Production Implementation Agent (FG-06 Editor Margins & Word Wrap / Continuous Text)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -12,13 +12,13 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [ ] Feature Implementation (FG-01..FG-05 Complete)
+  [x] Feature Implementation (FG-01..FG-06 Complete)
   [x] Refactor (Production Build Parity, CSP Nonce Unblocking & DevTools Complete)
-  [x] Testing (Vitest 127/127 Live, Playwright 21/21 E2E Live)
+  [x] Testing (Vitest 151/151 Live, Playwright 21/21 E2E Live)
   [ ] Sync-Back
 
-Current Feature Group: PROD-PARITY: Production Tauri WebView2 Parity & CSP Hardening
-Active Plan: /generated-documents/plans/refactor_plan_prod_parity_and_raw_mode_v3_2026-09-19.md
+Current Feature Group: FG-06: Editor Margin Settings & Continuous Text / Word Wrap Toggle
+Active Plan: /generated-documents/plans/feature_group_fg06_editor_margins_wordwrap_2026-09-19.md
 Last Audit Reconciliation: 2026-09-18 — PASS (Post-Refactor PERF-1 Closeout Audit: raw_findings_post_refactor_perf1_closeout_2026-09-18.md, 0 valid defects, TR-DEV-1 approved)
 Last Git Checkpoint: 2026-09-19 — Dev Launch TTFB Optimization (commit bcb7704)
 
@@ -248,6 +248,18 @@ npm test          # Run Vitest unit & integration test suites
 npm run test:e2e  # Run Playwright end-to-end browser test suites
 ```
 *(Note: Also remember to use `npm test` instead of bare `test` when running test suites in PowerShell, as `test` is not a native PowerShell cmdlet).*
+Feature Group: FG-06: Editor Margin Settings & Continuous Text / Word Wrap Toggle
+Status: implemented / gates green (2026-09-19) — awaiting Prompt 16 feature audit
+Background Processes: none
+Unit Tests: 151 passing (16 files; +2 new in settingsStore.test.ts for toggleWordWrap + width/padding presets)
+Notes:
+- Added `editorMaxWidth` ('narrow'|'standard'|'wide'|'full') and `editorPadding` ('compact'|'normal'|'spacious') to `EditorSettings` in contracts/data_shapes.ts (Option B mirror synced, byte-identical).
+- `settingsStore` gained canonical `toggleWordWrap` action; DEFAULT_SETTINGS editorMaxWidth 'standard', editorPadding 'normal'.
+- Editor.tsx uses two new Compartments (layout + wordWrap) for zero-teardown dynamic switching of `.cm-content` max-width/margin/padding and `EditorView.lineWrapping`.
+- `src/index.css`: `.cm-scroller` overflow-x changed hidden→auto (enables Continuous Text horizontal scroll); removed `!important` hardcoded canvas margins so compartment theme wins.
+- Live menu chrome is `ShellTitleBar.tsx` (TitleBar.tsx/MenuBar.tsx are dead code, NOT modified); View menu now has checked Word Wrap item (Alt+Z) + Width/Padding presets. StatusBar has Wrap/Cont pill. Global Alt+Z in ShellFrame.tsx.
+- Per-feature audit (Prompt 16) NOT YET reconciled.
+
 ━━━ FULL CODEBASE AUDIT — 2026-09-18 ━━━
 
 Audit Report: /generated-documents/audits/raw_findings_full_codebase_2026-09-18.md

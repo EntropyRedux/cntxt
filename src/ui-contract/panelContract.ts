@@ -7,7 +7,6 @@ export type SidebarPanelId =
   | 'actions' 
   | 'workflows' 
   | 'tokens' 
-  | 'formulas' 
   | 'settings';
 
 export interface UiPanelDescriptor {

@@ -104,6 +104,8 @@ export interface EditorSettings {
   fontSize: number;
   fontFamily: string;
   wordWrap: boolean;
+  editorMaxWidth: 'narrow' | 'standard' | 'wide' | 'full';
+  editorPadding: 'compact' | 'normal' | 'spacious';
   theme: ThemeName;
   enableBracketMatching: boolean;
   enableFoldGutter: boolean;
@@ -136,7 +138,7 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   showSidebar: boolean;
   showRibbon?: boolean;
   showMenuBar?: boolean;
-  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'workflows' | 'tokens' | 'formulas' | 'settings';
+  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'workflows' | 'tokens' | 'settings';
   showLivePreview: boolean;
   editorMode: 'raw' | 'rendered';
   enableMarkdownRendering: boolean;

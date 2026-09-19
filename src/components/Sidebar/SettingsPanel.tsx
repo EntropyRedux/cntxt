@@ -27,7 +27,7 @@ import { CURATED_FONTS, getCuratedFontByFamily, THEME_DEFAULT_FONTS } from '../.
 
 export const SettingsPanel: React.FC = () => {
   const bridge = useRuntimeBridge();
-  const { settings, updateSettings, resetSettings, openFontSelector } = useSettingsStore();
+  const { settings, updateSettings, resetSettings } = useSettingsStore();
   const { addNotification } = useNotificationStore();
   const { 
     isMultiRowExpanded, 
@@ -418,15 +418,6 @@ export const SettingsPanel: React.FC = () => {
                 <span className="text-[var(--text-primary)] block font-medium">Editor Font Family</span>
                 <span className="text-[10px] text-[var(--text-muted)]">Scientifically curated typefaces</span>
               </div>
-              <button
-                type="button"
-                onClick={openFontSelector}
-                className="text-[10px] text-[var(--accent-primary)] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                title="Open Scientific Font Studio"
-              >
-                <Type className="w-3 h-3" />
-                <span>Font Studio</span>
-              </button>
             </div>
             <select
               value={settings.fontFamily}
@@ -486,6 +477,33 @@ export const SettingsPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center justify-between">
+            <span className="text-[var(--text-primary)]">Editor Max Width</span>
+            <select
+              value={settings.editorMaxWidth}
+              onChange={(e: any) => updateSettings({ editorMaxWidth: e.target.value })}
+              className="theme-input rounded px-2 py-0.5 text-xs text-[var(--text-primary)]"
+            >
+              <option value="narrow">Narrow (680px)</option>
+              <option value="standard">Standard (880px)</option>
+              <option value="wide">Wide (1160px)</option>
+              <option value="full">Full 100% Width</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-[var(--text-primary)]">Editor Padding</span>
+            <select
+              value={settings.editorPadding}
+              onChange={(e: any) => updateSettings({ editorPadding: e.target.value })}
+              className="theme-input rounded px-2 py-0.5 text-xs text-[var(--text-primary)]"
+            >
+              <option value="compact">Compact (16px)</option>
+              <option value="normal">Normal (32px)</option>
+              <option value="spacious">Spacious (64px)</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between">
             <span className="text-[var(--text-primary)]">Line Numbers</span>
             <input
               type="checkbox"
@@ -511,52 +529,6 @@ export const SettingsPanel: React.FC = () => {
               type="checkbox"
               checked={settings.enableAutoIndent}
               onChange={(e) => updateSettings({ enableAutoIndent: e.target.checked })}
-              className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Live Preview Settings */}
-      <div className="p-3 theme-card rounded-lg space-y-2.5 shadow-xs">
-        <div className="font-bold text-[var(--text-primary)] text-[11px] uppercase tracking-wider">
-          Live Preview Settings
-        </div>
-
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[var(--text-primary)]">Preview Max Width</span>
-            <select
-              value={settings.previewMaxWidth}
-              onChange={(e: any) => updateSettings({ previewMaxWidth: e.target.value })}
-              className="theme-input rounded px-2 py-0.5 text-xs text-[var(--text-primary)]"
-            >
-              <option value="narrow">Narrow (600px)</option>
-              <option value="standard">Standard (800px)</option>
-              <option value="wide">Wide (1100px)</option>
-              <option value="full">Full 100% Width</option>
-            </select>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-[var(--text-primary)]">Font Scale ({settings.previewFontScale}%)</span>
-            <input
-              type="range"
-              min={80}
-              max={150}
-              step={5}
-              value={settings.previewFontScale}
-              onChange={(e) => updateSettings({ previewFontScale: Number(e.target.value) })}
-              className="w-24 accent-[var(--accent-primary)]"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-[var(--text-primary)]">Show Table of Contents</span>
-            <input
-              type="checkbox"
-              checked={settings.previewShowTOC}
-              onChange={(e) => updateSettings({ previewShowTOC: e.target.checked })}
               className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
             />
           </div>

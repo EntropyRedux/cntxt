@@ -25,6 +25,7 @@ interface SettingsState {
   togglePreview: () => void;
   toggleEditorMode: () => void;
   setEditorMode: (mode: 'raw' | 'rendered') => void;
+  toggleWordWrap: () => void;
   toggleStatusBar: () => void;
   toggleTouchMode: () => void;
   toggleMobileAccessoryBar: () => void;
@@ -57,6 +58,8 @@ const DEFAULT_SETTINGS: ViewSettings = {
   fontSize: 14,
   fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code Variable', 'Fira Code', Menlo, Monaco, 'Courier New', monospace",
   wordWrap: true,
+  editorMaxWidth: 'standard',
+  editorPadding: 'normal',
   theme: 'contextpad-dark',
   enableBracketMatching: true,
   enableFoldGutter: true,
@@ -218,6 +221,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setEditorMode: (mode: 'raw' | 'rendered') => {
     get().updateSettings({ editorMode: mode });
+  },
+
+  toggleWordWrap: () => {
+    const wordWrap = !get().settings.wordWrap;
+    get().updateSettings({ wordWrap });
   },
 
   toggleStatusBar: () => {

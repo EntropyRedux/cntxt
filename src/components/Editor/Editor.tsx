@@ -23,7 +23,7 @@ import { createMarkdownHighlighting } from '../../themes/markdownHighlighting';
 import { useActionStore } from '../../store/actionStore';
 import { lineCounterSelectionExtension } from '../../extensions/lineNumberSelection';
 import { imageDropPasteExtension } from '../../extensions/imageDropPasteExtension';
-import { SupportedLanguage } from '../../types';
+import { SupportedLanguage, ViewSettings } from '../../types';
 import { editorRegistry } from '../../services/editor/editorRegistry';
 import { searchHighlighterExtension } from './searchHighlighter';
 import { useRuntimeBridge } from '../../adapters';
@@ -51,6 +51,8 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
   const inlineFormulasCompartmentRef = useRef<Compartment>(new Compartment());
   const guttersCompartmentRef = useRef<Compartment>(new Compartment());
   const bracketMatchingCompartmentRef = useRef<Compartment>(new Compartment());
+  const layoutCompartmentRef = useRef<Compartment>(new Compartment());
+  const wordWrapCompartmentRef = useRef<Compartment>(new Compartment());
   const isFirstRenderRef = useRef(true);
 
   const { updateTabContent, updateTabMetadata } = useTabStore();
@@ -99,23 +101,52 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
   // Build mode-dependent cm-content layout (margins, max-width, padding).
   // These MUST live inside EditorView.theme() because CodeMirror's scoped
   // class names have higher specificity than external CSS selectors.
-  const getContentLayoutTheme = (isRendered: boolean, isMdOrText: boolean) => {
-    if (isRendered && isMdOrText) {
-      // Rendered mode: centered prose container with generous writing margins
+  const editorWidthPx: Record<NonNullable<ViewSettings['editorMaxWidth']>, string> = {
+    narrow: '680px',
+    standard: '880px',
+    wide: '1160px',
+    full: '100%',
+  };
+  const editorPaddingPx: Record<NonNullable<ViewSettings['editorPadding']>, string> = {
+    compact: '16px',
+    normal: '32px',
+    spacious: '64px',
+  };
+
+  const getContentLayoutTheme = (
+    isRendered: boolean,
+    isMdOrText: boolean,
+    wordWrap: boolean,
+    editorMaxWidth: ViewSettings['editorMaxWidth'],
+    editorPadding: ViewSettings['editorPadding']
+  ) => {
+    const hPadding = editorPaddingPx[editorPadding ?? 'normal'];
+    if (!isRendered || !isMdOrText) {
+      // Raw mode / code / continuous text: full-width editor
       return {
         '.cm-content': {
-          maxWidth: '880px',
-          margin: '0 auto',
-          padding: '24px 32px 120px 32px',
+          maxWidth: '100%',
+          margin: '0',
+          padding: `8px ${hPadding} 120px ${hPadding}`,
         }
       };
     }
-    // Raw mode / code: full-width editor
+    if (!wordWrap) {
+      // Continuous text in rendered mode: promote to full-width column 0 for horizontal scrolling
+      return {
+        '.cm-content': {
+          maxWidth: '100%',
+          margin: '0',
+          padding: `24px ${hPadding} 120px ${hPadding}`,
+        }
+      };
+    }
+    // Rendered mode with wrap: centered prose container with generous writing margins
     return {
       '.cm-content': {
-        maxWidth: '100%',
-        margin: '0',
-        padding: '8px 16px 120px 16px',
+        maxWidth: editorWidthPx[editorMaxWidth ?? 'standard'],
+        margin: '0 auto',
+        padding: `24px ${hPadding} 120px ${hPadding}`,
       }
     };
   };
@@ -125,7 +156,13 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
 
     const isRenderedMode = (settings.editorMode || 'rendered') === 'rendered';
     const isMarkdownOrText = language === 'markdown' || language === 'text';
-    const contentLayout = getContentLayoutTheme(isRenderedMode, isMarkdownOrText);
+    const contentLayout = getContentLayoutTheme(
+      isRenderedMode,
+      isMarkdownOrText,
+      settings.wordWrap,
+      settings.editorMaxWidth,
+      settings.editorPadding
+    );
 
     // Build extension stack
     const extensions: Extension[] = [
@@ -150,7 +187,12 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       }),
       searchHighlighterExtension(),
       highlightSelectionMatches(),
-      EditorView.lineWrapping,
+      wordWrapCompartmentRef.current.of(
+        settings.wordWrap ? EditorView.lineWrapping : []
+      ),
+
+      // Dynamic document canvas layout (max-width, margins, padding)
+      layoutCompartmentRef.current.of(EditorView.theme(contentLayout)),
 
       // Keymaps
       keymap.of([
@@ -172,6 +214,13 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
           key: 'Alt-/',
           run: (view) => {
             startCompletion(view);
+            return true;
+          }
+        },
+        {
+          key: 'Alt-z',
+          run: () => {
+            useSettingsStore.getState().toggleWordWrap();
             return true;
           }
         },
@@ -237,7 +286,6 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
           flexGrow: '1',
           outline: 'none !important',
           border: 'none !important',
-          ...contentLayout['.cm-content'],
         },
         '.cm-line': {
           fontFamily: `${settings.fontFamily} !important`,
@@ -358,6 +406,18 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     const bracketMatchingEffect = bracketMatchingCompartmentRef.current.reconfigure(
       settings.enableBracketMatching ? bracketMatching() : []
     );
+    const layoutEffect = layoutCompartmentRef.current.reconfigure(
+      EditorView.theme(getContentLayoutTheme(
+        isRenderedMode,
+        isMarkdownOrText,
+        settings.wordWrap,
+        settings.editorMaxWidth,
+        settings.editorPadding
+      ))
+    );
+    const wordWrapEffect = wordWrapCompartmentRef.current.reconfigure(
+      settings.wordWrap ? EditorView.lineWrapping : []
+    );
 
     const applyEffects = () => {
       const v = viewRef.current;
@@ -371,6 +431,8 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
           markdownEffect,
           guttersEffect,
           bracketMatchingEffect,
+          layoutEffect,
+          wordWrapEffect,
           refreshLiveMarkdownEffect.of()
         ]
       });
@@ -394,7 +456,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     } else {
       applyEffects();
     }
-  }, [settings.editorMode, language, settings.showLineNumbers, settings.enableFoldGutter, settings.theme, settings.enableBracketMatching]);
+  }, [settings.editorMode, language, settings.showLineNumbers, settings.enableFoldGutter, settings.theme, settings.enableBracketMatching, settings.wordWrap, settings.editorMaxWidth, settings.editorPadding]);
 
   // Listen for open-search events from menu, command palette, or global shortcuts
   useEffect(() => {
@@ -423,13 +485,22 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
   const isRenderedMode = (settings.editorMode || 'rendered') === 'rendered';
   const isMarkdownOrText = language === 'markdown' || language === 'text';
 
+  const activeMaxWidth = !settings.wordWrap || !isRenderedMode || !isMarkdownOrText
+    ? '100%'
+    : editorWidthPx[settings.editorMaxWidth ?? 'standard'];
+  const activePadding = editorPaddingPx[settings.editorPadding ?? 'normal'];
+
   return (
     <div className="w-full h-full relative overflow-hidden bg-[var(--editor-bg)] flex flex-col min-h-0">
       {/* Main CodeMirror Canvas */}
       <div 
         ref={containerRef} 
-        className={`w-full h-full flex-1 overflow-hidden min-h-0 ${isRenderedMode && isMarkdownOrText ? 'cm-rendered-canvas' : 'cm-raw-canvas'}`} 
-        style={{ fontFamily: settings.fontFamily }}
+        className={`w-full h-full flex-1 overflow-hidden min-h-0 ${isRenderedMode && isMarkdownOrText ? 'cm-rendered-canvas' : 'cm-raw-canvas'} ${!settings.wordWrap ? 'cm-wrap-off' : ''}`} 
+        style={{ 
+          fontFamily: settings.fontFamily,
+          '--editor-max-width': activeMaxWidth,
+          '--editor-padding-x': activePadding,
+        } as React.CSSProperties}
       />
       {showSearch && viewRef.current && (
         <FloatingSearch
