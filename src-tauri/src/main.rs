@@ -28,7 +28,7 @@ async fn get_app_info(window: tauri::Window, state: tauri::State<'_, Mutex<AppSt
     let state = state.lock().await;
     Ok(json!({
         "name": "CNTXT",
-        "version": "0.2.0",
+        "version": "0.2.1",
         "session_id": state.session_id,
         "platform": std::env::consts::OS,
     }))
@@ -186,6 +186,11 @@ fn main() {
                 .collect();
 
             app.manage(Mutex::new(file_paths));
+
+            if let Some(window) = app.get_webview_window("main") {
+                window.open_devtools();
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -196,6 +201,8 @@ fn main() {
             commands::window::is_maximized,
             commands::window::start_dragging,
             commands::window::toggle_maximize,
+            commands::window::open_devtools,
+            commands::window::toggle_devtools,
             commands::file::read_file,
             commands::file::write_file,
             commands::file::open_file_dialog,

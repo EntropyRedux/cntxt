@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.14
+Version: v1.15
 Last Updated: 2026-09-19
-Last Updated By: Production Implementation Agent (Dev Launch Optimization & Form Accessibility Hardening)
+Last Updated By: Production Implementation Agent (Production Build Parity, CSP Nonce Unblocking & DevTools Integration)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -13,14 +13,14 @@ Active Stage:
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
   [ ] Feature Implementation (FG-01..FG-05 Complete)
-  [x] Refactor (Dev Launch Optimization & Form Accessibility Hardening Complete)
-  [x] Testing (Vitest 126/126 Live, Playwright 21/21 E2E Live)
+  [x] Refactor (Production Build Parity, CSP Nonce Unblocking & DevTools Complete)
+  [x] Testing (Vitest 127/127 Live, Playwright 21/21 E2E Live)
   [ ] Sync-Back
 
-Current Feature Group: REMED-01: Full Codebase Audit Remediation & Performance Hardening
-Active Plan: /generated-documents/plans/refactor_plan_dev_launch_optimization_2026-09-19.md
+Current Feature Group: PROD-PARITY: Production Tauri WebView2 Parity & CSP Hardening
+Active Plan: /generated-documents/plans/refactor_plan_prod_parity_and_raw_mode_v3_2026-09-19.md
 Last Audit Reconciliation: 2026-09-18 — PASS (Post-Refactor PERF-1 Closeout Audit: raw_findings_post_refactor_perf1_closeout_2026-09-18.md, 0 valid defects, TR-DEV-1 approved)
-Last Git Checkpoint: 2026-09-18 — E2E Test Suite Stability & Action Widget Boundary (commit facd2e4)
+Last Git Checkpoint: 2026-09-19 — Dev Launch TTFB Optimization (commit bcb7704)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
@@ -384,7 +384,19 @@ The 12.7s TTFB is Vite processing and transforming the module graph on demand �
   2. Measured real-world TTFB drop: initial dev boot TTFB reduced from **19,156 ms to 851.6 ms** (95.5% reduction), with warm navigation responding in **27.8 ms**.
   3. Updated all `<input>` and `<textarea>` elements across `TemplateManager.tsx`, `ActionManager.tsx`, `OutlinePanel.tsx`, `WorkflowManager.tsx`, `FloatingSearch.tsx`, `TabBar.tsx`, `CommandPalette.tsx`, `FontSelectorModal.tsx`, `CategorySelector.tsx`, and `IconPicker.tsx` with explicit semantic `id` and `name` attributes.
 
-### 3. Active Priority 2 Functional Defects Queued
+### 4. Production WebView2 Parity & CSP Nonce Bypass Resolved (2026-09-19)
+- **Root Causes**:
+  1. Tauri release compiler auto-injected nonces into `style-src` when scanning inline `<style>` tags in `index.html`. Per W3C CSP specifications, WebView2 ignored `'unsafe-inline'` in the presence of a nonce, blocking all runtime stylesheets injected by CodeMirror (`style-mod`), language highlighters (`codeLanguages`), and themes.
+  2. CodeMirror retained stale block widget heights upon switching to Raw mode, causing large blank offsets and displaced text.
+  3. Layout CSS specificity conflicts between scoped `EditorView.theme` classes and external selectors.
+- **Resolution**:
+  1. Configured `dangerousDisableAssetCspModification: true` in `src-tauri/tauri.conf.json` and migrated inline `<style>` to `src/index.css`.
+  2. Integrated `requestMeasure()` and synchronized editor lifecycle on mode changes.
+  3. Moved layout definitions directly into `EditorView.theme()` via `getContentLayoutTheme()`.
+  4. Embedded native DevTools with `F12` and `Ctrl+Shift+I` hotkeys and startup auto-open.
+  5. Built and verified standalone `dist-portable/CNTXT-portable.exe`. Vitest passing 127/127 tests.
+
+### 5. Active Priority 2 Functional Defects Queued
 - **F-08**: RESOLVED (2026-09-18). CodeMirror action token cursor-boundary condition rectified in `liveMarkdown.ts` (`r.head > start && r.head < end`); Playwright test timeout increased to 60s in `playwright.config.ts`. All 21/21 E2E tests passing green.
 - **F-11**: Tab autosave debounce unflushed on exit (`beforeunload`), and `closeTab()` resurrecting tab content from pending timer.
 - **F-05**: FileExplorer active state name collision across directories (`activeFileName === item.name`).

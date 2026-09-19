@@ -13,10 +13,7 @@ let katexLoadingPromise: Promise<any> | null = null;
 export async function getKatex(): Promise<any> {
   if (katexInstance) return katexInstance;
   if (!katexLoadingPromise) {
-    katexLoadingPromise = Promise.all([
-      import('katex'),
-      import('katex/dist/katex.min.css')
-    ]).then(([mod]) => {
+    katexLoadingPromise = import('katex').then((mod) => {
       katexInstance = mod.default || mod;
       return katexInstance;
     });
@@ -49,7 +46,7 @@ export function renderLatex(latex: string, displayMode: boolean = false): MathRe
     const html = katexInstance.renderToString(trimmed, {
       displayMode,
       throwOnError: false,
-      output: 'htmlAndMathml',
+      output: 'html',
       strict: false,
       trust: false
     });

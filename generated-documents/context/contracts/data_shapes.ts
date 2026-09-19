@@ -160,6 +160,7 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   autocompleteConfig: AutocompleteConfig;
   spellCheckConfig: SpellCheckConfig;
   codeLintConfig: CodeLintConfig;
+  isFontCustomizedByUser?: boolean;
 }
 
 export type AppSettings = ViewSettings;

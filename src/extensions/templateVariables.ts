@@ -338,11 +338,14 @@ export function templateVariablesExtension(isRendered = false): Extension {
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet;
+      lastRendered: boolean;
       constructor(view: EditorView) {
+        this.lastRendered = isRendered;
         this.decorations = buildVariableDecorations(view, isRendered);
       }
       update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged) {
+        if (update.docChanged || update.viewportChanged || this.lastRendered !== isRendered) {
+          this.lastRendered = isRendered;
           this.decorations = buildVariableDecorations(update.view, isRendered);
         }
       }

@@ -5,6 +5,7 @@ import { THEME_DEFAULT_FONTS } from '../constants/fonts';
 import { IStorageBridge, IPlatformBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
+import { clearMermaidCache } from '../services/mermaidRenderer';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -54,7 +55,7 @@ const DEFAULT_SETTINGS: ViewSettings = {
   previewCustomCSS: '',
   previewSplitOrientation: 'horizontal',
   fontSize: 14,
-  fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, 'Courier New', monospace",
+  fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code Variable', 'Fira Code', Menlo, Monaco, 'Courier New', monospace",
   wordWrap: true,
   theme: 'contextpad-dark',
   enableBracketMatching: true,
@@ -132,6 +133,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }
     }
 
+    // On cold start, if the user hasn't explicitly customized their font, ensure the font matches the theme's curated default
+    if (!initialSettings.isFontCustomizedByUser && initialSettings.theme) {
+      const themeDefault = THEME_DEFAULT_FONTS[initialSettings.theme];
+      if (themeDefault) {
+        initialSettings.fontFamily = themeDefault;
+      }
+    }
+
     set({ settings: initialSettings });
   },
 
@@ -139,9 +148,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const current = get().settings;
     let fontFamilyToApply = updates.fontFamily;
     
-    // When changing themes, switch to that theme's default fitting font if font isn't explicitly provided
-    if (updates.theme && updates.theme !== current.theme && !updates.fontFamily) {
-      fontFamilyToApply = THEME_DEFAULT_FONTS[updates.theme] || current.fontFamily;
+    // When changing themes, switch to that theme's default fitting font if user hasn't explicitly customized font
+    if (updates.theme && updates.theme !== current.theme) {
+      if (!current.isFontCustomizedByUser && !updates.fontFamily) {
+        fontFamilyToApply = THEME_DEFAULT_FONTS[updates.theme] || current.fontFamily;
+      }
+      clearMermaidCache();
+    }
+
+    if (updates.fontFamily && updates.fontFamily !== current.fontFamily) {
+      updates.isFontCustomizedByUser = true;
     }
 
     if (updates.enableLiveDomSync !== undefined && updates.enableLiveMarkdownSync === undefined) {

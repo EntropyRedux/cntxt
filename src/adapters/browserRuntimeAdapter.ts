@@ -390,6 +390,8 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     isMaximized: async (): Promise<boolean> => false,
     startDragging: async (): Promise<void> => {},
     close: async (): Promise<void> => {},
+    openDevTools: async (): Promise<void> => {},
+    toggleDevTools: async (): Promise<void> => {},
     getPlatform: (): 'web' | 'macos' | 'windows' | 'linux' => {
       const p = navigator.platform.toLowerCase();
       if (p.includes('mac')) return 'macos';

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1] — 2026-09-19
+
+### Production Build Parity, CSP Hardening & DevTools Integration
+- **CSP Nonce Bypass (`dangerousDisableAssetCspModification`)**: Enabled `dangerousDisableAssetCspModification: true` in `src-tauri/tauri.conf.json` to stop Tauri CLI from injecting compile-time nonces into `style-src`. In WebView2, presence of a nonce caused `'unsafe-inline'` to be ignored, blocking all runtime `<style>` tags created by CodeMirror (`style-mod`), dynamic language packs (`codeLanguages`), KaTeX math, and themes.
+- **Raw Mode Parity & Height Map Recalculation**: Resolved the virtual viewport calculation defect where CodeMirror retained stale block widget heights after switching from Rendered to Raw mode. Added `requestMeasure()` and synchronized editor lifecycle on mode changes.
+- **Layout & Prose Margins Consistency**: Unified editor max-width (~880px) and padding into `EditorView.theme()` via `getContentLayoutTheme()`, eliminating CSS specificity conflicts with external `.cm-rendered-canvas` selectors.
+- **Native DevTools Access**: Added `features = ["devtools"]` in `src-tauri/Cargo.toml`, `"devtools": true` in `tauri.conf.json`, and implemented `open_devtools` / `toggle_devtools` IPC commands with global `F12` and `Ctrl+Shift+I` shortcuts.
+- **HTML & Asset Integrity**: Extracted inline style resets from `index.html` into `src/index.css` and cleaned up `<meta>` CSP directives.
+- **Portable Build Packaging**: Added `scripts/build-portable.mjs` for standalone release verification. Vitest suite passes at 127/127 tests.
+
 ## [0.2.0] — 2026-09-15
 
 ### Playwright E2E Test Suite (FG-05)

@@ -55,6 +55,8 @@ export interface IWindowBridge {
   isMaximized?: () => Promise<boolean>;
   startDragging?: () => Promise<void>;
   close?: () => Promise<void>;
+  openDevTools?: () => Promise<void>;
+  toggleDevTools?: () => Promise<void>;
   isNative: boolean;
   getPlatform: () => 'web' | 'macos' | 'windows' | 'linux';
 }

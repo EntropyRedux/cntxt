@@ -3,6 +3,7 @@ node_modules/
 .cache/
 build/
 dist/
+dist-portable/
 coverage/
 *.tsbuildinfo
 *.log

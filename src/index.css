@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "./styles/fonts.css";
 
+html, body {
+  background-color: var(--app-bg, #141417);
+  color: var(--text-primary, #D4D4D8);
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 /* =========================================================================
    Universal Theme Variables Engine (Dark & Material 3 Light Support)
    ========================================================================= */
@@ -1405,19 +1414,22 @@
 }
 
 .cm-live-mermaid-canvas {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: block;
+  text-align: center;
   padding: 16px;
   background-color: var(--mermaid-canvas-bg, var(--editor-bg));
   min-height: 100px;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .cm-live-mermaid-canvas svg,
 .live-preview-mermaid svg {
-  max-width: 100%;
+  max-width: none !important;
+  min-width: max-content;
   height: auto;
+  display: inline-block;
+  margin: 0 auto;
 }
 
 .cm-live-mermaid-canvas svg .edgeLabel,
@@ -1766,13 +1778,87 @@ header[data-shell-titlebar],
   overflow: visible;
 }
 
-/* StatusBar chrome */
+/* StatusBar chrome — overflow visible allows model switcher popover to render upwards */
 footer[data-shell-statusbar],
 .shell-statusbar {
-  contain: layout style;
   min-height: 24px;
   height: 24px;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  z-index: 30;
+}
+
+/* CodeMirror canvas outline, height, and scrollbar styling */
+.cm-editor {
+  height: 100% !important;
+  max-height: 100% !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.cm-editor.cm-focused {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.cm-editor .cm-scroller {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--editor-bg);
+}
+
+.cm-editor .cm-scroller::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.cm-editor .cm-scroller::-webkit-scrollbar-track {
+  background: var(--editor-bg);
+}
+
+.cm-editor .cm-scroller::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 7px;
+  border: 3px solid var(--editor-bg);
+}
+
+.cm-editor .cm-scroller::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+.cm-editor .cm-content,
+.cm-editor.cm-focused .cm-content,
+.cm-editor [contenteditable="true"],
+.cm-editor.cm-focused [contenteditable="true"] {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Inline markdown delimiters in Rendered Mode (preserves inline text flow without vertical line splitting) */
+.cm-live-hidden-delimiter {
+  display: none !important;
+}
+
+/* Document Canvas Margins: Rendered Mode (centered prose) vs Raw Mode (code editor) */
+.cm-rendered-canvas .cm-content {
+  max-width: 880px !important;
+  margin: 0 auto !important;
+  padding: 24px 32px 120px 32px !important;
+}
+
+.cm-raw-canvas .cm-content {
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 8px 16px 120px 16px !important;
 }
 
 /* Prevent FOUT flash — variable font fallback is always present after bundle */

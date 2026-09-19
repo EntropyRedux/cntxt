@@ -56,4 +56,21 @@ describe('TabStore', () => {
     tab = useTabStore.getState().tabs.find(t => t.id === tabId);
     expect(tab?.isPinned).toBe(false);
   });
+
+  it('resets welcome tab to canonical state', async () => {
+    // Open welcome tab and modify content
+    useTabStore.getState().openWelcomeTab();
+    useTabStore.getState().updateTabContent('welcome-doc', 'corrupted user typing');
+
+    let tab = useTabStore.getState().tabs.find(t => t.id === 'welcome-doc');
+    expect(tab?.content).toBe('corrupted user typing');
+
+    // Reset
+    await useTabStore.getState().resetWelcomeTab();
+
+    tab = useTabStore.getState().tabs.find(t => t.id === 'welcome-doc');
+    expect(tab?.content).not.toBe('corrupted user typing');
+    expect(tab?.content).toContain('# 🚀 Welcome to ContextPad');
+    expect(tab?.isPinned).toBe(true);
+  });
 });

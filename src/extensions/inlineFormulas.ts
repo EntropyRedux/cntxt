@@ -252,11 +252,14 @@ export function inlineFormulasExtension(isRendered = false): Extension {
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet;
+      lastRendered: boolean;
       constructor(view: EditorView) {
+        this.lastRendered = isRendered;
         this.decorations = buildFormulaDecorations(view, isRendered);
       }
       update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged) {
+        if (update.docChanged || update.viewportChanged || this.lastRendered !== isRendered) {
+          this.lastRendered = isRendered;
           this.decorations = buildFormulaDecorations(update.view, isRendered);
         }
       }

@@ -263,12 +263,8 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
         { label: 'Command Palette', shortcut: 'Ctrl+K', action: events.onOpenCommandPalette },
         { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+/', action: events.onOpenShortcuts },
         { isDivider: true },
-        { label: 'About ContextPad', action: () => {
-          useNotificationStore.getState().addNotification(
-            'ContextPad Desktop Shell',
-            'Portable, decoupled prompt engineering and markdown editor UI.',
-            'info'
-          );
+        { label: 'About ContextPad (Welcome Guide)', action: () => {
+          useTabStore.getState().openWelcomeTab();
         }}
       ]
     }

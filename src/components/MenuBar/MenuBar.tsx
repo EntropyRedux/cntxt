@@ -162,8 +162,12 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         { label: 'Command Palette', shortcut: 'Ctrl+K', action: onOpenCommandPalette },
         { label: 'Keyboard Shortcuts Guide', shortcut: 'Ctrl+/', action: onOpenShortcuts, divider: true },
         { label: 'Documentation & Formula Reference', action: () => setActiveSidebarTab('formulas') },
-        { label: 'About ContextPad v1.10.0', action: () => {
-          addNotification('ContextPad v1.10.0', 'Desktop-first workspace for structured writing & prompt engineering', 'info');
+        { label: 'About ContextPad (Welcome Guide)', action: () => {
+          useTabStore.getState().openWelcomeTab();
+        }},
+        { label: 'Restore Pristine Welcome Guide', action: async () => {
+          await useTabStore.getState().resetWelcomeTab();
+          addNotification('Welcome Guide Restored', 'Restored to clean showcase version', 'success');
         }}
       ]
     }

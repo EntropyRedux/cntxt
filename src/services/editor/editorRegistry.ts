@@ -31,6 +31,24 @@ class EditorRegistry {
     return this.views.get(tabId);
   }
 
+  setContent(tabId: string, newContent: string): boolean {
+    const view = this.views.get(tabId);
+    if (view) {
+      const currentDoc = view.state.doc.toString();
+      if (currentDoc !== newContent) {
+        const currentSel = view.state.selection.main;
+        const clampedAnchor = Math.min(currentSel.anchor, newContent.length);
+        const clampedHead = Math.min(currentSel.head, newContent.length);
+        view.dispatch({
+          changes: { from: 0, to: currentDoc.length, insert: newContent },
+          selection: { anchor: clampedAnchor, head: clampedHead }
+        });
+      }
+      return true;
+    }
+    return false;
+  }
+
   getSelectedText(tabId: string): string {
     const view = this.views.get(tabId);
     if (view) {

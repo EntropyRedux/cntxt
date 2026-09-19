@@ -52,11 +52,19 @@ export const material3LightTheme = EditorView.theme({
   '&': {
     color: '#1F1F1F',
     backgroundColor: '#F8F9FA',
-    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+    fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code Variable', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+    outline: 'none !important',
+    border: 'none !important',
+  },
+  '&.cm-focused': {
+    outline: 'none !important',
+    border: 'none !important',
   },
   '.cm-content': {
     caretColor: '#0B57D0',
-    padding: '12px 0',
+    padding: '0',
+    outline: 'none !important',
+    border: 'none !important',
   },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#0B57D0', borderLeftWidth: '2px' },
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
@@ -164,11 +172,19 @@ export const contextpadDarkTheme = EditorView.theme({
   '&': {
     color: '#D4D4D4',
     backgroundColor: '#1E1E1E',
-    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+    fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code Variable', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+    outline: 'none !important',
+    border: 'none !important',
+  },
+  '&.cm-focused': {
+    outline: 'none !important',
+    border: 'none !important',
   },
   '.cm-content': {
     caretColor: '#007ACC',
-    padding: '12px 0',
+    padding: '0',
+    outline: 'none !important',
+    border: 'none !important',
   },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#007ACC', borderLeftWidth: '2px' },
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
@@ -220,7 +236,7 @@ export const draculaTheme = EditorView.theme({
   '&': {
     color: '#F8F8F2',
     backgroundColor: '#282A36',
-    fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace",
+    fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code Variable', 'Fira Code', Menlo, Consolas, monospace",
   },
   '.cm-content': { caretColor: '#F8F8F2', padding: '12px 0' },
   '.cm-cursor': { borderLeftColor: '#F8F8F2', borderLeftWidth: '2px' },
@@ -294,8 +310,9 @@ export const nordHighlightStyle = HighlightStyle.define([
 ]);
 
 export const nordTheme = EditorView.theme({
-  '&': { color: '#D8DEE9', backgroundColor: '#2E3440', fontFamily: "'JetBrains Mono', monospace" },
-  '.cm-content': { caretColor: '#88C0D0', padding: '12px 0' },
+  '&': { color: '#D8DEE9', backgroundColor: '#2E3440', fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', monospace", outline: 'none !important', border: 'none !important' },
+  '&.cm-focused': { outline: 'none !important', border: 'none !important' },
+  '.cm-content': { caretColor: '#88C0D0', padding: '0', outline: 'none !important', border: 'none !important' },
   '.cm-cursor': { borderLeftColor: '#88C0D0', borderLeftWidth: '2px' },
   '.cm-gutters': { backgroundColor: '#2E3440', color: '#4C566A', borderRight: '1px solid #3B4252' },
   '.cm-activeLine': { backgroundColor: 'rgba(59, 66, 82, 0.5)' },
@@ -332,8 +349,9 @@ export const monokaiHighlightStyle = HighlightStyle.define([
 ]);
 
 export const monokaiTheme = EditorView.theme({
-  '&': { color: '#FCFCFA', backgroundColor: '#2D2A2E', fontFamily: "'JetBrains Mono', monospace" },
-  '.cm-content': { caretColor: '#FFD866', padding: '12px 0' },
+  '&': { color: '#FCFCFA', backgroundColor: '#2D2A2E', fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', monospace", outline: 'none !important', border: 'none !important' },
+  '&.cm-focused': { outline: 'none !important', border: 'none !important' },
+  '.cm-content': { caretColor: '#FFD866', padding: '0', outline: 'none !important', border: 'none !important' },
   '.cm-cursor': { borderLeftColor: '#FFD866', borderLeftWidth: '2px' },
   '.cm-gutters': { backgroundColor: '#2D2A2E', color: '#727072', borderRight: '1px solid #403E41' },
   '.cm-activeLine': { backgroundColor: 'rgba(64, 62, 65, 0.5)' },
@@ -369,8 +387,9 @@ export const githubDarkHighlightStyle = HighlightStyle.define([
 ]);
 
 export const githubDarkTheme = EditorView.theme({
-  '&': { color: '#E6EDF3', backgroundColor: '#0D1117', fontFamily: "'JetBrains Mono', monospace" },
-  '.cm-content': { caretColor: '#58A6FF', padding: '12px 0' },
+  '&': { color: '#E6EDF3', backgroundColor: '#0D1117', fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', monospace", outline: 'none !important', border: 'none !important' },
+  '&.cm-focused': { outline: 'none !important', border: 'none !important' },
+  '.cm-content': { caretColor: '#58A6FF', padding: '0', outline: 'none !important', border: 'none !important' },
   '.cm-cursor': { borderLeftColor: '#58A6FF', borderLeftWidth: '2px' },
   '.cm-gutters': { backgroundColor: '#0D1117', color: '#6E7681', borderRight: '1px solid #30363D' },
   '.cm-activeLine': { backgroundColor: 'rgba(110, 118, 129, 0.1)' },
@@ -405,8 +424,9 @@ export const solarizedDarkHighlightStyle = HighlightStyle.define([
 ]);
 
 export const solarizedDarkTheme = EditorView.theme({
-  '&': { color: '#839496', backgroundColor: '#002B36', fontFamily: "'JetBrains Mono', monospace" },
-  '.cm-content': { caretColor: '#268BD2', padding: '12px 0' },
+  '&': { color: '#839496', backgroundColor: '#002B36', fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', monospace", outline: 'none !important', border: 'none !important' },
+  '&.cm-focused': { outline: 'none !important', border: 'none !important' },
+  '.cm-content': { caretColor: '#268BD2', padding: '0', outline: 'none !important', border: 'none !important' },
   '.cm-cursor': { borderLeftColor: '#268BD2', borderLeftWidth: '2px' },
   '.cm-gutters': { backgroundColor: '#002B36', color: '#586E75', borderRight: '1px solid #073642' },
   '.cm-activeLine': { backgroundColor: 'rgba(7, 54, 66, 0.6)' },
@@ -461,10 +481,18 @@ export const parchmentTheme = EditorView.theme({
     color: '#1C1917',
     backgroundColor: '#FAF6EE',
     fontFamily: "'Literata', Georgia, serif",
+    outline: 'none !important',
+    border: 'none !important',
+  },
+  '&.cm-focused': {
+    outline: 'none !important',
+    border: 'none !important',
   },
   '.cm-content': {
     caretColor: '#9C522B',
-    padding: '12px 0',
+    padding: '0',
+    outline: 'none !important',
+    border: 'none !important',
   },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#9C522B', borderLeftWidth: '2px' },
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {

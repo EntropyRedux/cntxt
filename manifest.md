@@ -1,8 +1,8 @@
 # ContextPad Component Manifest
 
 - **Project:** CNTXT (ContextPad) — Modular Frontend UI Development Platform
-- **Version:** 0.2.0
-- **Generated:** 2026-09-13
+- **Version:** 0.2.1
+- **Generated:** 2026-09-19
 - **Specification:** Solo Dev AI-Assisted Workflow Stage 2/3 Handoff Manifest
 
 ---
@@ -19,7 +19,7 @@ All background processes (live token estimation, autosave loop, live markdown sy
 
 ### E2E Verification (FG-05)
 - Playwright 1.63.0 suite (`npm run test:e2e`): 21 Chromium tests green across 5 spec files (`e2e/editor`, `e2e/empty-state`, `e2e/preview`, `e2e/ribbon`, `e2e/slash-menu`), driven by `e2e/fixtures.ts` demo-mode bootstrap (`window.__CONTEXTPAD_DEMO__`).
-- Unit suite: 121 Vitest tests across 14 suites (`npm test`). Playwright artifacts gitignored.
+- Unit suite: 127 Vitest tests across 14 suites (`npm test`). Playwright artifacts gitignored.
 
 ---
 

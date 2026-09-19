@@ -25,7 +25,7 @@ interface TabState {
   closeOtherTabs: (keepTabId: string) => void;
   closeAllTabs: () => void;
   setActiveTabId: (tabId: string) => void;
-  updateTabContent: (tabId: string, content: string) => void;
+  updateTabContent: (tabId: string, content: string, isExternal?: boolean) => void;
   updateTabMetadata: (tabId: string, updates: Partial<Tab>) => void;
   insertTextAtCursor: (tabId: string, textToInsert: string, replaceSelection?: boolean) => void;
   reorderTabs: (sourceIndex: number, destinationIndex: number) => void;
@@ -33,6 +33,8 @@ interface TabState {
   saveTabAs: (tabId: string, newTitle: string, newPath?: string) => Promise<void>;
   duplicateTab: (tabId: string) => string;
   togglePinTab: (tabId: string) => void;
+  openWelcomeTab: () => string;
+  resetWelcomeTab: () => Promise<void>;
   initializeTabs: (storage?: IStorageBridge) => Promise<void>;
 }
 
@@ -76,11 +78,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
     if (!activeStorage) {
       if (!cached) {
-        if (IS_PROTOTYPE_DEMO_MODE) {
-          set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
-        } else {
-          set({ tabs: [], activeTabId: '', isHydrating: false });
-        }
+        set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
       }
       return;
     }
@@ -101,7 +99,12 @@ export const useTabStore = create<TabState>((set, get) => ({
           // Load content from storage bridge for each tab (parallel)
           const fullTabs: Tab[] = await Promise.all(
             metaList.map(async (meta) => {
-              const content = await activeStorage!.getItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${meta.id}`);
+              let content = await activeStorage!.getItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${meta.id}`);
+              // Auto-heal welcome document if contaminated with old scratch/test typing
+              if (meta.id === 'welcome-doc' && content && content.includes('The quick brown fox jumps over the lazy dog')) {
+                content = WELCOME_DOCUMENT;
+                await activeStorage!.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${meta.id}`, WELCOME_DOCUMENT);
+              }
               return {
                 ...meta,
                 content: content !== null ? content : meta.content || ''
@@ -120,8 +123,8 @@ export const useTabStore = create<TabState>((set, get) => ({
         }
       }
 
-      if (IS_PROTOTYPE_DEMO_MODE) {
-        // First run in Demo Mode: Create Welcome Document
+      if (!cached) {
+        // First run on clean workspace: Seed Welcome.md document with full CNTXT feature showcase
         await activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${initialTabId}`, WELCOME_DOCUMENT);
         await activeStorage.setItem(STORAGE_KEYS.TABS_META, JSON.stringify([defaultWelcomeTab]));
         await activeStorage.setItem(STORAGE_KEYS.ACTIVE_TAB_ID, initialTabId);
@@ -129,18 +132,10 @@ export const useTabStore = create<TabState>((set, get) => ({
         set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
         writeTabCache([defaultWelcomeTab], initialTabId);
       } else {
-        if (!cached) {
-          set({ tabs: [], activeTabId: '', isHydrating: false });
-          // No cached data and IPC returned nothing authoritative — clear any stray
-          // cache entry so a stale Layer-1 hydration can't survive a cleared workspace.
-          clearTabCache();
-        } else {
-          // Cache exists (Layer 1 hydrated it into state for this session), but IPC
-          // returned no authoritative meta. Keep the cached tabs as the user's
-          // last-session state — do NOT clearTabCache() here, because doing so would
-          // silently discard what we just displayed (F-P1-03 fix).
-          set({ isHydrating: false });
-        }
+        // Cache exists (Layer 1 hydrated it into state for this session), but IPC
+        // returned no authoritative meta. Keep the cached tabs as the user's
+        // last-session state.
+        set({ isHydrating: false });
       }
     } catch (e) {
       console.error('Error initializing tabs:', e);
@@ -265,7 +260,68 @@ export const useTabStore = create<TabState>((set, get) => ({
     }
   },
 
-  updateTabContent: (tabId: string, content: string) => {
+  openWelcomeTab: () => {
+    const { tabs } = get();
+    const existing = tabs.find(t => t.id === 'welcome-doc' || t.title === 'Welcome.md');
+    if (existing) {
+      get().setActiveTabId(existing.id);
+      return existing.id;
+    }
+
+    const welcomeId = 'welcome-doc';
+    const welcomeTab: Tab = {
+      id: welcomeId,
+      title: 'Welcome.md',
+      content: WELCOME_DOCUMENT,
+      filePath: null,
+      folderPath: null,
+      isDirty: false,
+      language: 'markdown',
+      lastModifiedTime: Date.now(),
+      isPinned: true
+    };
+
+    const newTabs = [welcomeTab, ...tabs];
+    set({ tabs: newTabs, activeTabId: welcomeId });
+    writeTabCache(newTabs, welcomeId);
+    if (activeStorage) {
+      safePersist(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${welcomeId}`, WELCOME_DOCUMENT, 'welcome document content');
+      saveTabsMeta(newTabs, welcomeId);
+    }
+    return welcomeId;
+  },
+
+  resetWelcomeTab: async () => {
+    const welcomeId = 'welcome-doc';
+    const welcomeTab: Tab = {
+      id: welcomeId,
+      title: 'Welcome.md',
+      content: WELCOME_DOCUMENT,
+      filePath: null,
+      folderPath: null,
+      isDirty: false,
+      language: 'markdown',
+      lastModifiedTime: Date.now(),
+      isPinned: true
+    };
+    const { tabs } = get();
+    const existingIndex = tabs.findIndex(t => t.id === welcomeId);
+    let newTabs: Tab[];
+    if (existingIndex >= 0) {
+      newTabs = tabs.map(t => t.id === welcomeId ? welcomeTab : t);
+    } else {
+      newTabs = [welcomeTab, ...tabs];
+    }
+    set({ tabs: newTabs, activeTabId: welcomeId });
+    writeTabCache(newTabs, welcomeId);
+    editorRegistry.setContent(welcomeId, WELCOME_DOCUMENT);
+    if (activeStorage) {
+      await activeStorage.setItem(`${STORAGE_KEYS.TAB_CONTENT_PREFIX}${welcomeId}`, WELCOME_DOCUMENT);
+      saveTabsMeta(newTabs, welcomeId);
+    }
+  },
+
+  updateTabContent: (tabId: string, content: string, isExternal = true) => {
     const { tabs } = get();
     const updated = tabs.map(tab => {
       if (tab.id === tabId) {
@@ -280,6 +336,10 @@ export const useTabStore = create<TabState>((set, get) => ({
     });
 
     set({ tabs: updated });
+
+    if (isExternal) {
+      editorRegistry.setContent(tabId, content);
+    }
 
     // Debounced persist to bridge storage
     debouncedContentSave(tabId, content);

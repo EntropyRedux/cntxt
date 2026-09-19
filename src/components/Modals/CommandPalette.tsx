@@ -239,6 +239,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
           openFontSelector();
         }
       },
+      {
+        id: 'cmd-reset-welcome-guide',
+        title: 'Restore Welcome & Feature Showcase Guide',
+        subtitle: 'Reset the canonical Welcome.md document to pristine showcase state',
+        category: 'Commands',
+        icon: 'Sparkles',
+        action: async () => {
+          await useTabStore.getState().resetWelcomeTab();
+          useNotificationStore.getState().addNotification('Welcome guide restored to pristine state', 'success');
+        }
+      },
 
       // Tabs
       ...tabs.map(t => ({

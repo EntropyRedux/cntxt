@@ -15,3 +15,18 @@
 @import '@fontsource/source-code-pro/700.css';
 @import '@fontsource/atkinson-hyperlegible/400.css';
 @import '@fontsource/atkinson-hyperlegible/700.css';
+
+/* Font family aliases for system resilience */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: local('JetBrains Mono Variable');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  src: local('Fira Code Variable');
+  font-weight: 300 700;
+  font-style: normal;
+}

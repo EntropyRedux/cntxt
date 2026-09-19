@@ -172,8 +172,11 @@ export const ShellFrame: React.FC = () => {
         const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
         setActiveTabId(tabs[prevIndex].id);
       }
+    } else if (e.key === 'F12' || (modifier && e.shiftKey && e.key.toLowerCase() === 'i')) {
+      e.preventDefault();
+      bridge.window.toggleDevTools?.();
     }
-  }, [tabs, activeTabId, setActiveTabId, closeTab, toggleActivityBar, toggleEditorMode, createTab, events, openVariableModal]);
+  }, [tabs, activeTabId, setActiveTabId, closeTab, toggleActivityBar, toggleEditorMode, createTab, events, openVariableModal, bridge]);
 
   useEffect(() => {
     const unsub = addWindowListener('keydown', handleKeyDown);

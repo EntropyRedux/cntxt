@@ -283,6 +283,12 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     close: async (): Promise<void> => {
       await this.invokeTauri('close_window');
     },
+    openDevTools: async (): Promise<void> => {
+      await this.invokeTauri('open_devtools');
+    },
+    toggleDevTools: async (): Promise<void> => {
+      await this.invokeTauri('toggle_devtools');
+    },
     getPlatform: (): 'web' | 'macos' | 'windows' | 'linux' => {
       const p = navigator.platform.toLowerCase();
       if (p.includes('mac')) return 'macos';

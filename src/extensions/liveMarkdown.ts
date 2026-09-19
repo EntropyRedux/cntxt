@@ -1385,7 +1385,7 @@ function buildDecorations(state: EditorState): DecorationSet {
           rangeDecos.push({
             from: line.from,
             to: line.from + markerLen,
-            deco: Decoration.replace({})
+            deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
           });
         }
       }
@@ -1407,7 +1407,7 @@ function buildDecorations(state: EditorState): DecorationSet {
           rangeDecos.push({
             from: line.from,
             to: Math.min(line.from + prefixLen, line.to),
-            deco: Decoration.replace({})
+            deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
           });
         }
       }
@@ -1562,7 +1562,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             rangeDecos.push({
               from: start,
               to: start + 1,
-              deco: Decoration.replace({})
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
             });
             rangeDecos.push({
               from: start + 1,
@@ -1572,7 +1572,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             rangeDecos.push({
               from: end - 1,
               to: end,
-              deco: Decoration.replace({})
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
             });
           }
         }
@@ -1592,7 +1592,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             rangeDecos.push({
               from: start,
               to: start + 2,
-              deco: Decoration.replace({})
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
             });
             rangeDecos.push({
               from: start + 2,
@@ -1602,7 +1602,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             rangeDecos.push({
               from: end - 2,
               to: end,
-              deco: Decoration.replace({})
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
             });
           }
         }
@@ -1622,7 +1622,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             rangeDecos.push({
               from: start,
               to: start + 1,
-              deco: Decoration.replace({})
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
             });
             rangeDecos.push({
               from: start + 1,
@@ -1632,7 +1632,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             rangeDecos.push({
               from: end - 1,
               to: end,
-              deco: Decoration.replace({})
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
             });
           }
         }
@@ -1652,7 +1652,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             rangeDecos.push({
               from: start,
               to: start + 2,
-              deco: Decoration.replace({})
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
             });
             rangeDecos.push({
               from: start + 2,
@@ -1662,7 +1662,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             rangeDecos.push({
               from: end - 2,
               to: end,
-              deco: Decoration.replace({})
+              deco: Decoration.mark({ class: 'cm-live-hidden-delimiter' })
             });
           }
         }

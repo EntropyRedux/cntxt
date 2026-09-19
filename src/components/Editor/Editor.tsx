@@ -19,6 +19,7 @@ import { slashCommandExtension } from '../../extensions/slashCommands';
 import { templateVariablesExtension, variableTabKeymap } from '../../extensions/templateVariables';
 import { inlineFormulasExtension } from '../../extensions/inlineFormulas';
 import { liveMarkdownExtension, refreshLiveMarkdownEffect } from '../../extensions/liveMarkdown';
+import { createMarkdownHighlighting } from '../../themes/markdownHighlighting';
 import { useActionStore } from '../../store/actionStore';
 import { lineCounterSelectionExtension } from '../../extensions/lineNumberSelection';
 import { imageDropPasteExtension } from '../../extensions/imageDropPasteExtension';
@@ -45,11 +46,11 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
   const [showSearch, setShowSearch] = useState(false);
   const [searchMode, setSearchMode] = useState<'find' | 'replace'>('find');
   const liveMarkdownCompartmentRef = useRef<Compartment>(new Compartment());
+  const markdownHighlightingCompartmentRef = useRef<Compartment>(new Compartment());
   const templateVariablesCompartmentRef = useRef<Compartment>(new Compartment());
   const inlineFormulasCompartmentRef = useRef<Compartment>(new Compartment());
   const guttersCompartmentRef = useRef<Compartment>(new Compartment());
   const bracketMatchingCompartmentRef = useRef<Compartment>(new Compartment());
-  const updatingFromStoreRef = useRef(false);
   const isFirstRenderRef = useRef(true);
 
   const { updateTabContent, updateTabMetadata } = useTabStore();
@@ -95,11 +96,36 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     return extensions;
   };
 
+  // Build mode-dependent cm-content layout (margins, max-width, padding).
+  // These MUST live inside EditorView.theme() because CodeMirror's scoped
+  // class names have higher specificity than external CSS selectors.
+  const getContentLayoutTheme = (isRendered: boolean, isMdOrText: boolean) => {
+    if (isRendered && isMdOrText) {
+      // Rendered mode: centered prose container with generous writing margins
+      return {
+        '.cm-content': {
+          maxWidth: '880px',
+          margin: '0 auto',
+          padding: '24px 32px 120px 32px',
+        }
+      };
+    }
+    // Raw mode / code: full-width editor
+    return {
+      '.cm-content': {
+        maxWidth: '100%',
+        margin: '0',
+        padding: '8px 16px 120px 16px',
+      }
+    };
+  };
+
   useEffect(() => {
     if (!containerRef.current) return;
 
     const isRenderedMode = (settings.editorMode || 'rendered') === 'rendered';
     const isMarkdownOrText = language === 'markdown' || language === 'text';
+    const contentLayout = getContentLayoutTheme(isRenderedMode, isMarkdownOrText);
 
     // Build extension stack
     const extensions: Extension[] = [
@@ -172,38 +198,70 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
         inlineFormulasExtension(isRenderedMode && isMarkdownOrText)
       ),
       imageDropPasteExtension(),
+      markdownHighlightingCompartmentRef.current.of(
+        !isRenderedMode && isMarkdownOrText ? createMarkdownHighlighting(true) : []
+      ),
       liveMarkdownCompartmentRef.current.of(
-        liveMarkdownExtension(isRenderedMode && isMarkdownOrText, bridge, settings.theme || 'contextpad-dark')
+        isRenderedMode && isMarkdownOrText
+          ? liveMarkdownExtension(true, bridge, settings.theme || 'contextpad-dark')
+          : []
       ),
 
-      // Custom font size and line height styling
+      // Custom font size, line height and gutter alignment styling
       EditorView.theme({
         '&': {
           fontSize: `${settings.fontSize}px`,
           fontFamily: `${settings.fontFamily} !important`,
-          height: '100%'
+          height: '100%',
+          maxHeight: '100%',
+          outline: 'none !important',
+          border: 'none !important',
+        },
+        '&.cm-focused': {
+          outline: 'none !important',
+          border: 'none !important',
         },
         '.cm-scroller': {
           fontFamily: `${settings.fontFamily} !important`,
           lineHeight: '1.6',
-          padding: '10px 14px'
+          height: '100%',
+          maxHeight: '100%',
+          outline: 'none !important',
+          border: 'none !important',
+          padding: '0 !important',
         },
         '.cm-content': {
           fontFamily: `${settings.fontFamily} !important`,
+          lineHeight: '1.6',
           minWidth: '0',
-          maxWidth: '100%',
-          flexGrow: '1'
+          flexGrow: '1',
+          outline: 'none !important',
+          border: 'none !important',
+          ...contentLayout['.cm-content'],
         },
         '.cm-line': {
-          fontFamily: `${settings.fontFamily} !important`
+          fontFamily: `${settings.fontFamily} !important`,
+          lineHeight: '1.6',
+        },
+        '.cm-gutters': {
+          fontFamily: `${settings.fontFamily} !important`,
+          lineHeight: '1.6',
+          padding: '0 !important',
+          border: 'none !important',
+          borderRight: '1px solid var(--border-subtle, rgba(0,0,0,0.1)) !important',
+        },
+        '.cm-lineNumbers .cm-gutterElement': {
+          lineHeight: '1.6 !important',
+          fontSize: 'inherit !important',
+          padding: '0 8px !important',
         }
       }),
 
       // Update listener
       EditorView.updateListener.of((update) => {
-        if (update.docChanged && !updatingFromStoreRef.current) {
+        if (update.docChanged) {
           const newDoc = update.state.doc.toString();
-          updateTabContent(tabId, newDoc);
+          updateTabContent(tabId, newDoc, false);
         }
 
         if (update.selectionSet || update.docChanged) {
@@ -262,7 +320,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       viewRef.current = null;
       isFirstRenderRef.current = true;
     };
-  }, [tabId, language, settings.theme, settings.fontSize, settings.fontFamily]);
+  }, [tabId, language, settings.theme, settings.fontSize, settings.fontFamily, settings.editorMode]);
 
   // Dynamically reconfigure live markdown mode and gutters without recreating editor
   useEffect(() => {
@@ -281,8 +339,13 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     const formulasEffect = inlineFormulasCompartmentRef.current.reconfigure(
       inlineFormulasExtension(isRenderedMode && isMarkdownOrText)
     );
+    const markdownHighlightingEffect = markdownHighlightingCompartmentRef.current.reconfigure(
+      !isRenderedMode && isMarkdownOrText ? createMarkdownHighlighting(true) : []
+    );
     const markdownEffect = liveMarkdownCompartmentRef.current.reconfigure(
-      liveMarkdownExtension(isRenderedMode && isMarkdownOrText, bridge, settings.theme || 'contextpad-dark')
+      isRenderedMode && isMarkdownOrText
+        ? liveMarkdownExtension(true, bridge, settings.theme || 'contextpad-dark')
+        : []
     );
     const guttersEffect = guttersCompartmentRef.current.reconfigure(
       getGuttersExtension(
@@ -297,9 +360,33 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     );
 
     const applyEffects = () => {
-      if (viewRef.current) {
-        viewRef.current.dispatch({ effects: [templateVarEffect, formulasEffect, markdownEffect, guttersEffect, bracketMatchingEffect] });
-      }
+      const v = viewRef.current;
+      if (!v) return;
+
+      v.dispatch({
+        effects: [
+          templateVarEffect,
+          formulasEffect,
+          markdownHighlightingEffect,
+          markdownEffect,
+          guttersEffect,
+          bracketMatchingEffect,
+          refreshLiveMarkdownEffect.of()
+        ]
+      });
+
+      // CRITICAL: Force CodeMirror to recalculate its internal height map.
+      // When switching between Rendered mode (which has block widgets that expand
+      // virtual document height) and Raw mode (zero widgets), the stale cached
+      // line heights from the widget era create phantom blank space.
+      // requestMeasure() forces a fresh viewport measurement cycle.
+      v.requestMeasure();
+
+      // Scroll cursor into view after mode switch to prevent user disorientation
+      const cursorPos = v.state.selection.main.head;
+      v.dispatch({
+        effects: EditorView.scrollIntoView(cursorPos, { y: 'center' })
+      });
     };
 
     if ((view as EditorViewInternal).updating) {
@@ -308,35 +395,6 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       applyEffects();
     }
   }, [settings.editorMode, language, settings.showLineNumbers, settings.enableFoldGutter, settings.theme, settings.enableBracketMatching]);
-
-  // Keep editor content synchronized with external updates without losing cursor
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-
-    const syncContent = () => {
-      const activeView = viewRef.current;
-      if (!activeView) return;
-      const currentDoc = activeView.state.doc.toString();
-      if (content !== currentDoc) {
-        updatingFromStoreRef.current = true;
-        activeView.dispatch({
-          changes: {
-            from: 0,
-            to: currentDoc.length,
-            insert: content
-          }
-        });
-        updatingFromStoreRef.current = false;
-      }
-    };
-
-    if ((view as EditorViewInternal).updating) {
-      queueMicrotask(syncContent);
-    } else {
-      syncContent();
-    }
-  }, [content]);
 
   // Listen for open-search events from menu, command palette, or global shortcuts
   useEffect(() => {
@@ -362,12 +420,15 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     return unsub;
   }, []);
 
+  const isRenderedMode = (settings.editorMode || 'rendered') === 'rendered';
+  const isMarkdownOrText = language === 'markdown' || language === 'text';
+
   return (
-    <div className="w-full h-full relative overflow-hidden bg-[var(--editor-bg)] flex flex-col">
+    <div className="w-full h-full relative overflow-hidden bg-[var(--editor-bg)] flex flex-col min-h-0">
       {/* Main CodeMirror Canvas */}
       <div 
         ref={containerRef} 
-        className="w-full h-full flex-1 overflow-hidden" 
+        className={`w-full h-full flex-1 overflow-hidden min-h-0 ${isRenderedMode && isMarkdownOrText ? 'cm-rendered-canvas' : 'cm-raw-canvas'}`} 
         style={{ fontFamily: settings.fontFamily }}
       />
       {showSearch && viewRef.current && (

@@ -5,6 +5,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
   return {
+    base: './',
     plugins: [tailwindcss(), react()],
     resolve: {
       alias: {
@@ -13,6 +14,7 @@ export default defineConfig(() => {
       dedupe: ['katex'],
     },
     optimizeDeps: {
+      entries: ['index.html'],
       include: [
         'react',
         'react-dom',
@@ -47,7 +49,9 @@ export default defineConfig(() => {
     server: {
       port: 5173,
       strictPort: true,
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      watch: process.env.DISABLE_HMR === 'true' ? null : {
+        ignored: ['**/src-tauri/target/**', '**/playwright-report/**', '**/test-results/**', '**/contextpad_replica_ai-studio/**'],
+      },
       warmup: {
         clientFiles: [
           './src/main.tsx',
@@ -63,15 +67,6 @@ export default defineConfig(() => {
     build: {
       target: ['chrome120', 'firefox120', 'safari17'],
       modulePreload: { polyfill: false },
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules/katex')) {
-              return 'katex';
-            }
-          },
-        },
-      },
     },
   };
 });

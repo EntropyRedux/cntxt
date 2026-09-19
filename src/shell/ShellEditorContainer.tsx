@@ -69,10 +69,10 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
       <TabBar />
 
       {/* Editor Surface or Empty State */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative min-h-0">
         {activeTab ? (
-          <div className="w-full h-full overflow-hidden flex">
-            <div className={`h-full overflow-hidden ${settings.showLivePreview ? 'w-1/2 border-r border-[var(--border-subtle)]' : 'w-full'}`}>
+          <div className="w-full h-full overflow-hidden flex min-h-0">
+            <div className={`h-full overflow-hidden min-h-0 ${settings.showLivePreview ? 'w-1/2 border-r border-[var(--border-subtle)]' : 'w-full'}`}>
               <ErrorBoundary fallbackTitle="Editor Canvas Error">
                 <Suspense fallback={<EditorSkeleton />}>
                   <Editor

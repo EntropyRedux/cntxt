@@ -24,7 +24,7 @@ export const CURATED_FONTS: CuratedFont[] = [
   {
     id: 'jetbrains-mono',
     name: 'JetBrains Mono',
-    fontFamily: "'JetBrains Mono', monospace",
+    fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code', 'Consolas', 'Cascadia Code', monospace",
     category: 'monospace',
     categoryLabel: 'Developer Ergonomics',
     badge: 'Standard Default',
@@ -46,7 +46,7 @@ export const CURATED_FONTS: CuratedFont[] = [
   {
     id: 'fira-code',
     name: 'Fira Code',
-    fontFamily: "'Fira Code', monospace",
+    fontFamily: "'Fira Code Variable', 'Fira Code', 'Consolas', 'Cascadia Code', monospace",
     category: 'monospace',
     categoryLabel: 'Cognitive Chunking',
     badge: 'Ligature Synthesis',
@@ -172,7 +172,7 @@ export const CURATED_FONTS: CuratedFont[] = [
   {
     id: 'plus-jakarta-sans',
     name: 'Plus Jakarta Sans',
-    fontFamily: "'Plus Jakarta Sans', sans-serif",
+    fontFamily: "'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', 'Inter', 'Roboto', 'Segoe UI', Arial, sans-serif",
     category: 'proportional',
     categoryLabel: 'Modern Humanist',
     badge: 'Ergonomic Warmth',
@@ -193,7 +193,7 @@ export const CURATED_FONTS: CuratedFont[] = [
   {
     id: 'literata',
     name: 'Literata',
-    fontFamily: "'Literata', Georgia, serif",
+    fontFamily: "'Literata Variable', 'Literata', Georgia, 'Times New Roman', serif",
     category: 'serif',
     categoryLabel: 'Continuous Immersion',
     badge: 'Book & Editorial',
@@ -268,19 +268,19 @@ export function getCuratedFontByFamily(family: string): CuratedFont {
  * Can be freely overridden by the user with any font.
  */
 export const THEME_DEFAULT_FONTS: Record<ThemeName, string> = {
-  'google-material-3': "'Plus Jakarta Sans', sans-serif",
-  'parchment': "'Literata', Georgia, serif",
-  'contextpad-dark': "'JetBrains Mono', monospace",
-  'one-dark': "'Fira Code', monospace",
-  'dracula': "'Fira Code', monospace",
-  'nord': "'Source Code Pro', monospace",
-  'monokai': "'Inconsolata', monospace",
-  'github-dark': "'JetBrains Mono', monospace",
-  'github-light': "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-  'solarized-dark': "'IBM Plex Mono', monospace"
+  'google-material-3': "'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', 'Inter', 'Roboto', 'Segoe UI', Arial, sans-serif",
+  'parchment': "'Literata Variable', 'Literata', Georgia, 'Times New Roman', Times, serif",
+  'contextpad-dark': "'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code Variable', 'Fira Code', 'Consolas', 'Cascadia Code', monospace",
+  'one-dark': "'Fira Code Variable', 'Fira Code', 'Consolas', 'Cascadia Code', monospace",
+  'dracula': "'Fira Code Variable', 'Fira Code', 'Consolas', 'Cascadia Code', monospace",
+  'nord': "'Source Code Pro', 'Cascadia Code', 'Consolas', monospace",
+  'monokai': "'Inconsolata Variable', 'Inconsolata', 'Consolas', monospace",
+  'github-dark': "'JetBrains Mono Variable', 'JetBrains Mono', 'Consolas', monospace",
+  'github-light': "'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif",
+  'solarized-dark': "'IBM Plex Mono', 'Consolas', monospace"
 };
 
 export function getThemeDefaultFont(theme: ThemeName): string {
-  return THEME_DEFAULT_FONTS[theme] || "'JetBrains Mono', monospace";
+  return THEME_DEFAULT_FONTS[theme] || "'JetBrains Mono Variable', 'JetBrains Mono', 'Consolas', monospace";
 }
 
