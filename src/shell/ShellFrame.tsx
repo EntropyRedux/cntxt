@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ClassicShell } from './ClassicShell';
+import { WindowResizeHandles } from './WindowResizeHandles';
 import { ShellModalLayer } from './ShellModalLayer';
 import { ShellNotificationLayer } from './ShellNotificationLayer';
 import { createUiEventDispatcher } from '../adapters/eventDispatcher';
@@ -240,6 +241,9 @@ export const ShellFrame: React.FC = () => {
     >
       {/* Primary Workspace Shell */}
       <ClassicShell events={events} />
+
+      {/* Client-Side Window Resize Handles (for frameless windows) */}
+      <WindowResizeHandles />
 
       {/* Global Modals Layer */}
       <ShellModalLayer 

@@ -389,6 +389,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     toggleMaximize: async (): Promise<void> => {},
     isMaximized: async (): Promise<boolean> => false,
     startDragging: async (): Promise<void> => {},
+    startResizeDragging: async (): Promise<void> => {},
     close: async (): Promise<void> => {},
     openDevTools: async (): Promise<void> => {},
     toggleDevTools: async (): Promise<void> => {},

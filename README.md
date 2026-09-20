@@ -4,13 +4,20 @@
 
 **Status:** Production Ready (v0.3.0) — FG-07 Editor Resiliency, multi-tab state preservation, extended markdown syntax, and power user tools complete. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (Windows v0.3.0)
+## Downloads (v0.3.0)
 
+### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
 | **Standard Setup** | `.exe` (NSIS) | x64 | [Download CNTXT_0.3.0_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT_0.3.0_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
 | **Enterprise Installer** | `.msi` (WiX) | x64 | [Download CNTXT_0.3.0_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT_0.3.0_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
 | **Standalone Portable** | `.exe` (Portable) | x64 | [Download CNTXT-portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT-portable.exe) | Standalone (Zero-install executable) |
+
+### Linux
+| Package | Format | Architecture | Download Link | Verification |
+|:---|:---:|:---:|:---:|:---:|
+| **Debian Package** | `.deb` | amd64 | [Download CNTXT_0.3.0_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT_0.3.0_amd64.deb) | SHA256: `d9921c3873cafbc3a5a611d274d2c2f6c1e70535154b462efb1c401c59ca6016` |
+| **Standalone Portable** | Binary | x64 | [Download cntxt-portable](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/cntxt-portable) | SHA256: `6cef65f7909299e8f54b183783fff18443268889a6e480f3c26bde8c90ddf1ff` |
 
 ## What It Is
 
@@ -48,7 +55,11 @@ CNTXT/
 ### Prerequisites
 - Node.js 18+
 - npm 9+
-- Rust toolchain (for the desktop app)
+- Rust toolchain (for desktop builds)
+- Linux libraries (Debian/Ubuntu/Mint):
+  ```bash
+  sudo apt install -y libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libdbus-1-dev libx11-dev
+  ```
 
 ### Frontend (web)
 ```bash
@@ -83,7 +94,8 @@ are found.
 - **Production Release (v0.3.0)**:
   - **Signed Installer Packages**: Official Windows NSIS installer (`dist-installer/CNTXT_0.3.0_x64-setup.exe`) and WiX MSI (`dist-installer/CNTXT_0.3.0_x64_en-US.msi`), signed with SHA256 Authenticode and DigiCert RFC 3161 timestamps via `npm run package:sign`. Standalone portable executable in `dist-portable/CNTXT-portable.exe`.
   - **Automated Test Coverage**: 223 unit tests passing across 24 suites via Vitest (`npm test`); 21 Playwright E2E tests green in headless Chromium (`npm run test:e2e`).
-  - **Platform Purity**: `npm run lint` scans 118 files with zero platform leaks outside `src/adapters/` and 100% contract parity.
+  - **Linux Packages & Parity**: Official Debian installer package (`CNTXT_0.3.0_amd64.deb`) and standalone Linux portable binary (`cntxt-portable`). Frameless GTK3/WebKitGTK client-side resize handles with responsive cursors, and Tiered Keyring with transparent encrypted fallback for headless/non-D-Bus environments.
+  - **Platform Purity**: `npm run lint` scans 119 files with zero platform leaks outside `src/adapters/` and 100% contract parity.
   - **Window Resize Remediation**: Synchronous dark WebView2 background (`#141417`), dark theme, and percentage sizing eliminating resize drag lag and white canvas artifacts.
   - **Per-Tab Undo/Redo & State Preservation**: Persistent single `EditorView` with isolated undo/redo history stacks and scroll offset caching across unlimited tab switches.
   - **Extended Markdown Syntax**: Full support for `***bold+italic***`, `==highlight==`, `~subscript~`, and `^superscript^` in both RAW and Rendered modes.

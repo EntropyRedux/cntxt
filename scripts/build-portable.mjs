@@ -7,7 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-console.log('🚀 Starting clean portable release build...');
+const isWindows = process.platform === 'win32';
+const isLinux = process.platform === 'linux';
+
+console.log(`🚀 Starting clean portable release build (${process.platform})...`);
 
 // 1. Clean dist/
 const distDir = path.join(rootDir, 'dist');
@@ -42,32 +45,38 @@ console.log('🦀 Compiling native release executable (CARGO_BUILD_JOBS=1)...');
 process.env.CARGO_BUILD_JOBS = '1';
 execSync('npx @tauri-apps/cli build', { cwd: rootDir, stdio: 'inherit', env: process.env });
 
-// 5. Copy release binary to dist-portable/CNTXT-portable.exe
-const releaseExe = path.join(rootDir, 'src-tauri', 'target', 'release', 'cntxt.exe');
+// 5. Copy release binary to dist-portable/
+const binaryFilename = isWindows ? 'cntxt.exe' : 'cntxt';
+const releaseBinary = path.join(rootDir, 'src-tauri', 'target', 'release', binaryFilename);
 const portableDir = path.join(rootDir, 'dist-portable');
-const portableExe = path.join(portableDir, 'CNTXT-portable.exe');
 
 if (!fs.existsSync(portableDir)) {
   fs.mkdirSync(portableDir, { recursive: true });
 }
 
-if (fs.existsSync(releaseExe)) {
-  // If an old test instance is currently running, gracefully stop it to release the file lock
+if (fs.existsSync(releaseBinary)) {
   try {
-    if (process.platform === 'win32') {
+    if (isWindows) {
       execSync('taskkill /F /IM CNTXT-portable.exe /T 2>nul || exit 0', { stdio: 'ignore' });
+    } else if (isLinux) {
+      execSync('pkill -f "cntxt" 2>/dev/null || true', { stdio: 'ignore' });
     }
   } catch {
     // Ignore if not running
   }
 
-  fs.copyFileSync(releaseExe, portableExe);
-  const stats = fs.statSync(portableExe);
+  const targetName = isWindows ? 'CNTXT-portable.exe' : 'cntxt-portable';
+  const targetPath = path.join(portableDir, targetName);
+  fs.copyFileSync(releaseBinary, targetPath);
+  if (!isWindows) {
+    fs.chmodSync(targetPath, 0o755);
+  }
+
+  const stats = fs.statSync(targetPath);
   const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
   console.log(`✅ Portable build complete!`);
-  console.log(`📍 Output: ${portableExe} (${sizeMB} MB)`);
+  console.log(`📍 Output: ${targetPath} (${sizeMB} MB)`);
 } else {
-  console.error(`❌ Build finished, but ${releaseExe} was not found.`);
+  console.error(`❌ Build finished, but ${releaseBinary} was not found.`);
   process.exit(1);
 }
-

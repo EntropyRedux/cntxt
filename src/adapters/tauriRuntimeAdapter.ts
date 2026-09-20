@@ -14,7 +14,8 @@ import {
   IThemeBridge, 
   BridgeFileResult,
   BridgeDirectoryEntry, 
-  SupportedLanguage 
+  SupportedLanguage,
+  WindowResizeDirection
 } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from './storageKeys';
 import { applyThemeTokensToElement } from '../../theme/index';
@@ -278,6 +279,13 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       } catch {
         // Fallback for secondary windows if capability isn't matched yet
         await this.invokeTauri('start_dragging');
+      }
+    },
+    startResizeDragging: async (direction: WindowResizeDirection): Promise<void> => {
+      try {
+        await getCurrentWindow().startResizeDragging(direction as any);
+      } catch (err) {
+        console.warn('[TauriRuntimeAdapter] startResizeDragging error:', err);
       }
     },
     close: async (): Promise<void> => {
