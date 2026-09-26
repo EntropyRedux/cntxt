@@ -1,17 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Plus, 
   X, 
-  Pin, 
   Copy,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Layers,
-  Search
+  Search,
+  FolderOpen,
+  Clipboard
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Tab } from '../../types';
-import { addDocumentListener, addWindowListener } from '../../adapters';
+import { addDocumentListener, addWindowListener, useRuntimeBridge } from '../../adapters';
 
 export const TabBar: React.FC = () => {
   const { 
@@ -22,11 +25,20 @@ export const TabBar: React.FC = () => {
     closeOtherTabs, 
     createTab, 
     duplicateTab,
-    togglePinTab,
+    closeTabsToRight,
     reorderTabs
   } = useTabStore();
 
+  const bridge = useRuntimeBridge();
   const { settings } = useSettingsStore();
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (!scrollContainerRef.current) return;
+    scrollContainerRef.current.scrollBy({
+      left: direction === 'left' ? -200 : 200,
+      behavior: 'smooth'
+    });
+  };
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tab: Tab } | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -34,6 +46,14 @@ export const TabBar: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [tabFilterText, setTabFilterText] = useState('');
   const [isAutoHidden, setIsAutoHidden] = useState(false);
+  const [hasOverflow, setHasOverflow] = useState(false);
+
+  // Check if tabs overflow container width to autohide scroll buttons
+  const checkOverflow = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    setHasOverflow(el.scrollWidth > el.clientWidth + 2);
+  }, []);
 
   // Reset search state whenever dropdown closes
   useEffect(() => {
@@ -59,7 +79,21 @@ export const TabBar: React.FC = () => {
       block: 'nearest',
       inline: 'nearest'
     });
-  }, [activeTabId]);
+    checkOverflow();
+  }, [activeTabId, checkOverflow]);
+
+  // Observe container size and tabs length to update overflow state
+  useEffect(() => {
+    checkOverflow();
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => checkOverflow());
+      ro.observe(el);
+      return () => ro.disconnect();
+    }
+  }, [checkOverflow, tabs.length]);
 
   // Mouse wheel horizontal scroll handler for natural tab browsing
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -321,20 +355,6 @@ export const TabBar: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
-                      {t.isPinned && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePinTab(t.id);
-                          }}
-                          title="Unpin Tab"
-                          aria-label={`Unpin tab ${t.title}`}
-                          className="p-1.5 rounded text-[var(--status-warning)] hover:bg-[var(--card-hover-bg)]"
-                        >
-                          <Pin className="w-3.5 h-3.5 fill-[var(--status-warning)]" />
-                        </button>
-                      )}
                       {t.isDirty && (
                         <span className="w-2 h-2 rounded-full bg-[var(--status-warning)] mr-1" title="Unsaved changes" />
                       )}
@@ -379,6 +399,7 @@ export const TabBar: React.FC = () => {
       <div 
         ref={scrollContainerRef}
         onWheel={handleWheel}
+        onScroll={checkOverflow}
         className={`flex items-stretch flex-1 min-w-0 h-full overflow-x-auto no-scrollbar scroll-smooth touch-pan-x ${
           !settings.showRibbon && (!settings.showActivityBar || isTouch) ? 'pl-10' : ''
         }`}
@@ -395,9 +416,12 @@ export const TabBar: React.FC = () => {
               onDragStart={(e) => handleDragStart(e, idx)}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, idx)}
+              onDragEnd={() => setDraggedIndex(null)}
               onClick={() => setActiveTabId(tab.id)}
               onContextMenu={(e) => handleContextMenu(e, tab)}
-              className={`group flex items-center border-r border-[var(--border-primary)] text-xs gap-2 cursor-pointer shrink-0 relative transition-colors ${
+              className={`group flex items-center border-r border-[var(--border-primary)] text-xs gap-2 cursor-pointer shrink-0 relative transition-all ${
+                draggedIndex === idx ? 'opacity-40 scale-95 border-dashed border-[var(--accent-primary)]' : ''
+              } ${
                 isTouch ? 'px-4 min-w-[130px] max-w-[240px]' : 'px-3.5 min-w-[120px] max-w-[220px]'
               } ${
                 isActive 
@@ -415,11 +439,6 @@ export const TabBar: React.FC = () => {
               <span className="truncate text-[12px] flex-1">
                 {tab.title}
               </span>
-
-              {/* Pin indicator */}
-              {tab.isPinned && (
-                <Pin className="w-2.5 h-2.5 text-[var(--status-warning)] shrink-0 fill-[var(--status-warning)] opacity-90" />
-              )}
 
               {/* Dirty / Close button */}
               <div className="shrink-0 flex items-center justify-center w-5 h-5 ml-0.5">
@@ -459,8 +478,43 @@ export const TabBar: React.FC = () => {
         {/* Tab Items End */}
       </div>
 
-      {/* Anchored Tab Actions: Static New Tab + Tab Selection Drop-down */}
-      <div className="relative shrink-0 flex items-center h-full border-l border-[var(--border-primary)] bg-[var(--tabbar-bg)] select-none">
+      {/* Anchored Tab Actions: Scroll Controls + Static New Tab + Tab Selection Drop-down */}
+      <div className="relative shrink-0 flex items-center h-full border-l border-[var(--border-primary)] bg-[var(--tabbar-bg)] select-none z-20">
+        {/* Scroll Buttons autohide when tabs fit within viewport */}
+        {hasOverflow && (
+          <>
+            {/* Scroll Left Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                scrollTabs('left');
+              }}
+              title="Scroll Tabs Left"
+              aria-label="Scroll Tabs Left"
+              className="h-full px-1.5 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--tab-hover-bg)] transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Scroll Right Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                scrollTabs('right');
+              }}
+              title="Scroll Tabs Right"
+              aria-label="Scroll Tabs Right"
+              className="h-full px-1.5 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--tab-hover-bg)] transition-colors cursor-pointer"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="h-3.5 w-px bg-[var(--border-primary)] opacity-70 shrink-0" />
+          </>
+        )}
+
         {/* Static + New Tab Button (compact and anchored) */}
         <button 
           onClick={() => createTab()}
@@ -595,9 +649,6 @@ export const TabBar: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {t.isPinned && (
-                        <Pin className="w-2.5 h-2.5 text-[var(--status-warning)] fill-[var(--status-warning)]" />
-                      )}
                       {t.isDirty && (
                         <span className="w-2 h-2 rounded-full bg-[var(--status-warning)]" title="Unsaved changes" />
                       )}
@@ -657,6 +708,15 @@ export const TabBar: React.FC = () => {
             >
               Close Other Tabs
             </button>
+            <button
+              onClick={() => {
+                closeTabsToRight(contextMenu.tab.id);
+                setContextMenu(null);
+              }}
+              className="w-full px-3 py-1.5 text-left hover:bg-[var(--accent-primary)] hover:text-white text-[var(--text-primary)]"
+            >
+              Close Tabs to the Right
+            </button>
             <div className="my-1 border-t border-[var(--border-primary)]" />
             <button
               onClick={() => {
@@ -668,16 +728,36 @@ export const TabBar: React.FC = () => {
               <Copy className="w-3.5 h-3.5 text-[var(--text-muted)]" />
               <span>Duplicate Tab</span>
             </button>
-            <button
-              onClick={() => {
-                togglePinTab(contextMenu.tab.id);
-                setContextMenu(null);
-              }}
-              className="w-full px-3 py-1.5 text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)]"
-            >
-              <Pin className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              <span>{contextMenu.tab.isPinned ? 'Unpin Tab' : 'Pin Tab'}</span>
-            </button>
+            {contextMenu.tab.filePath && (
+              <>
+                <div className="my-1 border-t border-[var(--border-primary)]" />
+                <button
+                  onClick={() => {
+                    bridge.clipboard.writeText(contextMenu.tab.filePath || '');
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-3 py-1.5 text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)]"
+                >
+                  <Clipboard className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                  <span>Copy File Path</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const filePath = contextMenu.tab.filePath;
+                    if (filePath) {
+                      if (bridge.openFileExplorer) {
+                        bridge.openFileExplorer(filePath);
+                      }
+                    }
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-3 py-1.5 text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)]"
+                >
+                  <FolderOpen className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                  <span>Reveal in File Explorer</span>
+                </button>
+              </>
+            )}
           </div>
         </>
       )}

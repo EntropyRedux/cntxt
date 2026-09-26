@@ -6,7 +6,6 @@ import { FileExplorer } from './FileExplorer';
 import { OutlinePanel } from './OutlinePanel';
 import { TemplateManager } from './TemplateManager';
 import { ActionManager } from './ActionManager';
-import { WorkflowManager } from './WorkflowManager';
 import { TokenAnalytics } from './TokenAnalytics';
 import { SettingsPanel } from './SettingsPanel';
 import { 
@@ -15,7 +14,6 @@ import {
   ListTree, 
   LayoutTemplate, 
   Terminal, 
-  Workflow, 
   Coins, 
   Settings,
   Sparkles,
@@ -239,8 +237,6 @@ export const Sidebar: React.FC = () => {
         return { title: 'Templates & Variables', icon: LayoutTemplate };
       case 'actions':
         return { title: 'Action Scripts', icon: Terminal };
-      case 'workflows':
-        return { title: 'Workflows', icon: Workflow };
       case 'tokens':
         return { title: 'Token Analytics', icon: Coins };
       case 'settings':
@@ -260,8 +256,6 @@ export const Sidebar: React.FC = () => {
         return <TemplateManager />;
       case 'actions':
         return <ActionManager />;
-      case 'workflows':
-        return <WorkflowManager />;
       case 'tokens':
         return <TokenAnalytics />;
       case 'settings':

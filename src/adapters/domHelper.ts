@@ -353,3 +353,44 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
 }
 
 
+
+/**
+ * WebView2 Resize Stability Fix
+ *
+ * On Windows with decorations:false, the Win32 window frame can grow while
+ * WebView2's CSS viewport stays locked at the initial size, causing a blank
+ * strip on the right/bottom of the window.
+ *
+ * Installs a resize listener that briefly sets explicit pixel dimensions on the
+ * root element then clears them, forcing WebView2 to re-measure the viewport
+ * and reflow the layout. Call once from main.tsx after mounting React.
+ *
+ * @returns Cleanup function that removes the listeners.
+ */
+export function installViewportResizeStabilizer(rootId = 'root'): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  const sync = () => {
+    const root = document.getElementById(rootId);
+    if (!root) return;
+    root.style.width = window.innerWidth + 'px';
+    root.style.height = window.innerHeight + 'px';
+    requestAnimationFrame(() => {
+      root.style.width = '';
+      root.style.height = '';
+    });
+  };
+
+  window.addEventListener('resize', sync, { passive: true });
+
+  let vpUnlisten: (() => void) | undefined;
+  if (typeof visualViewport !== 'undefined' && visualViewport) {
+    visualViewport.addEventListener('resize', sync, { passive: true });
+    vpUnlisten = () => (visualViewport as VisualViewport).removeEventListener('resize', sync);
+  }
+
+  return () => {
+    window.removeEventListener('resize', sync);
+    vpUnlisten?.();
+  };
+}

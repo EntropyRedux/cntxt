@@ -11,10 +11,15 @@ import {
   History,
   Trash2,
   Clock,
-  X
+  X,
+  RefreshCw,
+  Edit2,
+  Copy,
+  Clipboard
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useConfirmStore } from '../../store/confirmStore';
 import { useFileHistoryStore, PinnedItem, OpenedFileRecord } from '../../store/fileHistoryStore';
 import { useRuntimeBridge } from '../../adapters';
 import { safePersist } from '../../services/storageHelper';
@@ -107,8 +112,25 @@ export function computeRelativePath(targetPath?: string | null, workspacePath?: 
 
 export const FileExplorer: React.FC = () => {
   const bridge = useRuntimeBridge();
+  const { showConfirm } = useConfirmStore();
   const [files, setFiles] = useState<VirtualFile[]>([]);
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: VirtualFile } | null>(null);
+
+  useEffect(() => {
+    const handleCloseMenu = () => setContextMenu(null);
+    if (contextMenu) {
+      window.addEventListener('click', handleCloseMenu);
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setContextMenu(null);
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('click', handleCloseMenu);
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [contextMenu]);
 
   useEffect(() => {
     const loadFiles = async () => {
@@ -469,6 +491,114 @@ export const FileExplorer: React.FC = () => {
     addNotification('Workspace Closed', `"${folderName}" removed from workspace`, 'info');
   };
 
+  const handleRefreshWorkspace = async () => {
+    if (!workspacePath || !bridge.fs.readDirectory) {
+      addNotification('Refresh', 'No workspace folder is currently open', 'info');
+      return;
+    }
+    try {
+      const rawEntries = await bridge.fs.readDirectory(workspacePath);
+      if (rawEntries) {
+        const mapKidsToVirtual = (entries: BridgeDirectoryEntry[]): VirtualFile[] => {
+          return entries.map(entry => ({
+            id: entry.id || entry.path || `item_${Math.random().toString(36).substr(2, 7)}`,
+            name: entry.name,
+            type: entry.type,
+            content: entry.content,
+            language: entry.language,
+            path: entry.path,
+            children: entry.children ? mapKidsToVirtual(entry.children) : undefined
+          }));
+        };
+        const updated = mapKidsToVirtual(rawEntries);
+        setFiles(updated);
+        safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'workspace files');
+        addNotification('Workspace Refreshed', 'File tree updated from disk', 'info');
+      }
+    } catch (err) {
+      console.warn('Failed to refresh workspace:', err);
+      addNotification('Refresh Failed', 'Could not refresh file tree', 'error');
+    }
+  };
+
+  const handleRenameItem = async (item: VirtualFile) => {
+    const currentName = item.name;
+    const newName = window.prompt(`Rename "${currentName}" to:`, currentName);
+    if (!newName || newName.trim() === currentName) return;
+    const validation = validateFilename(newName.trim());
+    if (!validation.valid) {
+      addNotification('Invalid Filename', validation.error || 'Filename is not allowed', 'warning');
+      return;
+    }
+    const trimmed = newName.trim();
+    const updateTreeRecursively = (list: VirtualFile[]): VirtualFile[] => {
+      return list.map(node => {
+        if (node.id === item.id) {
+          const nextPath = node.path ? node.path.replace(/[\\/][^\\/]+$/, `/${trimmed}`) : undefined;
+          return { ...node, name: trimmed, path: nextPath };
+        }
+        if (node.children) {
+          return { ...node, children: updateTreeRecursively(node.children) };
+        }
+        return node;
+      });
+    };
+    const updated = updateTreeRecursively(files);
+    setFiles(updated);
+    safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'workspace files');
+    const openTab = tabs.find(t => (item.path && t.filePath === item.path) || t.title === currentName);
+    if (openTab) {
+      useTabStore.getState().updateTabMetadata(openTab.id, { title: trimmed });
+    }
+    addNotification('Renamed', `Renamed "${currentName}" to "${trimmed}"`, 'success');
+  };
+
+  const handleDeleteItem = (item: VirtualFile) => {
+    const isFolder = item.type === 'folder';
+    showConfirm({
+      title: `Delete ${isFolder ? 'Folder' : 'File'}`,
+      message: `Are you sure you want to delete "${item.name}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: async () => {
+        if (item.path && bridge.deleteFile) {
+          try {
+            await bridge.deleteFile(item.path);
+          } catch (e) {
+            console.warn('Native delete error:', e);
+          }
+        }
+        const removeRecursively = (list: VirtualFile[]): VirtualFile[] => {
+          return list
+            .filter(node => node.id !== item.id)
+            .map(node => node.children ? { ...node, children: removeRecursively(node.children) } : node);
+        };
+        const updated = removeRecursively(files);
+        setFiles(updated);
+        safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'workspace files');
+        const openTab = tabs.find(t => (item.path && t.filePath === item.path) || t.title === item.name);
+        if (openTab) {
+          useTabStore.getState().closeTab(openTab.id);
+        }
+        addNotification('Deleted', `Deleted "${item.name}"`, 'info');
+      }
+    });
+  };
+
+  const handleCopyPath = (path: string, type: 'relative' | 'absolute') => {
+    const textToCopy = type === 'relative' 
+      ? computeRelativePath(path, workspacePath) || path
+      : path;
+    bridge.clipboard.writeText(textToCopy);
+    addNotification('Path Copied', `${type === 'relative' ? 'Relative' : 'Absolute'} path copied to clipboard`, 'info');
+  };
+
+  const handleItemContextMenu = (e: React.MouseEvent, item: VirtualFile) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, item });
+  };
+
   return (
     <div className="theme-sidebar flex flex-col h-full text-xs select-none">
       {/* Header controls */}
@@ -490,6 +620,14 @@ export const FileExplorer: React.FC = () => {
             className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors cursor-pointer"
           >
             <Upload className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={handleRefreshWorkspace}
+            title="Refresh File Tree"
+            aria-label="Refresh File Tree"
+            className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleNativeOpenFolder}
@@ -563,6 +701,7 @@ export const FileExplorer: React.FC = () => {
                     onTogglePin={handleTogglePin}
                     isRoot={true}
                     onRemoveWorkspace={handleRemoveWorkspace}
+                    onContextMenu={handleItemContextMenu}
                   />
                 ))
               )}
@@ -818,6 +957,118 @@ export const FileExplorer: React.FC = () => {
         <span>Workspace Files</span>
         <span className="text-[var(--status-success)] font-medium">● Synced</span>
       </div>
+
+      {/* Context Menu Popup */}
+      {contextMenu && (
+        <div 
+          className="fixed z-50 bg-[var(--card-bg)] border border-[var(--border-primary)] rounded shadow-xl py-1 w-48 text-xs text-[var(--text-primary)] animate-in fade-in zoom-in-95 duration-100"
+          style={{ top: Math.min(contextMenu.y, window.innerHeight - 220), left: Math.min(contextMenu.x, window.innerWidth - 200) }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.item.type === 'file' && (
+            <button
+              onClick={() => {
+                handleOpenFile(contextMenu.item);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
+            >
+              <span>Open File</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              const itm = contextMenu.item;
+              setContextMenu(null);
+              handleRenameItem(itm);
+            }}
+            className="w-full text-left px-3 py-1.5 hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
+          >
+            <Edit2 className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+            <span>Rename</span>
+          </button>
+
+          <button
+            onClick={() => {
+              const itm = contextMenu.item;
+              handleTogglePin({
+                id: itm.id,
+                name: itm.name,
+                type: itm.type === 'directory' ? 'folder' : itm.type,
+                path: itm.path,
+                content: itm.content,
+                language: itm.language
+              });
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-1.5 hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
+          >
+            {isPinned(contextMenu.item.id) || isPinned(contextMenu.item.name) ? (
+              <>
+                <PinOff className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                <span>Unpin from Quick Access</span>
+              </>
+            ) : (
+              <>
+                <Pin className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                <span>Pin to Quick Access</span>
+              </>
+            )}
+          </button>
+
+          {contextMenu.item.path && (
+            <>
+              <div className="my-1 border-t border-[var(--border-subtle)]" />
+              <button
+                onClick={() => {
+                  handleCopyPath(contextMenu.item.path!, 'relative');
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
+              >
+                <Copy className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                <span>Copy Relative Path</span>
+              </button>
+              <button
+                onClick={() => {
+                  handleCopyPath(contextMenu.item.path!, 'absolute');
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
+              >
+                <Clipboard className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                <span>Copy Full Path</span>
+              </button>
+              {bridge.openFileExplorer && (
+                <button
+                  onClick={() => {
+                    bridge.openFileExplorer(contextMenu.item.path!);
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
+                >
+                  <Folder className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                  <span>Reveal in File Explorer</span>
+                </button>
+              )}
+            </>
+          )}
+
+          <div className="my-1 border-t border-[var(--border-subtle)]" />
+          <button
+            onClick={() => {
+              const itm = contextMenu.item;
+              setContextMenu(null);
+              handleDeleteItem(itm);
+            }}
+            className="w-full text-left px-3 py-1.5 hover:bg-red-500/10 text-red-400 flex items-center gap-2 cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-400" />
+            <span>Delete</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -841,14 +1092,18 @@ const FileTreeNode: React.FC<{
   onTogglePin: (item: PinnedItem) => void;
   isRoot?: boolean;
   onRemoveWorkspace?: (id: string, name: string) => void;
-}> = ({ item, activeFileName, activeFilePath, expandedFolders, toggleFolder, onOpenFile, isPinned, onTogglePin, isRoot, onRemoveWorkspace }) => {
+  onContextMenu?: (e: React.MouseEvent, item: VirtualFile) => void;
+}> = ({ item, activeFileName, activeFilePath, expandedFolders, toggleFolder, onOpenFile, isPinned, onTogglePin, isRoot, onRemoveWorkspace, onContextMenu }) => {
   const pinned = isPinned(item.id) || isPinned(item.name);
 
   if (item.type === 'folder') {
     const isExpanded = !!expandedFolders[item.id];
     return (
       <div>
-        <div className="group/folder relative flex items-center">
+        <div 
+          className="group/folder relative flex items-center"
+          onContextMenu={(e) => onContextMenu?.(e, item)}
+        >
           <button
             onClick={() => toggleFolder(item.id, item.path)}
             className={`w-full flex items-center gap-1.5 p-1.5 hover:bg-[var(--card-hover-bg)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-left cursor-pointer ${isRoot ? 'pr-14' : 'pr-7'}`}
@@ -904,6 +1159,7 @@ const FileTreeNode: React.FC<{
                   onOpenFile={onOpenFile}
                   isPinned={isPinned}
                   onTogglePin={onTogglePin}
+                  onContextMenu={onContextMenu}
                 />
               ))
             ) : item.children === undefined ? (
@@ -930,6 +1186,7 @@ const FileTreeNode: React.FC<{
   return (
     <div
       onClick={() => onOpenFile(item)}
+      onContextMenu={(e) => onContextMenu?.(e, item)}
       className={`group/node relative text-xs flex items-center gap-2 p-1.5 rounded cursor-pointer transition-colors ${
         isActive 
           ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-semibold' 

@@ -84,9 +84,53 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     return '';
   }
 
+  public shareContent = async (text: string): Promise<boolean> => {
+    if (this.platform.isMobile && (window as any).AndroidBridge) {
+      (window as any).AndroidBridge.shareText(text);
+      return true;
+    }
+    return false;
+  };
+
   public fs: IFileSystemBridge = {
     openFile: async (): Promise<BridgeFileResult | null> => {
       try {
+        if (this.platform.isMobile && (window as any).AndroidBridge) {
+          return new Promise<BridgeFileResult | null>((resolve) => {
+            const handleSafEvent = async (e: Event) => {
+              const customEvent = e as CustomEvent<string>;
+              window.removeEventListener('saf:file_picked', handleSafEvent);
+
+              const payload = customEvent.detail;
+              if (!payload || payload === 'CANCELLED') {
+                resolve(null);
+                return;
+              }
+
+              const parts = payload.split('|||');
+              if (parts.length >= 3) {
+                const uri = parts[0];
+                const tempPath = parts[1];
+                const filename = parts[2];
+
+                // Read from the tempPath natively via Tauri's existing POSIX file reader
+                const content = await this.invokeTauri<string>('read_file', { path: tempPath });
+
+                resolve({
+                  name: filename,
+                  path: uri, // We store the content:// URI so saveFile knows it's a SAF file
+                  content: content || '',
+                  language: this.detectLanguage(filename)
+                });
+              } else {
+                resolve(null);
+              }
+            };
+            window.addEventListener('saf:file_picked', handleSafEvent);
+            (window as any).AndroidBridge.launchOpenDocument();
+          });
+        }
+
         const selectedPath = await this.invokeTauri<string | null>('open_file_dialog');
         if (!selectedPath) return null;
 
@@ -108,6 +152,32 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     openDirectory: async () => {
       try {
+        if (this.platform.isMobile && (window as any).AndroidBridge) {
+          return new Promise<BridgeFolderResult | null>((resolve) => {
+            const handleSafFolderEvent = (e: Event) => {
+              const customEvent = e as CustomEvent<string>;
+              window.removeEventListener('saf:folder_picked', handleSafFolderEvent);
+
+              const payload = customEvent.detail;
+              if (!payload || payload === 'CANCELLED') {
+                resolve(null);
+                return;
+              }
+
+              try {
+                // Parse the BridgeFolderResult JSON constructed in Kotlin
+                const folderResult: BridgeFolderResult = JSON.parse(payload);
+                resolve(folderResult);
+              } catch (parseErr) {
+                console.error('[TauriRuntimeAdapter] Failed to parse SAF folder result:', parseErr);
+                resolve(null);
+              }
+            };
+            window.addEventListener('saf:folder_picked', handleSafFolderEvent);
+            (window as any).AndroidBridge.launchOpenDocumentTree();
+          });
+        }
+
         const selectedPath = await this.invokeTauri<string | null>('open_folder_dialog');
         if (!selectedPath) return null;
 
@@ -138,6 +208,25 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     readDirectory: async (path: string): Promise<BridgeDirectoryEntry[] | null> => {
       try {
+        if (this.platform.isMobile && path.startsWith('content://') && (window as any).AndroidBridge) {
+          const jsonArrayStr = (window as any).AndroidBridge.readDirectory(path);
+          if (!jsonArrayStr) return null;
+
+          try {
+            const rawEntries = JSON.parse(jsonArrayStr);
+            return rawEntries.map((node: any) => ({
+              id: node.id || node.path,
+              name: node.name,
+              type: node.type as 'file' | 'folder',
+              path: node.path,
+              language: node.type === 'folder' ? undefined : this.detectLanguage(node.name)
+            }));
+          } catch (e) {
+            console.error('[TauriRuntimeAdapter] Failed to parse SAF directory result:', e);
+            return null;
+          }
+        }
+
         const rawEntries = await this.invokeTauri<any[]>('read_directory', { path });
         if (!rawEntries) return null;
 
@@ -161,6 +250,14 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     readFile: async (path: string): Promise<string | null> => {
       try {
+        if (this.platform.isMobile && path.startsWith('content://') && (window as any).AndroidBridge) {
+          const tempPath = (window as any).AndroidBridge.createTempFileForRead(path);
+          if (tempPath) {
+            return await this.invokeTauri<string>('read_file', { path: tempPath });
+          }
+          return null;
+        }
+
         const content = await this.invokeTauri<string>('read_file', { path });
         return content;
       } catch (err) {
@@ -171,6 +268,16 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     saveFile: async (path: string, content: string): Promise<boolean> => {
       try {
+        if (this.platform.isMobile && path.startsWith('content://') && (window as any).AndroidBridge) {
+          // Write to a temporary POSIX file in the sandboxed app cache, then bridge to SAF
+          const tempPath = `/data/user/0/com.cntxt.desktop/cache/saf_write_temp.txt`;
+          const writeSuccess = await this.invokeTauri<boolean>('write_file', { path: tempPath, content });
+          if (writeSuccess !== null) {
+            return (window as any).AndroidBridge.saveToSaf(path, tempPath);
+          }
+          return false;
+        }
+
         const result = await this.invokeTauri('write_file', { path, content });
         return result !== null;
       } catch (err) {
@@ -227,6 +334,48 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         console.error('[TauriRuntimeAdapter] importWorkspace error:', err);
         return false;
       }
+    },
+
+    getPendingFiles: async (): Promise<string[]> => {
+      try {
+        const files = await this.invokeTauri<string[]>('get_pending_files');
+        return files || [];
+      } catch (err) {
+        console.error('[TauriRuntimeAdapter] getPendingFiles error:', err);
+        return [];
+      }
+    },
+
+    onOpenFileRequested: (callback: (filePaths: string[]) => void): (() => void) => {
+      let isUnmounted = false;
+      let unlistenFn: (() => void) | null = null;
+
+      // Use direct @tauri-apps/api/event import — works in both dev and production.
+      import('@tauri-apps/api/event').then(({ listen }) => {
+        if (isUnmounted) return;
+        listen<string[]>('open-files', (event) => {
+          if (Array.isArray(event.payload) && event.payload.length > 0) {
+            callback(event.payload);
+          }
+        }).then((unlisten) => {
+          if (isUnmounted) {
+            unlisten();
+          } else {
+            unlistenFn = unlisten;
+          }
+        }).catch((err) => {
+          console.error('[TauriRuntimeAdapter] listen open-files error:', err);
+        });
+      }).catch((err) => {
+        console.error('[TauriRuntimeAdapter] load @tauri-apps/api/event error:', err);
+      });
+
+      return () => {
+        isUnmounted = true;
+        if (unlistenFn) {
+          unlistenFn();
+        }
+      };
     }
   };
 
@@ -339,6 +488,47 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       const res = await this.invokeTauri<boolean>('kv_has', { key });
       if (res !== null) return res;
       return this.inMemoryFallback.has(key);
+    },
+    onStorageChanged: (callback: (key: string) => void): (() => void) => {
+      let isUnmounted = false;
+      let unlistenFn: (() => void) | null = null;
+
+      // Import from @tauri-apps/api/event directly — this works in both dev
+      // and production builds. We avoid the __TAURI_INTERNALS__ guard which
+      // is unreliable in production due to WebView2 initialization timing.
+      const attach = () => {
+        import('@tauri-apps/api/event').then(({ listen }) => {
+          if (isUnmounted) return;
+          listen<{ key: string }>('storage_changed', (event) => {
+            if (event.payload?.key) {
+              callback(event.payload.key);
+            }
+          }).then((unlisten) => {
+            if (isUnmounted) {
+              unlisten();
+            } else {
+              unlistenFn = unlisten;
+            }
+          }).catch((err) => {
+            // If IPC isn't ready yet (production race), retry after 500ms
+            if (!isUnmounted) {
+              console.warn('[TauriRuntimeAdapter] storage_changed listen failed, retrying...', err);
+              setTimeout(attach, 500);
+            }
+          });
+        }).catch((err) => {
+          console.error('[TauriRuntimeAdapter] load @tauri-apps/api/event error:', err);
+        });
+      };
+
+      attach();
+
+      return () => {
+        isUnmounted = true;
+        if (unlistenFn) {
+          unlistenFn();
+        }
+      };
     }
   };
 

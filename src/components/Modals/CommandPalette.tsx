@@ -26,14 +26,13 @@ import { AppIcon } from '../Common/AppIcon';
 import { useTabStore } from '../../store/tabStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
-import { useWorkflowStore } from '../../store/workflowStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useFormattingStore } from '../../store/formattingStore';
 import { useRibbonStore } from '../../store/ribbonStore';
 import { useRuntimeBridge } from '../../adapters';
 
-export type CommandCategory = 'All' | 'Commands' | 'Workflows' | 'Templates' | 'Actions' | 'Tabs';
+export type CommandCategory = 'All' | 'Commands' | 'Templates' | 'Actions' | 'Tabs';
 
 export interface CommandPaletteProps {
   isOpen: boolean;
@@ -44,13 +43,13 @@ interface PaletteItem {
   id: string;
   title: string;
   subtitle?: string;
-  category: 'Commands' | 'Templates' | 'Actions' | 'Workflows' | 'Tabs';
+  category: 'Commands' | 'Templates' | 'Actions' | 'Tabs';
   icon: string;
   shortcut?: string;
   action: () => void;
 }
 
-const CATEGORIES: CommandCategory[] = ['All', 'Commands', 'Workflows', 'Templates', 'Actions', 'Tabs'];
+const CATEGORIES: CommandCategory[] = ['All', 'Commands', 'Templates', 'Actions', 'Tabs'];
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
   const bridge = useRuntimeBridge();
@@ -64,12 +63,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
   const { tabs, activeTabId, setActiveTabId, createTab, saveCurrentTab } = useTabStore();
   const { templates, openVariableModal } = useTemplateStore();
   const { actions } = useActionStore();
-  const { workflows } = useWorkflowStore();
   const { 
     settings, 
     toggleSidebar, 
     toggleActivityBar, 
-    togglePreview, 
     toggleEditorMode, 
     setActiveSidebarTab, 
     openFontSelector,
@@ -152,14 +149,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
         icon: 'LayoutTemplate',
         shortcut: 'Alt+V',
         action: () => openVariableModal()
-      },
-      {
-        id: 'cmd-toggle-preview',
-        title: settings.showLivePreview ? 'Close Live Preview Pane' : 'Open Live Preview Split Pane',
-        subtitle: 'Toggle synchronized side-by-side HTML preview',
-        category: 'Commands',
-        icon: 'Columns',
-        action: () => togglePreview()
       },
       {
         id: 'cmd-toggle-sidebar',
@@ -261,19 +250,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
         action: () => setActiveTabId(t.id)
       })),
 
-      // Workflows
-      ...workflows.map(wf => ({
-        id: `wf-${wf.id}`,
-        title: `Launch Workflow: ${wf.name}`,
-        subtitle: `${wf.category || 'Workflows'} • Open blueprint in a fresh editor tab`,
-        category: 'Workflows' as const,
-        icon: wf.icon || (wf.type === 'bookmark' ? 'Bookmark' : 'Workflow'),
-        action: () => {
-          createTab(`${wf.name}.md`, wf.content, 'markdown');
-          addNotification('Workflow Launched', `Opened "${wf.name}"`, 'success');
-        }
-      })),
-
       // Templates
       ...templates.map(tmpl => ({
         id: `tmpl-${tmpl.id}`,
@@ -311,7 +287,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
     tabs, 
     templates, 
     actions, 
-    workflows, 
     settings, 
     activeTabId, 
     bridge, 
@@ -322,7 +297,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
     openVariableModal, 
     toggleSidebar, 
     toggleActivityBar, 
-    togglePreview, 
     toggleRibbon, 
     toggleMenuBar,
     toggleStatusBar, 
@@ -337,7 +311,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
     const counts: Record<CommandCategory, number> = {
       All: allItems.length,
       Commands: 0,
-      Workflows: 0,
       Templates: 0,
       Actions: 0,
       Tabs: 0
@@ -406,8 +379,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
       return 'bg-white/20 text-white border border-white/30';
     }
     switch (category) {
-      case 'Workflows':
-        return 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30';
       case 'Templates':
         return 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30';
       case 'Actions':
@@ -426,8 +397,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
       return 'bg-white/20 text-white';
     }
     switch (category) {
-      case 'Workflows':
-        return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20';
       case 'Templates':
         return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
       case 'Actions':

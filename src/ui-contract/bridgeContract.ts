@@ -40,6 +40,8 @@ export interface IFileSystemBridge {
   saveFileAs: (suggestedName: string, content: string) => Promise<string | null>;
   exportWorkspace: () => Promise<string>;
   importWorkspace: (jsonData: string) => Promise<boolean>;
+  getPendingFiles?: () => Promise<string[]>;
+  onOpenFileRequested?: (callback: (filePaths: string[]) => void) => () => void;
 }
 
 /**
@@ -78,6 +80,7 @@ export interface IStorageBridge {
   setItem: (key: string, value: string) => Promise<boolean>;
   removeItem: (key: string) => Promise<boolean>;
   hasItem?: (key: string) => Promise<boolean>;
+  onStorageChanged?: (callback: (key: string) => void) => (() => void);
 }
 
 export type PlatformOS = 'macos' | 'windows' | 'linux' | 'android' | 'ios' | 'web';
@@ -111,5 +114,16 @@ export interface IRuntimeBridge {
   storage: IStorageBridge;
   platform: IPlatformBridge;
   theme: IThemeBridge;
+  shareContent?: (text: string) => Promise<boolean>;
+  getSessionToken: () => Promise<string>;
+}
+  window: IWindowBridge;
+  clipboard: IClipboardBridge;
+  storage: IStorageBridge;
+  platform: IPlatformBridge;
+  theme: IThemeBridge;
+  deleteFile?: (path: string) => Promise<boolean>;
+  openFileExplorer?: (path: string) => Promise<boolean>;
+  openExternalUrl?: (url: string) => Promise<boolean>;
 }
 

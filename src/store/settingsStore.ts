@@ -22,7 +22,6 @@ interface SettingsState {
   toggleRibbon: () => void;
   setRibbonVisible: (visible: boolean) => void;
   toggleMenuBar: () => void;
-  togglePreview: () => void;
   toggleEditorMode: () => void;
   setEditorMode: (mode: 'raw' | 'rendered') => void;
   toggleWordWrap: () => void;
@@ -207,11 +206,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   toggleMenuBar: () => {
     const showMenuBar = !(get().settings.showMenuBar ?? true);
     get().updateSettings({ showMenuBar });
-  },
-
-  togglePreview: () => {
-    const showLivePreview = !get().settings.showLivePreview;
-    get().updateSettings({ showLivePreview });
   },
 
   toggleEditorMode: () => {

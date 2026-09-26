@@ -17,9 +17,6 @@ import { Button } from '../primitives/Button';
 const Editor = lazy(() =>
   import('../components/Editor/Editor').then(m => ({ default: m.Editor }))
 );
-const LivePreview = lazy(() =>
-  import('../components/Preview/LivePreview').then(m => ({ default: m.LivePreview }))
-);
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ShellEditorContainerProps {
@@ -71,8 +68,8 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
       {/* Editor Surface or Empty State */}
       <div className="flex-1 flex overflow-hidden relative min-h-0">
         {activeTab ? (
-          <div className="w-full h-full overflow-hidden flex min-h-0">
-            <div className={`h-full overflow-hidden min-h-0 ${settings.showLivePreview ? 'w-1/2 border-r border-[var(--border-subtle)]' : 'w-full'}`}>
+          <div className="w-full h-full overflow-hidden min-h-0">
+            <div className="h-full overflow-hidden min-h-0 w-full">
               <ErrorBoundary fallbackTitle="Editor Canvas Error">
                 <Suspense fallback={<EditorSkeleton />}>
                   <Editor
@@ -83,15 +80,6 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
                 </Suspense>
               </ErrorBoundary>
             </div>
-            {settings.showLivePreview && (
-              <div className="w-1/2 h-full overflow-hidden">
-                <ErrorBoundary fallbackTitle="Live Preview Error">
-                <Suspense fallback={<EditorSkeleton />}>
-                  <LivePreview content={activeTab.content} />
-                </Suspense>
-              </ErrorBoundary>
-              </div>
-            )}
           </div>
         ) : isHydrating ? (
           /* Cold-start: show skeleton while IPC loads saved tabs.

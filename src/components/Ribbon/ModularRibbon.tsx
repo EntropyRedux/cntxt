@@ -4,7 +4,6 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useTabStore } from '../../store/tabStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
-import { useWorkflowStore } from '../../store/workflowStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useFormattingStore } from '../../store/formattingStore';
 import { useImageModalStore } from '../../store/imageModalStore';
@@ -104,7 +103,6 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
     const { tabs, activeTabId, createTab, setActiveTabId, insertTextAtCursor } = useTabStore.getState();
     const activeTab = tabs.find(t => t.id === activeTabId);
     const { templates } = useTemplateStore.getState();
-    const { workflows } = useWorkflowStore.getState();
 
     switch (item.type) {
       case 'tool': {
@@ -139,6 +137,16 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
           case 'insert-image-modal':
             openImageModal();
             break;
+          case 'share':
+            if (bridge.platform.isMobile) {
+              const content = activeTab?.content || '';
+              if (!content.trim()) {
+                addNotification('Share', 'Cannot share an empty document', 'info');
+                return;
+              }
+              bridge.shareContent?.(content);
+            }
+            break;
           default:
             break;
         }
@@ -152,59 +160,6 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
       }
 
       case 'workflow': {
-        if (!item.targetId) return;
-        const wf = workflows.find(w => w.id === item.targetId);
-        if (!wf) {
-          addNotification('Workflow Not Found', 'Target workflow or bookmark could not be found', 'error');
-          return;
-        }
-
-        // Alt/Shift click: insert blueprint/content into active document at cursor
-        if ((e?.altKey || e?.shiftKey) && activeTab) {
-          insertTextAtCursor(activeTab.id, `\n\n${wf.content || ''}`);
-          addNotification('Workflow Inserted', `Inserted ${wf.name} blueprint into active document`, 'success');
-          return;
-        }
-
-        if (wf.type === 'bookmark') {
-          if (!wf.filePath) {
-            addNotification('Bookmark Error', `No file path specified for "${wf.name}"`, 'error');
-            return;
-          }
-
-          // Check if file is already open in a workspace tab
-          const existingTab = tabs.find(t => t.filePath === wf.filePath);
-          if (existingTab) {
-            setActiveTabId(existingTab.id);
-            addNotification('Switched Tab', `Switched to ${wf.name}`, 'info');
-            return;
-          }
-
-          // Read real file from disk via runtime bridge
-          try {
-            const fileData = await bridge.fs.readFile(wf.filePath);
-            const fileName = wf.filePath.split(/[/\\]/).pop() || wf.name;
-            const ext = fileName.split('.').pop()?.toLowerCase() || 'markdown';
-            const lang = ext === 'json' ? 'json' : ext === 'js' || ext === 'ts' ? 'javascript' : 'markdown';
-
-            createTab(fileName, fileData, lang as any, wf.filePath, wf.id);
-            addNotification('Bookmark Opened', `Loaded ${fileName} from disk`, 'success');
-          } catch (err: any) {
-            addNotification('Bookmark Read Failed', `Could not read ${wf.filePath}: ${err?.message || String(err)}`, 'error');
-          }
-        } else {
-          // Workflow blueprint: switch to existing tab or open new
-          const existingTab = tabs.find(t => t.pinnedTabId === wf.id);
-          if (existingTab) {
-            setActiveTabId(existingTab.id);
-            addNotification('Switched Tab', `Focused ${wf.name}`, 'info');
-            return;
-          }
-
-          const title = wf.name.endsWith('.md') ? wf.name : `${wf.name}.md`;
-          createTab(title, wf.content || '', 'markdown', null, wf.id);
-          addNotification('Workflow Launched', `Opened ${wf.name} in workspace`, 'success');
-        }
         break;
       }
 
@@ -246,17 +201,8 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
     }
   };
 
-  const handleButtonDoubleClick = (item: RibbonItem) => {
-    if (item.type === 'workflow') {
-      const { workflows } = useWorkflowStore.getState();
-      const { createTab } = useTabStore.getState();
-      const wf = workflows.find(w => w.id === item.targetId);
-      if (wf && wf.type !== 'bookmark') {
-        const title = wf.name.endsWith('.md') ? wf.name : `${wf.name}.md`;
-        createTab(title, wf.content || '', 'markdown', null, wf.id);
-        addNotification('Workflow Launched', `Opened fresh copy of ${wf.name}`, 'success');
-      }
-    }
+  const handleButtonDoubleClick = (_item: RibbonItem) => {
+    // Double-click handler hook
   };
 
   const getColorClass = (color?: string) => {

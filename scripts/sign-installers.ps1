@@ -40,20 +40,59 @@ if ($signtool) {
     Write-Host "[3/4] Using PowerShell Set-AuthenticodeSignature cmdlet" -ForegroundColor Yellow
 }
 
-$targets = @(
-    (Join-Path $rootDir "src-tauri\target\release\cntxt.exe"),
-    (Join-Path $rootDir "src-tauri\target\release\bundle\nsis\CNTXT_0.3.0_x64-setup.exe"),
-    (Join-Path $rootDir "src-tauri\target\release\bundle\msi\CNTXT_0.3.0_x64_en-US.msi"),
-    (Join-Path $rootDir "dist-portable\CNTXT-portable.exe")
-)
+# 1. Read current version from package.json
+$packageJson = Get-Content (Join-Path $rootDir "package.json") -Raw | ConvertFrom-Json
+$version = $packageJson.version
+Write-Host "Packaging CNTXT version $version..." -ForegroundColor Cyan
+
+# Locate targets dynamically
+$releaseExe = Join-Path $rootDir "src-tauri\target\release\cntxt.exe"
+$portableExe = Join-Path $rootDir "dist-portable\CNTXT-portable.exe"
+$versionedPortableExe = Join-Path $rootDir "dist-portable\CNTXT_${version}_portable.exe"
+$nsisSource = Join-Path $rootDir "src-tauri\target\release\bundle\nsis\CNTXT_${version}_x64-setup.exe"
+$msiSource = Join-Path $rootDir "src-tauri\target\release\bundle\msi\CNTXT_${version}_x64_en-US.msi"
+
+if (-not (Test-Path $nsisSource)) {
+    $foundNsis = Get-ChildItem (Join-Path $rootDir "src-tauri\target\release\bundle\nsis\*.exe") -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($foundNsis) { $nsisSource = $foundNsis.FullName }
+}
+if (-not (Test-Path $msiSource)) {
+    $foundMsi = Get-ChildItem (Join-Path $rootDir "src-tauri\target\release\bundle\msi\*.msi") -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($foundMsi) { $msiSource = $foundMsi.FullName }
+}
 
 $installerDir = Join-Path $rootDir "dist-installer"
 if (-not (Test-Path $installerDir)) {
     New-Item -ItemType Directory -Path $installerDir | Out-Null
 }
 
+# Copy newly built installers to dist-installer (preserving existing versions)
+if (Test-Path $nsisSource) {
+    Copy-Item $nsisSource -Destination $installerDir -Force
+    Write-Host "Copied NSIS installer ($nsisSource) to dist-installer/" -ForegroundColor Green
+}
+if (Test-Path $msiSource) {
+    Copy-Item $msiSource -Destination $installerDir -Force
+    Write-Host "Copied MSI installer ($msiSource) to dist-installer/" -ForegroundColor Green
+}
+
+$targets = @(
+    $releaseExe,
+    $portableExe,
+    $versionedPortableExe,
+    $nsisSource,
+    $msiSource
+)
+
+# Add any installer files present in dist-installer
+Get-ChildItem $installerDir -File | ForEach-Object {
+    if ($targets -notcontains $_.FullName) {
+        $targets += $_.FullName
+    }
+}
+
 foreach ($target in $targets) {
-    if (Test-Path $target) {
+    if ($target -and (Test-Path $target)) {
         Write-Host "Signing $target..." -ForegroundColor Cyan
         try {
             if ($signtool) {
@@ -66,19 +105,6 @@ foreach ($target in $targets) {
             Write-Warning "  -> Could not sign $target (file may be in use): $($_.Exception.Message)"
         }
     }
-}
-
-# Copy signed installers to dist-installer
-$nsisSource = Join-Path $rootDir "src-tauri\target\release\bundle\nsis\CNTXT_0.3.0_x64-setup.exe"
-$msiSource = Join-Path $rootDir "src-tauri\target\release\bundle\msi\CNTXT_0.3.0_x64_en-US.msi"
-
-if (Test-Path $nsisSource) {
-    Copy-Item $nsisSource -Destination $installerDir -Force
-    Write-Host "Copied signed NSIS installer to dist-installer/" -ForegroundColor Green
-}
-if (Test-Path $msiSource) {
-    Copy-Item $msiSource -Destination $installerDir -Force
-    Write-Host "Copied signed MSI installer to dist-installer/" -ForegroundColor Green
 }
 
 Write-Host "`n[4/4] Signed Installer Packages ready in: $installerDir" -ForegroundColor Cyan

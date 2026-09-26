@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { Tab, SupportedLanguage } from '../../contracts/data_shapes';
 // MOCK: quarantined synthetic sample data for prototype demo mode
-import { WELCOME_DOCUMENT, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
+import { IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
+import { WELCOME_DOCUMENT } from '../constants/welcomeDoc';
 import { MARKDOWN_GUIDE_DOCUMENT } from '../constants/markdownGuideDoc';
 import { POWER_USER_GUIDE_DOCUMENT } from '../constants/powerUserGuideDoc';
 import { editorRegistry } from '../services/editor/editorRegistry';
@@ -35,7 +36,7 @@ interface TabState {
   saveCurrentTab: () => Promise<void>;
   saveTabAs: (tabId: string, newTitle: string, newPath?: string) => Promise<void>;
   duplicateTab: (tabId: string) => string;
-  togglePinTab: (tabId: string) => void;
+  closeTabsToRight: (tabId: string) => void;
   openWelcomeTab: () => string;
   resetWelcomeTab: () => Promise<void>;
   openMarkdownGuideTab: () => string;
@@ -242,6 +243,49 @@ export const useTabStore = create<TabState>((set, get) => ({
     set({ tabs: remaining, activeTabId: keepTabId });
     writeTabCache(remaining, keepTabId);
     saveTabsMeta(remaining, keepTabId);
+  },
+
+  closeTabsToRight: (tabId: string) => {
+    const { tabs, activeTabId } = get();
+    const index = tabs.findIndex(t => t.id === tabId);
+    if (index === -1) return;
+
+    const remaining = tabs.slice(0, index + 1);
+    const toDelete = tabs.slice(index + 1);
+
+    toDelete.forEach(t => {
+      cancelPendingSave(t.id);
+      editorStateCache.evictTabState(t.id);
+    });
+    if (activeStorage) {
+      toDelete.forEach(t => safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${t.id}`, `tab ${t.id}`));
+    }
+
+    const nextActiveId = remaining.some(t => t.id === activeTabId) ? activeTabId : tabId;
+    set({ tabs: remaining, activeTabId: nextActiveId });
+    writeTabCache(remaining, nextActiveId);
+    saveTabsMeta(remaining, nextActiveId);
+  },
+
+  reorderTabs: (sourceIndex: number, destinationIndex: number) => {
+    const { tabs, activeTabId } = get();
+    if (
+      sourceIndex < 0 ||
+      sourceIndex >= tabs.length ||
+      destinationIndex < 0 ||
+      destinationIndex >= tabs.length ||
+      sourceIndex === destinationIndex
+    ) {
+      return;
+    }
+
+    const reordered = [...tabs];
+    const [movedTab] = reordered.splice(sourceIndex, 1);
+    reordered.splice(destinationIndex, 0, movedTab);
+
+    set({ tabs: reordered });
+    writeTabCache(reordered, activeTabId);
+    saveTabsMeta(reordered, activeTabId);
   },
 
   closeAllTabs: () => {
@@ -472,16 +516,6 @@ export const useTabStore = create<TabState>((set, get) => ({
       cursorLine: newCursorLine,
       cursorCol: newCursorCol
     });
-  },
-
-  reorderTabs: (sourceIndex: number, destinationIndex: number) => {
-    const { tabs, activeTabId } = get();
-    const result = Array.from(tabs);
-    const [removed] = result.splice(sourceIndex, 1);
-    result.splice(destinationIndex, 0, removed);
-    set({ tabs: result });
-    writeTabCache(result, activeTabId);
-    saveTabsMeta(result, activeTabId);
   },
 
   saveCurrentTab: async () => {

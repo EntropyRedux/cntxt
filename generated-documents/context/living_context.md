@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.24
-Last Updated: 2026-09-20
-Last Updated By: Production Agent (Signed Windows Installer Packages Generated; Window Resize White-Box Remediated; 223/223 Unit Tests Clean)
+Version: v1.27
+Last Updated: 2026-09-24
+Last Updated By: Production Agent (Android SAF Deep Traversal fix; SAF Context root URI tracking; Android Release APK packaged)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -12,14 +12,27 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-07 Complete & Tested; Extended Markdown & Tab State Preservation Live)
+  [x] Feature Implementation (FG-01..FG-08 Complete & Tested; Android APK Native Mobile Runtime Live)
   [x] Refactor (Production Build Parity, CSP Nonce Unblocking, Ribbon Error #185 Hardened, Power User Guide Added)
-  [x] Testing (Vitest 223/223 Live, Playwright 21/21 E2E Live)
-  [x] Packaging & Release (Signed NSIS Setup & Signed WiX MSI in dist-installer/, Signed via Authenticode + RFC 3161)
+  [x] Testing (Vitest 272/272 Live, Playwright 21/21 E2E Live)
+  [x] Packaging & Release (Signed Windows Setup/MSI in dist-installer/ + Android Release APK via ADB)
 
-Current Feature Group: FG-07: Editor Resiliency, Performance & UX Refinements + Production Packaging
-Active Plan: /generated-documents/plans/feature_group_fg07_editor_resiliency_ux_polishes_2026-09-19.md
-Last Audit Reconciliation: 2026-09-20 — PASS (Full Codebase Audit: raw_findings_full_codebase_2026-09-20.md reconciled; 5 valid defects remediated; all verification gates 100% green; TR-014..TR-017 registered)
+Current Feature Group: FG-08: Android APK Porting & Mobile Architecture Adaptation
+Status: completed / verified (2026-09-26)
+Background Processes: none
+Unit Tests: passing [x]
+Notes: 
+- Strict Module Quarantine Strategy: All Android-specific Rust code (SAF, Intents) is quarantined in `src-tauri/src/commands/android_saf.rs` using `#[cfg(target_os = "android")]` to ensure zero desktop drift. 
+- SAF deep traversal utilizes `DocumentsContract.buildChildDocumentsUriUsingTree` with exact root tree context tracking. File content extraction routes via a local `/cache/saf_temp_*.txt` staging strategy in `MainActivity.kt`.
+- Mobile build output `.apk` packaged utilizing Android release keystores.
+
+Feature Group: FG-09: Mobile UI Ergonomics & Navigation
+Status: Pending
+Background Processes: none
+Unit Tests: none
+Notes: Deferred in favor of stabilizing SAF files first.
+Active Plan: /generated-documents/plans/implementation_plan.artifact.md (SAF & Intent Porting)
+Last Audit Reconciliation: 2026-09-26 — PASS (FG-08 Android SAF Fixes resolved)
 Last Git Checkpoint: 2026-09-19 — FG-06 Hotfixes and FG-07 Plan (commit 4d9cd55)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
@@ -49,7 +62,7 @@ Active Shapes:
 
 Mock ID | Physical Location | Type | Real Replacement Target | Feature Group | Status
 --------|-------------------|------|------------------------|---------------|-------
-MOCK-001 | mocks/index.ts (WELCOME_DOCUMENT) | MOCK | Native File System (initial user workspace document) | FG-01: Document Tabs | active (demo mode)
+MOCK-001 | src/constants/welcomeDoc.ts | STATIC ONBOARDING | Native File System | FG-08 | Cleared & Physically Quarantined outside mocks/
 MOCK-002 | mocks/index.ts (DEFAULT_ACTIONS) | MOCK | Native Action Registry & Persistent Store (`plugin:store`) | FG-02: Sandboxed Actions | active (demo mode)
 MOCK-003 | mocks/index.ts (DEFAULT_TEMPLATES) | MOCK | Native Template Registry & Filesystem (`templates/`) | FG-03: Templates | active (demo mode)
 MOCK-004 | mocks/index.ts (DEFAULT_PINNED_TABS) | MOCK | Native Pinned Tab Store (`plugin:store`) | FG-01: Document Tabs | active (demo mode)
@@ -128,6 +141,35 @@ Notes:
 - Window resize edge-drag lag and white canvas flashing eliminated via WebView2 background `#141417`, dark theme, and percentage sizing.
 - Official signed Windows installer packages (`dist-installer/CNTXT_0.3.0_x64-setup.exe` and `CNTXT_0.3.0_x64_en-US.msi`) generated and signed with SHA256 Authenticode and RFC 3161 timestamps.
 - Complete standalone exportable assets bundle created in `generated-documents/exportable-assets/`.
+
+Feature Group: FG-08: Android APK Porting & Mobile Architecture Adaptation
+Status: completed / verified
+Background Processes: none
+Unit Tests: passing [x]
+Notes: 
+- Strict Module Quarantine Strategy: All Android-specific Rust code (SAF, Intents) is quarantined in `src-tauri/src/commands/android_saf.rs` using `#[cfg(target_os = "android")]` to ensure zero desktop drift. 
+- SAF integration utilizes a local temp-file cache to prevent massive JNI string loads, copying `content://` URIs to `/data/user/0/.../cache/` for Rust to read via standard std::fs.
+- **Deep Traversal Fix**: Workspace Explorer on Android resolves indefinitely deep folders utilizing correct `DocumentsContract.buildChildDocumentsUriUsingTree` tree tracking, mitigating Android's default 3-level limitation.
+
+Feature Group: FG-09: Mobile UI Ergonomics & Navigation
+Status: Pending
+Background Processes: none
+Unit Tests: none
+Notes: Deferred in favor of stabilizing SAF files first.
+Status: completed / verified (2026-09-20)
+Background Processes: none
+Unit Tests: written [x] passing [x] (272/272 unit tests across 27 test suites clean)
+Android Packaging: universal & arm64 release APK (`app-arm64-release-signed.apk`, 17.98 MB) compiled, signed via debug keystore, and successfully installed + running on physical Android device (`ce6162a`)
+Notes:
+- Single adaptive React 19 frontend bundle maintained without fork or drift.
+- Cargo dual entry point architecture: `[lib] name = "cntxt_lib"` (`cdylib`, `staticlib`, `rlib`) + thin desktop wrapper binary `main.rs`.
+- Desktop crate quarantine: `rfd`, `arboard`, `tauri-plugin-single-instance`, `keyring` isolated to `cfg(not(any(target_os = "android", target_os = "ios")))`.
+- Dead code pruned: deleted 346-line dead Axum preview server and unconfigured `tauri-plugin-deep-link`.
+- Quarantined native commands: mobile window no-ops (`#[cfg(target_os = "android")] {}`), clipboard DOM fallback (`Err("MOBILE_DELEGATE_DOM")`), and sandboxed `kv_store.json` secrets persistence.
+- Native Android back button handshake: `onWebViewCreate` and `OnBackPressedCallback` in `MainActivity.kt` with JavaScript evaluation and priority overlay dismissal hierarchy in `ShellFrame.tsx`.
+- Viewport ergonomics: `viewport-fit=cover, interactive-widget=resizes-content` and safe area insets in `index.css`.
+- TR-013 Physical Mock Quarantine cleared: `WELCOME_DOCUMENT` moved to `src/constants/welcomeDoc.ts`.
+- TR-018 and TR-019 registered in Reconciled Tradeoffs.
 
 ━━━ ARCHITECTURAL DECISIONS LOG ━━━
 
@@ -240,7 +282,7 @@ Date: 2026-09-14
 Finding Source: F-2.4 (Pass 1 Refactor Completion Audit)
 Pillar: Pillar 8 (Deep Security)
 Decision: Tauri CSP connect-src permits http://localhost:5173 and ws://localhost:* in tauri.conf.json.
-Reasoning: Required for local desktop development (tauri dev) with Vite dev server and HMR WebSocket, and connects to internal dynamic-port preview server (127.0.0.1:*). Host/Origin validation in preview_server.rs prevents unauthorized cross-origin access.
+Reasoning: Required for local desktop development (tauri dev) with Vite dev server and HMR WebSocket. Standalone Axum preview server was pruned in FG-08 in favor of client-rendered LivePreview DOM observer.
 Status: APPROVED TRADEOFF
 
 Tradeoff ID: TR-012
@@ -256,8 +298,8 @@ Date: 2026-09-20
 Finding Source: M-01 (Pass 1 Full Codebase Audit 2026-09-19)
 Pillar: Pillar 1 (Mock Quarantine & Initial State)
 Decision: Retain initial onboarding Welcome document (`Welcome.md`) on virgin app start.
-Reasoning: New users require an interactive tutorial and formatting showcase rather than an empty, unguided canvas. The welcome document is static product onboarding documentation, not synthetic test mock data. Scheduled to move from `mocks/index.ts` to `src/constants/welcomeDoc.ts` in FG-08 to satisfy strict physical directory quarantine.
-Status: APPROVED TRADEOFF
+Reasoning: New users require an interactive tutorial and formatting showcase rather than an empty, unguided canvas. The welcome document is static product onboarding documentation, not synthetic test mock data. Cleared in FG-08: migrated from `mocks/index.ts` to `src/constants/welcomeDoc.ts` to satisfy strict physical directory quarantine.
+Status: CLEARED (Physical Quarantine Satisfied in src/constants/welcomeDoc.ts)
 
 Tradeoff ID: TR-014
 Date: 2026-09-20
@@ -279,16 +321,40 @@ Tradeoff ID: TR-016
 Date: 2026-09-20
 Finding Source: FINDING-12 (Pass 1 Full Codebase Audit 2026-09-20)
 Pillar: Pillar 9 (Validation & Error Handling)
-Decision: Harmless observer disconnect cleanup during dynamic preview runner iframe destruction (`preview_server.rs:243`).
-Reasoning: Swallowing errors during `previewObserver.disconnect()` in the isolated preview sandbox script prevents unhandled error dialogs during teardown of temporary iframe DOM instances.
+Decision: Harmless observer disconnect cleanup during dynamic preview runner iframe destruction in LivePreview.
+Reasoning: Swallowing errors during observer disconnect in the isolated preview sandbox script prevents unhandled error dialogs during teardown of temporary iframe DOM instances. Standalone Axum server pruned in FG-08; client-side LivePreview retains this safe teardown pattern.
 Status: APPROVED TRADEOFF
 
 Tradeoff ID: TR-017
 Date: 2026-09-20
 Finding Source: FINDING-14 (Pass 1 Full Codebase Audit 2026-09-20)
 Pillar: Pillar 6 (Scope & Dead Surfaces)
-Decision: Retain native IPC helper commands (`get_file_name`, `get_file_modified_time`, `detect_language_from_path`, `get_dir_name`) in `main.rs:196-239`.
+Decision: Retain native IPC helper commands (`get_file_name`, `get_file_modified_time`, `detect_language_from_path`, `get_dir_name`) in `lib.rs`.
 Reasoning: Preserved to provide headless filesystem metadata operations for external CLI bridges, third-party automation scripts, and future companion app integrations.
+Status: APPROVED TRADEOFF
+
+Tradeoff ID: TR-018
+Date: 2026-09-20
+Finding Source: Plan Review / Re-Audit FG-08
+Pillar: Pillar 2 & Pillar 3 (Presenter Purity & Strict Typing)
+Decision: Retain unit `()` return type for mobile window control commands (`commands/window.rs`).
+Reasoning: On Android, window operations (minimize, maximize, close, unmaximize) are safe no-ops (`#[cfg(target_os = "android")] {}`). Preserving the exact same unit `()` signature across desktop and mobile eliminates conditional TypeScript return signature branches and avoids IPC boundary typing ripples.
+Status: APPROVED TRADEOFF
+
+Tradeoff ID: TR-019
+Date: 2026-09-20
+Finding Source: Plan Review / Re-Audit FG-08 & PA-03
+Pillar: Pillar 8 (Deep Security & Sandboxing)
+Decision: Delegate secret storage on Android (`commands/secrets.rs`) to dedicated `secrets_store.json` in dynamic sandbox path with atomic rename.
+Reasoning: Android lacks desktop OS-native keyring daemons (such as Secret Service or Windows Credential Manager). Secret API keys on Android are persisted to dedicated `secrets_store.json` in the app's internal sandbox directory (`app_data_dir()`), completely isolated from `kv_store.json` to eliminate concurrency/lock contention with general storage, and protected by Linux DAC UID-based file permissions preventing access by other unrooted applications.
+Status: APPROVED TRADEOFF
+
+Tradeoff ID: TR-020
+Date: 2026-09-20
+Finding Source: PA-01 (Post-Port Audit 2026-09-20)
+Pillar: Pillar 5 (Tech Stack & Deployment)
+Decision: Parameterized Android build script (`scripts/build-android.ps1`) defaulting to `arm64-v8a` signed with local debug keystore for physical hardware testing; universal variant available via `-Target universal`.
+Reasoning: Physical Android device testing and rapid sideloading via ADB requires signing certificates (`INSTALL_PARSE_FAILED_NO_CERTIFICATES`). Compiling arm64 (`aarch64-linux-android`) signed with `debug.keystore` produces an immediate, installable release-optimized binary for 99% of modern hardware. Play Store production distribution signing is managed separately in CI/CD environments.
 Status: APPROVED TRADEOFF
 
 ━━━ OPERATIONAL & TROUBLESHOOTING NOTES ━━━
@@ -533,3 +599,74 @@ The 12.7s TTFB is Vite processing and transforming the module graph on demand �
   - All 24 test suites / 223 unit tests pass (`npm test`).
   - Zero platform leaks across 118 files, contracts 100% synchronized (`npm run lint`).
   - Rust Tauri v2 build fully compiles with 0 errors, 0 warnings.
+
+### 9. Desktop QA Remediation, Reusable Confirmation & Category System (2026-09-24)
+- **Reusable Confirmation System**:
+  - Implemented `src/store/confirmStore.ts` and `src/components/Common/ConfirmationModal.tsx` mounted at `ShellModalLayer.tsx`.
+  - Replaced all raw `window.confirm` calls across the application.
+  - Wired into all destructive/reset actions: "Reset All Settings to Factory Defaults" in `SettingsPanel.tsx`, "Clear Local Storage / Cache" in `SettingsPanel.tsx`, single/bulk deletions in `TemplateManager.tsx` and `ActionManager.tsx`, and "Reset to Defaults" in `MenuBar.tsx`.
+- **Cross-Feature Category Management (`CategoryManagerModal`)**:
+  - Implemented `src/components/Common/CategoryManagerModal.tsx` providing category list, count of items, addition, inline renaming, and safe deletion (reassigns items to `GENERAL`).
+  - Implemented category CRUD actions in both `templateStore.ts` and `actionStore.ts` (`addCategory`, `renameCategory`, `deleteCategory`, `getAllCategories`).
+  - Fixed `CategorySelector.tsx` to immediately commit typed custom categories into the active form state without falling back to `GENERAL`.
+- **Architectural Cleanup & Excisions**:
+  - Removed deprecated `WorkflowManager`, `workflowStore`, and `LivePreview`.
+  - Excised obsolete `ActionEditorModal.tsx`; sidebar `ActionManager` handles all action creation, editing, and execution.
+- **TabBar & File Explorer QA Fixes**:
+  - Repaired `reorderTabs` in `tabStore.ts` and added drag visual state (`opacity-40 scale-95 border-dashed`) and `onDragEnd` cleanup.
+  - Separated anchored `ChevronLeft` and `ChevronRight` scroll buttons with `e.stopPropagation()` in `TabBar.tsx` so clicking overflow buttons cannot trigger tab close.
+  - Added "Reveal in File Explorer" (`FolderOpen`) and "Copy File Path" to `TabBar.tsx` context menu.
+  - Added `RefreshCw` button to `FileExplorer.tsx` toolbar for disk directory sync.
+  - Added item right-click context menu to `FileExplorer.tsx` tree nodes (Open File, Rename, Pin to Quick Access, Copy Relative Path, Copy Full Path, Reveal in Native File Explorer, and Delete with Confirmation).
+  - Added `Ctrl+Shift+E` global shortcut in `ShellFrame.tsx` to toggle/focus File Explorer.
+  - Help Menu -> "Check for Updates / Version Info" directs users to CNTXT GitHub releases via `bridge.openExternalUrl`.
+- **Verification Metrics**:
+  - Vitest: 33/33 test files passing, 321/321 unit tests passing (100% clean).
+  - Lint: 0 TypeScript errors (`tsc --noEmit`), 0 platform leaks across 115 files (`check-platform-leaks.mjs`), 100% canonical contract synchronization (`check-contract-sync.mjs`).
+  - Build: Vite 6 production bundle builds cleanly.
+
+### 10. Android Target Platform & Multi-Window Backlog Items
+- **[BACKLOG-01] Hide Desktop-Only Menus on Mobile**:
+  - In `MenuBar.tsx` and title bar menus, hide "New Window" when running on Android/iOS (`platform.isMobile`). Android apps use single-activity lifecycle.
+- **[BACKLOG-02] Multi-Window State Synchronization**:
+  - Investigate Tauri v2 multi-window event bus or shared SQLite store so secondary desktop windows reflect templates and actions created in the primary window.
+- **[BACKLOG-03] Mobile Touch Accessory Bar Polish**:
+  - Validate touch target dimensions and virtual keyboard avoidances with Android WebView.
+
+### 11. CNTXT v0.3.2 Release & Package Generation (2026-09-24)
+- **Version Bump**:
+  - Version incremented to `0.3.2` across `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and `src-tauri/src/lib.rs`.
+- **Preserved Existing Artifacts & New Versioned Artifacts**:
+  - All existing previous version packages were preserved untouched (not overwritten or deleted).
+  - New standalone portable package generated with version number:
+    - `dist-portable/CNTXT_0.3.2_portable.exe` (13.36 MB, Standalone Portable Executable, Signed)
+  - New installable packages generated with version number:
+    - `dist-installer/CNTXT_0.3.2_x64-setup.exe` (5.80 MB, NSIS Setup Installer, Signed)
+    - `dist-installer/CNTXT_0.3.2_x64_en-US.msi` (6.83 MB, WiX MSI Installer, Signed)
+- **Authenticode Code Signing**:
+  - All new binaries and installers signed via `CN=PCControlSuiteLocalTrust` (SHA256 Authenticode with RFC 3161 timestamping).
+- **Verification Gates**:
+  - 33/33 test files passing, 321/321 unit tests passing (`npm test`).
+  - Zero platform leaks across 115 files, 100% canonical contract synchronization (`npm run lint`).
+  - Native release compilation completed with exit code 0 (`npm run build:portable` and `npm run package:sign`).
+
+### 12. Multi-Window IPC Authorization & Selective Sync Hardening (2026-09-24)
+- **Rust Native IPC Generalization**:
+  - Replaced hardcoded `if window.label() != "main"` across 28 native commands in `storage.rs`, `file.rs`, `secrets.rs`, `clipboard.rs`, and `lib.rs` with `is_authorized_window(&window)` supporting both `"main"` and `"window-*"`.
+  - Added dark theme initialization (`theme: Some(tauri::Theme::Dark)`) to `new_window` in `src-tauri/src/lib.rs`.
+- **Tauri v2 Capability Manifest**:
+  - Updated `src-tauri/capabilities/extra-windows.json` with missing permissions: `"dialog:default"`, `"core:window:allow-set-focus"`, `"core:window:allow-unminimize"`, and `"core:webview:allow-create-webview-window"`.
+- **Selective Cross-Window Live Synchronization**:
+  - Emitted `storage_changed` event from `storage.rs` (`kv_set`, `kv_remove`).
+  - Added `onStorageChanged` listener in `src/adapters/tauriRuntimeAdapter.ts` and `ShellFrame.tsx` with strict allowlist (`TEMPLATES`, `ACTIONS`, `RIBBON`, `FORMATTING_BUTTONS`, `PINNED_ITEMS`, `VIRTUAL_FILES`).
+  - Deliberately isolated window-local states (tabs, active file, editor raw/rendered mode, touch mode, sidebar tab, theme) to prevent tab hijacking or cross-window UI disruptions.
+- **UI Hardening & Improvements**:
+  - View Menu: Updated Status Bar toggle to dynamically show `settings.showStatusBar ? 'Hide Bottom Status Bar' : 'Show Bottom Status Bar'` in `MenuBar.tsx`.
+  - Activity Bar: Changed Action Scripts & Prompts icon from `Terminal` to `Zap` (lightning bolt) in `ActivityBar.tsx`.
+  - Tab Bar: Autohide `ChevronLeft` and `ChevronRight` scroll buttons when tab contents do not overflow (`scrollWidth <= clientWidth`) in `TabBar.tsx`.
+  - Category Selector: Replaced native browser `<select>` with custom glassmorphic theme dropdown in `CategorySelector.tsx`, featuring active selection indicators, dividers, and Lucide SVG icons (`Plus` and `Settings2`).
+- **Verification Gates**:
+  - Cargo: `cargo check` in `src-tauri` passed with 0 errors.
+  - Vitest: 33/33 test files passing, 321/321 unit tests passing (`npm test`).
+  - Lint: 0 TypeScript errors, 0 platform leaks across 115 files, 100% canonical contract synchronization (`npm run lint`).
+  - Build: Vite 6 production bundle builds cleanly in 36s.

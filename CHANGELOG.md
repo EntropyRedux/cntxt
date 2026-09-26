@@ -7,7 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.2] — 2026-09-26
+
+### FG-08 Android SAF Deep Traversal & Mobile Release
+- **Infinite Subfolder Traversal Fix**:
+  - Re-wrote Kotlin `DocumentsContract` usage to accurately parse deep `TreeDocumentUri` parameters in `readDirectorySaf`.
+  - Replaced the flawed `DocumentFile` traversal, allowing seamless Workspace mapping past the default Android 3-level folder cap.
+- **Android APK Release Generation**:
+  - Validated and built `app-arm64-release.apk` with the latest Tauri configuration, verified against local ADB installs.
+
 ## [0.3.0] — 2026-09-20
+
+### FG-08 Android APK Porting & Mobile Architecture Adaptation
+- **Cargo Dual Entry Point Architecture**:
+  - Re-architected `src-tauri` into dual entry points: `[lib] name = "cntxt_lib"` (`crate-type = ["staticlib", "cdylib", "rlib"]`) for the Android JNI harness and thin desktop binary wrapper `src/main.rs`.
+  - Exported mobile entry point annotated with `#[cfg_attr(mobile, tauri::mobile_entry_point)] pub fn run()`.
+- **Desktop Crate Quarantine & Dead Code Pruning**:
+  - Quarantined desktop-only crates (`rfd`, `arboard`, `tauri-plugin-single-instance`, `keyring`) under `[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]`.
+  - Deleted 346-line dead Axum preview server (`preview_server.rs`) and unconfigured `tauri-plugin-deep-link` plugin.
+  - Added lean Rust-level `tauri-plugin-dialog = "2"`.
+- **Native Android Back Button Handshake (F-01)**:
+  - Overrode `onWebViewCreate` in `MainActivity.kt` to capture the WebView reference.
+  - Installed `OnBackPressedCallback` executing a boolean JavaScript handshake `window.__CNTXT_HANDLE_BACK__()`.
+  - In `ShellFrame.tsx`, registered priority overlay dismissal hierarchy (Command Palette -> Shortcuts Modal -> Settings/Image/Variable Modals -> Sidebar) before allowing native task backgrounding, completely preventing dual-action exit races.
+- **Mobile Ergonomics & Viewport Resilience**:
+  - Configured `index.html` viewport meta with `viewport-fit=cover, interactive-widget=resizes-content` for virtual keyboard viewport resizing without obscuring cursor.
+  - Added `env(safe-area-inset-*)` support in `index.css` for edge-to-edge display cutouts.
+  - Gated window control buttons (`WindowControls.tsx`) on mobile devices.
+- **Quarantined Mobile Commands & Sandboxed Secrets**:
+  - Mobile clipboard delegates cleanly to DOM `navigator.clipboard` via `invokeTauri` error handling.
+  - Mobile secrets storage persists to `kv_store.json` in `app_data_dir()`, isolated by Linux DAC UID permissions (TR-019).
+  - Mobile window controls safely no-op with unit `()` return signatures (TR-018).
+- **Physical Mock Quarantine Cleared (TR-013)**:
+  - Migrated `WELCOME_DOCUMENT` from `mocks/index.ts` to `src/constants/welcomeDoc.ts`, satisfying strict physical directory quarantine.
+- **Automated Packaging & Device Verification**:
+  - Added `scripts/build-android.ps1` and registered `"package:android"` script in `package.json`.
+  - Built `app-arm64-release-unsigned.apk` (17.98 MB), signed with debug keystore (`app-arm64-release-signed.apk`), installed via ADB on connected Android device (`ce6162a`), and verified live execution.
+  - Vitest test suite expanded to 272/272 passing unit tests across 27 test files (100% green).
 
 ### FG-07 Editor Resiliency, Multi-Tab State Architecture, Extended Markdown & Power User Tools
 - **Per-Tab Undo/Redo & State Preservation Architecture**:
@@ -355,7 +391,8 @@ Then promote to a release version when ready.
 
 | Version | Date       | Status      | Modules | Key Change |
 | :------ | :--------- | :---------- | ------: | :---------- |
-| 0.2.0   | 2026-09-14 | Active Dev | 120    | Full-codebase security remediation, command authorization, open extensibility | 
+| 0.3.2   | 2026-09-26 | Stable      | 120    | Android SAF Deep Traversal fix and Mobile Release APK | 
+| 0.2.0   | 2026-09-14 | Active Dev  | 120    | Full-codebase security remediation, command authorization, open extensibility | 
 | 0.1.0   | 2026-09-02 | Stable      | 1879    | Initial refactored AI Studio baseline with modular shell architecture |
 | -       | Ongoing    | Development | *       | Tracking changes in [Unreleased] section above |
 
@@ -382,6 +419,6 @@ Built artifacts are placed in `dist/` within the build directory and can be move
 
 ---
 
-**Last Updated**: 2026-09-14  
+**Last Updated**: 2026-09-26  
 **Maintained By**: CNTXT Development Team  
 **Status**: Active Development

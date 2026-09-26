@@ -5,17 +5,24 @@ import { ShellNotificationLayer } from './ShellNotificationLayer';
 import { createUiEventDispatcher } from '../adapters/eventDispatcher';
 import { useRuntimeBridge } from '../adapters/runtimeBridge';
 import { addWindowListener } from '../adapters/domHelper';
+import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { useSettingsStore } from '../store/settingsStore';
 import { useTabStore } from '../store/tabStore';
 import { useTemplateStore } from '../store/templateStore';
 import { useActionStore } from '../store/actionStore';
-import { useWorkflowStore } from '../store/workflowStore';
 import { useRibbonStore } from '../store/ribbonStore';
 import { useFormattingStore } from '../store/formattingStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useFileHistoryStore } from '../store/fileHistoryStore';
+import { useImageModalStore } from '../store/imageModalStore';
 import { compressAndConvertToDataUrl, generateImageAlt } from '../services/imageService';
 import { SupportedLanguage } from '../types';
+
+declare global {
+  interface Window {
+    __CNTXT_HANDLE_BACK__?: () => boolean;
+  }
+}
 
 export const ShellFrame: React.FC = () => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -39,7 +46,6 @@ export const ShellFrame: React.FC = () => {
 
   const { initializeTemplates, openVariableModal } = useTemplateStore();
   const { initializeActions } = useActionStore();
-  const { initializeWorkflows } = useWorkflowStore();
   const { initializeRibbon } = useRibbonStore();
   const { initializeFormattingStore } = useFormattingStore();
   const { toggleActivityBar, toggleEditorMode, initializeSettings } = useSettingsStore();
@@ -52,12 +58,11 @@ export const ShellFrame: React.FC = () => {
       initializeTabs(bridge.storage),
       initializeTemplates(bridge.storage),
       initializeActions(bridge.storage),
-      initializeWorkflows(bridge.storage),
       initializeRibbon(bridge.storage),
       initializeFormattingStore(bridge.storage),
       initializeFileHistory(bridge.storage),
     ]).catch((e) => console.error('Store init batch failed', e));
-  }, [bridge, initializeSettings, initializeTabs, initializeTemplates, initializeActions, initializeWorkflows, initializeRibbon, initializeFormattingStore, initializeFileHistory]);
+  }, [bridge, initializeSettings, initializeTabs, initializeTemplates, initializeActions, initializeRibbon, initializeFormattingStore, initializeFileHistory]);
 
   // Sync theme via bridge
   useEffect(() => {
@@ -75,6 +80,192 @@ export const ShellFrame: React.FC = () => {
     window.addEventListener('live-markdown-render-error', handleMarkdownError);
     return () => window.removeEventListener('live-markdown-render-error', handleMarkdownError);
   }, [addNotification]);
+
+  // Handle files requested at startup or via single-instance file associations
+  useEffect(() => {
+    const detectLanguage = (filename: string): SupportedLanguage => {
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      switch (ext) {
+        case 'md':
+        case 'markdown':
+        case 'mdown':
+        case 'mkdn':
+          return 'markdown';
+        case 'js':
+        case 'jsx':
+        case 'mjs':
+        case 'cjs':
+          return 'javascript';
+        case 'ts':
+        case 'tsx':
+          return 'typescript';
+        case 'py':
+        case 'pyw':
+          return 'python';
+        case 'json':
+          return 'json';
+        case 'yaml':
+        case 'yml':
+          return 'yaml';
+        case 'html':
+        case 'htm':
+        case 'xml':
+        case 'svg':
+          return 'html';
+        case 'css':
+        case 'scss':
+        case 'sass':
+        case 'less':
+          return 'css';
+        default:
+          return 'text';
+      }
+    };
+
+    const openPaths = async (filePaths: string[]) => {
+      for (const filePath of filePaths) {
+        if (!filePath) continue;
+        try {
+          const content = await bridge.fs.readFile?.(filePath);
+          if (content !== null && content !== undefined) {
+            const fileName = filePath.split(/[/\\]/).pop() || filePath;
+            const lang = detectLanguage(fileName);
+            useTabStore.getState().createTab(fileName, content, lang, filePath);
+            useFileHistoryStore.getState().recordOpenedFile({
+              id: filePath,
+              name: fileName,
+              type: 'file',
+              path: filePath,
+              language: lang,
+              content
+            });
+            addNotification('File Opened', fileName, 'success');
+          }
+        } catch (err) {
+          console.error('[ShellFrame] Failed to open external file:', filePath, err);
+        }
+      }
+    };
+
+    bridge.fs.getPendingFiles?.().then((paths) => {
+      if (paths && paths.length > 0) {
+        openPaths(paths);
+      }
+    }).catch((err) => {
+      console.warn('[ShellFrame] Failed to query pending files:', err);
+    });
+
+    const unlisten = bridge.fs.onOpenFileRequested?.((paths) => {
+      if (paths && paths.length > 0) {
+        openPaths(paths);
+      }
+    });
+
+    // Android Mobile Incoming Share Intent handler
+    const handleIncomingShare = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      const payload = customEvent.detail;
+      if (payload) {
+        const timestamp = new Date().toISOString().split('T')[1].substring(0, 8).replace(/:/g, '-');
+        useTabStore.getState().createTab(`Shared_${timestamp}.md`, payload, 'markdown');
+        addNotification('Content Received', 'New tab created from shared content', 'success');
+      }
+    };
+
+    // Check for cold-start share intent immediately
+    if (bridge.platform.isMobile && (window as any).AndroidBridge) {
+      const coldStartText = (window as any).AndroidBridge.consumeSharedText();
+      if (coldStartText) {
+        handleIncomingShare(new CustomEvent('saf:shared_text', { detail: coldStartText }));
+      }
+    }
+
+    window.addEventListener('saf:shared_text', handleIncomingShare);
+
+    return () => {
+      if (unlisten) unlisten();
+      window.removeEventListener('saf:shared_text', handleIncomingShare);
+    };
+  }, [bridge.fs, bridge.platform, addNotification]);
+
+  // Selective cross-window live synchronization for permanent assets
+  useEffect(() => {
+    const SYNCABLE_STORAGE_KEYS = new Set<string>([
+      STORAGE_KEYS.TEMPLATES,
+      STORAGE_KEYS.ACTIONS,
+      STORAGE_KEYS.RIBBON,
+      STORAGE_KEYS.FORMATTING_BUTTONS,
+      STORAGE_KEYS.PINNED_ITEMS,
+      STORAGE_KEYS.VIRTUAL_FILES,
+    ]);
+
+    const unlistenStorage = bridge.storage.onStorageChanged?.((key: string) => {
+      if (!SYNCABLE_STORAGE_KEYS.has(key)) return;
+      if (key === STORAGE_KEYS.TEMPLATES) {
+        useTemplateStore.getState().initializeTemplates();
+      } else if (key === STORAGE_KEYS.ACTIONS) {
+        useActionStore.getState().initializeActions();
+      } else if (key === STORAGE_KEYS.RIBBON) {
+        useRibbonStore.getState().initializeRibbon();
+      } else if (key === STORAGE_KEYS.FORMATTING_BUTTONS) {
+        useFormattingStore.getState().initializeFormattingStore();
+      } else if (key === STORAGE_KEYS.PINNED_ITEMS) {
+        useFileHistoryStore.getState().initializeFileHistory();
+      }
+    });
+
+    return () => {
+      if (unlistenStorage) unlistenStorage();
+    };
+  }, [bridge.storage]);
+
+  // Register Android back-button handshake handler with priority dismiss hierarchy
+  useEffect(() => {
+    const handleAndroidBack = (): boolean => {
+      if (isCommandPaletteOpen) {
+        setIsCommandPaletteOpen(false);
+        return true;
+      }
+      if (isShortcutsOpen) {
+        setIsShortcutsOpen(false);
+        return true;
+      }
+      if (useSettingsStore.getState().isFontSelectorOpen) {
+        useSettingsStore.getState().closeFontSelector();
+        return true;
+      }
+      if (useImageModalStore.getState().isOpen) {
+        useImageModalStore.getState().closeImageModal();
+        return true;
+      }
+      if (useTemplateStore.getState().isVariableModalOpen) {
+        useTemplateStore.getState().closeVariableModal();
+        return true;
+      }
+      if (useActionStore.getState().isActionEditorOpen) {
+        useActionStore.getState().closeActionEditor();
+        return true;
+      }
+      if (useRibbonStore.getState().isCustomizerOpen) {
+        useRibbonStore.getState().closeCustomizer();
+        return true;
+      }
+      if (useFormattingStore.getState().isCustomizerOpen) {
+        useFormattingStore.getState().closeCustomizer();
+        return true;
+      }
+      if (useSettingsStore.getState().settings.showSidebar) {
+        useSettingsStore.getState().updateSettings({ showSidebar: false });
+        return true;
+      }
+      return false;
+    };
+
+    window.__CNTXT_HANDLE_BACK__ = handleAndroidBack;
+    return () => {
+      delete window.__CNTXT_HANDLE_BACK__;
+    };
+  }, [isCommandPaletteOpen, isShortcutsOpen]);
 
 
   // Track active tab in opened file history
@@ -126,9 +317,14 @@ export const ShellFrame: React.FC = () => {
       } else {
         toggleActivityBar();
       }
+    } else if (modifier && e.shiftKey && e.key.toLowerCase() === 'e') {
+      e.preventDefault();
+      useSettingsStore.getState().updateSettings({ showSidebar: true });
+      useSettingsStore.getState().setActiveSidebarTab('explorer');
     } else if (modifier && e.key.toLowerCase() === 'o') {
       e.preventDefault();
       if (e.shiftKey) {
+        useSettingsStore.getState().updateSettings({ showSidebar: true });
         useSettingsStore.getState().setActiveSidebarTab('outline');
       } else {
         events.onOpenFile();

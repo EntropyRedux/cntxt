@@ -374,7 +374,10 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
         console.error('[BrowserRuntimeAdapter] import error:', err);
         return false;
       }
-    }
+    },
+
+    getPendingFiles: async (): Promise<string[]> => [],
+    onOpenFileRequested: (_callback: (filePaths: string[]) => void): (() => void) => () => {}
   };
 
   public window: IWindowBridge = {
@@ -443,6 +446,9 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     hasItem: async (key: string): Promise<boolean> => {
       const item = await browserDB.getItem(key);
       return item !== null;
+    },
+    onStorageChanged: (_callback: (key: string) => void): (() => void) => {
+      return () => {};
     }
   };
 
@@ -479,4 +485,20 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
       return 'contextpad-dark';
     }
   };
+
+  public async deleteFile(_path: string): Promise<boolean> {
+    return false;
+  }
+
+  public async openFileExplorer(_path: string): Promise<boolean> {
+    return false;
+  }
+
+  public async openExternalUrl(url: string): Promise<boolean> {
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+      return true;
+    }
+    return false;
+  }
 }

@@ -1661,8 +1661,8 @@ function buildDecorations(state: EditorState): DecorationSet {
           }
         }
 
-        // Italic: *italic* or _italic_
-        const italicRegex = /(?<!\*)\*([^*\n]+?)\*(?!\*)|(?<!_)_([^_\n]+?)_(?!_)/g;
+        // Italic: *italic* or _italic_ (enforce CommonMark whitespace boundaries)
+        const italicRegex = /(?<!\*)\*(?!\s)([^*\n]+?)(?<!\s)\*(?!\*)|(?<!_)_(?!\s)([^_\n]+?)(?<!\s)_(?!_)/g;
         while ((match = italicRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
@@ -1692,7 +1692,7 @@ function buildDecorations(state: EditorState): DecorationSet {
         }
 
         // Strikethrough: ~~strike~~
-        const strikeRegex = /~~([^~\n]+?)~~/g;
+        const strikeRegex = /~~(?!\s)([^~\n]+?)(?<!\s)~~/g;
         while ((match = strikeRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
@@ -1722,7 +1722,7 @@ function buildDecorations(state: EditorState): DecorationSet {
         }
 
         // Highlight: ==highlight==
-        const highlightRegex = /==([^=\n]+?)==/g;
+        const highlightRegex = /==(?!\s)([^=\n]+?)(?<!\s)==/g;
         while ((match = highlightRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
@@ -1830,7 +1830,11 @@ function buildDecorations(state: EditorState): DecorationSet {
         builder.add(line.from, line.from, lineDeco);
       }
 
-      rangeDecos.sort((a, b) => a.from - b.from || a.to - b.to);
+      rangeDecos.sort((a, b) => 
+        a.from - b.from || 
+        (a.deco.startSide ?? 0) - (b.deco.startSide ?? 0) || 
+        a.to - b.to
+      );
 
       let lastReplaceEnd = -1;
       for (const item of rangeDecos) {
@@ -1838,6 +1842,9 @@ function buildDecorations(state: EditorState): DecorationSet {
         if (isReplace) {
           if (item.from < lastReplaceEnd) continue;
           lastReplaceEnd = item.to;
+        } else {
+          // If a mark falls inside an active replaced widget range, skip it to prevent overlapping collisions
+          if (item.from < lastReplaceEnd) continue;
         }
         if (item.from <= item.to && item.from >= line.from && item.to <= line.to) {
           builder.add(item.from, item.to, item.deco);

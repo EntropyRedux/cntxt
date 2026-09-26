@@ -3,8 +3,7 @@ import {
   FolderTree, 
   ListTree,
   LayoutTemplate, 
-  Terminal, 
-  Workflow, 
+  Zap, 
   Settings
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -21,8 +20,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertica
     { id: 'explorer', label: 'File Explorer (Ctrl+Shift+E)', ariaLabel: 'File Explorer', icon: FolderTree },
     { id: 'outline', label: 'Document Outline (Ctrl+Shift+O)', ariaLabel: 'Document Outline', icon: ListTree },
     { id: 'templates', label: 'Templates & Variables (Ctrl+Alt+T)', ariaLabel: 'Templates & Variables', icon: LayoutTemplate },
-    { id: 'actions', label: 'Action Scripts & Prompts', ariaLabel: 'Action Scripts', icon: Terminal },
-    { id: 'workflows', label: 'Workflows & Multi-Step Blueprints', ariaLabel: 'Workflows', icon: Workflow },
+    { id: 'actions', label: 'Action Scripts & Prompts', ariaLabel: 'Action Scripts', icon: Zap },
   ];
 
   const handleTabClick = (tabId: ViewSettings['activeSidebarTab']) => {

@@ -111,7 +111,7 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
 
 #[tauri::command]
 pub async fn read_file(window: Window, path: String) -> Result<String, String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     let safe_path = validate_path(&path)?;
@@ -121,7 +121,7 @@ pub async fn read_file(window: Window, path: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn write_file(window: Window, path: String, content: String) -> Result<(), String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     let safe_path = validate_path(&path)?;
@@ -129,9 +129,10 @@ pub async fn write_file(window: Window, path: String, content: String) -> Result
         .map_err(|e| format!("Failed to write file: {}", e))
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn open_file_dialog(window: Window) -> Result<Option<String>, String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     use rfd::FileDialog;
@@ -154,9 +155,24 @@ pub async fn open_file_dialog(window: Window) -> Result<Option<String>, String> 
     Ok(file_path.map(|p| p.to_string_lossy().to_string()))
 }
 
+#[cfg(any(target_os = "android", target_os = "ios"))]
+#[tauri::command]
+pub async fn open_file_dialog(window: Window) -> Result<Option<String>, String> {
+    if !super::is_authorized_window(&window) {
+        return Err("Unauthorized window origin".into());
+    }
+    use tauri_plugin_dialog::DialogExt;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    window.dialog().file().pick_file(move |file_path| {
+        let _ = tx.send(file_path.map(|p| p.to_string()));
+    });
+    rx.await.map_err(|e| e.to_string())
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn save_file_dialog(window: Window, default_name: Option<String>) -> Result<Option<String>, String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     use rfd::FileDialog;
@@ -182,6 +198,24 @@ pub async fn save_file_dialog(window: Window, default_name: Option<String>) -> R
     let file_path = dialog.save_file();
 
     Ok(file_path.map(|p| p.to_string_lossy().to_string()))
+}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+#[tauri::command]
+pub async fn save_file_dialog(window: Window, default_name: Option<String>) -> Result<Option<String>, String> {
+    if !super::is_authorized_window(&window) {
+        return Err("Unauthorized window origin".into());
+    }
+    use tauri_plugin_dialog::DialogExt;
+    let mut builder = window.dialog().file();
+    if let Some(name) = default_name {
+        builder = builder.set_file_name(&name);
+    }
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    builder.save_file(move |file_path| {
+        let _ = tx.send(file_path.map(|p| p.to_string()));
+    });
+    rx.await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -231,7 +265,7 @@ pub fn detect_language_from_path(path: String) -> String {
 
 #[tauri::command]
 pub fn get_file_modified_time(window: Window, path: String) -> Result<u64, String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     let safe_path = validate_path(&path)?;
@@ -247,9 +281,10 @@ pub fn get_file_modified_time(window: Window, path: String) -> Result<u64, Strin
     Ok(duration.as_secs())
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn open_folder_dialog(window: Window) -> Result<Option<String>, String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     use rfd::FileDialog;
@@ -258,6 +293,19 @@ pub async fn open_folder_dialog(window: Window) -> Result<Option<String>, String
         .pick_folder();
 
     Ok(folder_path.map(|p| p.to_string_lossy().to_string()))
+}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+#[tauri::command]
+pub async fn open_folder_dialog(window: Window) -> Result<Option<String>, String> {
+    if !super::is_authorized_window(&window) {
+        return Err("Unauthorized window origin".into());
+    }
+    use tauri::Manager;
+    let app = window.app_handle();
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("workspace");
+    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create workspace directory: {}", e))?;
+    Ok(Some(dir.to_string_lossy().to_string()))
 }
 
 #[derive(serde::Serialize, Debug)]
@@ -341,7 +389,7 @@ fn read_dir_internal(dir_path: &Path, depth: usize, max_depth: usize) -> Result<
 
 #[tauri::command]
 pub fn read_directory(window: Window, path: String) -> Result<Vec<FileNode>, String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     let dir_path = validate_path(&path)?;
@@ -356,7 +404,7 @@ pub fn read_directory(window: Window, path: String) -> Result<Vec<FileNode>, Str
 
 #[tauri::command]
 pub async fn rename_file(window: Window, old_path: String, new_path: String) -> Result<(), String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     let safe_old = validate_path(&old_path)?;
@@ -372,7 +420,7 @@ pub async fn delete_file(
     auth_token: Option<String>,
     state: tauri::State<'_, tokio::sync::Mutex<crate::AppState>>
 ) -> Result<(), String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin for sensitive native operation".to_string());
     }
     let token = auth_token.unwrap_or_default();
@@ -407,7 +455,7 @@ pub async fn open_file_explorer(
     auth_token: Option<String>,
     state: tauri::State<'_, tokio::sync::Mutex<crate::AppState>>
 ) -> Result<(), String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin for file explorer invocation".to_string());
     }
     let token = auth_token.unwrap_or_default();
@@ -420,12 +468,12 @@ pub async fn open_file_explorer(
     }
 
     let safe_path = validate_path(&path)?;
-    let path_str = safe_path.to_string_lossy().to_string();
+    let _path_str = safe_path.to_string_lossy().to_string();
 
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new("explorer")
-            .arg(&path_str)
+            .arg(&_path_str)
             .spawn()
             .map_err(|e| format!("Failed to open file explorer: {}", e))?;
     }

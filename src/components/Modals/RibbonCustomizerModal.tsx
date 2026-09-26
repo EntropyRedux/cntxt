@@ -8,7 +8,6 @@ import { RibbonIcon, AVAILABLE_ICONS } from '../Ribbon/RibbonIcon';
 import { IconPicker } from '../Common/IconPicker';
 import { useRibbonStore } from '../../store/ribbonStore';
 import { useActionStore } from '../../store/actionStore';
-import { useWorkflowStore } from '../../store/workflowStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { RibbonItem, RibbonItemType } from '../../types';
 import {
@@ -75,10 +74,9 @@ export const RibbonCustomizerModal: React.FC = () => {
   } = useRibbonStore();
 
   const { actions } = useActionStore();
-  const { workflows } = useWorkflowStore();
   const { templates } = useTemplateStore();
 
-  const [activeTab, setActiveTab] = useState<'manage' | 'add_tools' | 'add_actions' | 'add_workflows' | 'add_templates' | 'custom'>('manage');
+  const [activeTab, setActiveTab] = useState<'manage' | 'add_tools' | 'add_actions' | 'add_templates' | 'custom'>('manage');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
@@ -254,19 +252,6 @@ export const RibbonCustomizerModal: React.FC = () => {
             <Zap className="w-4 h-4" />
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('add_workflows')}
-            title={`Workflows (${workflows.length})`}
-            aria-label={`Workflows (${workflows.length})`}
-            className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
-              activeTab === 'add_workflows'
-                ? 'bg-[var(--card-bg)] text-[var(--accent-primary)] shadow-2xs font-semibold'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-          </button>
 
           <button
             type="button"
@@ -676,66 +661,6 @@ export const RibbonCustomizerModal: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 4: Add Workflows */}
-        {activeTab === 'add_workflows' && (
-          <div className="space-y-3">
-            <p className="text-xs text-[var(--text-muted)]">
-              Pin full prompt blueprints and multi-step workflows to your ribbon:
-            </p>
-
-            {workflows.length === 0 ? (
-              <div className="p-6 text-center text-xs text-[var(--text-muted)] border border-dashed border-[var(--border-primary)] rounded-lg">
-                No workflows created yet.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {workflows.map((wf) => {
-                  const added = isAlreadyInRibbon(wf.id, 'workflow');
-
-                  return (
-                    <Card
-                      key={wf.id}
-                      variant="default"
-                      padding="sm"
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-md bg-[var(--app-bg)] border border-[var(--border-subtle)] flex items-center justify-center shrink-0">
-                          <Layers className="w-4 h-4 text-purple-500" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-[var(--text-primary)]">{wf.name}</div>
-                          <div className="text-[11px] text-[var(--text-muted)]">{wf.category}</div>
-                        </div>
-                      </div>
-
-                      <Button
-                        variant={added ? 'secondary' : 'accent'}
-                        size="xs"
-                        disabled={added}
-                        icon={added ? Check : Plus}
-                        onClick={() => {
-                          addItem({
-                            label: wf.name,
-                            icon: wf.icon || 'Layers',
-                            type: 'workflow',
-                            targetId: wf.id,
-                            color: 'purple',
-                            tooltip: `Insert ${wf.name} blueprint`,
-                            enabled: true
-                          });
-                          setActiveTab('manage');
-                        }}
-                      >
-                        {added ? 'Pinned' : 'Pin to Ribbon'}
-                      </Button>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Tab 5: Add Templates */}
         {activeTab === 'add_templates' && (
