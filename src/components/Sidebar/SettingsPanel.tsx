@@ -16,11 +16,13 @@ import {
   Activity,
   Cpu,
   Clock,
-  FlaskConical
+  FlaskConical,
+  Trash2
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useFormattingStore } from '../../store/formattingStore';
+import { useConfirmStore } from '../../store/confirmStore';
 import { useRuntimeBridge } from '../../adapters';
 import { ThemeName } from '../../types';
 import { CURATED_FONTS, getCuratedFontByFamily, THEME_DEFAULT_FONTS } from '../../constants/fonts';
@@ -29,6 +31,7 @@ export const SettingsPanel: React.FC = () => {
   const bridge = useRuntimeBridge();
   const { settings, updateSettings, resetSettings } = useSettingsStore();
   const { addNotification } = useNotificationStore();
+  const { showConfirm } = useConfirmStore();
   const { 
     isMultiRowExpanded, 
     setIsMultiRowExpanded, 
@@ -644,44 +647,91 @@ export const SettingsPanel: React.FC = () => {
         )}
       </div>
 
-      {/* Storage & Backup */}
+      {/* Storage, Backup & Reset */}
       <div className="p-3 theme-card rounded-lg space-y-2.5 shadow-xs">
         <div className="font-bold text-[var(--text-primary)] text-[11px] uppercase tracking-wider">
-          Backup & Reset
+          Storage & Reset
         </div>
 
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={handleExportBackup}
-            title="Export Backup"
-            aria-label="Export Backup"
-            className="h-8 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center transition-colors font-medium cursor-pointer"
+            title="Export Settings JSON"
+            className="h-8 px-2.5 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center gap-1.5 transition-colors text-xs font-medium cursor-pointer"
           >
-            <Download className="w-4 h-4 text-[var(--accent-primary)]" />
+            <Download className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+            <span>Export JSON</span>
           </button>
           <button
             type="button"
             onClick={handleImportBackup}
-            title="Import Backup"
-            aria-label="Import Backup"
-            className="h-8 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center transition-colors font-medium cursor-pointer"
+            title="Import Settings JSON"
+            className="h-8 px-2.5 theme-card-secondary hover:bg-[var(--card-hover-bg)] rounded-md text-[var(--text-primary)] flex items-center justify-center gap-1.5 transition-colors text-xs font-medium cursor-pointer"
           >
-            <Upload className="w-4 h-4 text-[var(--accent-primary)]" />
+            <Upload className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+            <span>Import JSON</span>
           </button>
+        </div>
+
+        <div className="pt-1 flex flex-col gap-1.5">
           <button
             type="button"
             onClick={() => {
-              if (confirm('Reset all settings to default values?')) {
-                resetSettings();
-                addNotification('Settings Reset', 'Default settings restored', 'info');
-              }
+              showConfirm({
+                title: 'Reset Settings to Factory Defaults',
+                message: 'This will restore all theme, editor, font, and view settings to their initial factory defaults. Your document files will NOT be affected. Are you sure you want to proceed?',
+                confirmLabel: 'Reset Settings',
+                variant: 'danger',
+                onConfirm: () => {
+                  resetSettings();
+                  addNotification('Settings Reset', 'Default settings restored', 'info');
+                }
+              });
             }}
-            title="Reset Settings to Default"
-            aria-label="Reset Settings to Default"
-            className="h-8 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-md flex items-center justify-center transition-colors font-medium cursor-pointer"
+            title="Reset All Settings to Factory Defaults"
+            className="w-full h-8 px-3 bg-[var(--status-error)]/10 hover:bg-[var(--status-error)]/20 text-[var(--status-error)] border border-[var(--status-error)]/30 rounded-md flex items-center justify-center gap-2 transition-colors text-xs font-medium cursor-pointer"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset All Settings to Factory Defaults</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              showConfirm({
+                title: 'Clear Local Storage & Cache',
+                message: 'This will purge all cached virtual files, recently opened history, pinned items, and stored UI states from local storage. The window will reload cleanly. Proceed?',
+                confirmLabel: 'Clear Cache & Reload',
+                variant: 'danger',
+                onConfirm: async () => {
+                  try {
+                    const keys = [
+                      'contextpad_tabs_meta',
+                      'contextpad_active_tab_id',
+                      'contextpad_view_settings',
+                      'contextpad_editor_settings',
+                      'contextpad_formatting_settings',
+                      'contextpad_virtual_files',
+                      'contextpad_pinned_files',
+                      'contextpad_opened_history',
+                      'contextpad_ribbon_items'
+                    ];
+                    for (const key of keys) {
+                      await bridge.storage.removeItem(key);
+                    }
+                  } catch {
+                    // Ignore storage errors
+                  }
+                  window.location.reload();
+                }
+              });
+            }}
+            title="Clear Local Storage / Cache"
+            className="w-full h-8 px-3 bg-[var(--status-warning)]/10 hover:bg-[var(--status-warning)]/20 text-[var(--status-warning)] border border-[var(--status-warning)]/30 rounded-md flex items-center justify-center gap-2 transition-colors text-xs font-medium cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Clear Local Storage / Cache</span>
           </button>
         </div>
       </div>

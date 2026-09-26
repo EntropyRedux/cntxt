@@ -4,6 +4,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useConfirmStore } from '../../store/confirmStore';
 import { execUndo, execRedo, addWindowListener, useRuntimeBridge } from '../../adapters';
 
 interface MenuBarProps {
@@ -24,10 +25,11 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const { createTab, saveCurrentTab, closeTab, closeAllTabs, activeTabId, tabs, duplicateTab } = useTabStore();
-  const { settings, updateSettings, toggleSidebar, togglePreview, toggleStatusBar, toggleRibbon, toggleMobileAccessoryBar, setActiveSidebarTab } = useSettingsStore();
+  const { settings, updateSettings, toggleSidebar, toggleStatusBar, toggleRibbon, toggleMobileAccessoryBar, setActiveSidebarTab } = useSettingsStore();
   const { templates, openVariableModal, resetToDefaults: resetTemplates } = useTemplateStore();
   const { actions, openActionEditor, resetToDefaults: resetActions } = useActionStore();
   const { addNotification } = useNotificationStore();
+  const { showConfirm } = useConfirmStore();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -99,7 +101,6 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       label: 'View',
       items: [
         { label: 'Toggle Sidebar', shortcut: 'Ctrl+B', action: toggleSidebar },
-        { label: 'Toggle Live Preview', shortcut: 'Ctrl+P', action: togglePreview },
         { 
           label: settings.showRibbon ? 'Hide Modular Ribbon' : 'Show Modular Ribbon', 
           shortcut: 'Ctrl+Shift+R', 
@@ -109,15 +110,16 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           label: (settings.showMobileAccessoryBar ?? true) ? 'Hide Markdown Formatting quick buttons' : 'Show Markdown Formatting quick buttons', 
           action: toggleMobileAccessoryBar 
         },
-        { label: 'Toggle Status Bar', action: toggleStatusBar, divider: true },
+        { 
+          label: (settings.showStatusBar ?? true) ? 'Hide Bottom Status Bar' : 'Show Bottom Status Bar', 
+          action: toggleStatusBar, 
+          divider: true 
+        },
         { label: 'Show File Explorer', action: () => setActiveSidebarTab('explorer') },
         { label: 'Show Document Outline', action: () => setActiveSidebarTab('outline') },
         { label: 'Show Templates Library', action: () => setActiveSidebarTab('templates') },
         { label: 'Show Action Scripts', action: () => setActiveSidebarTab('actions') },
-        { label: 'Show Workflows & Blueprints', action: () => setActiveSidebarTab('workflows') },
         { label: 'Show Token Analytics', action: () => setActiveSidebarTab('tokens'), divider: true },
-        { label: 'Zoom In (Font +)', action: () => updateSettings({ fontSize: Math.min(24, settings.fontSize + 1) }) },
-        { label: 'Zoom Out (Font -)', action: () => updateSettings({ fontSize: Math.max(10, settings.fontSize - 1) }) },
         { label: 'Toggle Word Wrap', action: () => updateSettings({ wordWrap: !settings.wordWrap }) }
       ]
     },
@@ -136,7 +138,23 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             }
           }
         })),
-        { label: 'Reset Templates to Defaults', danger: true, divider: true, action: resetTemplates }
+        { 
+          label: 'Reset Templates to Defaults', 
+          danger: true, 
+          divider: true, 
+          action: () => {
+            showConfirm({
+              title: 'Reset Templates to Defaults',
+              message: 'This will reset your templates library to the default factory templates. Custom templates will be overwritten. Are you sure you want to proceed?',
+              confirmLabel: 'Reset Templates',
+              variant: 'danger',
+              onConfirm: () => {
+                resetTemplates();
+                addNotification('Templates Reset', 'Restored default templates', 'info');
+              }
+            });
+          } 
+        }
       ]
     },
     {
@@ -151,7 +169,23 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             setActiveSidebarTab('actions');
           }
         })),
-        { label: 'Reset Actions to Defaults', danger: true, divider: true, action: resetActions }
+        { 
+          label: 'Reset Actions to Defaults', 
+          danger: true, 
+          divider: true, 
+          action: () => {
+            showConfirm({
+              title: 'Reset Actions to Defaults',
+              message: 'This will reset your action scripts to factory defaults. Custom actions will be overwritten. Are you sure you want to proceed?',
+              confirmLabel: 'Reset Actions',
+              variant: 'danger',
+              onConfirm: () => {
+                resetActions();
+                addNotification('Actions Reset', 'Restored default actions', 'info');
+              }
+            });
+          } 
+        }
       ]
     },
     {
@@ -168,10 +202,14 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         { label: 'CNTXT Power User Guide', action: () => {
           useTabStore.getState().openPowerUserGuideTab();
         }},
-        { label: 'Restore Pristine Welcome Guide', action: async () => {
-          await useTabStore.getState().resetWelcomeTab();
-          addNotification('Welcome Guide Restored', 'Restored to clean showcase version', 'success');
-        }}
+        { 
+          label: 'Check for Updates / Version Info', 
+          divider: true, 
+          action: () => {
+            bridge.openExternalUrl?.('https://github.com/EntropyRedux/cntxt/releases');
+            addNotification('Check for Updates', 'Opening CNTXT GitHub releases page...', 'info');
+          }
+        }
       ]
     }
   ];

@@ -260,13 +260,6 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           } 
         },
         { 
-          label: 'Workflows', 
-          action: () => {
-            updateSettings({ showSidebar: true });
-            setActiveSidebarTab('workflows');
-          } 
-        },
-        { 
           label: 'Token Analytics', 
           action: () => {
             updateSettings({ showSidebar: true });

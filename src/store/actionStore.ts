@@ -8,6 +8,7 @@ import { DEFAULT_ACTIONS, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 import { executeActionById } from '../services/actionExecutor';
 import { executeInSandbox } from '../services/actionSandbox';
 import { useNotificationStore } from './notificationStore';
+import { useSettingsStore } from './settingsStore';
 
 export { DEFAULT_ACTIONS };
 
@@ -63,6 +64,9 @@ interface ActionState {
   collapseAllCategories: () => void;
   expandAllCategories: () => void;
   moveCategory: (category: string, direction: 'up' | 'down') => void;
+  addCategory: (name: string) => boolean;
+  renameCategory: (oldName: string, newName: string) => boolean;
+  deleteCategory: (category: string, fallbackCategory?: string) => boolean;
   
   getEnabledActions: () => Action[];
   getAllCategories: () => CategorySummary[];
@@ -177,6 +181,8 @@ export const useActionStore = create<ActionState>((set, get) => ({
   },
 
   openActionEditor: (action = null) => {
+    useSettingsStore.getState().updateSettings({ showSidebar: true });
+    useSettingsStore.getState().setActiveSidebarTab('actions');
     set({ isActionEditorOpen: true, editingAction: action });
   },
 
@@ -393,15 +399,90 @@ export const useActionStore = create<ActionState>((set, get) => ({
     });
   },
 
+  addCategory: (name: string) => {
+    const cat = name.trim().toUpperCase();
+    if (!cat) return false;
+    const state = get();
+    if (state.categoryOrder.includes(cat)) return true;
+    const newOrder = [...state.categoryOrder, cat];
+    set({ categoryOrder: newOrder });
+    persistUIState({
+      collapsedCategories: state.collapsedCategories,
+      categoryOrder: newOrder,
+      pinnedActionIds: state.pinnedActionIds
+    });
+    return true;
+  },
+
+  renameCategory: (oldName: string, newName: string) => {
+    const oldCat = oldName.trim().toUpperCase();
+    const newCat = newName.trim().toUpperCase();
+    if (!oldCat || !newCat || oldCat === newCat) return false;
+    const state = get();
+    const updatedActions = state.actions.map(a =>
+      (a.category || 'GENERAL').toUpperCase() === oldCat
+        ? { ...a, category: newCat, updatedAt: Date.now() }
+        : a
+    );
+    const newOrder = state.categoryOrder.map(c => c === oldCat ? newCat : c);
+    const newCollapsed = state.collapsedCategories.map(c => c === oldCat ? newCat : c);
+    set({
+      actions: updatedActions,
+      categoryOrder: newOrder,
+      collapsedCategories: newCollapsed
+    });
+    saveActions(updatedActions);
+    persistUIState({
+      collapsedCategories: newCollapsed,
+      categoryOrder: newOrder,
+      pinnedActionIds: state.pinnedActionIds
+    });
+    return true;
+  },
+
+  deleteCategory: (category: string, fallback = 'GENERAL') => {
+    const targetCat = category.trim().toUpperCase();
+    const fallbackCat = fallback.trim().toUpperCase();
+    const state = get();
+    const updatedActions = state.actions.map(a =>
+      (a.category || 'GENERAL').toUpperCase() === targetCat
+        ? { ...a, category: fallbackCat, updatedAt: Date.now() }
+        : a
+    );
+    const newOrder = state.categoryOrder.filter(c => c !== targetCat);
+    const newCollapsed = state.collapsedCategories.filter(c => c !== targetCat);
+    set({
+      actions: updatedActions,
+      categoryOrder: newOrder,
+      collapsedCategories: newCollapsed
+    });
+    saveActions(updatedActions);
+    persistUIState({
+      collapsedCategories: newCollapsed,
+      categoryOrder: newOrder,
+      pinnedActionIds: state.pinnedActionIds
+    });
+    return true;
+  },
+
   getEnabledActions: () => {
     return get().actions.filter(a => a.enabled !== false);
   },
 
   getAllCategories: () => {
     const counts = new Map<string, number>();
-    get().actions.forEach(a => {
-      const cat = a.category || 'General';
+    const actions = get().actions;
+    const order = get().categoryOrder;
+
+    actions.forEach(a => {
+      const cat = (a.category || 'GENERAL').toUpperCase();
       counts.set(cat, (counts.get(cat) || 0) + 1);
+    });
+
+    order.forEach(cat => {
+      if (!counts.has(cat)) {
+        counts.set(cat, 0);
+      }
     });
 
     const categories: CategorySummary[] = Array.from(counts.entries()).map(([name, count]) => ({
@@ -409,7 +490,6 @@ export const useActionStore = create<ActionState>((set, get) => ({
       count
     }));
 
-    const order = get().categoryOrder;
     if (order.length > 0) {
       categories.sort((a, b) => {
         const aIndex = order.indexOf(a.name);

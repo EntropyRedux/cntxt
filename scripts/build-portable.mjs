@@ -33,6 +33,13 @@ if (fs.existsSync(targetReleaseBuildDir)) {
   }
 }
 
+// 2b. Clean stale bundle artifacts
+const bundleDir = path.join(rootDir, 'src-tauri', 'target', 'release', 'bundle');
+if (fs.existsSync(bundleDir)) {
+  console.log('🧹 Purging stale installer bundles...');
+  fs.rmSync(bundleDir, { recursive: true, force: true });
+}
+
 // 3. Build frontend bundle with Vite
 console.log('📦 Compiling frontend assets with Vite...');
 execSync('npm run build', { cwd: rootDir, stdio: 'inherit' });
@@ -42,32 +49,59 @@ console.log('🦀 Compiling native release executable (CARGO_BUILD_JOBS=1)...');
 process.env.CARGO_BUILD_JOBS = '1';
 execSync('npx @tauri-apps/cli build', { cwd: rootDir, stdio: 'inherit', env: process.env });
 
-// 5. Copy release binary to dist-portable/CNTXT-portable.exe
+// 5. Copy release binary to dist-portable/CNTXT_${version}_portable.exe
 const releaseExe = path.join(rootDir, 'src-tauri', 'target', 'release', 'cntxt.exe');
 const portableDir = path.join(rootDir, 'dist-portable');
-const portableExe = path.join(portableDir, 'CNTXT-portable.exe');
+
+const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
+const version = packageJson.version;
+const versionedPortableExe = path.join(portableDir, `CNTXT_${version}_portable.exe`);
 
 if (!fs.existsSync(portableDir)) {
   fs.mkdirSync(portableDir, { recursive: true });
 }
 
 if (fs.existsSync(releaseExe)) {
-  // If an old test instance is currently running, gracefully stop it to release the file lock
-  try {
-    if (process.platform === 'win32') {
-      execSync('taskkill /F /IM CNTXT-portable.exe /T 2>nul || exit 0', { stdio: 'ignore' });
-    }
-  } catch {
-    // Ignore if not running
-  }
-
-  fs.copyFileSync(releaseExe, portableExe);
-  const stats = fs.statSync(portableExe);
+  fs.copyFileSync(releaseExe, versionedPortableExe);
+  const stats = fs.statSync(versionedPortableExe);
   const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
   console.log(`✅ Portable build complete!`);
-  console.log(`📍 Output: ${portableExe} (${sizeMB} MB)`);
+  console.log(`📍 Output: ${versionedPortableExe} (${sizeMB} MB)`);
 } else {
   console.error(`❌ Build finished, but ${releaseExe} was not found.`);
   process.exit(1);
 }
 
+// 6. Copy versioned installer bundles to dist-installer/
+const distInstallerDir = path.join(rootDir, 'dist-installer');
+if (!fs.existsSync(distInstallerDir)) {
+  fs.mkdirSync(distInstallerDir, { recursive: true });
+}
+
+const bundlesToCopy = [
+  {
+    src: path.join(bundleDir, 'nsis', `CNTXT_${version}_x64-setup.exe`),
+    label: 'NSIS installer',
+  },
+  {
+    src: path.join(bundleDir, 'msi', `CNTXT_${version}_x64_en-US.msi`),
+    label: 'MSI installer',
+  },
+];
+
+let copiedCount = 0;
+for (const { src, label } of bundlesToCopy) {
+  if (fs.existsSync(src)) {
+    const dest = path.join(distInstallerDir, path.basename(src));
+    fs.copyFileSync(src, dest);
+    const sizeMB = (fs.statSync(dest).size / (1024 * 1024)).toFixed(2);
+    console.log(`📦 ${label} → dist-installer/${path.basename(dest)} (${sizeMB} MB)`);
+    copiedCount++;
+  } else {
+    console.warn(`⚠️  ${label} not found at expected path: ${src}`);
+  }
+}
+
+if (copiedCount > 0) {
+  console.log(`✅ ${copiedCount} installer(s) copied to dist-installer/`);
+}

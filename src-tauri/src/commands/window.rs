@@ -2,54 +2,117 @@ use tauri::Window;
 
 #[tauri::command]
 pub fn minimize_window(window: Window) {
-    let _ = window.minimize();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let _ = window.minimize();
+    }
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = window;
+    }
 }
 
 #[tauri::command]
 pub fn maximize_window(window: Window) {
-    let _ = window.maximize();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let _ = window.maximize();
+    }
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = window;
+    }
 }
 
 #[tauri::command]
 pub fn unmaximize_window(window: Window) {
-    let _ = window.unmaximize();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let _ = window.unmaximize();
+    }
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = window;
+    }
 }
 
 #[tauri::command]
 pub fn close_window(window: Window) {
-    let _ = window.close();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let _ = window.close();
+    }
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = window;
+    }
 }
 
 #[tauri::command]
 pub fn is_maximized(window: Window) -> bool {
-    window.is_maximized().unwrap_or(false)
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        window.is_maximized().unwrap_or(false)
+    }
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = window;
+        true
+    }
 }
 
 #[tauri::command]
 pub fn start_dragging(window: Window) {
-    let _ = window.start_dragging();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let _ = window.start_dragging();
+    }
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = window;
+    }
 }
 
 #[tauri::command]
 pub fn toggle_maximize(window: Window) {
-    if window.is_maximized().unwrap_or(false) {
-        let _ = window.unmaximize();
-    } else {
-        let _ = window.maximize();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        if window.is_maximized().unwrap_or(false) {
+            let _ = window.unmaximize();
+        } else {
+            let _ = window.maximize();
+        }
+    }
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = window;
     }
 }
 
 #[tauri::command]
 pub fn open_devtools(window: tauri::WebviewWindow) {
-    window.open_devtools();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        window.open_devtools();
+    }
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = window;
+    }
 }
 
 #[tauri::command]
 pub fn toggle_devtools(window: tauri::WebviewWindow) {
-    if window.is_devtools_open() {
-        window.close_devtools();
-    } else {
-        window.open_devtools();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        if window.is_devtools_open() {
+            window.close_devtools();
+        } else {
+            window.open_devtools();
+        }
+    }
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = window;
     }
 }
-

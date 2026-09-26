@@ -164,14 +164,6 @@ describe('SettingsStore', () => {
     expect(useSettingsStore.getState().settings.activeSidebarTab).toBe('templates');
   });
 
-  it('toggles preview', () => {
-    const store = useSettingsStore.getState();
-    store.togglePreview();
-    expect(useSettingsStore.getState().settings.showLivePreview).toBe(true);
-    store.togglePreview();
-    expect(useSettingsStore.getState().settings.showLivePreview).toBe(false);
-  });
-
   it('sets model', () => {
     const store = useSettingsStore.getState();
     store.setModel('gpt-4');

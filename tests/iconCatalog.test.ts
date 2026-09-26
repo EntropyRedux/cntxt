@@ -6,7 +6,6 @@ import {
   DEFAULT_WORKFLOW_ICON, 
   DEFAULT_BOOKMARK_ICON 
 } from '../src/constants/iconCatalog';
-import { ALL_WORKFLOW_ICONS } from '../src/constants/workflowIcons';
 import { AVAILABLE_ICONS, ICON_MAP } from '../src/components/Ribbon/RibbonIcon';
 
 describe('Unified Icon Catalog & Provider', () => {
@@ -31,12 +30,6 @@ describe('Unified Icon Catalog & Provider', () => {
     expect(APP_ICON_MAP[DEFAULT_APP_ICON]).toBeDefined();
     expect(APP_ICON_MAP[DEFAULT_WORKFLOW_ICON]).toBeDefined();
     expect(APP_ICON_MAP[DEFAULT_BOOKMARK_ICON]).toBeDefined();
-  });
-
-  it('guarantees 100% backward compatibility with workflow icons', () => {
-    for (const wfIcon of ALL_WORKFLOW_ICONS) {
-      expect(APP_ICON_MAP[wfIcon]).toBeDefined();
-    }
   });
 
   it('guarantees 100% backward compatibility with ribbon icons', () => {

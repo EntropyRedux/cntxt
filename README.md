@@ -1,16 +1,17 @@
 # CNTXT
 
-**A reimagining of ContextPad** — a cross-platform application (Desktop, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
+**A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.3.0) — FG-07 Editor Resiliency, multi-tab state preservation, extended markdown syntax, and power user tools complete. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.3.2) — FG-08 Android APK native mobile runtime, dual-entry-point architecture, FG-07 Editor Resiliency, multi-tab state preservation, and power user tools complete. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (Windows v0.3.0)
+## Downloads (v0.3.2)
 
-| Package | Format | Architecture | Download Link | Verification / Signature |
+| Package | Format | Platform / Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | x64 | [Download CNTXT_0.3.0_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT_0.3.0_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | x64 | [Download CNTXT_0.3.0_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT_0.3.0_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | x64 | [Download CNTXT-portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT-portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.3.2_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.2/CNTXT_0.3.2_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.3.2_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.2/CNTXT_0.3.2_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT-portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.2/CNTXT-portable.exe) | Standalone (Zero-install executable) |
+| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download app-arm64-release.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.2/app-arm64-release.apk) | Signed with Release Keystore / Installable via ADB |
 
 ## What It Is
 
@@ -18,7 +19,8 @@ CNTXT builds on the ContextPad concept with a clean, portable frontend architect
 
 - **Portability-first** — a typed `IRuntimeBridge` contract (`src/ui-contract/bridgeContract.ts`) is the *only* boundary between the UI and the platform (Tauri desktop, Android mobile, web, or mock). No component, store, or service touches `window`, `navigator`, `localStorage`, or `indexedDB` directly; all platform access lives in `src/adapters/`.
 - **Modular shell architecture** — Classic / Prototype / Workbench shell modes with a typed design system (`src/design/`), primitive component library (`src/primitives/`), and touch-friendly mobile accessory toolbar (`MobileAccessoryBar`).
-- **Tauri v2 runtime** — native Rust commands for file operations (`rfd` dialogs on desktop, Scoped Storage plugins on mobile), window management, keyring secrets, and a live preview server (`axum` + WebSocket).
+- **Tauri v2 runtime** — native Rust commands for file operations (`rfd` dialogs on desktop, Scoped Storage plugins on mobile), window management, sandboxed keyring/storage secrets, and client-side LivePreview with synchronized scrolling and markdown decoration rendering.
+- **Native Android APK** — compiled with Rust JNI cdylib (`libcntxt_lib.so`), Kotlin `MainActivity` with edge-to-edge safe area handling, and native Android back-button handshake for priority overlay dismissal.
 
 ## Repository Layout
 
@@ -85,10 +87,12 @@ are found.
 
 ## Current Status & Verification
  
-- **Production Release (v0.3.0)**:
-  - **Signed Installer Packages**: Official Windows NSIS installer (`dist-installer/CNTXT_0.3.0_x64-setup.exe`) and WiX MSI (`dist-installer/CNTXT_0.3.0_x64_en-US.msi`), signed with SHA256 Authenticode and DigiCert RFC 3161 timestamps via `npm run package:sign`. Standalone portable executable in `dist-portable/CNTXT-portable.exe`.
-  - **Automated Test Coverage**: 223 unit tests passing across 24 suites via Vitest (`npm test`); 21 Playwright E2E tests green in headless Chromium (`npm run test:e2e`).
-  - **Platform Purity**: `npm run lint` scans 118 files with zero platform leaks outside `src/adapters/` and 100% contract parity.
+- **Production Release (v0.3.2)**:
+  - **Android SAF Deep Traversal Fix**: Workspace Explorer now implements robust `DocumentsContract.buildChildDocumentsUriUsingTree` querying for infinitely deep subfolder traversal, bypassing Android's default 3-level limitation.
+  - **Android APK Support (FG-08)**: Fully automated release APK packaging via `npm run package:android` (`scripts/build-android.ps1`), compiled with Rust JNI `cdylib` and Gradle, signed with release keystore (`app-arm64-release.apk`), and verified live via ADB on physical Android hardware.
+  - **Signed Windows Installer Packages**: Official Windows NSIS installer (`dist-installer/CNTXT_0.3.0_x64-setup.exe`) and WiX MSI (`dist-installer/CNTXT_0.3.0_x64_en-US.msi`), signed with SHA256 Authenticode and DigiCert RFC 3161 timestamps via `npm run package:sign`. Standalone portable executable in `dist-portable/CNTXT-portable.exe`.
+  - **Automated Test Coverage**: 272 unit tests passing across 27 suites via Vitest (`npm test`); 21 Playwright E2E tests green in headless Chromium (`npm run test:e2e`).
+  - **Platform Purity**: `npm run lint` scans 119 files with zero platform leaks outside `src/adapters/` and 100% contract parity.
   - **Window Resize Remediation**: Synchronous dark WebView2 background (`#141417`), dark theme, and percentage sizing eliminating resize drag lag and white canvas artifacts.
   - **Per-Tab Undo/Redo & State Preservation**: Persistent single `EditorView` with isolated undo/redo history stacks and scroll offset caching across unlimited tab switches.
   - **Extended Markdown Syntax**: Full support for `***bold+italic***`, `==highlight==`, `~subscript~`, and `^superscript^` in both RAW and Rendered modes.

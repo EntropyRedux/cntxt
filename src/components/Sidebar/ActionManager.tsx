@@ -32,6 +32,8 @@ import { Action } from '../../contracts/data_shapes';
 import { FormulaEngine, getFormulaFunctionsByCategory, FormulaFunctionInfo } from '../../services/formulaParser';
 import { CategorySelector } from './TemplateManager/CategorySelector';
 import { ActionRowItem } from './ActionManager/ActionRowItem';
+import { CategoryManagerModal } from '../Common/CategoryManagerModal';
+import { useConfirmStore } from '../../store/confirmStore';
 import { useRuntimeBridge, getSelectionText } from '../../adapters';
 import { executeActionById } from '../../services/actionExecutor';
 
@@ -60,12 +62,19 @@ export const ActionManager: React.FC = () => {
     toggleActionsEnabledBulk,
     executeAction,
     isRunningAction,
+    addCategory,
+    renameCategory,
+    deleteCategory,
     getAllCategories
   } = useActionStore();
 
+  const { showConfirm } = useConfirmStore();
   const { tabs, activeTabId, updateTabContent, createTab, insertTextAtCursor } = useTabStore();
   const { templates, getVisibleTemplates, openVariableModal } = useTemplateStore();
   const { addNotification } = useNotificationStore();
+
+  // Category Manager modal state
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
 
   // Search state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -229,6 +238,20 @@ export const ActionManager: React.FC = () => {
     setShowForm(true);
   };
 
+  // Synchronize external trigger (from menu or command palette) with in-panel form
+  const editingAction = useActionStore(s => s.editingAction);
+  const isActionEditorOpen = useActionStore(s => s.isActionEditorOpen);
+
+  useEffect(() => {
+    if (editingAction) {
+      handleEdit(editingAction);
+      useActionStore.getState().closeActionEditor();
+    } else if (isActionEditorOpen) {
+      handleOpenAddForm();
+      useActionStore.getState().closeActionEditor();
+    }
+  }, [editingAction, isActionEditorOpen]);
+
   // Save or Update Action
   const handleSaveForm = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -310,11 +333,31 @@ export const ActionManager: React.FC = () => {
   // Bulk actions
   const handleBulkDelete = () => {
     if (selectedActionIds.length === 0) return;
-    if (window.confirm(`Delete ${selectedActionIds.length} selected action(s)?`)) {
-      deleteActionsBulk(selectedActionIds);
-      clearSelection();
-      addNotification('Bulk Delete', `Deleted ${selectedActionIds.length} action(s)`, 'success');
-    }
+    const count = selectedActionIds.length;
+    showConfirm({
+      title: `Delete ${count} Actions`,
+      message: `Are you sure you want to delete ${count} selected action script(s)? This action cannot be undone.`,
+      confirmLabel: `Delete ${count} Actions`,
+      variant: 'danger',
+      onConfirm: () => {
+        deleteActionsBulk(selectedActionIds);
+        clearSelection();
+        addNotification('Bulk Delete', `Deleted ${count} action(s)`, 'success');
+      }
+    });
+  };
+
+  const handleDeleteAction = (id: string, name?: string) => {
+    showConfirm({
+      title: 'Delete Action Script',
+      message: `Are you sure you want to delete action "${name || id}"? This action cannot be undone.`,
+      confirmLabel: 'Delete Action',
+      variant: 'danger',
+      onConfirm: () => {
+        deleteAction(id);
+        addNotification('Action Deleted', name || id, 'info');
+      }
+    });
   };
 
   const handleBulkToggleEnabled = () => {
@@ -727,6 +770,7 @@ export const ActionManager: React.FC = () => {
             value={formData.category}
             categories={allCategories}
             onChange={val => setFormData({ ...formData, category: val })}
+            onOpenCategoryManager={() => setIsCategoryManagerOpen(true)}
             placeholder="Select Category"
           />
 
@@ -900,7 +944,7 @@ export const ActionManager: React.FC = () => {
                         onToggleSelect={toggleSelection}
                         onRunAction={handleRunAction}
                         onEdit={handleEdit}
-                        onDelete={deleteAction}
+                        onDelete={(actionId) => handleDeleteAction(actionId, action.name)}
                         onToggleEnabled={toggleActionEnabled}
                       />
                     ))}
@@ -911,6 +955,16 @@ export const ActionManager: React.FC = () => {
           })
         )}
       </div>
+
+      <CategoryManagerModal
+        isOpen={isCategoryManagerOpen}
+        onClose={() => setIsCategoryManagerOpen(false)}
+        title="Manage Action Categories"
+        categories={allCategories}
+        onAddCategory={addCategory}
+        onRenameCategory={renameCategory}
+        onDeleteCategory={deleteCategory}
+      />
     </div>
   );
 };

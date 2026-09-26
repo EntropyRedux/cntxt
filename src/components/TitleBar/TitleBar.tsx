@@ -152,7 +152,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
     {
       id: 'view',
       label: 'View',
-      ariaLabel: 'View menu (Zen Mode, Preview, Sidebar, Zoom)',
+      ariaLabel: 'View menu (Sidebar, Editor Mode, Layout)',
       icon: Eye,
       items: [
         { 
@@ -167,10 +167,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         { label: 'Show Document Outline', action: () => setActiveSidebarTab('outline') },
         { label: 'Show Templates Library', action: () => setActiveSidebarTab('templates') },
         { label: 'Show Action Scripts', action: () => setActiveSidebarTab('actions') },
-        { label: 'Show Workflows', action: () => setActiveSidebarTab('workflows') },
         { label: 'Show Token Analytics', action: () => setActiveSidebarTab('tokens'), divider: true },
-        { label: 'Zoom In (Font +)', action: () => updateSettings({ fontSize: Math.min(24, settings.fontSize + 1) }) },
-        { label: 'Zoom Out (Font -)', action: () => updateSettings({ fontSize: Math.max(10, settings.fontSize - 1) }) },
         { label: 'Toggle Word Wrap', action: () => updateSettings({ wordWrap: !settings.wordWrap }) }
       ]
     },

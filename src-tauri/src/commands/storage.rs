@@ -46,11 +46,11 @@ async fn ensure_loaded<'a>(app: &tauri::AppHandle, state: &'a Mutex<KvStoreState
     lock
 }
 
-use tauri::Window;
+use tauri::{Emitter, Window};
 
 #[tauri::command]
 pub async fn kv_get(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<Option<String>, String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     let lock = ensure_loaded(&app, &state.0).await;
@@ -59,24 +59,32 @@ pub async fn kv_get(window: Window, app: tauri::AppHandle, state: tauri::State<'
 
 #[tauri::command]
 pub async fn kv_set(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String, value: String) -> Result<(), String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     let path = KvStore::store_path(&app)?;
     let snapshot = {
         let mut lock = ensure_loaded(&app, &state.0).await;
-        lock.data.insert(key, value);
+        lock.data.insert(key.clone(), value);
         lock.data.clone()
     };
+    // Fan-out to ALL windows explicitly — app.emit() targets only the
+    // current webview in some production builds; emit_to() per window
+    // is the reliable cross-window broadcast pattern in Tauri v2.
+    let payload = serde_json::json!({ "key": &key });
+    for (label, _) in app.webview_windows() {
+        let _ = app.emit_to(label.as_str(), "storage_changed", &payload);
+    }
     tokio::task::spawn_blocking(move || {
         let raw = serde_json::to_string_pretty(&snapshot).map_err(|e| e.to_string())?;
         fs::write(&path, raw).map_err(|e| format!("Failed to persist kv store: {}", e))
     }).await.map_err(|e| e.to_string())?
 }
 
+
 #[tauri::command]
 pub async fn kv_remove(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<(), String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     let path = KvStore::store_path(&app)?;
@@ -85,15 +93,21 @@ pub async fn kv_remove(window: Window, app: tauri::AppHandle, state: tauri::Stat
         lock.data.remove(&key);
         lock.data.clone()
     };
+    // Fan-out to ALL windows explicitly (same fix as kv_set).
+    let payload = serde_json::json!({ "key": &key });
+    for (label, _) in app.webview_windows() {
+        let _ = app.emit_to(label.as_str(), "storage_changed", &payload);
+    }
     tokio::task::spawn_blocking(move || {
         let raw = serde_json::to_string_pretty(&snapshot).map_err(|e| e.to_string())?;
         fs::write(&path, raw).map_err(|e| format!("Failed to persist kv store: {}", e))
     }).await.map_err(|e| e.to_string())?
 }
 
+
 #[tauri::command]
 pub async fn kv_has(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<bool, String> {
-    if window.label() != "main" {
+    if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
     let lock = ensure_loaded(&app, &state.0).await;

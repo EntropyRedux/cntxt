@@ -21,7 +21,7 @@ export type SupportedLanguage =
   | 'css' 
   | 'text';
 
-export type TabType = 'document' | 'workflow' | 'template' | 'scratchpad';
+export type TabType = 'document' | 'template' | 'scratchpad';
 
 export interface DocumentContent {
   raw: string;
@@ -56,7 +56,7 @@ export interface PinnedTab {
   id: string;
   name: string;
   icon: string; // Lucide icon name
-  type: 'workflow' | 'bookmark';
+  type: 'bookmark';
   content: string; // Blueprint content for workflow, cached content for bookmark
   filePath?: string;
   category: string;
@@ -138,7 +138,7 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   showSidebar: boolean;
   showRibbon?: boolean;
   showMenuBar?: boolean;
-  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'workflows' | 'tokens' | 'settings';
+  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'tokens' | 'settings';
   showLivePreview: boolean;
   editorMode: 'raw' | 'rendered';
   enableMarkdownRendering: boolean;

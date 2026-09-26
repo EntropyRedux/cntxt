@@ -57,6 +57,9 @@ interface TemplateState {
   toggleTemplatesVisibilityBulk: (ids: string[], isHidden: boolean) => void;
   toggleCategoryCollapse: (category: string) => void;
   moveCategory: (category: string, direction: 'up' | 'down') => void;
+  addCategory: (name: string) => boolean;
+  renameCategory: (oldName: string, newName: string) => boolean;
+  deleteCategory: (category: string, fallbackCategory?: string) => boolean;
 
   getAllCategories: () => CategorySummary[];
   getVisibleTemplates: () => Template[];
@@ -389,6 +392,75 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
     });
   },
 
+  addCategory: (name: string) => {
+    const catUpper = name.trim().toUpperCase();
+    if (!catUpper) return false;
+    const state = get();
+    if (state.categoryOrder.includes(catUpper)) return true;
+    const newOrder = [...state.categoryOrder, catUpper];
+    set({ categoryOrder: newOrder });
+    persistUIState({
+      collapsedCategories: state.collapsedCategories,
+      categoryOrder: newOrder,
+      pinnedTemplateIds: state.pinnedTemplateIds,
+      showHidden: state.showHidden
+    });
+    return true;
+  },
+
+  renameCategory: (oldName: string, newName: string) => {
+    const oldUpper = oldName.trim().toUpperCase();
+    const newUpper = newName.trim().toUpperCase();
+    if (!oldUpper || !newUpper || oldUpper === newUpper) return false;
+    const state = get();
+    const updatedTemplates = state.templates.map(t => 
+      (t.category || 'GENERAL').toUpperCase() === oldUpper 
+        ? { ...t, category: newUpper, updatedAt: Date.now() }
+        : t
+    );
+    const newOrder = state.categoryOrder.map(c => c === oldUpper ? newUpper : c);
+    const newCollapsed = state.collapsedCategories.map(c => c === oldUpper ? newUpper : c);
+    set({ 
+      templates: updatedTemplates, 
+      categoryOrder: newOrder,
+      collapsedCategories: newCollapsed 
+    });
+    saveTemplates(updatedTemplates);
+    persistUIState({
+      collapsedCategories: newCollapsed,
+      categoryOrder: newOrder,
+      pinnedTemplateIds: state.pinnedTemplateIds,
+      showHidden: state.showHidden
+    });
+    return true;
+  },
+
+  deleteCategory: (category: string, fallback = 'GENERAL') => {
+    const catUpper = category.trim().toUpperCase();
+    const fallbackUpper = fallback.trim().toUpperCase();
+    const state = get();
+    const updatedTemplates = state.templates.map(t =>
+      (t.category || 'GENERAL').toUpperCase() === catUpper
+        ? { ...t, category: fallbackUpper, updatedAt: Date.now() }
+        : t
+    );
+    const newOrder = state.categoryOrder.filter(c => c !== catUpper);
+    const newCollapsed = state.collapsedCategories.filter(c => c !== catUpper);
+    set({
+      templates: updatedTemplates,
+      categoryOrder: newOrder,
+      collapsedCategories: newCollapsed
+    });
+    saveTemplates(updatedTemplates);
+    persistUIState({
+      collapsedCategories: newCollapsed,
+      categoryOrder: newOrder,
+      pinnedTemplateIds: state.pinnedTemplateIds,
+      showHidden: state.showHidden
+    });
+    return true;
+  },
+
   getAllCategories: () => {
     const { templates, categoryOrder } = get();
     const categoryMap = new Map<string, number>();
@@ -396,6 +468,12 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
     templates.forEach(t => {
       const cat = (t.category || 'GENERAL').toUpperCase();
       categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
+    });
+
+    categoryOrder.forEach(cat => {
+      if (!categoryMap.has(cat)) {
+        categoryMap.set(cat, 0);
+      }
     });
 
     const categories: CategorySummary[] = Array.from(categoryMap.entries()).map(([name, count]) => ({

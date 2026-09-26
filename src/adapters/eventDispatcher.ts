@@ -1,7 +1,6 @@
 import { useTabStore } from '../store/tabStore';
 import { useTemplateStore } from '../store/templateStore';
 import { useActionStore } from '../store/actionStore';
-import { useWorkflowStore } from '../store/workflowStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useFileHistoryStore } from '../store/fileHistoryStore';
@@ -194,7 +193,6 @@ export function createUiEventDispatcher(
             await useTabStore.getState().initializeTabs();
             await useTemplateStore.getState().initializeTemplates();
             await useActionStore.getState().initializeActions();
-            await useWorkflowStore.getState().initializeWorkflows();
             useNotificationStore.getState().addNotification('Import Successful', 'Workspace restored', 'success');
           }
         };

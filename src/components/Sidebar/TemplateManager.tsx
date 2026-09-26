@@ -30,6 +30,8 @@ import { editorRegistry } from '../../services/editor/editorRegistry';
 import { processTemplateVariables, extractTemplateVariables } from '../../services/editor/templateVariableService';
 import { CategorySelector } from './TemplateManager/CategorySelector';
 import { TemplateRowItem } from './TemplateManager/TemplateRowItem';
+import { CategoryManagerModal } from '../Common/CategoryManagerModal';
+import { useConfirmStore } from '../../store/confirmStore';
 
 const QUICK_MACRO_TOKENS = [
   { label: 'Selection', token: '{{SELECTION}}', description: 'Selected editor text' },
@@ -61,11 +63,18 @@ export const TemplateManager: React.FC = () => {
     duplicateTemplate,
     toggleTemplatesVisibilityBulk,
     openVariableModal,
+    addCategory,
+    renameCategory,
+    deleteCategory,
     getAllCategories
   } = useTemplateStore();
 
+  const { showConfirm } = useConfirmStore();
   const { tabs, activeTabId, insertTextAtCursor } = useTabStore();
   const { addNotification } = useNotificationStore();
+
+  // Category Manager modal state
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
 
   // Search state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -309,11 +318,30 @@ export const TemplateManager: React.FC = () => {
   const handleBulkDelete = () => {
     if (selectedTemplateIds.length === 0) return;
     const count = selectedTemplateIds.length;
-    if (window.confirm(`Delete ${count} selected template(s)? This action cannot be undone.`)) {
-      deleteTemplatesBulk(selectedTemplateIds);
-      clearSelection();
-      addNotification('Bulk Delete', `Deleted ${count} template(s)`, 'info');
-    }
+    showConfirm({
+      title: `Delete ${count} Templates`,
+      message: `Are you sure you want to delete ${count} selected template(s)? This action cannot be undone.`,
+      confirmLabel: `Delete ${count} Templates`,
+      variant: 'danger',
+      onConfirm: () => {
+        deleteTemplatesBulk(selectedTemplateIds);
+        clearSelection();
+        addNotification('Bulk Delete', `Deleted ${count} template(s)`, 'info');
+      }
+    });
+  };
+
+  const handleDeleteTemplate = (id: string, name?: string) => {
+    showConfirm({
+      title: 'Delete Template',
+      message: `Are you sure you want to delete template "${name || id}"? This action cannot be undone.`,
+      confirmLabel: 'Delete Template',
+      variant: 'danger',
+      onConfirm: () => {
+        deleteTemplate(id);
+        addNotification('Template Deleted', name || id, 'info');
+      }
+    });
   };
 
   const handleBulkToggleVisibility = () => {
@@ -618,6 +646,7 @@ export const TemplateManager: React.FC = () => {
                 value={formData.category}
                 categories={categoriesSummary}
                 onChange={val => setFormData({ ...formData, category: val })}
+                onOpenCategoryManager={() => setIsCategoryManagerOpen(true)}
                 placeholder="Select Category"
               />
             </div>
@@ -791,7 +820,7 @@ export const TemplateManager: React.FC = () => {
                         onToggleSelect={toggleSelection}
                         onUseTemplate={handleUseTemplate}
                         onEdit={handleEdit}
-                        onDelete={deleteTemplate}
+                        onDelete={(tmplId) => handleDeleteTemplate(tmplId, template.name)}
                         onOpenVariableModal={openVariableModal}
                       />
                     ))}
@@ -802,6 +831,16 @@ export const TemplateManager: React.FC = () => {
           })
         )}
       </div>
+
+      <CategoryManagerModal
+        isOpen={isCategoryManagerOpen}
+        onClose={() => setIsCategoryManagerOpen(false)}
+        title="Manage Template Categories"
+        categories={categoriesSummary}
+        onAddCategory={addCategory}
+        onRenameCategory={renameCategory}
+        onDeleteCategory={deleteCategory}
+      />
     </div>
   );
 };

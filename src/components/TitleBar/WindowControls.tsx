@@ -29,7 +29,7 @@ export const WindowControls: React.FC<WindowControlsProps> = ({ className = '' }
   }, [bridge]);
 
   useEffect(() => {
-    if (!bridge.window.isNative) return;
+    if (!bridge.window.isNative || bridge.platform.isMobile) return;
     checkMaximized();
 
     const handleResize = () => {
@@ -40,8 +40,8 @@ export const WindowControls: React.FC<WindowControlsProps> = ({ className = '' }
     return () => window.removeEventListener('resize', handleResize);
   }, [bridge, checkMaximized]);
 
-  // Graceful degradation: do not render window controls in browser or AI Studio
-  if (!bridge.window.isNative) {
+  // Graceful degradation: do not render window controls in browser, AI Studio, or on mobile
+  if (!bridge.window.isNative || bridge.platform.isMobile) {
     return null;
   }
 
