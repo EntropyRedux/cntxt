@@ -48,6 +48,16 @@ export interface IFileSystemBridge {
  * Window & System Bridge Contract
  * Decouples the UI from Tauri appWindow, Electron BrowserWindow, or browser window manager
  */
+export type WindowResizeDirection =
+  | 'East'
+  | 'North'
+  | 'NorthEast'
+  | 'NorthWest'
+  | 'South'
+  | 'SouthEast'
+  | 'SouthWest'
+  | 'West';
+
 export interface IWindowBridge {
   newWindow: (url?: string) => Promise<boolean>;
   minimize?: () => Promise<void>;
@@ -56,6 +66,7 @@ export interface IWindowBridge {
   toggleMaximize?: () => Promise<void>;
   isMaximized?: () => Promise<boolean>;
   startDragging?: () => Promise<void>;
+  startResizeDragging?: (direction: WindowResizeDirection) => Promise<void>;
   close?: () => Promise<void>;
   openDevTools?: () => Promise<void>;
   toggleDevTools?: () => Promise<void>;

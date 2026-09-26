@@ -1,0 +1,93 @@
+name: Build Linux Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux-deb:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential curl wget file pkg-config \
+            libssl-dev \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libx11-dev \
+            libxcb1-dev \
+            libdbus-1-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Run Platform Purity & Lint Checks
+        run: npm run lint
+
+      - name: Run Unit Tests
+        run: npm test
+
+      - name: Build Linux Packages (Debian & Portable)
+        run: node scripts/build-portable.mjs
+
+      - name: Generate Checksums
+        run: |
+          sha256sum src-tauri/target/release/bundle/deb/*.deb dist-portable/cntxt-portable > SHA256SUMS-linux.txt
+          cat SHA256SUMS-linux.txt
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cntxt-linux-x64
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            dist-portable/cntxt-portable
+            SHA256SUMS-linux.txt
+
+      - name: Attach to GitHub Release (Tag Triggered)
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          gh release upload "$TAG_NAME" \
+            src-tauri/target/release/bundle/deb/*.deb \
+            dist-portable/cntxt-portable \
+            SHA256SUMS-linux.txt \
+            --clobber
+
