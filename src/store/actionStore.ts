@@ -3,14 +3,10 @@ import { Action, ActionCategory, PersistedActionUIState } from '../../contracts/
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
-// MOCK: quarantined synthetic sample data for prototype demo mode
-import { DEFAULT_ACTIONS, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 import { executeActionById } from '../services/actionExecutor';
 import { executeInSandbox } from '../services/actionSandbox';
 import { useNotificationStore } from './notificationStore';
 import { useSettingsStore } from './settingsStore';
-
-export { DEFAULT_ACTIONS };
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -95,9 +91,6 @@ export const useActionStore = create<ActionState>((set, get) => ({
       activeStorage = storage;
     }
     if (!activeStorage) {
-      if (IS_PROTOTYPE_DEMO_MODE) {
-        set({ actions: DEFAULT_ACTIONS });
-      }
       return;
     }
 
@@ -105,9 +98,6 @@ export const useActionStore = create<ActionState>((set, get) => ({
       const stored = await activeStorage.getItem(STORAGE_KEYS.ACTIONS);
       if (stored) {
         set({ actions: JSON.parse(stored) });
-      } else if (IS_PROTOTYPE_DEMO_MODE) {
-        set({ actions: DEFAULT_ACTIONS });
-        await activeStorage.setItem(STORAGE_KEYS.ACTIONS, JSON.stringify(DEFAULT_ACTIONS));
       } else {
         set({ actions: [] });
       }
@@ -127,11 +117,7 @@ export const useActionStore = create<ActionState>((set, get) => ({
         }
       }
     } catch {
-      if (IS_PROTOTYPE_DEMO_MODE) {
-        set({ actions: DEFAULT_ACTIONS });
-      } else {
-        set({ actions: [] });
-      }
+      set({ actions: [] });
     }
   },
 
@@ -533,9 +519,8 @@ export const useActionStore = create<ActionState>((set, get) => ({
   },
 
   resetToDefaults: () => {
-    const resetActions = IS_PROTOTYPE_DEMO_MODE ? DEFAULT_ACTIONS : [];
-    set({ actions: resetActions });
-    saveActions(resetActions);
+    set({ actions: [] });
+    saveActions([]);
   }
 }));
 

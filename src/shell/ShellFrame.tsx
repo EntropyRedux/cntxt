@@ -175,8 +175,8 @@ export const ShellFrame: React.FC = () => {
     };
 
     // Check for cold-start share intent immediately
-    if (bridge.platform.isMobile && (window as any).AndroidBridge) {
-      const coldStartText = (window as any).AndroidBridge.consumeSharedText();
+    if (bridge.platform.isMobile && bridge.platform.consumeSharedText) {
+      const coldStartText = bridge.platform.consumeSharedText();
       if (coldStartText) {
         handleIncomingShare(new CustomEvent('saf:shared_text', { detail: coldStartText }));
       }

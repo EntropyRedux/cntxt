@@ -91,11 +91,14 @@ pub fn toggle_maximize(window: Window) {
 
 #[tauri::command]
 pub fn open_devtools(window: tauri::WebviewWindow) {
+    #[cfg(debug_assertions)]
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
-        window.open_devtools();
+        if super::is_authorized_label(window.label()) {
+            window.open_devtools();
+        }
     }
-    #[cfg(any(target_os = "android", target_os = "ios"))]
+    #[cfg(not(all(debug_assertions, not(any(target_os = "android", target_os = "ios")))))]
     {
         let _ = window;
     }
@@ -103,16 +106,21 @@ pub fn open_devtools(window: tauri::WebviewWindow) {
 
 #[tauri::command]
 pub fn toggle_devtools(window: tauri::WebviewWindow) {
+    #[cfg(debug_assertions)]
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
-        if window.is_devtools_open() {
-            window.close_devtools();
-        } else {
-            window.open_devtools();
+        if super::is_authorized_label(window.label()) {
+            if window.is_devtools_open() {
+                window.close_devtools();
+            } else {
+                window.open_devtools();
+            }
         }
     }
-    #[cfg(any(target_os = "android", target_os = "ios"))]
+    #[cfg(not(all(debug_assertions, not(any(target_os = "android", target_os = "ios")))))]
     {
         let _ = window;
     }
 }
+
+

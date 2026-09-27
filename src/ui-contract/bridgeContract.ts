@@ -104,6 +104,7 @@ export interface IPlatformBridge {
   isTouch: boolean;
   isMac: boolean;
   isMobile: boolean;
+  consumeSharedText?: () => string | null;
 }
 
 /**
@@ -126,7 +127,7 @@ export interface IRuntimeBridge {
   platform: IPlatformBridge;
   theme: IThemeBridge;
   shareContent?: (text: string) => Promise<boolean>;
-  getSessionToken: () => Promise<string>;
+  getSessionToken?: () => Promise<string>;
   deleteFile?: (path: string) => Promise<boolean>;
   openFileExplorer?: (path: string) => Promise<boolean>;
   openExternalUrl?: (url: string) => Promise<boolean>;

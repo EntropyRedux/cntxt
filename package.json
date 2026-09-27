@@ -52,7 +52,6 @@
     "canvas-confetti": "^1.9.4",
     "katex": "^0.18.5",
     "lucide-react": "^0.546.0",
-    "marked": "^18.0.10",
     "mermaid": "^11.17.2",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",

@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useSettingsStore } from '../src/store/settingsStore';
 import { useTabStore } from '../src/store/tabStore';
 import { useTemplateStore } from '../src/store/templateStore';

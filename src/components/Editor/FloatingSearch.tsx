@@ -112,7 +112,9 @@ export const FloatingSearch: React.FC<FloatingSearchProps> = ({ view, onClose: o
     clearSearchState();
     try {
       view.focus();
-    } catch {}
+    } catch (e) {
+      console.warn('[FloatingSearch] View focus restoration failed:', e);
+    }
     onCloseProp();
   }, [clearSearchState, onCloseProp, view]);
 

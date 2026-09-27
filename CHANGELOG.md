@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.10] — 2026-09-28
+
+### Full Codebase Security Hardening & Architectural Remediation (Plan v4)
+- **Table Cell & Widget Sanitization with KaTeX Layout Preservation**:
+  - Implemented mathematical collision-avoidance tokenization for table cell contents, pre-extracting `$math$` spans into nonce tokens before markdown parsing and HTML entity escaping.
+  - Hardened `sanitizePreviewHtml` in `domHelper.ts` to block `<style>` tags, unquoted `on*` event handlers, and `data:` URIs while preserving essential KaTeX vertical alignment styles (`top`, `position`, `left`, `height`) on math subtrees.
+  - Rebuilt live markdown missing-action badges to use safe DOM node creation instead of raw `innerHTML`.
+- **Action Sandbox Dedicated Web Worker Realm Isolation**:
+  - Migrated JavaScript action execution to a Dedicated Web Worker (`actionWorker.ts`) with snapshot-journal protocol, separating script evaluation completely from the main DOM realm.
+  - Implemented complete 24-member `SandboxAPI` matrix including modern base64 encoding (`TextEncoder`/`TextDecoder`), formula engine evaluation, document mutations, and async modal dialog RPC.
+  - Added 4000ms execution watchdog timer with `worker.terminate()` and AST/regex pre-flight scanner for prototype/constructor security.
+- **Native IPC Authorization & Native Confirmation in Rust**:
+  - Replaced session tokens with native confirmation dialogs via `rfd::MessageDialog` (`spawn_blocking`) on sensitive operations (`delete_file`, `open_external`).
+  - Added `APPDATA` and `LOCALAPPDATA` canonical roots to protected system directory checks.
+  - Gated devtools commands behind `is_authorized_window` and `debug_assertions`.
+  - Added Rust unit test suite (`src-tauri/src/tests/security_tests.rs`) verifying root protections, URL forbidden characters, and app info payloads.
+- **Production CSP Hardening & TR-003 Retirement**:
+  - Stripped `'unsafe-inline'` and `'unsafe-eval'` from Tauri CSP (`script-src 'self'`).
+  - Removed static CSP meta tag from `index.html` to support Vite dev server HMR while enforcing Tauri production CSP in webviews.
+- **Mock Quarantine Inversion & Platform Leak Inversion**:
+  - Inverted mock quarantine: removed all imports from `mocks/index.ts` across `src/` production code (`FileExplorer.tsx`, `actionStore.ts`, `tabStore.ts`, `templateStore.ts`, `fileHistoryStore.ts`). Collections initialize 100% empty.
+  - Added `consumeSharedText` to `IPlatformBridge` and inverted `AndroidBridge` access to the adapter layer; added `AndroidBridge` to platform leak check script.
+  - Deleted dead components: `TitleBar.tsx`, `MenuBar.tsx`, `MobileBottomNav.tsx`.
+  - Removed unused `marked` dependency from `package.json` and quarantined `dist-android/` in `.gitignore`.
+
 ## [0.3.9] — 2026-09-27
 
 ### Large Document Truncation & Mobile UI Ergonomics

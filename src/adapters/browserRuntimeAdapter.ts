@@ -436,7 +436,22 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
 
   public storage: IStorageBridge = {
     getItem: async (key: string): Promise<string | null> => {
-      return browserDB.getItem(key);
+      const item = await browserDB.getItem(key);
+      if (item !== null) return item;
+      // In web demo/test environment, seed initial prototype mocks from quarantine on first empty read
+      if (key === STORAGE_KEYS.ACTIONS) {
+        const { DEFAULT_ACTIONS } = await import('../../mocks/index');
+        const serialized = JSON.stringify(DEFAULT_ACTIONS);
+        await browserDB.setItem(key, serialized);
+        return serialized;
+      }
+      if (key === STORAGE_KEYS.TEMPLATES) {
+        const { DEFAULT_TEMPLATES } = await import('../../mocks/index');
+        const serialized = JSON.stringify(DEFAULT_TEMPLATES);
+        await browserDB.setItem(key, serialized);
+        return serialized;
+      }
+      return null;
     },
     setItem: async (key: string, value: string): Promise<boolean> => {
       return browserDB.setItem(key, value);
@@ -469,7 +484,8 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     isMobile: typeof window !== 'undefined' && (
       /android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
       (('ontouchstart' in window || (navigator.maxTouchPoints > 0)) && window.innerWidth < 768)
-    )
+    ),
+    consumeSharedText: () => null
   };
 
   public theme: IThemeBridge = {

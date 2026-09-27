@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 import { Template, PersistedTemplateUIState } from '../../contracts/data_shapes';
-// MOCK: quarantined synthetic sample data for prototype demo mode
-import { DEFAULT_TEMPLATES, IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
@@ -95,9 +93,6 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
       activeStorage = storage;
     }
     if (!activeStorage) {
-      if (IS_PROTOTYPE_DEMO_MODE) {
-        set({ templates: DEFAULT_TEMPLATES });
-      }
       return;
     }
 
@@ -107,9 +102,6 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
       let templates: Template[] = [];
       if (stored) {
         templates = JSON.parse(stored);
-      } else if (IS_PROTOTYPE_DEMO_MODE) {
-        templates = DEFAULT_TEMPLATES;
-        await activeStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(DEFAULT_TEMPLATES));
       }
 
       // 2. Load persisted UI state (category order, collapsed categories, pinned items)
@@ -147,11 +139,7 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
       });
     } catch (e) {
       console.error('Error initializing templates:', e);
-      if (IS_PROTOTYPE_DEMO_MODE) {
-        set({ templates: DEFAULT_TEMPLATES });
-      } else {
-        set({ templates: [] });
-      }
+      set({ templates: [] });
     }
   },
 
@@ -536,7 +524,9 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
     const newTemplates: Template[] = [];
 
     rawItems.forEach(t => {
-      if (!t || !t.name || !t.content) return;
+      if (!t || typeof t !== 'object') return;
+      if (typeof t.name !== 'string' || !t.name.trim()) return;
+      if (typeof t.content !== 'string') return;
       const isDuplicate = currentTemplates.some(
         curr => curr.name.trim().toLowerCase() === String(t.name).trim().toLowerCase()
       );
@@ -596,9 +586,8 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   },
 
   resetToDefaults: () => {
-    const resetTemplates = IS_PROTOTYPE_DEMO_MODE ? DEFAULT_TEMPLATES : [];
-    set({ templates: resetTemplates });
-    saveTemplates(resetTemplates);
+    set({ templates: [] });
+    saveTemplates([]);
   }
 }));
 

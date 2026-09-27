@@ -22,11 +22,12 @@ import { STORAGE_KEYS } from './storageKeys';
 import { applyThemeTokensToElement } from '../../theme/index';
 import { ThemeName } from '../ui-contract/themeContract';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { useNotificationStore } from '../store/notificationStore';
 
+const CRITICAL_IPC_COMMANDS = ['read_file', 'write_file', 'delete_file', 'store_api_key', 'delete_api_key'];
 
 export class TauriRuntimeAdapter implements IRuntimeBridge {
   private inMemoryFallback: Map<string, string> = new Map();
-  private sessionToken: string | null = null;
 
   constructor() {
     this.detectLanguage = this.detectLanguage.bind(this);
@@ -68,8 +69,12 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       }
       const { invoke } = await import('@tauri-apps/api/core');
       return await invoke<T>(cmd, args);
-    } catch (e) {
+    } catch (e: any) {
       console.warn(`[TauriRuntimeAdapter] invoke(${cmd}) failed:`, e);
+      if (CRITICAL_IPC_COMMANDS.includes(cmd)) {
+        const errorMsg = typeof e === 'string' ? e : e?.message || `Operation ${cmd} failed`;
+        useNotificationStore.getState().addNotification('System Error', errorMsg, 'error');
+      }
     }
     return null;
   }
@@ -84,23 +89,17 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       const { invoke } = await import('@tauri-apps/api/core');
       await invoke(cmd, args);
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.warn(`[TauriRuntimeAdapter] invokeVoid(${cmd}) failed:`, e);
+      if (CRITICAL_IPC_COMMANDS.includes(cmd)) {
+        const errorMsg = typeof e === 'string' ? e : e?.message || `Operation ${cmd} failed`;
+        useNotificationStore.getState().addNotification('System Error', errorMsg, 'error');
+      }
     }
     return false;
   }
 
   public async getSessionToken(): Promise<string> {
-    if (this.sessionToken) return this.sessionToken;
-    try {
-      const info = await this.invokeTauri<{ session_id?: string }>('get_app_info');
-      if (info?.session_id) {
-        this.sessionToken = info.session_id;
-        return this.sessionToken;
-      }
-    } catch (e) {
-      console.warn('[TauriRuntimeAdapter] Failed to get session token:', e);
-    }
     return '';
   }
 
@@ -574,7 +573,13 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     isMobile: typeof window !== 'undefined' && (
       /android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
       (('ontouchstart' in window || (navigator.maxTouchPoints > 0)) && window.innerWidth < 768)
-    )
+    ),
+    consumeSharedText: () => {
+      if (typeof window !== 'undefined' && (window as any).AndroidBridge?.consumeSharedText) {
+        return (window as any).AndroidBridge.consumeSharedText() || null;
+      }
+      return null;
+    }
   };
 
   public theme: IThemeBridge = {
@@ -593,19 +598,17 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     }
   };
 
-  // Sensitive native operations requiring token verification
+  // Sensitive native operations with authorization and validation
   public async deleteFile(path: string): Promise<boolean> {
-    const token = await this.getSessionToken();
-    return await this.invokeTauriVoid('delete_file', { path, authToken: token });
+    return await this.invokeTauriVoid('delete_file', { path });
   }
 
   public async openFileExplorer(path: string): Promise<boolean> {
-    const token = await this.getSessionToken();
-    return await this.invokeTauriVoid('open_file_explorer', { path, authToken: token });
+    return await this.invokeTauriVoid('open_file_explorer', { path });
   }
 
   public async openExternalUrl(url: string): Promise<boolean> {
-    const token = await this.getSessionToken();
-    return await this.invokeTauriVoid('open_external', { url, authToken: token });
+    return await this.invokeTauriVoid('open_external', { url });
   }
 }
+

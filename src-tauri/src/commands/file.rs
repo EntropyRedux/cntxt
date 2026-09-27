@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 /// Check if a canonical path points to a system root or protected directory.
-fn is_system_root(canonical: &Path) -> bool {
+pub fn is_system_root(canonical: &Path) -> bool {
     let canonical_str = canonical.to_string_lossy();
     let lower = canonical_str.to_lowercase();
     let stripped = if lower.starts_with(r"\\?\") {
@@ -32,6 +32,20 @@ fn is_system_root(canonical: &Path) -> bool {
         ];
         for prefix in &protected {
             if stripped.len() > 2 && stripped[1..].starts_with(prefix) {
+                return true;
+            }
+        }
+
+        // Check canonical APPDATA and LOCALAPPDATA environment roots
+        if let Ok(appdata) = std::env::var("APPDATA") {
+            let appdata_clean = strip_verbatim_prefix(&PathBuf::from(appdata)).to_string_lossy().to_lowercase();
+            if stripped == appdata_clean || stripped == format!(r"{}\roaming", appdata_clean) {
+                return true;
+            }
+        }
+        if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
+            let local_clean = strip_verbatim_prefix(&PathBuf::from(localappdata)).to_string_lossy().to_lowercase();
+            if stripped == local_clean {
                 return true;
             }
         }
@@ -219,7 +233,10 @@ pub async fn save_file_dialog(window: Window, default_name: Option<String>) -> R
 }
 
 #[tauri::command]
-pub fn get_file_name(path: String) -> Result<String, String> {
+pub fn get_file_name(window: Window, path: String) -> Result<String, String> {
+    if !super::is_authorized_window(&window) {
+        return Err("Unauthorized window origin".into());
+    }
     PathBuf::from(&path)
         .file_name()
         .and_then(|name| name.to_str())
@@ -228,7 +245,10 @@ pub fn get_file_name(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn detect_language_from_path(path: String) -> String {
+pub fn detect_language_from_path(window: Window, path: String) -> String {
+    if !super::is_authorized_window(&window) {
+        return "text".to_string();
+    }
     let path_buf = PathBuf::from(&path);
     let extension = path_buf.extension()
         .and_then(|ext| ext.to_str())
@@ -417,19 +437,9 @@ pub async fn rename_file(window: Window, old_path: String, new_path: String) -> 
 pub async fn delete_file(
     window: Window,
     path: String,
-    auth_token: Option<String>,
-    state: tauri::State<'_, tokio::sync::Mutex<crate::AppState>>
 ) -> Result<(), String> {
     if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin for sensitive native operation".to_string());
-    }
-    let token = auth_token.unwrap_or_default();
-    if token.trim().is_empty() {
-        return Err("Missing required authorization token".to_string());
-    }
-    let app_state = state.lock().await;
-    if token.trim() != app_state.session_id {
-        return Err("Invalid authorization token".to_string());
     }
 
     let safe_path = validate_path(&path)?;
@@ -437,6 +447,22 @@ pub async fn delete_file(
     // Guard against root deletion: check parent and drive root
     if safe_path.parent().is_none() || is_system_root(&safe_path) {
         return Err("Cannot delete root directory".to_string());
+    }
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let display_path = safe_path.display().to_string();
+        let confirmed = tokio::task::spawn_blocking(move || {
+            rfd::MessageDialog::new()
+                .set_title("Confirm Deletion")
+                .set_description(&format!("Are you sure you want to permanently delete:\n\n{}", display_path))
+                .set_buttons(rfd::MessageButtons::OkCancel)
+                .show()
+        }).await.map_err(|e| e.to_string())?;
+
+        if confirmed != rfd::MessageDialogResult::Ok {
+            return Err("User cancelled deletion".into());
+        }
     }
 
     if safe_path.is_dir() {
@@ -452,19 +478,9 @@ pub async fn delete_file(
 pub async fn open_file_explorer(
     window: Window,
     path: String,
-    auth_token: Option<String>,
-    state: tauri::State<'_, tokio::sync::Mutex<crate::AppState>>
 ) -> Result<(), String> {
     if !super::is_authorized_window(&window) {
         return Err("Unauthorized window origin for file explorer invocation".to_string());
-    }
-    let token = auth_token.unwrap_or_default();
-    if token.trim().is_empty() {
-        return Err("Missing required authorization token".to_string());
-    }
-    let app_state = state.lock().await;
-    if token.trim() != app_state.session_id {
-        return Err("Invalid authorization token".to_string());
     }
 
     let safe_path = validate_path(&path)?;
@@ -515,7 +531,10 @@ pub async fn open_file_explorer(
 }
 
 #[tauri::command]
-pub fn get_dir_name(path: String) -> Result<String, String> {
+pub fn get_dir_name(window: Window, path: String) -> Result<String, String> {
+    if !super::is_authorized_window(&window) {
+        return Err("Unauthorized window origin".into());
+    }
     let path = std::path::Path::new(&path);
     if let Some(parent) = path.parent() {
         Ok(parent.to_string_lossy().into_owned())
@@ -523,3 +542,4 @@ pub fn get_dir_name(path: String) -> Result<String, String> {
         Err("No parent directory found".into())
     }
 }
+

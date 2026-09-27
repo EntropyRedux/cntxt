@@ -225,7 +225,9 @@ export const VariableFillerModal: React.FC = () => {
 
     try {
       confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 } });
-    } catch {}
+    } catch (e) {
+      console.warn('[VariableFillerModal] Confetti effect failed:', e);
+    }
 
     closeVariableModal();
   };

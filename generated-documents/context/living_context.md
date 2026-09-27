@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.35
-Last Updated: 2026-09-27
-Last Updated By: Production Implementation Agent (FG-09 Finalized: Original Variable Floating Navigator Draggable & Edge-Anchored)
+Version: v1.36
+Last Updated: 2026-09-28
+Last Updated By: Production Implementation Agent (Full Codebase Remediation Plan v4 Finalized)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -13,22 +13,23 @@ Active Stage:
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-09 Complete & Verified; Android APK Native Mobile Runtime Live)
-  [x] Refactor (Production Build Parity, CSP Nonce Unblocking, Ribbon Error #185 Hardened, Draggable Edge-Anchored Original FAB)
-  [x] Testing (Vitest 341/341 Live across 36 suites, Playwright 21/21 E2E Live)
+  [x] Refactor (Full Codebase Remediation Plan v4: Table KaTeX HTML/CSS Sanitization, Dedicated Web Worker Sandbox Isolation, Native Confirmation & Protected Roots, CSP Hardening & Zero-Mock Quarantine)
+  [x] Testing (Vitest 348/348 Live across 36 suites, Playwright E2E Live, Rust Security Test Suite Live)
   [x] Packaging & Release (Signed Windows Setup/MSI in dist-installer/ + Standalone Portable in dist-portable/)
 
-Current Feature Group: FG-09: Large Document Truncation & Mobile UI Ergonomics
-Status: completed / verified (2026-09-27)
+Current Feature Group: Full Codebase Remediation (Plan v4)
+Status: completed / verified (2026-09-28)
 Background Processes: none
-Unit Tests: written [x] passing [x] (341/341 unit tests across 36 test suites clean)
-Active Plan: /generated-documents/plans/feature_group_large_doc_and_mobile_ergonomics_2026-09-27.md (Completed)
+Unit Tests: written [x] passing [x] (348/348 unit tests across 36 test suites clean, 3 Rust security tests clean)
+Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-27.md (Completed)
 Notes:
-- Feature 1: Large Document Detection & TOC Chunk Loading: Intercepts file loads exceeding configurable thresholds (`enableLargeDocDetection`, `largeDocThresholdKb: 500`, `largeDocThresholdLines: 10000`; 150KB / 2500 lines on touch/mobile). Displays interactive heading checklist and loads sliced sections with clean banner metadata.
-- Feature 2: Modernized Adaptive Fill-Up Form (`VariableFillerModal`): Dual-mode layout (side-by-side desktop vs segmented Form/Preview sheet), visualViewport keyboard clearance, sticky `< Prev` / `Next >` navigation strip with required count, auto-growing textarea, and progress bar.
-- Feature 3: 4 Variable Extraction Action Presets under `EXTRACTION` category: `action-extract-answered` (Markdown table summary), `action-extract-rows-with-vars` (filtered variable lines), `action-extract-rows-without-vars` (isolated static text), `action-selection-extract-vars` (unique checklist).
-- Feature 4: Draggable & Edge-Anchored Original Variable Navigator (`VariableFloatingNavigator`): Removed redundant second FAB. Upgraded the original canvas-level floating navigator to be movable and draggable with zero-latency 120fps direct transforms, jitter-free hover, and magnetic horizontal edge-snapping (12px left/right margin) within the editor canvas. Single tap auto-scrolls to next variable; double-tap opens form filler modal.
-Last Audit Reconciliation: 2026-09-26 — PASS
-Last Git Checkpoint: 2026-09-27 — FG-09 Implementation & Windows v0.3.9 Release Packages
+- Task 1.1: Markdown Table Cell & Widget Sanitization with KaTeX Layout Preservation (pre-extraction of $...$ into token spans, entity escaping, layout style retention).
+- Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation with complete 24-member API matrix (snapshot-journal protocol, modern base64, watchdog timer, AST/prototype scanner).
+- Task 1.3: Native IPC Authorization, Native Confirmation (`rfd::MessageDialog` spawn_blocking) for delete and external links, APPDATA/LOCALAPPDATA system roots, devtools debug-gated, session token eliminated.
+- Task 1.4: Production CSP Hardened (`script-src 'self'`; unsafe-inline and unsafe-eval completely removed from main realm).
+- Task 2.1 - 2.4: Platform leak inversion (`consumeSharedText`), error toast notifications on critical IPC failures, physical mock quarantine 100% clean (zero imports from `mocks/` in `src/`), dead code deleted (`TitleBar.tsx`, `MenuBar.tsx`, `MobileBottomNav.tsx`), `marked` dependency removed, `dist-android/` quarantined in `.gitignore`.
+Last Audit Reconciliation: 2026-09-28 — PASS (Plan v4 Reconciled)
+Last Git Checkpoint: 2026-09-28 — Full Codebase Remediation v4 Completed
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
@@ -53,17 +54,18 @@ Active Shapes:
 - SupportedPlatformOS ('windows' | 'macos' | 'linux' | 'android' | 'ios' | 'web'), DeviceProfile
 
 ━━━ MOCK REGISTRY (PHYSICALLY QUARANTINED) ━━━
-[All active mocks reside strictly in mocks/index.ts. In native production mode, collections initialize empty [].]
+[All active mocks reside strictly in mocks/index.ts. In native production mode, collections initialize empty []. Zero imports from mocks/ in src/.]
 
 Mock ID | Physical Location | Type | Real Replacement Target | Feature Group | Status
 --------|-------------------|------|------------------------|---------------|-------
 MOCK-001 | src/constants/welcomeDoc.ts | STATIC ONBOARDING | Native File System | FG-08 | Cleared & Physically Quarantined outside mocks/
-MOCK-002 | mocks/index.ts (DEFAULT_ACTIONS) | MOCK | Native Action Registry & Persistent Store (`plugin:store`) | FG-02: Sandboxed Actions | active (demo mode)
-MOCK-003 | mocks/index.ts (DEFAULT_TEMPLATES) | MOCK | Native Template Registry & Filesystem (`templates/`) | FG-03: Templates | active (demo mode)
-MOCK-004 | mocks/index.ts (DEFAULT_PINNED_TABS) | MOCK | Native Pinned Tab Store (`plugin:store`) | FG-01: Document Tabs | active (demo mode)
-MOCK-005 | mocks/index.ts (INITIAL_PROJECT_FILES) | MOCK | Native Workspace Directory Tree (`plugin:fs`) | FG-04: Workspace Explorer | active (demo mode)
-MOCK-006 | mocks/index.ts (DEFAULT_PINNED_ITEMS) | MOCK | Native Pinned Files Store (`plugin:store`) | FG-04: Workspace Explorer | active (demo mode) / quarantined
-MOCK-007 | mocks/index.ts (DEFAULT_OPENED_HISTORY) | MOCK | Native File History Store (`plugin:store`) | FG-04: Workspace Explorer | active (demo mode) / quarantined
+MOCK-002 | mocks/index.ts (DEFAULT_ACTIONS) | MOCK | Native Action Registry & Persistent Store (`plugin:store`) | FG-02: Sandboxed Actions | Inverted & Quarantined (zero imports in src/)
+MOCK-003 | mocks/index.ts (DEFAULT_TEMPLATES) | MOCK | Native Template Registry & Filesystem (`templates/`) | FG-03: Templates | Inverted & Quarantined (zero imports in src/)
+MOCK-004 | mocks/index.ts (DEFAULT_PINNED_TABS) | MOCK | Native Pinned Tab Store (`plugin:store`) | FG-01: Document Tabs | Inverted & Quarantined (zero imports in src/)
+MOCK-005 | mocks/index.ts (INITIAL_PROJECT_FILES) | MOCK | Native Workspace Directory Tree (`plugin:fs`) | FG-04: Workspace Explorer | Inverted & Quarantined (zero imports in src/)
+MOCK-006 | mocks/index.ts (DEFAULT_PINNED_ITEMS) | MOCK | Native Pinned Files Store (`plugin:store`) | FG-04: Workspace Explorer | Inverted & Quarantined (zero imports in src/)
+MOCK-007 | mocks/index.ts (DEFAULT_OPENED_HISTORY) | MOCK | Native File History Store (`plugin:store`) | FG-04: Workspace Explorer | Inverted & Quarantined (zero imports in src/)
+
 
 ━━━ FEATURE GROUP STATUS ━━━
 

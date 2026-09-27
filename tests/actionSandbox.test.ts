@@ -58,4 +58,29 @@ describe('executeInSandbox Security Hardening', () => {
       executeInSandbox('import("data:text/javascript,console.log(1)");', mockApi)
     ).rejects.toThrow(/Security Error/);
   });
+
+  it('supports base64Encode and base64Decode correctly with UTF-8', async () => {
+    const encoded = await executeInSandbox('return api.utils.base64Encode("Hello 🌍");', mockApi);
+    expect(encoded).toBe('SGVsbG8g8J+MjQ==');
+
+    const decoded = await executeInSandbox(`return api.utils.base64Decode("${encoded}");`, mockApi);
+    expect(decoded).toBe('Hello 🌍');
+  });
+
+  it('provides working utilities: slugify, formatJSON, countWords', async () => {
+    const slug = await executeInSandbox('return api.utils.slugify("Hello World -- Test!");', mockApi);
+    expect(slug).toBe('hello-world-test');
+
+    const formatted = await executeInSandbox('return api.utils.formatJSON(\'{"a":1}\');', mockApi);
+    expect(formatted).toBe('{\n  "a": 1\n}');
+
+    const words = await executeInSandbox('return api.utils.countWords("three blind mice");', mockApi);
+    expect(words).toBe(3);
+  });
+
+  it('evaluates formulas via evaluateFormula', async () => {
+    const res = await executeInSandbox('return api.evaluateFormula("10 + 20");', mockApi);
+    expect(res).toBe(30);
+  });
 });
+

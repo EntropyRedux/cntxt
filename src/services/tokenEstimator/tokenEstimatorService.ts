@@ -28,7 +28,7 @@ export class TokenEstimatorService {
   private static instance: TokenEstimatorService;
   private cache = new TokenCache();
   private subscribers: Array<(estimate: TokenEstimate) => void> = [];
-  private debounceTimer: any = null;
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private lastTextHash: string = '';
 
   public static getInstance(): TokenEstimatorService {

@@ -1,4 +1,5 @@
 import { renderLatex } from './mathRenderer';
+import { sanitizePreviewHtml } from '../adapters';
 
 export interface ParsedTable {
   headers: string[];
@@ -73,27 +74,49 @@ export function parseMarkdownTableLines(lines: string[]): ParsedTable | null {
 
 /**
  * Format inline text within a table cell (e.g. bold, code, inline math)
+ * Preserves KaTeX math expressions without double-escaping while immunizing against HTML/CSS injection.
  */
 export function formatTableCellHtml(text: string): string {
   if (!text) return '&nbsp;';
 
-  // 1. Process inline math: $formula$
-  let formatted = text.replace(/(?<!\$)\$(?!\$)([^\$\n]+?)(?<!\$)\$(?!\$)/g, (_, formula) => {
+  // 1. Extract inline math into placeholders with a per-run random nonce
+  const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const mathPlaceholders = new Map<string, string>();
+
+  let tokenized = text.replace(/(?<!\$)\$(?!\$)((?:\\\$|[^\$\n])+?)(?<!\$)\$(?!\$)/g, (_, formula) => {
+    const key = `@@CNTXT_MATH_${nonce}_${mathPlaceholders.size}@@`;
     const res = renderLatex(formula, false);
-    return `<span class="cm-table-math inline-flex align-middle">${res.html}</span>`;
+    mathPlaceholders.set(key, `<span class="cm-table-math inline-flex align-middle">${res.html}</span>`);
+    return key;
   });
 
-  // 2. Process inline code: `code` (use cm-live-code-pill to match inline code outside tables)
-  formatted = formatted.replace(/`([^`\n]+)`/g, '<code class="cm-live-code-pill font-mono">$1</code>');
+  // 2. Pre-sanitize non-math text to strip dangerous tags (<style>, <script>, <iframe>)
+  let cleanText = sanitizePreviewHtml(tokenized);
 
-  // 3. Process bold: **bold**
-  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong class="cm-live-bold font-bold">$1</strong>');
+  // 3. Escape raw HTML entities on non-math text segments
+  let safeText = cleanText
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 
-  // 4. Process italic: *italic*
-  formatted = formatted.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em class="cm-live-italic italic">$1</em>');
+  // 4. Process inline code: `code`
+  safeText = safeText.replace(/`([^`\n]+)`/g, '<code class="cm-live-code-pill font-mono">$1</code>');
 
-  // 5. Process links: [text](url)
-  formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[var(--accent-primary)] underline hover:opacity-80 transition-opacity">$1</a>');
+  // 5. Process bold: **bold**
+  safeText = safeText.replace(/\*\*([^*]+)\*\*/g, '<strong class="cm-live-bold font-bold">$1</strong>');
 
-  return formatted;
+  // 6. Process italic: *italic*
+  safeText = safeText.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em class="cm-live-italic italic">$1</em>');
+
+  // 7. Process links: [text](url)
+  safeText = safeText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[var(--accent-primary)] underline hover:opacity-80 transition-opacity">$1</a>');
+
+  // 8. Re-inject rendered math placeholders using a replacer function (disabling $&, $', $` special replacement patterns)
+  mathPlaceholders.forEach((html, key) => {
+    safeText = safeText.replaceAll(key, () => html);
+  });
+
+  // 9. Final gate through sanitizePreviewHtml to preserve KaTeX layout styles while eliminating injection
+  return sanitizePreviewHtml(safeText);
 }

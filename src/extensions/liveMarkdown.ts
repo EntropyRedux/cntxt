@@ -644,7 +644,12 @@ class ActionButtonWidget extends WidgetType {
         className: 'cm-action-missing-widget',
         title: `Action "${this.actionId}" not found in Action Scripts library.\nClick to place cursor here to edit syntax.`
       });
-      missingSpan.innerHTML = `<span class="opacity-75">⚠️</span><span class="cm-action-missing-name">${this.customLabel || this.rawToken}</span><span class="cm-action-missing-badge">(missing)</span>`;
+      const icon = createElement('span', { className: 'opacity-75' }, ['⚠️']);
+      const name = createElement('span', { className: 'cm-action-missing-name' }, [this.customLabel || this.rawToken]);
+      const badge = createElement('span', { className: 'cm-action-missing-badge' }, ['(missing)']);
+      missingSpan.appendChild(icon);
+      missingSpan.appendChild(name);
+      missingSpan.appendChild(badge);
       missingSpan.addEventListener('mousedown', (e) => e.stopPropagation());
       missingSpan.addEventListener('click', (e) => {
         e.preventDefault();

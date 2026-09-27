@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 import { Tab, SupportedLanguage } from '../../contracts/data_shapes';
-// MOCK: quarantined synthetic sample data for prototype demo mode
-import { IS_PROTOTYPE_DEMO_MODE } from '../../mocks/index';
 import { WELCOME_DOCUMENT } from '../constants/welcomeDoc';
 import { MARKDOWN_GUIDE_DOCUMENT } from '../constants/markdownGuideDoc';
 import { POWER_USER_GUIDE_DOCUMENT } from '../constants/powerUserGuideDoc';
@@ -154,11 +152,7 @@ export const useTabStore = create<TabState>((set, get) => ({
     } catch (e) {
       console.error('Error initializing tabs:', e);
       if (!cached) {
-        if (IS_PROTOTYPE_DEMO_MODE) {
-          set({ tabs: [defaultWelcomeTab], activeTabId: initialTabId, isHydrating: false });
-        } else {
-          set({ tabs: [], activeTabId: '', isHydrating: false });
-        }
+        set({ tabs: [], activeTabId: '', isHydrating: false });
       } else {
         set({ isHydrating: false });
       }

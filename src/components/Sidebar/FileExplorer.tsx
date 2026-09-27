@@ -26,8 +26,6 @@ import { safePersist } from '../../services/storageHelper';
 import { openDocumentWithLargeDocCheck } from '../../services/largeDocHelper';
 import { BridgeDirectoryEntry } from '../../ui-contract/bridgeContract';
 import { VirtualFile } from '../../../contracts/data_shapes';
-// MOCK: quarantined synthetic sample data for prototype demo mode
-import { INITIAL_PROJECT_FILES, IS_PROTOTYPE_DEMO_MODE } from '../../../mocks/index';
 
 
 const formatRelativeTime = (timestamp: number): string => {
@@ -147,15 +145,13 @@ export const FileExplorer: React.FC = () => {
           try {
             setFiles(JSON.parse(saved));
           } catch {
-            setFiles(IS_PROTOTYPE_DEMO_MODE ? INITIAL_PROJECT_FILES : []);
+            setFiles([]);
           }
-        } else if (IS_PROTOTYPE_DEMO_MODE) {
-          setFiles(INITIAL_PROJECT_FILES);
         } else {
           setFiles([]);
         }
       } catch {
-        setFiles(IS_PROTOTYPE_DEMO_MODE ? INITIAL_PROJECT_FILES : []);
+        setFiles([]);
       }
     };
 

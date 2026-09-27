@@ -1,5 +1,8 @@
 mod commands;
 
+#[cfg(test)]
+mod tests;
+
 use serde_json::{json, Value};
 use tauri::Manager;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -7,30 +10,23 @@ use tauri::Emitter;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-pub struct AppState {
-    pub session_id: String,
-}
+#[derive(Default)]
+pub struct AppState;
 
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            session_id: Uuid::new_v4().to_string(),
-        }
-    }
+pub fn app_info_payload() -> Value {
+    json!({
+        "name": "CNTXT",
+        "version": env!("CARGO_PKG_VERSION"),
+        "platform": std::env::consts::OS,
+    })
 }
 
 #[tauri::command]
-async fn get_app_info(window: tauri::Window, state: tauri::State<'_, Mutex<AppState>>) -> Result<Value, String> {
+async fn get_app_info(window: tauri::Window) -> Result<Value, String> {
     if !commands::is_authorized_window(&window) {
         return Err("Unauthorized window origin for application metadata".into());
     }
-    let state = state.lock().await;
-    Ok(json!({
-        "name": "CNTXT",
-        "version": env!("CARGO_PKG_VERSION"),
-        "session_id": state.session_id,
-        "platform": std::env::consts::OS,
-    }))
+    Ok(app_info_payload())
 }
 
 #[tauri::command]
@@ -48,20 +44,9 @@ async fn get_system_info(window: tauri::Window) -> Result<Value, String> {
 async fn open_external(
     window: tauri::Window,
     url: String,
-    auth_token: Option<String>,
-    state: tauri::State<'_, Mutex<AppState>>,
 ) -> Result<(), String> {
     if !commands::is_authorized_window(&window) {
         return Err("Unauthorized window origin for external process execution".into());
-    }
-
-    let token = auth_token.unwrap_or_default();
-    if token.trim().is_empty() {
-        return Err("Missing required authorization token".into());
-    }
-    let app_state = state.lock().await;
-    if token.trim() != &app_state.session_id {
-        return Err("Invalid authorization token".into());
     }
 
     let trimmed = url.trim();
@@ -69,15 +54,32 @@ async fn open_external(
         return Err("Only https:// and http:// URLs are permitted".into());
     }
 
-    let forbidden_chars = ['\0', '\n', '\r', '"', '\'', '`', '$', '<', '>', '|'];
+    let forbidden_chars = ['\0', '\n', '\r', '"', '\'', '`', '$', '<', '>', '|', '&', ';'];
     if trimmed.chars().any(|c| forbidden_chars.contains(&c)) {
         return Err("URL contains illegal characters".into());
+    }
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let url_to_open = trimmed.to_string();
+        let confirmed = tokio::task::spawn_blocking(move || {
+            rfd::MessageDialog::new()
+                .set_title("Open External Link")
+                .set_description(&format!("Do you want to open the following link in your default browser?\n\n{}", url_to_open))
+                .set_buttons(rfd::MessageButtons::OkCancel)
+                .show()
+        }).await.map_err(|e| e.to_string())?;
+
+        if confirmed != rfd::MessageDialogResult::Ok {
+            return Err("User cancelled external link navigation".into());
+        }
     }
 
     open::that_detached(trimmed).map_err(|e| format!("Failed to open URL: {}", e))?;
 
     Ok(())
 }
+
 
 #[tauri::command]
 async fn new_window(window: tauri::Window, app_handle: tauri::AppHandle) -> Result<(), String> {

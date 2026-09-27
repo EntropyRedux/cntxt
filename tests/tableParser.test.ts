@@ -168,5 +168,32 @@ describe('TableParser', () => {
     it('returns plain text unchanged', () => {
       expect(formatTableCellHtml('plain text')).toBe('plain text');
     });
+
+    it('preserves math comparisons like $a < b$ without entity double-escaping', () => {
+      const result = formatTableCellHtml('$a < b$');
+      expect(result).toContain('<span class="cm-table-math');
+      expect(result).not.toContain('&amp;lt;');
+      expect(result).toContain('a < b');
+    });
+
+    it('safely handles formula strings with dollar patterns like $& and $`', () => {
+      const result = formatTableCellHtml('$cost \\$& and \\\'$');
+      expect(result).toContain('<span class="cm-table-math');
+      expect(result).toContain('cost \\$& and \\\'');
+    });
+
+    it('sanitizes executable HTML tags and event handlers in table cells', () => {
+      const result = formatTableCellHtml('<img src=x onerror=alert(1)>**bold**');
+      expect(result).not.toContain('onerror');
+      expect(result).not.toContain('alert(1)');
+      expect(result).toContain('<strong');
+    });
+
+    it('strips injected style tags while preserving KaTeX math formatting', () => {
+      const result = formatTableCellHtml('<style>body{display:none}</style>$x + y$');
+      expect(result).not.toContain('<style>');
+      expect(result).not.toContain('display:none');
+      expect(result).toContain('<span class="cm-table-math');
+    });
   });
-});
+});

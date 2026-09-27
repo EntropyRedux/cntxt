@@ -29,7 +29,7 @@ export const RuntimeBridgeProvider: React.FC<RuntimeBridgeProviderProps> = ({
 }) => {
   const activeBridge = useMemo(() => {
     if (bridge) return bridge;
-    return isTauriRuntime() ? new TauriRuntimeAdapter() : new BrowserRuntimeAdapter();
+    return getRuntimeBridge();
   }, [bridge]);
 
   return (

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * DOM Helper for Adapter Layer
  * Quarantines direct DOM interactions (document, window, navigator) inside src/adapters/.
  */
@@ -288,19 +288,21 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
     // Regex fallback for non-DOM environments
     return dirtyHtml
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
       .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
       .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
       .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '')
-      .replace(/\s+on[a-zA-Z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-      .replace(/href\s*=\s*["']?\s*(?:javascript|file|vbscript):[^"'>\s]*/gi, 'href="#"');
+      .replace(/\s+on[a-zA-Z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s&]+)/gi, '')
+      .replace(/href\s*=\s*["']?\s*(?:javascript|file|vbscript):[^"'>\s]*/gi, 'href="#"')
+      .replace(/src\s*=\s*["']?\s*(?:javascript|file|vbscript|data):[^"'>\s]*/gi, '');
   }
 
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(dirtyHtml, 'text/html');
 
-    const FORBIDDEN_TAGS = ['script', 'iframe', 'object', 'embed', 'form', 'base'];
+    const FORBIDDEN_TAGS = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'base'];
     FORBIDDEN_TAGS.forEach(tag => {
       const elements = doc.querySelectorAll(tag);
       elements.forEach(el => el.remove());
@@ -339,9 +341,28 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
         if (
           lower.startsWith('javascript:') ||
           lower.startsWith('file:') ||
-          lower.startsWith('vbscript:')
+          lower.startsWith('vbscript:') ||
+          lower.startsWith('data:')
         ) {
           el.removeAttribute('src');
+        }
+      }
+
+      // Sanitize inline style attributes on non-KaTeX elements (prevent UI redressing)
+      if (el.hasAttribute('style')) {
+        const isKatex = el.closest('.katex, .cm-table-math') !== null;
+        if (!isKatex) {
+          const style = el.getAttribute('style') || '';
+          // Strip dangerous positioning properties from arbitrary user styles
+          const sanitizedStyle = style
+            .replace(/(?:^|;)\s*(?:position|z-index|top|bottom|left|right)\s*:[^;]*/gi, '')
+            .trim()
+            .replace(/^;+/, '');
+          if (sanitizedStyle) {
+            el.setAttribute('style', sanitizedStyle);
+          } else {
+            el.removeAttribute('style');
+          }
         }
       }
     });

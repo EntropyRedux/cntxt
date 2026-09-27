@@ -5,6 +5,7 @@ build/
 dist/
 dist-portable/
 dist-installer/
+dist-android/
 generated-documents/exportable-assets/
 coverage/
 *.tsbuildinfo

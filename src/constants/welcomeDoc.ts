@@ -4,7 +4,7 @@
  * This is static tutorial and documentation content presented to users on virgin workspace initialization.
  */
 
-export const WELCOME_DOCUMENT = `# 🚀 Welcome to ContextPad
+export const WELCOME_DOCUMENT = `# 🚀 Welcome to ContextPad - CNTXT Workspace
 > **A cross-platform workspace designed for structured writing, prompt engineering, technical drafting, and workflow automation.**
 
 ---

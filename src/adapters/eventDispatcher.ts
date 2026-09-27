@@ -79,7 +79,11 @@ export function createUiEventDispatcher(
           const saved = await bridge.storage.getItem('contextpad_virtual_files');
           let current: any[] = [];
           if (saved) {
-            try { current = JSON.parse(saved); } catch {}
+            try {
+              current = JSON.parse(saved);
+            } catch (e) {
+              console.warn('[eventDispatcher] Failed to parse saved virtual files:', e);
+            }
           }
           const updated = [newFolder, ...current.filter(f => f.name !== dirResult.name)];
           await bridge.storage.setItem('contextpad_virtual_files', JSON.stringify(updated));

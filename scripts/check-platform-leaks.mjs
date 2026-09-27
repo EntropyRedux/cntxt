@@ -10,7 +10,8 @@ const FORBIDDEN_TOKENS = [
   'navigator.clipboard',
   '@tauri-apps/api',
   'window.__TAURI_',
-  '__TAURI_INTERNALS__'
+  '__TAURI_INTERNALS__',
+  'AndroidBridge'
 ];
 
 const ROOT_SRC = path.resolve('src');
