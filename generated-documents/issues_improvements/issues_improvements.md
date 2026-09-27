@@ -1,19 +1,18 @@
-# Issues
-1. Adding custom markdown formatting buttons not functional
-2. CTRL+S or File > Save Document returns an error 'Could not write to file path', and fails to overwrite the file, only working solution is to Save As with the same existing name to replace existing file
-3. *Italic* or _italic_ --- italicizing text does not actually italicize them unless the text is inside inline code ``, it only changes colors -- this may also be related with syntax color highlighting, I may have to define what elements in the editor gets syntax highlighted
-4. External web link implementation/ links not actually working properly, ideally CTRL+ right click moves the user to the link
-5. Action Sripts Panel > Collapse/Expand all categories button > only afffects the 'General' category
-6. 
+# Issues (Completed in v0.3.3)
+- [x] 1. Adding custom markdown formatting buttons not functional (Resolved)
+- [x] 2. CTRL+S or File > Save Document returns an error 'Could not write to file path' (Resolved)
+- [x] 3. *Italic* or _italic_ italicizing text does not actually italicize them unless inside inline code (Resolved)
+- [x] 4. External web link implementation / links not actually working properly (Resolved: Ctrl+Click and context menu open in system browser)
+- [x] 5. Action Scripts Panel > Collapse/Expand all categories button > only affects the 'General' category (Resolved)
 
-# Improvements
-1. When browsing a folder on the file explorer, at the very end of the file lists, add a + New file button, so that the user can create new file on any folder or subfolder inside their chosen workspace
-2. Reduce the editor padding options to : 12px, 24px, 36px
-3. Add 'insert' variable in the markdown quick formatting
-4. Add variable extractions, extract answered variabled only, extract rows with variables, extract rows without variables, select text > extract
-5. Export as filename_blueprint.cntxt
-6. Fine tune text color syntax highlighting
-7. Increase the size of the popup modal for filling up a document variables/ fill up form
-8. Document outline > a type field allows users to type using that space and sending it appends on the exact location selected on the document outline, a toggle can also be turned on to set anything typed on this text field to append either on top of the document or on the bottom of the document
-10. When opening documents specially large documents, a modal appears prompting the user that the file is large, but it can truncate the file depending on what the user only needs, the user selects what they need by showing TOC outline and clicking, this can also be done using the TOC document outline panel
-11. Document outline panel will be split into two: top section is the TOC, bottom section is a text input field similar to a message field on chat apps
+# Improvements (Completed in v0.3.4)
+- [x] 1. When browsing a folder on the file explorer, at the very end of the file lists, add a + New file button, so that the user can create new file on any folder or subfolder inside their chosen workspace.
+- [x] 2. Reduce the editor padding options to: 12px, 24px, 36px.
+- [x] 3. Add 'insert' variable (`fmt_variable` / `{{variable}}`) in the markdown quick formatting bar and modular ribbon.
+- [x] 4. Add variable extractions (extract answered variables, extract rows with variables, extract rows without variables, select text > extract).
+- [x] 5. Export as `${filename}_blueprint.cntxt`.
+- [x] 6. Fine tune text color syntax highlighting and variable tokens.
+- [x] 7. Increase the size of the popup modal for filling up document variables (`VariableFillerModal.tsx` expanded to `max-w-5xl` 88vh).
+- [x] 8. Document outline > quick append section input allowing text to append on selected heading or toggle top/bottom of document.
+- [x] 10. When opening documents especially large documents (>100KB), a modal prompts the user with TOC outline checklist to truncate or open full document.
+- [x] 11. Document outline panel split into two: top section is the TOC/symbols, bottom section is a chat-like quick append input field.

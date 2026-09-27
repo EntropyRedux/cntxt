@@ -118,6 +118,10 @@ export interface EditorSettings {
   enableCodeLinting: boolean;
   showLineNumbers: boolean;
   showCodeBlockMarkers: boolean;
+  typingDirection?: 'top-to-bottom' | 'bottom-to-up';
+  enableLargeDocDetection?: boolean;
+  largeDocThresholdKb?: number;
+  largeDocThresholdLines?: number;
 }
 
 export interface FormattingSettings {
@@ -241,6 +245,7 @@ export interface SandboxAPI {
   openVariableModal?: () => void;
   evaluateFormula?: (formula: string) => any;
   copyToClipboard: (text: string) => Promise<void>;
+  copy?: (text: string) => Promise<void>;
   getClipboard?: () => Promise<string>;
   dialog?: {
     prompt: (message: string, defaultValue?: string) => Promise<string | null>;
@@ -398,7 +403,7 @@ export interface MarkdownFormatButton {
   enabled: boolean;
   isAccent?: boolean;
   order: number;
-  category?: 'format' | 'heading' | 'block' | 'list' | 'insert' | 'tool' | 'custom';
+  category?: 'format' | 'heading' | 'block' | 'list' | 'insert' | 'tool' | 'custom' | (string & {});
   isBuiltIn?: boolean;
   shortcut?: string;
 }
@@ -415,6 +420,9 @@ export interface RibbonItem {
   enabled: boolean;
   order: number;
   showLabel?: boolean;
+  prefix?: string;
+  suffix?: string;
+  formatType?: MarkdownFormatType;
 }
 
 export interface FormulaResult {

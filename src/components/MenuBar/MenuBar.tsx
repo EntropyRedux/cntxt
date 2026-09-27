@@ -5,6 +5,7 @@ import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useConfirmStore } from '../../store/confirmStore';
+import { useVariableExtractionModalStore } from '../../store/variableExtractionModalStore';
 import { execUndo, execRedo, addWindowListener, useRuntimeBridge } from '../../adapters';
 
 interface MenuBarProps {
@@ -128,7 +129,13 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       label: 'Templates',
       items: [
         { label: 'Manage Templates', action: () => setActiveSidebarTab('templates') },
-        { label: 'Fill Active Document Variables', shortcut: 'Ctrl+Alt+V', action: () => openVariableModal(), divider: true },
+        { label: 'Fill Active Document Variables', shortcut: 'Ctrl+Alt+V', action: () => openVariableModal() },
+        { 
+          label: 'Extract Variables & Blueprint...', 
+          shortcut: 'Ctrl+Shift+E', 
+          action: () => useVariableExtractionModalStore.getState().openExtractionModal(),
+          divider: true 
+        },
         ...templates.slice(0, 5).map(tmpl => ({
           label: `Insert: ${tmpl.name}`,
           action: () => {

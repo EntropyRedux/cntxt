@@ -1235,13 +1235,21 @@ body {
 
 .cm-live-italic {
   font-style: italic !important;
+  font-synthesis: style !important;
   color: var(--text-secondary) !important;
 }
 
 .cm-live-bold-italic {
   font-weight: 700 !important;
   font-style: italic !important;
+  font-synthesis: style !important;
   color: var(--text-primary) !important;
+}
+
+.cm-editor,
+.cm-content,
+.cm-line {
+  font-synthesis: weight style !important;
 }
 
 .cm-live-highlight {
@@ -1942,4 +1950,31 @@ footer[data-shell-statusbar],
        this ensures the cascade never falls back to system fonts mid-paint. */
     font-synthesis: none;
   }
+}
+
+/* Template Variables Syntax Highlighting & Tag Polish */
+.cm-template-variable {
+  letter-spacing: -0.01em;
+  border-radius: 2px;
+  padding: 0 1px;
+  transition: all 0.15s ease-in-out;
+}
+
+.cm-template-variable:hover {
+  background-color: rgba(245, 158, 11, 0.12);
+}
+
+.cm-template-variable-required {
+  background-color: rgba(244, 63, 94, 0.08);
+}
+
+.cm-template-variable-required:hover {
+  background-color: rgba(244, 63, 94, 0.16);
+}
+
+.cm-template-input-syntax {
+  background-color: rgba(217, 119, 6, 0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(217, 119, 6, 0.2);
 }

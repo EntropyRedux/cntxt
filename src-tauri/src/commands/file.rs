@@ -468,29 +468,46 @@ pub async fn open_file_explorer(
     }
 
     let safe_path = validate_path(&path)?;
-    let _path_str = safe_path.to_string_lossy().to_string();
+    let path_str = safe_path.to_string_lossy().to_string();
 
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("explorer")
-            .arg(&_path_str)
-            .spawn()
+        let mut cmd = std::process::Command::new("explorer");
+        if safe_path.is_file() {
+            let win_path = path_str.replace('/', "\\");
+            cmd.arg(format!("/select,{}", win_path));
+        } else {
+            cmd.arg(&path_str);
+        }
+        cmd.spawn()
             .map_err(|e| format!("Failed to open file explorer: {}", e))?;
     }
 
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open")
-            .arg(&path_str)
-            .spawn()
+        let mut cmd = std::process::Command::new("open");
+        if safe_path.is_file() {
+            cmd.arg("-R").arg(&path_str);
+        } else {
+            cmd.arg(&path_str);
+        }
+        cmd.spawn()
             .map_err(|e| format!("Failed to open file explorer: {}", e))?;
     }
 
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open")
-            .arg(&path_str)
-            .spawn()
+        let mut cmd = std::process::Command::new("xdg-open");
+        if safe_path.is_file() {
+            if let Some(parent) = safe_path.parent() {
+                cmd.arg(parent);
+            } else {
+                cmd.arg(&path_str);
+            }
+        } else {
+            cmd.arg(&path_str);
+        }
+        cmd.spawn()
             .map_err(|e| format!("Failed to open file explorer: {}", e))?;
     }
 

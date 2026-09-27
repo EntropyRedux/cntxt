@@ -14,7 +14,7 @@ import {
   formatTableCellHtml, 
   ParsedTable 
 } from '../services/tableParser';
-import { createElement, createTextNode, appendToBody, removeFromBody, isDarkTheme, copyText, getDocumentTheme } from '../adapters';
+import { createElement, createTextNode, appendToBody, removeFromBody, isDarkTheme, copyText, getDocumentTheme, getRuntimeBridge } from '../adapters';
 import { IRuntimeBridge } from '../ui-contract/bridgeContract';
 import { useActionStore } from '../store/actionStore';
 import { executeActionById } from '../services/actionExecutor';
@@ -571,19 +571,33 @@ class LinkWidget extends WidgetType {
       href: this.url,
       target: '_blank',
       rel: 'noopener noreferrer',
-      title: `Open link: ${this.url}`,
+      title: `Click or Ctrl+Right-click to open in browser: ${this.url}`,
       textContent: this.text || this.url
     }) as HTMLAnchorElement;
     
     const icon = createElement('span', {
-      className: 'text-[0.75em] opacity-70',
+      className: 'text-[0.75em] opacity-70 pointer-events-none',
       textContent: '↗'
     });
     a.appendChild(icon);
 
-    a.addEventListener('click', (e) => {
+    const openLink = (e: MouseEvent) => {
+      e.preventDefault();
       e.stopPropagation();
+      const bridge = activeBridge || getRuntimeBridge();
+      bridge?.openExternalUrl?.(this.url);
+    };
+
+    a.addEventListener('click', (e) => {
+      openLink(e);
     });
+
+    a.addEventListener('contextmenu', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        openLink(e);
+      }
+    });
+
     return a;
   }
 

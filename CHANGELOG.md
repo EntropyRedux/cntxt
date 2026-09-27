@@ -7,6 +7,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.9] — 2026-09-27
+
+### Large Document Truncation & Mobile UI Ergonomics
+- **Large Document Detection & TOC Chunk Loading**:
+  - Added configurable large document threshold detection (`enableLargeDocDetection`, `largeDocThresholdKb: 500`, `largeDocThresholdLines: 10000`; defaulting to 150KB / 2500 lines in touch/mobile modes).
+  - Intercepts large markdown notes across File Explorer, file open dialogs, and drag-and-drop.
+  - Interactive Table of Contents modal allows selective loading of individual sections/chapters with clean metadata banners, or opening the full document.
+  - Added threshold configuration controls in Settings -> Editor Settings.
+- **Modernized Adaptive Fill-Up Form (`VariableFillerModal`)**:
+  - Dual-mode layout: preserves 50/50 side-by-side editing on desktop, transitions to a full-screen sheet with a segmented `[ Form ]` / `[ Preview ]` toggle on mobile and touch mode.
+  - Visual Viewport dynamic sizing tracks `window.visualViewport` to guarantee bottom action bars remain visible above the software keyboard.
+  - Sticky keyboard navigation strip with `< Prev` and `Next >` buttons to jump through variables without closing the virtual keyboard, accompanied by an active required counter and progress bar.
+  - Increased touch input height to `min-h-[44px]` with auto-growing textarea support.
+- **Granular Variable Extraction Action Presets**:
+  - Added 4 built-in extraction operations under category `EXTRACTION`:
+    - `Extract Answered Variables`: Formats filled key-value pairs into a clean markdown summary table.
+    - `Extract Rows With Variables`: Filters document lines containing `{{variable}}` placeholders to the clipboard.
+    - `Extract Rows Without Variables`: Isolates static boilerplate text by stripping lines with variables.
+    - `Selection: Extract Variables`: Extracts unique variables from active selection into an actionable task checklist.
+  - Added `copy` alias to `SandboxAPI`.
+- **Draggable & Edge-Anchored Variable Navigator FAB (`VariableFloatingNavigator`)**:
+  - Upgraded the original canvas-level floating navigator to be movable and draggable within the editor container.
+  - Zero-latency direct DOM transform updates (60-120fps) and magnetic horizontal edge-snapping (12px left/right margins) within the editor canvas.
+  - Jitter-free hover transitions without scale flickering.
+  - Single tap auto-scrolls to and highlights the next variable placeholder via CodeMirror selection; double-tap opens the variable filler modal.
+- **Signed Installer Packages**:
+  - Official Authenticode signed installers with RFC 3161 timestamps generated for v0.3.9:
+    - NSIS Setup: `dist-installer/CNTXT_0.3.9_x64-setup.exe` (5.93 MB)
+    - WiX MSI: `dist-installer/CNTXT_0.3.9_x64_en-US.msi` (6.95 MB)
+    - Standalone Portable: `dist-portable/CNTXT_0.3.9_portable.exe` (13.48 MB)
+
+## [0.3.8] — 2026-09-27
+
+### Document Outline Refinements & Typing Direction Engine
+- **Document Outline Panel Usability & Typography**:
+  - Removed redundant inner subheader banner (`DOCUMENT OUTLINE`), reclaiming vertical viewing space.
+  - Relocated Table of Contents synchronization and export action buttons into the filter row alongside symbol category pills (`All`, `Headings`, `Code`, `Tasks`, `Tables`).
+  - Increased font sizes across the outline tree by +1px (`text-[13px]` labels, `text-[11px]` line numbers and badges) for improved readability and scanning.
+  - Removed the quick append chat input box from the bottom of the panel, dedicating 100% of panel height to document navigation.
+- **Top-to-Bottom vs. Bottom-to-Up Typing Direction**:
+  - Added full support for reverse stream/conversation typing mode in the editor engine (`typingDirection: 'top-to-bottom' | 'bottom-to-up'`).
+  - Implemented CodeMirror 6 keymap interceptor: when in `bottom-to-up` mode, typing at Line 1 and pressing Enter automatically shifts the line down to Line 2 while returning the cursor to Line 1 pos 0.
+  - Added a dedicated typing direction toggle button in the Shell Title Bar with dynamic `ArrowDownToLine` / `ArrowUpToLine` state icons and accent highlighting.
+  - Added a `Typing Direction` toggle option in the `Edit` menu dropdown and a selection control in `Settings -> Editor Settings`.
+- **Contract & Architecture Integrity**:
+  - Updated canonical schemas in `contracts/data_shapes.ts` and `generated-documents/context/contracts/data_shapes.ts`.
+  - Added comprehensive unit test coverage in `tests/settingsStore.test.ts`.
+
+## [0.3.7] — 2026-09-27
+
+### Quick Markdown Toolbar Stability & Polish
+- **Eliminated Rapid Icon Flickering & Disappearance**:
+  - Fixed infinite storage echo loop caused by `initializeFormattingStore()` re-saving buttons on every load and re-triggering Tauri `storage_changed` events.
+  - Added a 1.2s local save debounce guard in `formattingStore.ts` to prevent self-echo and race condition overwrites with defaults.
+  - Removed phantom preset resurrection that reintroduced disabled presets into the active button array.
+- **Unconditional & Reliable Button Deletion**:
+  - Fixed `removeButton()` so both built-in presets and custom buttons are cleanly and permanently removed from the active toolbar array on the first click.
+  - Deleted presets seamlessly return to the "Preset Library" tab with an active `+ Add` button for easy restoration.
+  - Removed blocking toast notification overlays that were rendering over trash buttons and intercepting mouse clicks.
+- **Smooth Toolbar Expand / Collapse Transition**:
+  - Removed `transition-all` on the dynamic flex container in `MobileAccessoryBar.tsx` that caused multi-row wrap animation thrashing.
+  - Guarded horizontal overflow and scroll indicators in `checkOverflowAndScroll()` during multi-row expansion, eliminating the double-hop stutter when expanding or collapsing the toolbar.
+
+## [0.3.6] — 2026-09-27
+
+### Quick Markdown Toolbar Category Management & Modular Ribbon Isolation
+- **Modular Ribbon vs Quick Markdown Toolbar Separation**:
+  - Completely decoupled the Quick Markdown formatting toolbar customizer (`FormattingCustomizerModal.tsx`) from the Modular Ribbon (`useRibbonStore`).
+  - Removed accidental auto-pinning to the desktop top ribbon; custom formatting buttons are now strictly dedicated to the bottom Quick Markdown formatting accessory bar (`MobileAccessoryBar.tsx`).
+- **Comprehensive Formatting Category Management**:
+  - Implemented dynamic category management matching Templates and Action Scripts in `formattingStore.ts` (`getAllCategories`, `addCategory`, `renameCategory`, `deleteCategory`, `moveCategory`, `categoryOrder`).
+  - Integrated `CategoryManagerModal` into `FormattingCustomizerModal.tsx` for creating, renaming, reordering, and deleting categories with fallback reassignment.
+  - Replaced hardcoded category `<select>` with `<CategorySelector>` in the custom button creator for instant on-the-fly category assignment and inline category creation.
+  - Converted the Preset Library category filter dropdown to dynamically display all categories with live button counts and a dedicated "Categories" management button.
+  - Added category badges on active buttons in the Manage tab.
+  - Persisted custom formatting categories in `STORAGE_KEYS.FORMATTING_CATEGORIES`.
+
+## [0.3.5] — 2026-09-27
+
+### Production Build Parity, Stale Codegen Cache Resolution & Desktop Quality of Life
+- **Cargo Codegen Cache Invalidation & Build Parity**:
+  - Implemented recursive directory watching in `src-tauri/build.rs` (`watch_dir_recursive`) ensuring Cargo tracks every file in `../dist`, preventing stale embedded asset retention on release builds.
+  - Enhanced `scripts/build-portable.mjs` and `npm run tauri:build` pipeline to purge stale release `.fingerprint/cntxt-*` and `target/release/build/cntxt-*` artifacts before compilation.
+  - Enabled `"withGlobalTauri": true` in `tauri.conf.json` and resilient multi-tier IPC resolution (`window.__TAURI_INTERNALS__`, `window.__TAURI__.core`, and `@tauri-apps/api/core`) in `tauriRuntimeAdapter.ts` and `runtimeBridge.tsx`.
+- **Direct File Overwrite (`Ctrl+S`) Parity**:
+  - Resolved `write_file` void-return mismatch via `invokeTauriVoid` in `tauriRuntimeAdapter.ts`, guaranteeing `Ctrl+S` overwrites previously opened/saved files directly without triggering unwanted "Save As" prompts.
+- **Custom Formatting Buttons in Modular Ribbon**:
+  - Added "Add Formatting" tab in `RibbonCustomizerModal.tsx` allowing one-click pinning of custom markdown formatting syntax to the Modular Ribbon with real-time preview and icon assignment.
+  - Fixed form state reset in `FormattingCustomizerModal.tsx` when creating new formats.
+- **True Italic Typography in Rendered Mode**:
+  - Registered explicit italic `@font-face` aliases in `fonts.css` and added `font-synthesis: weight style !important;` in `index.css` to guarantee clean italic rendering across all bundled fonts (JetBrains Mono, Inter, Fira Code, Inconsolata, Atkinson Hyperlegible, etc.).
+- **Live Markdown External Link Navigation**:
+  - Enabled `Ctrl+Click` and `Ctrl+Right-Click` on markdown links in the editor via `bridge.openExternalUrl`, sanitized with strict protocol validation (`http://`, `https://`) in `src-tauri/src/lib.rs`.
+- **Action Manager Category Case Normalization**:
+  - Added case-insensitive grouping and Collapse All / Expand All toggle across all custom action categories in `ActionManager.tsx`.
+
 ## [0.3.2] — 2026-09-26
 
 ### FG-08 Android SAF Deep Traversal & Mobile Release

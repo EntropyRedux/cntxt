@@ -341,9 +341,9 @@ export const useActionStore = create<ActionState>((set, get) => ({
 
   toggleCategoryCollapse: (category) => {
     set(state => {
-      const isCollapsed = state.collapsedCategories.includes(category);
+      const isCollapsed = state.collapsedCategories.some(c => c.toLowerCase() === category.toLowerCase());
       const newCollapsed = isCollapsed
-        ? state.collapsedCategories.filter(c => c !== category)
+        ? state.collapsedCategories.filter(c => c.toLowerCase() !== category.toLowerCase())
         : [...state.collapsedCategories, category];
 
       persistUIState({
@@ -358,9 +358,12 @@ export const useActionStore = create<ActionState>((set, get) => ({
 
   collapseAllCategories: () => {
     const cats = get().getAllCategories().map(c => c.name);
-    set({ collapsedCategories: cats });
+    const actionCats = get().actions.map(a => a.category || 'General');
+    const orderCats = get().categoryOrder;
+    const allCats = Array.from(new Set([...cats, ...actionCats, ...orderCats, 'General', 'GENERAL']));
+    set({ collapsedCategories: allCats });
     persistUIState({
-      collapsedCategories: cats,
+      collapsedCategories: allCats,
       categoryOrder: get().categoryOrder,
       pinnedActionIds: get().pinnedActionIds
     });

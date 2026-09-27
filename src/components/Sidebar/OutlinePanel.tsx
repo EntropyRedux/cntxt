@@ -32,13 +32,14 @@ interface OutlineItem {
 
 export const OutlinePanel: React.FC = () => {
   const bridge = useRuntimeBridge();
-  const { tabs, activeTabId, insertTextAtCursor } = useTabStore();
+  const { tabs, activeTabId, insertTextAtCursor, updateTabContent } = useTabStore();
   const { settings } = useSettingsStore();
   const { addNotification } = useNotificationStore();
   
   const [filterType, setFilterType] = useState<'all' | 'heading' | 'code' | 'task' | 'table'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  const [selectedOutlineItem, setSelectedOutlineItem] = useState<OutlineItem | null>(null);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
   const content = activeTab?.content || '';
@@ -178,6 +179,11 @@ export const OutlinePanel: React.FC = () => {
     };
   }, [outlineItems]);
 
+  const handleSelectItem = (item: OutlineItem) => {
+    setSelectedOutlineItem(item);
+    jumpToLine(item.lineNumber);
+  };
+
   const jumpToLine = (lineNumber: number) => {
     const editor = querySelector('.cm-editor');
     if (editor) {
@@ -238,49 +244,9 @@ export const OutlinePanel: React.FC = () => {
 
   return (
     <div className="theme-sidebar flex flex-col h-full select-none">
-      {/* Header */}
-      <div className="p-3 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 bg-[var(--sidebar-header-bg)]">
-        <div className="flex items-center gap-2">
-          <ListTree className="w-4 h-4 text-[var(--accent-primary)]" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-primary)]">Document Outline</span>
-        </div>
-        <div className="flex items-center gap-1">
-          {!isLiveSync && (
-            <button
-              onClick={handleManualSync}
-              title={isOutdated ? "Sync outline with latest changes" : "Outline is up to date"}
-              aria-label="Refresh Outline"
-              className={`p-1 rounded transition-colors ${
-                isOutdated 
-                  ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
-              }`}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isOutdated ? 'animate-spin-slow' : ''}`} />
-            </button>
-          )}
-          <button
-            onClick={copyTableOfContents}
-            title="Copy Table of Contents (TOC)"
-            aria-label="Copy Table of Contents"
-            className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-[var(--status-success)]" /> : <Copy className="w-3.5 h-3.5" />}
-          </button>
-          <button
-            onClick={insertTableOfContents}
-            title="Insert TOC into Document"
-            aria-label="Insert TOC into Document"
-            className="p-1 text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
       {/* Overview Stats Bar */}
       {outlineItems.length > 0 && (
-        <div className="px-3 py-2 bg-[var(--card-secondary-bg)] border-b border-[var(--border-primary)] text-[11px] flex items-center justify-between gap-2 shrink-0">
+        <div className="px-3 py-1.5 bg-[var(--card-secondary-bg)] border-b border-[var(--border-primary)] text-[11px] flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2 text-[var(--text-muted)]">
             <span>{stats.headings} Headings</span>
             <span>•</span>
@@ -297,8 +263,8 @@ export const OutlinePanel: React.FC = () => {
         </div>
       )}
 
-      {/* Search & Filter Controls */}
-      <div className="p-2 border-b border-[var(--border-primary)] flex flex-col gap-2 shrink-0">
+      {/* Search & Filter Controls with Quick Actions */}
+      <div className="p-2 border-b border-[var(--border-primary)] flex flex-col gap-1.5 shrink-0">
         <div className="relative">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
@@ -312,41 +278,76 @@ export const OutlinePanel: React.FC = () => {
           />
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
-          {(
-            [
-              { id: 'all', label: 'All', icon: Filter },
-              { id: 'heading', label: 'Headings', icon: Hash },
-              { id: 'code', label: 'Code', icon: Code },
-              { id: 'task', label: 'Tasks', icon: CheckSquare },
-              { id: 'table', label: 'Tables', icon: Table }
-            ] as const
-          ).map(tab => {
-            const Icon = tab.icon;
-            const isSelected = filterType === tab.id;
-            return (
+        {/* Filter Pills & Actions Row */}
+        <div className="flex items-center justify-between gap-1 pb-0.5">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            {(
+              [
+                { id: 'all', label: 'All', icon: Filter },
+                { id: 'heading', label: 'Headings', icon: Hash },
+                { id: 'code', label: 'Code', icon: Code },
+                { id: 'task', label: 'Tasks', icon: CheckSquare },
+                { id: 'table', label: 'Tables', icon: Table }
+              ] as const
+            ).map(tab => {
+              const Icon = tab.icon;
+              const isSelected = filterType === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFilterType(tab.id)}
+                  title={tab.label}
+                  aria-label={tab.label}
+                  className={`w-6 h-6 rounded flex items-center justify-center transition-colors shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-[var(--accent-primary)] text-white shadow-xs'
+                      : 'bg-[var(--card-secondary-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+                  }`}
+                >
+                  <Icon className="w-3 h-3" />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-0.5 shrink-0 border-l border-[var(--border-subtle)] pl-1.5 ml-1">
+            {!isLiveSync && (
               <button
-                key={tab.id}
-                type="button"
-                onClick={() => setFilterType(tab.id)}
-                title={tab.label}
-                aria-label={tab.label}
-                className={`w-6 h-6 rounded flex items-center justify-center transition-colors shrink-0 ${
-                  isSelected
-                    ? 'bg-[var(--accent-primary)] text-white shadow-xs'
-                    : 'bg-[var(--card-secondary-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+                onClick={handleManualSync}
+                title={isOutdated ? "Sync outline with latest changes" : "Outline is up to date"}
+                aria-label="Refresh Outline"
+                className={`p-1 rounded transition-colors cursor-pointer ${
+                  isOutdated 
+                    ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30' 
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
                 }`}
               >
-                <Icon className="w-3 h-3" />
+                <RefreshCw className={`w-3.5 h-3.5 ${isOutdated ? 'animate-spin-slow' : ''}`} />
               </button>
-            );
-          })}
+            )}
+            <button
+              onClick={copyTableOfContents}
+              title="Copy Table of Contents (TOC)"
+              aria-label="Copy Table of Contents"
+              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors cursor-pointer"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-[var(--status-success)]" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+            <button
+              onClick={insertTableOfContents}
+              title="Insert TOC into Document"
+              aria-label="Insert TOC into Document"
+              className="p-1 text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors cursor-pointer"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Tree / Symbol List */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5 text-xs">
+      {/* Tree / Symbol List (Full Panel Height) */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
         {filteredItems.length === 0 ? (
           <div className="p-6 text-center text-[var(--text-muted)] flex flex-col items-center justify-center">
             <FileText className="w-8 h-8 mb-2 opacity-30 text-[var(--text-muted)]" />
@@ -357,25 +358,31 @@ export const OutlinePanel: React.FC = () => {
           </div>
         ) : (
           filteredItems.map(item => {
+            const isSelected = selectedOutlineItem?.id === item.id;
+
             if (item.type === 'heading') {
               const level = item.level || 1;
               const indentPadding = (level - 1) * 12;
               return (
                 <button
                   key={item.id}
-                  onClick={() => jumpToLine(item.lineNumber)}
+                  onClick={() => handleSelectItem(item)}
                   style={{ paddingLeft: `${Math.max(6, indentPadding + 6)}px` }}
-                  className="w-full text-left py-1 pr-2 rounded hover:bg-[var(--card-hover-bg)] flex items-center justify-between group transition-colors"
+                  className={`w-full text-left py-1 pr-2 rounded flex items-center justify-between group transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-[var(--accent-primary)]/15 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)] font-medium'
+                      : 'hover:bg-[var(--card-hover-bg)]'
+                  }`}
                 >
                   <div className="flex items-center gap-1.5 truncate">
-                    <span className="text-[10px] font-mono font-bold text-[var(--accent-primary)] shrink-0">
+                    <span className="text-[11px] font-mono font-bold text-[var(--accent-primary)] shrink-0">
                       H{level}
                     </span>
-                    <span className={`truncate ${level === 1 ? 'font-bold text-[var(--text-primary)]' : level === 2 ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
+                    <span className={`truncate text-[13px] ${level === 1 ? 'font-bold text-[var(--text-primary)]' : level === 2 ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
                       {item.text}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-[var(--text-muted)] opacity-60 group-hover:opacity-100 transition-colors shrink-0 ml-1">
+                  <span className="text-[11px] font-mono text-[var(--text-muted)] opacity-60 group-hover:opacity-100 transition-colors shrink-0 ml-1">
                     :{item.lineNumber}
                   </span>
                 </button>
@@ -386,14 +393,18 @@ export const OutlinePanel: React.FC = () => {
               return (
                 <button
                   key={item.id}
-                  onClick={() => jumpToLine(item.lineNumber)}
-                  className="w-full text-left px-2 py-1 rounded hover:bg-[var(--card-hover-bg)] flex items-center justify-between group transition-colors"
+                  onClick={() => handleSelectItem(item)}
+                  className={`w-full text-left px-2 py-1 rounded flex items-center justify-between group transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-[var(--accent-primary)]/15 border border-[var(--accent-primary)]/30'
+                      : 'hover:bg-[var(--card-hover-bg)]'
+                  }`}
                 >
                   <div className="flex items-center gap-1.5 truncate text-[var(--status-warning)]">
                     <Code className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate text-xs">{item.text}</span>
+                    <span className="truncate text-[13px]">{item.text}</span>
                   </div>
-                  <span className="text-[10px] font-mono text-[var(--text-muted)] opacity-60 group-hover:opacity-100 transition-colors shrink-0 ml-1">
+                  <span className="text-[11px] font-mono text-[var(--text-muted)] opacity-60 group-hover:opacity-100 transition-colors shrink-0 ml-1">
                     :{item.lineNumber}
                   </span>
                 </button>
@@ -404,8 +415,12 @@ export const OutlinePanel: React.FC = () => {
               return (
                 <button
                   key={item.id}
-                  onClick={() => jumpToLine(item.lineNumber)}
-                  className="w-full text-left px-2 py-1 rounded hover:bg-[var(--card-hover-bg)] flex items-center justify-between group transition-colors"
+                  onClick={() => handleSelectItem(item)}
+                  className={`w-full text-left px-2 py-1 rounded flex items-center justify-between group transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-[var(--accent-primary)]/15 border border-[var(--accent-primary)]/30'
+                      : 'hover:bg-[var(--card-hover-bg)]'
+                  }`}
                 >
                   <div className="flex items-center gap-1.5 truncate">
                     {item.completed ? (
@@ -413,11 +428,11 @@ export const OutlinePanel: React.FC = () => {
                     ) : (
                       <Square className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
                     )}
-                    <span className={`truncate text-xs ${item.completed ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-primary)]'}`}>
+                    <span className={`truncate text-[13px] ${item.completed ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-primary)]'}`}>
                       {item.text}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-[var(--text-muted)] opacity-60 group-hover:opacity-100 transition-colors shrink-0 ml-1">
+                  <span className="text-[11px] font-mono text-[var(--text-muted)] opacity-60 group-hover:opacity-100 transition-colors shrink-0 ml-1">
                     :{item.lineNumber}
                   </span>
                 </button>
@@ -428,14 +443,18 @@ export const OutlinePanel: React.FC = () => {
               return (
                 <button
                   key={item.id}
-                  onClick={() => jumpToLine(item.lineNumber)}
-                  className="w-full text-left px-2 py-1 rounded hover:bg-[var(--card-hover-bg)] flex items-center justify-between group transition-colors"
+                  onClick={() => handleSelectItem(item)}
+                  className={`w-full text-left px-2 py-1 rounded flex items-center justify-between group transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-[var(--accent-primary)]/15 border border-[var(--accent-primary)]/30'
+                      : 'hover:bg-[var(--card-hover-bg)]'
+                  }`}
                 >
                   <div className="flex items-center gap-1.5 truncate text-[var(--status-info)]">
                     <Table className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate text-xs">{item.text}</span>
+                    <span className="truncate text-[13px]">{item.text}</span>
                   </div>
-                  <span className="text-[10px] font-mono text-[var(--text-muted)] opacity-60 group-hover:opacity-100 transition-colors shrink-0 ml-1">
+                  <span className="text-[11px] font-mono text-[var(--text-muted)] opacity-60 group-hover:opacity-100 transition-colors shrink-0 ml-1">
                     :{item.lineNumber}
                   </span>
                 </button>

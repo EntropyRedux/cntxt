@@ -9,7 +9,8 @@ import { IconPicker } from '../Common/IconPicker';
 import { useRibbonStore } from '../../store/ribbonStore';
 import { useActionStore } from '../../store/actionStore';
 import { useTemplateStore } from '../../store/templateStore';
-import { RibbonItem, RibbonItemType } from '../../types';
+import { useFormattingStore } from '../../store/formattingStore';
+import { RibbonItem, RibbonItemType, MarkdownFormatType } from '../../types';
 import {
   SlidersHorizontal,
   Plus,
@@ -32,7 +33,8 @@ import {
   Search,
   Check,
   Palette,
-  Minus
+  Minus,
+  Type
 } from 'lucide-react';
 
 const COLOR_OPTIONS = [
@@ -75,8 +77,9 @@ export const RibbonCustomizerModal: React.FC = () => {
 
   const { actions } = useActionStore();
   const { templates } = useTemplateStore();
+  const { buttons: formattingButtons } = useFormattingStore();
 
-  const [activeTab, setActiveTab] = useState<'manage' | 'add_tools' | 'add_actions' | 'add_templates' | 'custom'>('manage');
+  const [activeTab, setActiveTab] = useState<'manage' | 'add_tools' | 'add_formatting' | 'add_actions' | 'add_templates' | 'custom'>('manage');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
@@ -88,6 +91,9 @@ export const RibbonCustomizerModal: React.FC = () => {
   const [customTarget, setCustomTarget] = useState('variable-modal');
   const [customTooltip, setCustomTooltip] = useState('');
   const [customShortcut, setCustomShortcut] = useState('');
+  const [customPrefix, setCustomPrefix] = useState('**');
+  const [customSuffix, setCustomSuffix] = useState('**');
+  const [customFormatType, setCustomFormatType] = useState<MarkdownFormatType>('wrap');
 
   if (!isCustomizerOpen) return null;
 
@@ -95,22 +101,52 @@ export const RibbonCustomizerModal: React.FC = () => {
     e.preventDefault();
     if (!customLabel.trim()) return;
 
-    addItem({
-      label: customLabel.trim(),
-      icon: customIcon,
-      color: customColor,
-      type: customType,
-      targetId: customTarget,
-      tooltip: customTooltip.trim() || undefined,
-      shortcut: customShortcut.trim() || undefined,
-      enabled: true,
-      showLabel: false
-    });
+    if (customType === 'formatting') {
+      const fmtButton = useFormattingStore.getState().addButton({
+        label: customLabel.trim(),
+        icon: customIcon,
+        title: customTooltip.trim() || `${customLabel.trim()} formatting`,
+        prefix: customPrefix,
+        suffix: (customFormatType === 'wrap' || customFormatType === 'block') ? customSuffix : undefined,
+        type: customFormatType,
+        category: 'custom',
+        enabled: true
+      });
+
+      addItem({
+        label: customLabel.trim(),
+        icon: customIcon,
+        color: customColor,
+        type: 'formatting',
+        targetId: fmtButton.id,
+        prefix: customPrefix,
+        suffix: (customFormatType === 'wrap' || customFormatType === 'block') ? customSuffix : undefined,
+        formatType: customFormatType,
+        tooltip: customTooltip.trim() || undefined,
+        shortcut: customShortcut.trim() || undefined,
+        enabled: true,
+        showLabel: false
+      });
+    } else {
+      addItem({
+        label: customLabel.trim(),
+        icon: customIcon,
+        color: customColor,
+        type: customType,
+        targetId: customTarget,
+        tooltip: customTooltip.trim() || undefined,
+        shortcut: customShortcut.trim() || undefined,
+        enabled: true,
+        showLabel: false
+      });
+    }
 
     // Reset and return to manage
     setCustomLabel('');
     setCustomTooltip('');
     setCustomShortcut('');
+    setCustomPrefix('**');
+    setCustomSuffix('**');
     setActiveTab('manage');
   };
 
@@ -236,6 +272,20 @@ export const RibbonCustomizerModal: React.FC = () => {
             }`}
           >
             <Sparkles className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('add_formatting')}
+            title={`Formatting Buttons (${formattingButtons.length})`}
+            aria-label={`Formatting Buttons (${formattingButtons.length})`}
+            className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
+              activeTab === 'add_formatting'
+                ? 'bg-[var(--card-bg)] text-[var(--accent-primary)] shadow-2xs font-semibold'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Type className="w-4 h-4" />
           </button>
 
           <button
@@ -599,7 +649,79 @@ export const RibbonCustomizerModal: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 3: Add Custom Actions */}
+        {/* Tab 3: Markdown Formatting */}
+        {activeTab === 'add_formatting' && (
+          <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+            <div className="flex items-center justify-between gap-2 pb-1">
+              <p className="text-xs text-[var(--text-muted)]">
+                Click to pin markdown syntax formatting buttons to your modular ribbon:
+              </p>
+              <Button
+                variant="accent"
+                size="xs"
+                icon={Plus}
+                onClick={() => {
+                  setCustomType('formatting');
+                  setActiveTab('custom');
+                }}
+              >
+                Create Custom Button
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {formattingButtons.map((btn) => {
+                const added = isAlreadyInRibbon(btn.id, 'formatting');
+
+                return (
+                  <Card
+                    key={btn.id}
+                    variant="default"
+                    padding="sm"
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-md bg-[var(--app-bg)] border border-[var(--border-subtle)] flex items-center justify-center shrink-0">
+                        <RibbonIcon name={btn.icon} className="w-4 h-4 text-[var(--accent-primary)]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-[var(--text-primary)]">{btn.label}</div>
+                        <div className="text-[11px] text-[var(--text-muted)] line-clamp-1">{btn.title || btn.prefix}</div>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant={added ? 'secondary' : 'primary'}
+                      size="xs"
+                      disabled={added}
+                      icon={added ? Check : Plus}
+                      onClick={() => {
+                        addItem({
+                          label: btn.label,
+                          icon: btn.icon,
+                          type: 'formatting',
+                          targetId: btn.id,
+                          prefix: btn.prefix,
+                          suffix: btn.suffix,
+                          formatType: btn.type,
+                          color: btn.isAccent ? 'accent' : 'cyan',
+                          tooltip: btn.title || `${btn.label} formatting`,
+                          enabled: true,
+                          showLabel: false
+                        });
+                        setActiveTab('manage');
+                      }}
+                    >
+                      {added ? 'Added' : 'Add'}
+                    </Button>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 4: Add Custom Actions */}
         {activeTab === 'add_actions' && (
           <div className="space-y-3">
             <p className="text-xs text-[var(--text-muted)]">
@@ -747,6 +869,7 @@ export const RibbonCustomizerModal: React.FC = () => {
                     className="w-full h-8 px-2 text-xs rounded-md bg-[var(--app-bg)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
                   >
                     <option value="tool">Built-in Tool</option>
+                    <option value="formatting">Markdown Formatting</option>
                     <option value="action">Custom Action</option>
                     <option value="workflow">Workflow Blueprint</option>
                     <option value="template">Template</option>
@@ -754,34 +877,102 @@ export const RibbonCustomizerModal: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">
-                    Accent Color
-                  </label>
-                  <select
-                    value={customColor}
-                    onChange={(e) => setCustomColor(e.target.value)}
-                    className="w-full h-8 px-2 text-xs rounded-md bg-[var(--app-bg)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
-                  >
-                    {COLOR_OPTIONS.map(c => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                  </select>
-                </div>
+              {customType === 'formatting' ? (
+                <div className="space-y-3 pt-1 border-t border-[var(--border-subtle)]">
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--text-primary)] block mb-1">
+                      Formatting Behavior
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+                      {[
+                        { id: 'wrap', label: 'Wrap Selection', desc: 'prefix + text + suffix' },
+                        { id: 'line-prefix', label: 'Line Prefix', desc: 'prefix at line start' },
+                        { id: 'block', label: 'Code / Block', desc: 'multi-line container' },
+                        { id: 'insert', label: 'Raw Insert', desc: 'insert snippet at cursor' },
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setCustomFormatType(t.id as MarkdownFormatType)}
+                          className={`p-2 rounded-lg border text-left transition-all ${
+                            customFormatType === t.id
+                              ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)] font-semibold'
+                              : 'bg-[var(--app-bg)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[var(--border-primary)]'
+                          }`}
+                        >
+                          <div className="font-medium">{t.label}</div>
+                          <div className="text-[10px] text-[var(--text-muted)]">{t.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">
-                    Target ID / Command (Optional)
-                  </label>
-                  <Input
-                    value={customTarget}
-                    onChange={(e) => setCustomTarget(e.target.value)}
-                    placeholder="e.g. variable-modal or command id"
-                    inputSize="sm"
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">
+                        Prefix Delimiter <span className="text-rose-500">*</span>
+                      </label>
+                      <Input
+                        value={customPrefix}
+                        onChange={(e) => setCustomPrefix(e.target.value)}
+                        placeholder={customFormatType === 'line-prefix' ? 'e.g. > [!NOTE] ' : 'e.g. == or ** or <mark>'}
+                        inputSize="sm"
+                        required
+                      />
+                    </div>
+
+                    {(customFormatType === 'wrap' || customFormatType === 'block') && (
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">
+                          Suffix Delimiter
+                        </label>
+                        <Input
+                          value={customSuffix}
+                          onChange={(e) => setCustomSuffix(e.target.value)}
+                          placeholder="e.g. == or ** or </mark>"
+                          inputSize="sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-2 bg-[var(--app-bg)] border border-[var(--border-subtle)] rounded text-xs flex items-center gap-2">
+                    <span className="text-[var(--text-muted)]">Preview:</span>
+                    <span className="font-mono text-[var(--accent-primary)] font-medium">
+                      {customPrefix}selected_text{customFormatType === 'wrap' || customFormatType === 'block' ? customSuffix : ''}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">
+                      Accent Color
+                    </label>
+                    <select
+                      value={customColor}
+                      onChange={(e) => setCustomColor(e.target.value)}
+                      className="w-full h-8 px-2 text-xs rounded-md bg-[var(--app-bg)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
+                    >
+                      {COLOR_OPTIONS.map(c => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">
+                      Target ID / Command (Optional)
+                    </label>
+                    <Input
+                      value={customTarget}
+                      onChange={(e) => setCustomTarget(e.target.value)}
+                      placeholder="e.g. variable-modal or command id"
+                      inputSize="sm"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Visual Icon Picker */}
               <IconPicker

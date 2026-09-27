@@ -151,29 +151,36 @@ export const ActionManager: React.FC = () => {
     });
   }, [actions, showHidden, selectedCategoryFilter, searchQuery]);
 
-  // Group filtered actions by category, respecting category ordering
+  // Group filtered actions by category, respecting category ordering and normalizing case
   const groupedActions = useMemo(() => {
-    const groups: Record<string, Action[]> = {};
+    const groups = new Map<string, { displayName: string; actions: Action[] }>();
 
     // Initialize all existing categories so order is preserved
     allCategories.forEach(cat => {
-      groups[cat.name] = [];
+      groups.set(cat.name.toUpperCase(), { displayName: cat.name, actions: [] });
     });
 
     filteredActions.forEach(action => {
-      const cat = action.category || 'General';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(action);
+      const rawCat = action.category || 'General';
+      const key = rawCat.toUpperCase();
+      if (!groups.has(key)) {
+        groups.set(key, { displayName: rawCat, actions: [] });
+      }
+      groups.get(key)!.actions.push(action);
     });
 
     // Remove empty categories when filtering by search or category
-    return Object.entries(groups).filter(([_, items]) => items.length > 0);
+    return Array.from(groups.values())
+      .filter(g => g.actions.length > 0)
+      .map(g => [g.displayName, g.actions] as [string, Action[]]);
   }, [filteredActions, allCategories]);
 
   const areAllCategoriesCollapsed = useMemo(() => {
-    if (allCategories.length === 0) return false;
-    return allCategories.every(c => collapsedCategories.includes(c.name));
-  }, [allCategories, collapsedCategories]);
+    if (groupedActions.length === 0) return false;
+    return groupedActions.every(([catName]) => 
+      collapsedCategories.some(c => c.toLowerCase() === catName.toLowerCase())
+    );
+  }, [groupedActions, collapsedCategories]);
 
   // Toggle expand / collapse all categories
   const handleToggleAllCategories = () => {
@@ -876,7 +883,7 @@ export const ActionManager: React.FC = () => {
           </div>
         ) : (
           groupedActions.map(([categoryName, categoryActions], index) => {
-            const isCollapsed = collapsedCategories.includes(categoryName);
+            const isCollapsed = collapsedCategories.some(c => c.toLowerCase() === categoryName.toLowerCase());
             const isFirst = index === 0;
             const isLast = index === groupedActions.length - 1;
 

@@ -77,7 +77,15 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
 }, ref) => {
   const baseStyles = 'inline-flex items-center justify-center font-medium select-none transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 cursor-pointer';
 
-  const sizeStyles: Record<ButtonSize, string> = {
+  const hasChildren = Boolean(children);
+
+  const sizeStyles: Record<ButtonSize, string> = hasChildren ? {
+    xs: 'h-6 px-2 text-[11px] rounded gap-1',
+    sm: 'h-7 px-2.5 text-xs rounded-md gap-1.5',
+    md: 'h-8 px-3 text-xs rounded-md gap-1.5',
+    lg: 'h-9 px-3.5 text-sm rounded-lg gap-2',
+    touch: 'h-11 px-4 text-sm rounded-xl min-w-[44px] min-h-[44px] gap-2',
+  } : {
     xs: 'w-6 h-6 p-0 text-[11px] rounded',
     sm: 'w-7 h-7 p-0 text-xs rounded-md',
     md: 'w-8 h-8 p-0 text-xs rounded-md',
@@ -102,6 +110,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
     (shortcut ? `Action (${shortcut})` : 'Button');
   const computedTitle = props.title || (shortcut ? `${computedAriaLabel} (${shortcut})` : computedAriaLabel);
   const ResolvedIcon = getSmartIcon(Icon, typeof children === 'string' ? children : computedAriaLabel);
+  const showIcon = Boolean(Icon || !hasChildren);
 
   return (
     <button
@@ -114,7 +123,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
     >
       {isLoading ? (
         <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
-      ) : (
+      ) : showIcon && iconPosition === 'left' ? (
+        <ResolvedIcon className="w-3.5 h-3.5 shrink-0" />
+      ) : null}
+
+      {hasChildren && <span className="truncate">{children}</span>}
+
+      {!isLoading && showIcon && iconPosition === 'right' && (
         <ResolvedIcon className="w-3.5 h-3.5 shrink-0" />
       )}
     </button>

@@ -187,6 +187,41 @@ class EditorRegistry {
     window.dispatchEvent(new CustomEvent('open-search', { detail: { mode } }));
     return true;
   }
+
+  selectAndScrollToNextVariable(tabId: string): boolean {
+    const view = this.views.get(tabId);
+    if (!view) return false;
+    const docText = view.state.doc.toString();
+    const regex = /\{\{([^}]+)\}\}/g;
+    const currentPos = view.state.selection.main.to;
+
+    let match: RegExpExecArray | null = null;
+    let nextMatch: { from: number; to: number } | null = null;
+    let firstMatch: { from: number; to: number } | null = null;
+
+    while ((match = regex.exec(docText)) !== null) {
+      const from = match.index;
+      const to = from + match[0].length;
+      if (!firstMatch) {
+        firstMatch = { from, to };
+      }
+      if (from >= currentPos && !nextMatch) {
+        nextMatch = { from, to };
+        break;
+      }
+    }
+
+    const target = nextMatch || firstMatch;
+    if (target) {
+      view.dispatch({
+        selection: { anchor: target.from, head: target.to },
+        scrollIntoView: true
+      });
+      view.focus();
+      return true;
+    }
+    return false;
+  }
 }
 
 export const editorRegistry = new EditorRegistry();

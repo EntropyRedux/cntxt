@@ -8,6 +8,7 @@ import { IRuntimeBridge } from '../ui-contract/bridgeContract';
 import { AppUiEvents } from '../ui-contract/actionContract';
 import { editorRegistry } from '../services/editor/editorRegistry';
 import { copyText, execUndo, execRedo, getSelectionText } from './domHelper';
+import { openDocumentWithLargeDocCheck } from '../services/largeDocHelper';
 
 /**
  * Creates a centralized, typed event dispatcher for UI actions
@@ -24,7 +25,12 @@ export function createUiEventDispatcher(
       try {
         const file = await bridge.fs.openFile();
         if (file) {
-          useTabStore.getState().createTab(file.name, file.content, file.language, file.path);
+          openDocumentWithLargeDocCheck({
+            title: file.name,
+            content: file.content,
+            language: file.language,
+            filePath: file.path
+          });
           useFileHistoryStore.getState().recordOpenedFile({
             id: file.path || file.name,
             name: file.name,

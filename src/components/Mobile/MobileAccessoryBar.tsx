@@ -67,6 +67,11 @@ export const MobileAccessoryBar: React.FC = () => {
   const checkOverflowAndScroll = useCallback(() => {
     if (scrollContainerRef.current) {
       const el = scrollContainerRef.current;
+      if (isMultiRowExpanded) {
+        setCanScrollLeft(false);
+        setCanScrollRight(false);
+        return;
+      }
       setHasOverflow(prev => {
         const threshold = prev ? -2 : 4;
         const overflowing = el.scrollWidth > el.clientWidth + threshold;
@@ -81,7 +86,7 @@ export const MobileAccessoryBar: React.FC = () => {
         return prev !== canScroll ? canScroll : prev;
       });
     }
-  }, []);
+  }, [isMultiRowExpanded]);
 
   useEffect(() => {
     const isNarrow = windowWidth < 768;
@@ -295,7 +300,7 @@ export const MobileAccessoryBar: React.FC = () => {
             onWheel={handleWheel}
             onScroll={checkOverflowAndScroll}
             onDragStart={(e) => e.preventDefault()}
-            className={`flex-1 min-w-0 transition-all ${
+            className={`flex-1 min-w-0 ${
               isMultiRowExpanded 
                 ? `flex flex-wrap items-center ${sizeStyles.gap} ${sizeStyles.containerPad} max-h-56 overflow-y-auto no-scrollbar touch-pan-y` 
                 : `flex items-center ${sizeStyles.gap} py-1.5 px-1 overflow-x-auto no-scrollbar touch-pan-x ${

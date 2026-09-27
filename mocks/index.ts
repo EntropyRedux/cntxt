@@ -680,6 +680,115 @@ api.toast('Wrapped in prompt context tags', 'success');`
     code: 'FORMULA:UUID()',
     createdAt: 1700000000000,
     updatedAt: 1700000000000
+  },
+  {
+    id: 'action-extract-answered',
+    name: 'Extract Answered Variables',
+    description: 'Scans active document for filled variables or key-value pairs and copies a markdown table summary.',
+    type: 'command',
+    category: 'EXTRACTION',
+    enabled: true,
+    isDefault: true,
+    icon: 'Table',
+    createdAt: 1700000000000,
+    updatedAt: 1700000000000,
+    code: `// Extract Answered Variables Action
+const text = api.getContent();
+const regex = /\\{\\{([a-zA-Z0-9_-]+)(?:=([^}]+))?\\}\\}/g;
+const matches = [...text.matchAll(regex)];
+
+const varMap = new Map();
+for (const m of matches) {
+  const key = m[1].trim();
+  const val = m[2] ? m[2].trim() : '(unassigned)';
+  if (!varMap.has(key) || (varMap.get(key) === '(unassigned)' && val !== '(unassigned)')) {
+    varMap.set(key, val);
+  }
+}
+
+if (varMap.size === 0) {
+  api.toast('No variable tags {{...}} found in document', 'info');
+} else {
+  let table = '### Extracted Document Variables\\n| Variable | Value |\\n| :--- | :--- |\\n';
+  for (const [k, v] of varMap.entries()) {
+    table += \`| \${k} | \${v} |\\n\`;
+  }
+  await api.copyToClipboard(table);
+  api.toast(\`Copied \${varMap.size} extracted variable(s) to clipboard\`, 'success');
+}`
+  },
+  {
+    id: 'action-extract-rows-with-vars',
+    name: 'Extract Rows With Variables',
+    description: 'Filters lines containing {{variable}} placeholders and copies them to the clipboard.',
+    type: 'command',
+    category: 'EXTRACTION',
+    enabled: true,
+    isDefault: true,
+    icon: 'ListFilter',
+    createdAt: 1700000000000,
+    updatedAt: 1700000000000,
+    code: `// Extract Rows With Variables Action
+const text = api.getContent();
+const lines = text.split('\\n');
+const matching = lines.filter(l => /\\{\\{[^}]+\\}\\}/.test(l));
+
+if (matching.length === 0) {
+  api.toast('No rows containing {{variable}} tags found', 'info');
+} else {
+  const result = matching.join('\\n');
+  await api.copyToClipboard(result);
+  api.toast(\`Copied \${matching.length} row(s) with variables to clipboard\`, 'success');
+}`
+  },
+  {
+    id: 'action-extract-rows-without-vars',
+    name: 'Extract Rows Without Variables',
+    description: 'Filters out lines containing {{variable}} placeholders, isolating boilerplate static text to clipboard.',
+    type: 'command',
+    category: 'EXTRACTION',
+    enabled: true,
+    isDefault: true,
+    icon: 'FileText',
+    createdAt: 1700000000000,
+    updatedAt: 1700000000000,
+    code: `// Extract Rows Without Variables Action
+const text = api.getContent();
+const lines = text.split('\\n');
+const staticLines = lines.filter(l => !/\\{\\{[^}]+\\}\\}/.test(l));
+
+if (staticLines.length === 0) {
+  api.toast('All rows in document contain {{variable}} tags', 'info');
+} else {
+  const result = staticLines.join('\\n');
+  await api.copyToClipboard(result);
+  api.toast(\`Copied \${staticLines.length} row(s) without variables to clipboard\`, 'success');
+}`
+  },
+  {
+    id: 'action-selection-extract-vars',
+    name: 'Selection: Extract Variables',
+    description: 'Extracts all unique {{...}} tokens from the selected text or document into a formatted checklist.',
+    type: 'command',
+    category: 'EXTRACTION',
+    enabled: true,
+    isDefault: true,
+    icon: 'CheckSquare',
+    createdAt: 1700000000000,
+    updatedAt: 1700000000000,
+    code: `// Selection: Extract Variables Action
+const sel = api.getSelection();
+const target = sel || api.getContent();
+const matches = [...target.matchAll(/\\{\\{([^}]+)\\}\\}/g)];
+
+if (matches.length === 0) {
+  api.toast('No {{variable}} tags found in ' + (sel ? 'selection' : 'document'), 'info');
+} else {
+  const unique = Array.from(new Set(matches.map(m => m[1].trim())));
+  const checklist = '### Variable Checklist\\n' + unique.map(v => \`- [ ] \\\`{{\${v}}}\\\`\`).join('\\n');
+  await api.copyToClipboard(checklist);
+  api.toast(\`Extracted \${unique.length} unique variable(s) to checklist and copied to clipboard\`, 'success');
+}`
   }
 ];
 

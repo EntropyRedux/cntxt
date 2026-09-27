@@ -1,7 +1,7 @@
 {
   "name": "cntxt",
   "private": true,
-  "version": "0.3.2",
+  "version": "0.3.9",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,7 +13,7 @@
     "test:e2e": "playwright test",
     "tauri": "tauri",
     "tauri:dev": "tauri dev --config src-tauri/tauri.dev.conf.json",
-    "tauri:build": "tauri build",
+    "tauri:build": "node scripts/build-portable.mjs",
     "build:portable": "node scripts/build-portable.mjs",
     "package:sign": "powershell -ExecutionPolicy Bypass -File scripts/sign-installers.ps1",
     "package:android": "powershell -ExecutionPolicy Bypass -File scripts/build-android.ps1 -Target arm64",

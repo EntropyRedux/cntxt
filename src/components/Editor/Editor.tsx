@@ -66,9 +66,9 @@ const editorWidthPx: Record<NonNullable<ViewSettings['editorMaxWidth']>, string>
 };
 
 const editorPaddingPx: Record<NonNullable<ViewSettings['editorPadding']>, string> = {
-  compact: '16px',
-  normal: '32px',
-  spacious: '64px',
+  compact: '12px',
+  normal: '24px',
+  spacious: '36px',
 };
 
 const getContentLayoutTheme = (
@@ -265,6 +265,27 @@ const buildEditorExtensions = (
         run: () => {
           useSettingsStore.getState().toggleWordWrap();
           return true;
+        }
+      },
+      {
+        key: 'Enter',
+        run: (view) => {
+          const { typingDirection } = useSettingsStore.getState().settings;
+          if (typingDirection === 'bottom-to-up') {
+            const { from, to } = view.state.selection.main;
+            if (from === to) {
+              const line = view.state.doc.lineAt(from);
+              if (line.number === 1) {
+                view.dispatch({
+                  changes: { from: 0, insert: '\n' },
+                  selection: { anchor: 0 },
+                  scrollIntoView: true
+                });
+                return true;
+              }
+            }
+          }
+          return false;
         }
       },
       ...variableTabKeymap(),
@@ -469,6 +490,18 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     if (initialScrollTop > 0 || initialScrollLeft > 0) {
       view.scrollDOM.scrollTop = initialScrollTop;
       view.scrollDOM.scrollLeft = initialScrollLeft;
+    }
+
+    // Check large document threshold (>100KB) and offer section selection
+    if (content.length > 100_000 && !editorStateCache.hasTabState(tabId)) {
+      const activeTab = useTabStore.getState().tabs.find(t => t.id === tabId);
+      const title = activeTab?.title || 'Document';
+      // Only open if headings exist to choose from
+      if (/^(#{1,6})\s+/m.test(content)) {
+        import('../../store/largeDocModalStore').then(({ useLargeDocModalStore }) => {
+          useLargeDocModalStore.getState().openLargeDocModal(tabId, title, content);
+        });
+      }
     }
 
     editorRegistry.registerCommands({ undo, redo, selectAll, indentMore, indentLess });

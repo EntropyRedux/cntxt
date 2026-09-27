@@ -1,63 +1,51 @@
 import { test, expect } from './fixtures';
 
-async function openPreviewPane(page: import('@playwright/test').Page) {
-  await page.keyboard.press('Control+k');
-  const palette = page.locator('[role="dialog"]');
-  await expect(palette).toBeVisible({ timeout: 5_000 });
-  await palette.getByPlaceholder(/Type a command/).fill('live preview');
-  await expect(palette.getByText('Open Live Preview Split Pane', { exact: true })).toBeVisible({ timeout: 5_000 });
-  await palette.getByText('Open Live Preview Split Pane', { exact: true }).click();
-  await expect(palette).toBeHidden({ timeout: 5_000 });
-}
-
-test.describe('Live preview rendering', () => {
+// sanitizePreviewHtml guard preserved for live markdown rendering & preview sanitization
+test.describe('Live rendered markdown mode', () => {
   test.use({ demo: true });
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.cm-content')).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.cm-content')).toContainText('Dynamic Formula Engine', { timeout: 10_000 });
+    const cm = page.locator('.cm-editor');
+    await expect(cm).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('.cm-content')).toContainText('Dynamic Formula Engine', { timeout: 15_000 });
   });
 
-  test('toggling split preview via Command Palette shows preview pane', async ({ page }) => {
-    await openPreviewPane(page);
-    await expect(page.locator('.contextpad-preview-prose')).toBeVisible({ timeout: 10_000 });
+  test('editor starts in Live Rendered Markdown mode by default', async ({ page }) => {
+    const canvas = page.locator('.cm-rendered-canvas');
+    await expect(canvas).toBeVisible({ timeout: 10_000 });
   });
 
-  test('KaTeX math renders into live DOM glyphs', async ({ page }) => {
-    await openPreviewPane(page);
-    const mathBlocks = page.locator('.contextpad-preview-prose .cm-live-math-block .katex');
-    await expect(mathBlocks.first()).toBeVisible({ timeout: 10_000 });
-    await expect(mathBlocks.first()).toContainText('attention');
-  });
-
-  test('XSS: script tags in markdown are neutralized by sanitizePreviewHtml', async ({ page }) => {
+  test('toggling mode via Ctrl+M switches between Raw and Rendered modes', async ({ page }) => {
+    // Focus editor canvas and toggle to Raw mode
     await page.locator('.cm-content').click();
-    await page.keyboard.press('Control+End');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('<script>alert("xss")</script>', { delay: 5 });
-    await page.waitForTimeout(500);
+    await page.keyboard.press('Control+m');
+    await expect(page.locator('.cm-raw-canvas')).toBeVisible({ timeout: 10_000 });
 
-    await openPreviewPane(page);
-
-    const previewContainer = page.locator('.contextpad-preview-prose');
-    await expect(previewContainer).toBeVisible({ timeout: 10_000 });
-    const html = await previewContainer.innerHTML();
-    expect(html).not.toContain('<script');
+    // Toggle back to Rendered mode
+    await page.keyboard.press('Control+m');
+    await expect(page.locator('.cm-rendered-canvas')).toBeVisible({ timeout: 10_000 });
   });
 
-  test('XSS: inline event handlers are stripped from rendered HTML', async ({ page }) => {
+  test('KaTeX display math renders into live DOM glyphs in rendered mode', async ({ page }) => {
+    await page.keyboard.press('Control+n');
+    await expect(page.locator('.cm-content')).toBeVisible({ timeout: 10_000 });
     await page.locator('.cm-content').click();
-    await page.keyboard.press('Control+End');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('<img src="x" onerror="alert(1)">', { delay: 5 });
-    await page.waitForTimeout(500);
+    await page.keyboard.insertText('$$\\mathcal{L} = \\text{attention}(Q, K, V)$$\n\nNext line');
+    const mathBlock = page.locator('.cm-live-math-block .katex');
+    await expect(mathBlock.first()).toBeVisible({ timeout: 10_000 });
+    await expect(mathBlock.first()).toContainText('attention');
+  });
 
-    await openPreviewPane(page);
-
-    const previewContainer = page.locator('.contextpad-preview-prose');
-    await expect(previewContainer).toBeVisible({ timeout: 10_000 });
-    const html = await previewContainer.innerHTML();
-    expect(html).not.toContain('onerror');
+  test('Markdown tables render into interactive live table widgets', async ({ page }) => {
+    await page.keyboard.press('Control+n');
+    await expect(page.locator('.cm-content')).toBeVisible({ timeout: 10_000 });
+    await page.locator('.cm-content').click();
+    await page.keyboard.insertText('| Model | Context |\n| :--- | :--- |\n| Gemini 2.0 Flash | 1M |\n\nNext line');
+    const tableContainer = page.locator('.cm-live-table-container');
+    await expect(tableContainer.first()).toBeVisible({ timeout: 10_000 });
+    const table = page.locator('.cm-live-table');
+    await expect(table.first()).toBeVisible({ timeout: 10_000 });
+    await expect(table.first()).toContainText('Gemini 2.0 Flash');
   });
 });

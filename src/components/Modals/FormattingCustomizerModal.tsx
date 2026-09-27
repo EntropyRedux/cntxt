@@ -8,6 +8,8 @@ import { IconPicker } from '../Common/IconPicker';
 import { useFormattingStore, PRESET_FORMATTING_BUTTONS } from '../../store/formattingStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { MarkdownFormatButton, MarkdownFormatType, FormattingButtonSize } from '../../types';
+import { CategoryManagerModal } from '../Common/CategoryManagerModal';
+import { CategorySelector } from '../Sidebar/TemplateManager/CategorySelector';
 import {
   SlidersHorizontal,
   Plus,
@@ -27,18 +29,9 @@ import {
   Link,
   Layers,
   Wand2,
-  Info
+  Info,
+  Settings2
 } from 'lucide-react';
-
-const CATEGORY_TABS = [
-  { id: 'all', label: 'All Presets' },
-  { id: 'format', label: 'Text Styles' },
-  { id: 'heading', label: 'Headings' },
-  { id: 'list', label: 'Lists & Tasks' },
-  { id: 'block', label: 'Blocks & Quotes' },
-  { id: 'insert', label: 'Media & Tables' },
-  { id: 'tool', label: 'Tools & Actions' },
-];
 
 export const FormattingCustomizerModal: React.FC = () => {
   const {
@@ -56,7 +49,11 @@ export const FormattingCustomizerModal: React.FC = () => {
     isMultiRowExpanded,
     setIsMultiRowExpanded,
     buttonSize,
-    setButtonSize
+    setButtonSize,
+    getAllCategories,
+    addCategory,
+    renameCategory,
+    deleteCategory
   } = useFormattingStore();
 
   const { addNotification } = useNotificationStore();
@@ -64,6 +61,9 @@ export const FormattingCustomizerModal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'manage' | 'presets' | 'custom'>('manage');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Category management modal state
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
 
   // Custom button creator state
   const [customLabel, setCustomLabel] = useState('');
@@ -73,14 +73,16 @@ export const FormattingCustomizerModal: React.FC = () => {
   const [customSuffix, setCustomSuffix] = useState('**');
   const [customTitle, setCustomTitle] = useState('');
   const [customIsAccent, setCustomIsAccent] = useState(false);
-  const [customCategory, setCustomCategory] = useState<'format' | 'heading' | 'block' | 'list' | 'insert' | 'tool' | 'custom'>('custom');
+  const [customCategory, setCustomCategory] = useState('CUSTOM');
 
   const activeButtons = useMemo(() => buttons.filter(b => b.enabled), [buttons]);
+  const allCategories = useMemo(() => getAllCategories(), [buttons, getAllCategories]);
 
   // Filtered preset buttons for library tab
   const filteredPresets = useMemo(() => {
     return PRESET_FORMATTING_BUTTONS.filter(preset => {
-      const matchesCat = selectedCategory === 'all' || preset.category === selectedCategory;
+      const presetCatUpper = (preset.category || 'CUSTOM').toString().toUpperCase();
+      const matchesCat = selectedCategory === 'all' || presetCatUpper === selectedCategory.toUpperCase();
       const matchesSearch = !searchQuery.trim() || 
         preset.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
         preset.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -103,18 +105,18 @@ export const FormattingCustomizerModal: React.FC = () => {
       suffix: customType === 'wrap' || customType === 'block' ? customSuffix : undefined,
       type: customType,
       isAccent: customIsAccent,
-      category: customCategory,
+      category: customCategory.trim().toUpperCase(),
       enabled: true
     });
 
-    addNotification('Formatting Button Created', `Added "${customLabel.trim()}" to markdown bar`, 'success');
+    addNotification('Formatting Button Created', `Added "${customLabel.trim()}" to Quick Markdown formatting bar`, 'success');
 
     // Reset and return to manage tab
     setCustomLabel('');
     setCustomTitle('');
-    setCustomPrefix('');
-    setCustomSuffix('');
-    setCustomCategory('custom');
+    setCustomPrefix('**');
+    setCustomSuffix('**');
+    setCustomCategory('CUSTOM');
     setActiveTab('manage');
   };
 
@@ -406,10 +408,9 @@ export const FormattingCustomizerModal: React.FC = () => {
                       type="button"
                       onClick={() => {
                         removeButton(button.id);
-                        addNotification('Button Removed', `Removed "${button.label}" from toolbar`, 'info');
                       }}
                       className="p-1.5 rounded text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                      title={button.isBuiltIn ? 'Remove / Hide button' : 'Permanently delete button'}
+                      title={button.isBuiltIn ? 'Remove button' : 'Permanently delete button'}
                       aria-label="Remove button"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -437,18 +438,29 @@ export const FormattingCustomizerModal: React.FC = () => {
                 />
               </div>
 
-              <div className="shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="px-2.5 py-1.5 rounded-md text-xs bg-[var(--card-bg)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] font-medium cursor-pointer"
                 >
-                  {CATEGORY_TABS.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.label}
+                  <option value="all">All Categories</option>
+                  {allCategories.map((cat) => (
+                    <option key={cat.name} value={cat.name}>
+                      {cat.name} ({cat.count})
                     </option>
                   ))}
                 </select>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryManagerOpen(true)}
+                  title="Manage Categories"
+                  className="px-2.5 py-1.5 rounded-md text-xs border border-[var(--border-primary)] bg-[var(--card-bg)] hover:bg-[var(--card-hover-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Settings2 className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                  <span>Categories</span>
+                </button>
               </div>
             </div>
 
@@ -500,7 +512,6 @@ export const FormattingCustomizerModal: React.FC = () => {
                           icon={Check}
                           onClick={() => {
                             removeButton(preset.id);
-                            addNotification('Removed Button', `Removed "${preset.label}" from toolbar`, 'info');
                           }}
                           className="text-emerald-500 hover:text-red-500 hover:bg-red-500/10"
                           title="Click to remove from toolbar"
@@ -514,7 +525,6 @@ export const FormattingCustomizerModal: React.FC = () => {
                           icon={Plus}
                           onClick={() => {
                             addPresetButton(preset.id);
-                            addNotification('Added Button', `Added "${preset.label}" to toolbar`, 'success');
                           }}
                           title="Add to formatting toolbar"
                         >
@@ -575,19 +585,13 @@ export const FormattingCustomizerModal: React.FC = () => {
                 <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                   Category
                 </label>
-                <select
+                <CategorySelector
                   value={customCategory}
-                  onChange={(e) => setCustomCategory(e.target.value as any)}
-                  className="w-full px-3 py-1.5 rounded-md text-xs bg-[var(--card-bg)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] font-medium cursor-pointer"
-                >
-                  <option value="custom">Custom</option>
-                  <option value="format">Text Styles</option>
-                  <option value="heading">Headings</option>
-                  <option value="list">Lists & Tasks</option>
-                  <option value="block">Blocks & Quotes</option>
-                  <option value="insert">Media & Tables</option>
-                  <option value="tool">Tools & Actions</option>
-                </select>
+                  categories={allCategories}
+                  onChange={(cat) => setCustomCategory(cat)}
+                  onOpenCategoryManager={() => setIsCategoryManagerOpen(true)}
+                  placeholder="Select Category"
+                />
               </div>
             </div>
 
@@ -679,7 +683,7 @@ export const FormattingCustomizerModal: React.FC = () => {
             </div>
 
             {/* Output Preview */}
-            <div className="p-2.5 bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-lg flex items-center justify-between text-xs">
+            <div className="p-2.5 bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-lg flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-2">
                 <span className="text-[var(--text-muted)]">Preview output:</span>
                 <span className="font-mono bg-[var(--app-bg)] px-2 py-0.5 rounded border border-[var(--border-subtle)] text-[var(--text-primary)]">
@@ -687,19 +691,31 @@ export const FormattingCustomizerModal: React.FC = () => {
                 </span>
               </div>
 
-              <Button
-                type="submit"
-                variant="accent"
-                size="sm"
-                icon={Plus}
-                disabled={!customLabel.trim() || !customPrefix}
-              >
-                Add to Formatting Bar
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  type="submit"
+                  variant="accent"
+                  size="sm"
+                  icon={Plus}
+                  disabled={!customLabel.trim() || !customPrefix}
+                >
+                  Add Formatting Button
+                </Button>
+              </div>
             </div>
           </form>
         )}
       </div>
+
+      <CategoryManagerModal
+        isOpen={isCategoryManagerOpen}
+        onClose={() => setIsCategoryManagerOpen(false)}
+        title="Manage Formatting Categories"
+        categories={allCategories}
+        onAddCategory={addCategory}
+        onRenameCategory={renameCategory}
+        onDeleteCategory={deleteCategory}
+      />
     </Modal>
   );
 };

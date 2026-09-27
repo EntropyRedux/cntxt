@@ -442,6 +442,21 @@ export const SettingsPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[var(--text-primary)] block">Typing Direction</span>
+              <span className="text-[10px] text-[var(--text-muted)]">Top-to-Bottom or Bottom-to-Up</span>
+            </div>
+            <select
+              value={settings.typingDirection || 'top-to-bottom'}
+              onChange={(e: any) => updateSettings({ typingDirection: e.target.value })}
+              className="theme-input rounded px-2 py-0.5 text-xs text-[var(--text-primary)]"
+            >
+              <option value="top-to-bottom">Top to Bottom (Standard)</option>
+              <option value="bottom-to-up">Bottom to Up (Conversation)</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between">
             <span className="text-[var(--text-primary)]">Editor Max Width</span>
             <select
               value={settings.editorMaxWidth}
@@ -462,9 +477,9 @@ export const SettingsPanel: React.FC = () => {
               onChange={(e: any) => updateSettings({ editorPadding: e.target.value })}
               className="theme-input rounded px-2 py-0.5 text-xs text-[var(--text-primary)]"
             >
-              <option value="compact">Compact (16px)</option>
-              <option value="normal">Normal (32px)</option>
-              <option value="spacious">Spacious (64px)</option>
+              <option value="compact">Compact (12px)</option>
+              <option value="normal">Normal (24px)</option>
+              <option value="spacious">Spacious (36px)</option>
             </select>
           </div>
 
@@ -496,6 +511,58 @@ export const SettingsPanel: React.FC = () => {
               onChange={(e) => updateSettings({ enableAutoIndent: e.target.checked })}
               className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
             />
+          </div>
+
+          {/* Large Document Detection */}
+          <div className="space-y-2 border-t border-[var(--border-subtle)] pt-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[var(--text-primary)] block font-medium">Large Document Detection</span>
+                <span className="text-[10px] text-[var(--text-muted)]">Prompt section loading on opening large files</span>
+              </div>
+              <input
+                type="checkbox"
+                id="toggle-large-doc-detection"
+                checked={settings.enableLargeDocDetection ?? true}
+                onChange={(e) => updateSettings({ enableLargeDocDetection: e.target.checked })}
+                className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
+              />
+            </div>
+
+            {settings.enableLargeDocDetection && (
+              <div className="grid grid-cols-2 gap-2 pl-2 border-l-2 border-[var(--accent-primary)]/40 pt-1">
+                <div>
+                  <label htmlFor="input-large-doc-kb" className="text-[10px] text-[var(--text-secondary)] block">
+                    Size Limit (KB)
+                  </label>
+                  <input
+                    id="input-large-doc-kb"
+                    type="number"
+                    min={50}
+                    max={100000}
+                    step={50}
+                    value={settings.largeDocThresholdKb ?? 500}
+                    onChange={(e) => updateSettings({ largeDocThresholdKb: Math.max(10, Number(e.target.value) || 500) })}
+                    className="w-full h-6 px-1.5 theme-input rounded text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="input-large-doc-lines" className="text-[10px] text-[var(--text-secondary)] block">
+                    Line Limit
+                  </label>
+                  <input
+                    id="input-large-doc-lines"
+                    type="number"
+                    min={500}
+                    max={1000000}
+                    step={500}
+                    value={settings.largeDocThresholdLines ?? 10000}
+                    onChange={(e) => updateSettings({ largeDocThresholdLines: Math.max(100, Number(e.target.value) || 10000) })}
+                    className="w-full h-6 px-1.5 theme-input rounded text-xs font-mono"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

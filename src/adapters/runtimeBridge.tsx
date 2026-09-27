@@ -12,7 +12,7 @@ export interface RuntimeBridgeProviderProps {
 
 const isTauriRuntime = (): boolean => {
   return typeof window !== 'undefined' && Boolean(
-    (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__
+    (window as any).isTauri || (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__
   );
 };
 
@@ -39,10 +39,19 @@ export const RuntimeBridgeProvider: React.FC<RuntimeBridgeProviderProps> = ({
   );
 };
 
+let globalBridgeInstance: IRuntimeBridge | null = null;
+
+export const getRuntimeBridge = (): IRuntimeBridge => {
+  if (!globalBridgeInstance) {
+    globalBridgeInstance = isTauriRuntime() ? new TauriRuntimeAdapter() : new BrowserRuntimeAdapter();
+  }
+  return globalBridgeInstance;
+};
+
 export const useRuntimeBridge = (): IRuntimeBridge => {
   const bridge = useContext(RuntimeBridgeContext);
   if (!bridge) {
-    return isTauriRuntime() ? new TauriRuntimeAdapter() : new BrowserRuntimeAdapter();
+    return getRuntimeBridge();
   }
   return bridge;
 };

@@ -178,4 +178,19 @@ describe('SettingsStore', () => {
     store.toggleMobileAccessoryBar();
     expect(useSettingsStore.getState().settings.showMobileAccessoryBar).toBe(initialState);
   });
+
+  it('toggles typing direction between top-to-bottom and bottom-to-up', () => {
+    const store = useSettingsStore.getState();
+    store.setTypingDirection('top-to-bottom');
+    expect(useSettingsStore.getState().settings.typingDirection).toBe('top-to-bottom');
+
+    store.toggleTypingDirection();
+    expect(useSettingsStore.getState().settings.typingDirection).toBe('bottom-to-up');
+
+    store.toggleTypingDirection();
+    expect(useSettingsStore.getState().settings.typingDirection).toBe('top-to-bottom');
+
+    store.setTypingDirection('bottom-to-up');
+    expect(useSettingsStore.getState().settings.typingDirection).toBe('bottom-to-up');
+  });
 });

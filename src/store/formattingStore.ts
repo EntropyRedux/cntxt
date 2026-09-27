@@ -292,6 +292,21 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
     order: 21,
     isBuiltIn: true
   },
+  {
+    id: 'fmt_variable',
+    label: 'Variable',
+    icon: 'Variable',
+    title: 'Insert Variable ({{variable}})',
+    prefix: '{{',
+    suffix: '}}',
+    type: 'wrap',
+    category: 'insert',
+    enabled: true,
+    order: 22,
+    isBuiltIn: true,
+    shortcut: 'Alt+V'
+  },
+
 
   // Editor Commands
   {
@@ -348,12 +363,28 @@ export const PRESET_FORMATTING_BUTTONS: MarkdownFormatButton[] = [
   }
 ];
 
+export interface CategorySummary {
+  name: string;
+  count: number;
+}
+
+export const DEFAULT_FORMATTING_CATEGORIES = [
+  'FORMAT',
+  'HEADING',
+  'LIST',
+  'BLOCK',
+  'INSERT',
+  'TOOL',
+  'CUSTOM'
+];
+
 const STORAGE_KEY = 'contextpad_markdown_format_buttons';
 const MULTI_ROW_STORAGE_KEY = 'contextpad_formatting_toolbar_multi_row';
 const BUTTON_SIZE_STORAGE_KEY = 'contextpad_formatting_toolbar_button_size';
 
 interface FormattingState {
   buttons: MarkdownFormatButton[];
+  categoryOrder: string[];
   isCustomizerOpen: boolean;
   isMultiRowExpanded: boolean;
   buttonSize: FormattingButtonSize;
@@ -374,15 +405,31 @@ interface FormattingState {
   moveButtonUp: (id: string) => void;
   moveButtonDown: (id: string) => void;
   resetToDefaults: () => void;
+
+  // Category Management
+  getAllCategories: () => CategorySummary[];
+  addCategory: (name: string) => boolean;
+  renameCategory: (oldName: string, newName: string) => boolean;
+  deleteCategory: (category: string, fallbackCategory?: string) => boolean;
+  moveCategory: (category: string, direction: 'up' | 'down') => void;
 }
+
+let lastLocalSaveTimestamp = 0;
 
 const saveButtonsToStorage = (buttons: MarkdownFormatButton[]) => {
   if (!activeStorage) return;
+  lastLocalSaveTimestamp = Date.now();
   safePersist(activeStorage, STORAGE_KEYS.FORMATTING_BUTTONS, JSON.stringify(buttons), 'formatting buttons');
+};
+
+const saveCategoriesToStorage = (categories: string[]) => {
+  if (!activeStorage) return;
+  safePersist(activeStorage, STORAGE_KEYS.FORMATTING_CATEGORIES, JSON.stringify(categories), 'formatting categories');
 };
 
 export const useFormattingStore = create<FormattingState>((set, get) => ({
   buttons: PRESET_FORMATTING_BUTTONS,
+  categoryOrder: DEFAULT_FORMATTING_CATEGORIES,
   isCustomizerOpen: false,
   isMultiRowExpanded: false,
   buttonSize: 'medium',
@@ -393,6 +440,11 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
     }
     if (!activeStorage) return;
 
+    // Guard against local self-echo when this window just wrote to storage
+    if (Date.now() - lastLocalSaveTimestamp < 1200) {
+      return;
+    }
+
     try {
       const stored = await activeStorage.getItem(STORAGE_KEYS.FORMATTING_BUTTONS);
       if (stored) {
@@ -402,22 +454,25 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
           const nonMarkdownIds = new Set(['fmt_var', 'fmt_formula', 'fmt_slash']);
           const cleanParsed = parsed.filter(b => !nonMarkdownIds.has(b.id));
 
-          const cleanPresets = PRESET_FORMATTING_BUTTONS.filter(p => !nonMarkdownIds.has(p.id));
-          const parsedIds = new Set(cleanParsed.map(b => b.id));
-          const missingPresets = cleanPresets
-            .filter(p => !parsedIds.has(p.id))
-            .map(p => ({ ...p, enabled: false, order: cleanParsed.length + p.order }));
-
-          const merged = [...cleanParsed, ...missingPresets].sort((a, b) => a.order - b.order);
-          set({ buttons: merged });
-          saveButtonsToStorage(merged);
+          set({ buttons: cleanParsed.sort((a, b) => a.order - b.order) });
         }
       } else {
         set({ buttons: PRESET_FORMATTING_BUTTONS });
-        saveButtonsToStorage(PRESET_FORMATTING_BUTTONS);
       }
     } catch {
       console.warn('Failed to load stored formatting buttons, using defaults');
+    }
+
+    try {
+      const categoriesStored = await activeStorage.getItem(STORAGE_KEYS.FORMATTING_CATEGORIES);
+      if (categoriesStored) {
+        const parsedCats = JSON.parse(categoriesStored);
+        if (Array.isArray(parsedCats) && parsedCats.length > 0) {
+          set({ categoryOrder: parsedCats });
+        }
+      }
+    } catch (err) {
+      console.warn('[formattingStore] Failed to load persisted formatting categories:', err);
     }
 
     try {
@@ -461,17 +516,25 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
 
   addButton: (buttonData) => {
     const current = get().buttons;
+    const assignedCat = (buttonData.category || 'CUSTOM').toString().trim().toUpperCase();
     const newButton: MarkdownFormatButton = {
       ...buttonData,
       id: `custom_fmt_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       order: current.length,
-      category: 'custom',
+      category: assignedCat,
       isBuiltIn: false,
       enabled: true
     };
 
     const updated = [...current, newButton];
-    set({ buttons: updated });
+    const order = get().categoryOrder;
+    let newOrder = order;
+    if (!order.includes(assignedCat)) {
+      newOrder = [...order, assignedCat];
+      saveCategoriesToStorage(newOrder);
+    }
+
+    set({ buttons: updated, categoryOrder: newOrder });
     saveButtonsToStorage(updated);
     return newButton;
   },
@@ -497,16 +560,9 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
 
   removeButton: (id) => {
     const current = get().buttons;
-    const target = current.find(b => b.id === id);
-
-    let updated: MarkdownFormatButton[];
-    if (target?.isBuiltIn) {
-      // Built-in buttons are disabled when removed from active list so user can easily re-add them
-      updated = current.map(b => b.id === id ? { ...b, enabled: false } : b);
-    } else {
-      // Custom buttons are completely removed
-      updated = current.filter(b => b.id !== id);
-    }
+    const updated = current
+      .filter(b => b.id !== id)
+      .map((btn, idx) => ({ ...btn, order: idx }));
 
     set({ buttons: updated });
     saveButtonsToStorage(updated);
@@ -566,7 +622,130 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
   },
 
   resetToDefaults: () => {
-    set({ buttons: PRESET_FORMATTING_BUTTONS });
+    set({
+      buttons: PRESET_FORMATTING_BUTTONS,
+      categoryOrder: DEFAULT_FORMATTING_CATEGORIES
+    });
     saveButtonsToStorage(PRESET_FORMATTING_BUTTONS);
+    saveCategoriesToStorage(DEFAULT_FORMATTING_CATEGORIES);
+  },
+
+  getAllCategories: () => {
+    const counts = new Map<string, number>();
+    const buttons = get().buttons;
+    const order = get().categoryOrder;
+
+    buttons.forEach(b => {
+      const cat = (b.category || 'CUSTOM').toString().toUpperCase();
+      counts.set(cat, (counts.get(cat) || 0) + 1);
+    });
+
+    order.forEach(cat => {
+      if (!counts.has(cat)) {
+        counts.set(cat, 0);
+      }
+    });
+
+    DEFAULT_FORMATTING_CATEGORIES.forEach(cat => {
+      if (!counts.has(cat)) {
+        counts.set(cat, 0);
+      }
+    });
+
+    const result: CategorySummary[] = [];
+    const seen = new Set<string>();
+
+    order.forEach(name => {
+      if (!seen.has(name) && counts.has(name)) {
+        result.push({ name, count: counts.get(name)! });
+        seen.add(name);
+      }
+    });
+
+    DEFAULT_FORMATTING_CATEGORIES.forEach(name => {
+      if (!seen.has(name) && counts.has(name)) {
+        result.push({ name, count: counts.get(name)! });
+        seen.add(name);
+      }
+    });
+
+    counts.forEach((count, name) => {
+      if (!seen.has(name)) {
+        result.push({ name, count });
+        seen.add(name);
+      }
+    });
+
+    return result;
+  },
+
+  addCategory: (name: string) => {
+    const cat = name.trim().toUpperCase();
+    if (!cat) return false;
+    const state = get();
+    if (state.categoryOrder.includes(cat)) return true;
+    const newOrder = [...state.categoryOrder, cat];
+    set({ categoryOrder: newOrder });
+    saveCategoriesToStorage(newOrder);
+    return true;
+  },
+
+  renameCategory: (oldName: string, newName: string) => {
+    const oldCat = oldName.trim().toUpperCase();
+    const newCat = newName.trim().toUpperCase();
+    if (!oldCat || !newCat || oldCat === newCat) return false;
+    const state = get();
+    const updatedButtons = state.buttons.map(b =>
+      (b.category || 'CUSTOM').toString().toUpperCase() === oldCat
+        ? { ...b, category: newCat }
+        : b
+    );
+    const newOrder = state.categoryOrder.map(c => c === oldCat ? newCat : c);
+    set({
+      buttons: updatedButtons,
+      categoryOrder: newOrder
+    });
+    saveButtonsToStorage(updatedButtons);
+    saveCategoriesToStorage(newOrder);
+    return true;
+  },
+
+  deleteCategory: (category: string, fallback = 'CUSTOM') => {
+    const targetCat = category.trim().toUpperCase();
+    const fallbackCat = fallback.trim().toUpperCase();
+    const state = get();
+    const updatedButtons = state.buttons.map(b =>
+      (b.category || 'CUSTOM').toString().toUpperCase() === targetCat
+        ? { ...b, category: fallbackCat }
+        : b
+    );
+    const newOrder = state.categoryOrder.filter(c => c !== targetCat);
+    set({
+      buttons: updatedButtons,
+      categoryOrder: newOrder
+    });
+    saveButtonsToStorage(updatedButtons);
+    saveCategoriesToStorage(newOrder);
+    return true;
+  },
+
+  moveCategory: (category: string, direction: 'up' | 'down') => {
+    const categories = get().getAllCategories().map(c => c.name);
+    const order = get().categoryOrder.length > 0 ? [...get().categoryOrder] : [...categories];
+    categories.forEach(c => {
+      if (!order.includes(c)) order.push(c);
+    });
+
+    const index = order.indexOf(category);
+    if (index === -1) return;
+
+    if (direction === 'up' && index > 0) {
+      [order[index], order[index - 1]] = [order[index - 1], order[index]];
+    } else if (direction === 'down' && index < order.length - 1) {
+      [order[index], order[index + 1]] = [order[index + 1], order[index]];
+    }
+
+    set({ categoryOrder: order });
+    saveCategoriesToStorage(order);
   }
 }));

@@ -14,7 +14,9 @@ import {
   Check,
   Search,
   PanelTop,
-  Menu
+  Menu,
+  ArrowDownToLine,
+  ArrowUpToLine
 } from 'lucide-react';
 import { useTabStore } from '../store/tabStore';
 import { useSettingsStore } from '../store/settingsStore';
@@ -140,7 +142,13 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
         { label: 'Paste', shortcut: 'Ctrl+V', action: events.onPaste || (() => {}) },
         { label: 'Select All', shortcut: 'Ctrl+A', action: events.onSelectAll || (() => {}) },
         { isDivider: true },
-        { label: 'Find / Replace', shortcut: 'Ctrl+F', action: events.onFind || (() => {}) }
+        { label: 'Find / Replace', shortcut: 'Ctrl+F', action: events.onFind || (() => {}) },
+        { isDivider: true },
+        { 
+          label: settings.typingDirection === 'bottom-to-up' ? 'Typing Direction: Bottom-to-Up (Active)' : 'Typing Direction: Top-to-Bottom', 
+          checked: settings.typingDirection === 'bottom-to-up',
+          action: () => useSettingsStore.getState().toggleTypingDirection() 
+        }
       ]
     },
     {
@@ -210,17 +218,17 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
         },
         { isDivider: true },
         { 
-          label: 'Padding: Compact (16px)', 
+          label: 'Padding: Compact (12px)', 
           checked: settings.editorPadding === 'compact',
           action: () => updateSettings({ editorPadding: 'compact' }) 
         },
         { 
-          label: 'Padding: Normal (32px)', 
+          label: 'Padding: Normal (24px)', 
           checked: settings.editorPadding === 'normal',
           action: () => updateSettings({ editorPadding: 'normal' }) 
         },
         { 
-          label: 'Padding: Spacious (64px)', 
+          label: 'Padding: Spacious (36px)', 
           checked: settings.editorPadding === 'spacious',
           action: () => updateSettings({ editorPadding: 'spacious' }) 
         },
@@ -456,6 +464,28 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           >
             <Smartphone className="w-3 h-3" />
             <span className="text-[10.5px] hidden lg:inline">Touch</span>
+          </button>
+
+          {/* Typing Direction Toggle: Top-to-Bottom vs Bottom-to-Up */}
+          <button
+            type="button"
+            onClick={() => useSettingsStore.getState().toggleTypingDirection()}
+            title={`Typing Direction: ${settings.typingDirection === 'bottom-to-up' ? 'Bottom-to-Up (Conversation / Stream Mode)' : 'Top-to-Bottom (Standard Mode)'}`}
+            aria-label="Toggle typing direction"
+            className={`h-6 px-2 flex items-center gap-1 rounded-md text-xs transition-colors cursor-pointer border ${
+              settings.typingDirection === 'bottom-to-up'
+                ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] border-[var(--accent-primary)]/40 font-medium'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border-transparent'
+            }`}
+          >
+            {settings.typingDirection === 'bottom-to-up' ? (
+              <ArrowUpToLine className="w-3 h-3 text-[var(--accent-primary)]" />
+            ) : (
+              <ArrowDownToLine className="w-3 h-3" />
+            )}
+            <span className="text-[10.5px] hidden lg:inline">
+              {settings.typingDirection === 'bottom-to-up' ? 'Bottom-Up' : 'Top-Down'}
+            </span>
           </button>
 
           {/* Theme Picker Dropdown */}

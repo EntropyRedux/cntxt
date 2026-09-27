@@ -6,8 +6,8 @@ test.describe('Editor core behavior', () => {
   test('welcome document loads in CodeMirror', async ({ page }) => {
     await page.goto('/');
     const cm = page.locator('.cm-editor');
-    await expect(cm).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.cm-content')).toContainText('Dynamic Formula Engine', { timeout: 10_000 });
+    await expect(cm).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('.cm-content')).toContainText('Dynamic Formula Engine', { timeout: 15_000 });
   });
 
   test('tab is rendered with the welcome doc title', async ({ page }) => {

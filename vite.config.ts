@@ -64,9 +64,29 @@ export default defineConfig(() => {
     test: {
       exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
     },
+    esbuild: {
+      sourcemap: false,
+      legalComments: 'none',
+    },
     build: {
-      target: ['chrome120', 'firefox120', 'safari17'],
+      target: 'esnext',
       modulePreload: { polyfill: false },
+      sourcemap: false,
+      cssCodeSplit: true,
+      chunkSizeWarningLimit: 2500,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('katex')) return 'vendor-katex';
+              if (id.includes('@codemirror') || id.includes('@lezer')) return 'vendor-codemirror';
+              if (id.includes('lucide-react')) return 'vendor-lucide';
+              if (id.includes('react') || id.includes('zustand')) return 'vendor-react';
+              return 'vendor';
+            }
+          },
+        },
+      },
     },
   };
 });

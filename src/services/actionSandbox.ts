@@ -206,6 +206,7 @@ export async function executeInSandbox(code: string, rawApi?: Partial<SandboxAPI
         openVariableModal,
         evaluateFormula,
         copyToClipboard,
+        copy: copyToClipboard,
         getClipboard,
         dialog: {
           prompt: async (message: string, defaultValue = '') => {

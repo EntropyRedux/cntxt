@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.27
-Last Updated: 2026-09-24
-Last Updated By: Production Agent (Android SAF Deep Traversal fix; SAF Context root URI tracking; Android Release APK packaged)
+Version: v1.35
+Last Updated: 2026-09-27
+Last Updated By: Production Implementation Agent (FG-09 Finalized: Original Variable Floating Navigator Draggable & Edge-Anchored)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -12,28 +12,23 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-08 Complete & Tested; Android APK Native Mobile Runtime Live)
-  [x] Refactor (Production Build Parity, CSP Nonce Unblocking, Ribbon Error #185 Hardened, Power User Guide Added)
-  [x] Testing (Vitest 272/272 Live, Playwright 21/21 E2E Live)
-  [x] Packaging & Release (Signed Windows Setup/MSI in dist-installer/ + Android Release APK via ADB)
+  [x] Feature Implementation (FG-01..FG-09 Complete & Verified; Android APK Native Mobile Runtime Live)
+  [x] Refactor (Production Build Parity, CSP Nonce Unblocking, Ribbon Error #185 Hardened, Draggable Edge-Anchored Original FAB)
+  [x] Testing (Vitest 341/341 Live across 36 suites, Playwright 21/21 E2E Live)
+  [x] Packaging & Release (Signed Windows Setup/MSI in dist-installer/ + Standalone Portable in dist-portable/)
 
-Current Feature Group: FG-08: Android APK Porting & Mobile Architecture Adaptation
-Status: completed / verified (2026-09-26)
+Current Feature Group: FG-09: Large Document Truncation & Mobile UI Ergonomics
+Status: completed / verified (2026-09-27)
 Background Processes: none
-Unit Tests: passing [x]
-Notes: 
-- Strict Module Quarantine Strategy: All Android-specific Rust code (SAF, Intents) is quarantined in `src-tauri/src/commands/android_saf.rs` using `#[cfg(target_os = "android")]` to ensure zero desktop drift. 
-- SAF deep traversal utilizes `DocumentsContract.buildChildDocumentsUriUsingTree` with exact root tree context tracking. File content extraction routes via a local `/cache/saf_temp_*.txt` staging strategy in `MainActivity.kt`.
-- Mobile build output `.apk` packaged utilizing Android release keystores.
-
-Feature Group: FG-09: Mobile UI Ergonomics & Navigation
-Status: Pending
-Background Processes: none
-Unit Tests: none
-Notes: Deferred in favor of stabilizing SAF files first.
-Active Plan: /generated-documents/plans/implementation_plan.artifact.md (SAF & Intent Porting)
-Last Audit Reconciliation: 2026-09-26 — PASS (FG-08 Android SAF Fixes resolved)
-Last Git Checkpoint: 2026-09-19 — FG-06 Hotfixes and FG-07 Plan (commit 4d9cd55)
+Unit Tests: written [x] passing [x] (341/341 unit tests across 36 test suites clean)
+Active Plan: /generated-documents/plans/feature_group_large_doc_and_mobile_ergonomics_2026-09-27.md (Completed)
+Notes:
+- Feature 1: Large Document Detection & TOC Chunk Loading: Intercepts file loads exceeding configurable thresholds (`enableLargeDocDetection`, `largeDocThresholdKb: 500`, `largeDocThresholdLines: 10000`; 150KB / 2500 lines on touch/mobile). Displays interactive heading checklist and loads sliced sections with clean banner metadata.
+- Feature 2: Modernized Adaptive Fill-Up Form (`VariableFillerModal`): Dual-mode layout (side-by-side desktop vs segmented Form/Preview sheet), visualViewport keyboard clearance, sticky `< Prev` / `Next >` navigation strip with required count, auto-growing textarea, and progress bar.
+- Feature 3: 4 Variable Extraction Action Presets under `EXTRACTION` category: `action-extract-answered` (Markdown table summary), `action-extract-rows-with-vars` (filtered variable lines), `action-extract-rows-without-vars` (isolated static text), `action-selection-extract-vars` (unique checklist).
+- Feature 4: Draggable & Edge-Anchored Original Variable Navigator (`VariableFloatingNavigator`): Removed redundant second FAB. Upgraded the original canvas-level floating navigator to be movable and draggable with zero-latency 120fps direct transforms, jitter-free hover, and magnetic horizontal edge-snapping (12px left/right margin) within the editor canvas. Single tap auto-scrolls to next variable; double-tap opens form filler modal.
+Last Audit Reconciliation: 2026-09-26 — PASS
+Last Git Checkpoint: 2026-09-27 — FG-09 Implementation & Windows v0.3.9 Release Packages
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
@@ -670,3 +665,80 @@ The 12.7s TTFB is Vite processing and transforming the module graph on demand �
   - Vitest: 33/33 test files passing, 321/321 unit tests passing (`npm test`).
   - Lint: 0 TypeScript errors, 0 platform leaks across 115 files, 100% canonical contract synchronization (`npm run lint`).
   - Build: Vite 6 production bundle builds cleanly in 36s.
+
+### 13. CNTXT v0.3.3 Release & Production Build Parity (2026-09-26)
+- **Root Cause of Dev vs Production Discrepancy**:
+  - Cargo's `build.rs` did not recursively watch `../dist` assets, causing Tauri release builds to skip re-running asset embedding when only frontend files changed.
+  - Previous release build commands (`npx @tauri-apps/cli build --bundles nsis`) did not clear stale `target/release/build/cntxt-*` codegen assets, leading to the distribution of binaries embedding pre-fix frontend bundles.
+- **Permanent Fixes Applied**:
+  - **Recursive Asset Watching**: Added `watch_dir_recursive` in `src-tauri/build.rs` to emit `cargo:rerun-if-changed` for every file in `../dist`, ensuring Cargo tracks frontend modifications.
+  - **Fingerprint & Cache Invalidation**: Enhanced `scripts/build-portable.mjs` to purge both `target/release/build/cntxt-*` and `target/release/.fingerprint/cntxt-*`.
+  - **Tauri IPC Resilience**: Enabled `"withGlobalTauri": true` in `tauri.conf.json` and multi-tier IPC resolution (`window.__TAURI_INTERNALS__`, `window.__TAURI__.core`, and `@tauri-apps/api/core`) in `tauriRuntimeAdapter.ts` and `runtimeBridge.tsx`.
+  - **Direct File Overwrite (`Ctrl+S`)**: Fixed `write_file` void return handling via `invokeTauriVoid`.
+  - **Custom Formatting in Modular Ribbon**: Added "Add Formatting" tab in `RibbonCustomizerModal.tsx`.
+  - **True Italic Typography**: Registered italic `@font-face` aliases in `fonts.css` and `font-synthesis: weight style !important;` in `index.css`.
+  - **External Link Navigation**: Enabled `Ctrl+Click` on markdown links in `liveMarkdown.ts` via `bridge.openExternalUrl`.
+  - **Action Category Normalization**: Added case-insensitive grouping and Collapse/Expand All in `ActionManager.tsx`.
+- **Verification Gates**:
+  - `npm run lint`: 0 errors, 0 leaks, 100% contract sync.
+  - `npm test`: 33/33 files passed, 321/321 unit tests passed.
+  - `cargo check`: 0 errors.
+
+### 14. CNTXT v0.3.7 Release — Quick Markdown Toolbar Polish (2026-09-27)
+- **Eliminated Rapid Icon Flickering & Disappearance**:
+  - Fixed infinite storage echo loop caused by `initializeFormattingStore()` re-saving buttons on every load and re-triggering Tauri `storage_changed` events.
+  - Added a 1.2s local save debounce guard in `formattingStore.ts` to prevent self-echo and race condition overwrites with defaults.
+  - Removed phantom preset resurrection that reintroduced disabled presets into the active button array.
+- **Unconditional & Reliable Button Deletion**:
+  - Fixed `removeButton()` so both built-in presets and custom buttons are cleanly and permanently removed from the active toolbar array on the first click.
+  - Deleted presets seamlessly return to the "Preset Library" tab with an active `+ Add` button for easy restoration.
+  - Removed blocking toast notification overlays that were rendering over trash buttons and intercepting mouse clicks.
+- **Smooth Toolbar Expand / Collapse Transition**:
+  - Removed `transition-all` on the dynamic flex container in `MobileAccessoryBar.tsx` that caused multi-row wrap animation thrashing.
+  - Guarded horizontal overflow and scroll indicators in `checkOverflowAndScroll()` during multi-row expansion, eliminating the double-hop stutter when expanding or collapsing the toolbar.
+
+### 15. CNTXT v0.3.8 Release — Document Outline Refinements & Typing Direction Engine (2026-09-27)
+- **Document Outline Panel Usability & Typography**:
+  - Removed redundant inner subheader banner (`DOCUMENT OUTLINE`), reclaiming vertical viewing space.
+  - Relocated Table of Contents synchronization and export action buttons into the filter row alongside symbol category pills (`All`, `Headings`, `Code`, `Tasks`, `Tables`).
+  - Increased font sizes across the outline tree by +1px (`text-[13px]` labels, `text-[11px]` line numbers and badges) for improved readability and scanning.
+  - Removed the quick append chat input box from the bottom of the panel, dedicating 100% of panel height to document navigation.
+- **Top-to-Bottom vs. Bottom-to-Up Typing Direction Engine**:
+  - Added full support for reverse stream/conversation typing mode in the editor engine (`typingDirection: 'top-to-bottom' | 'bottom-to-up'`).
+  - Implemented CodeMirror 6 keymap interceptor: when in `bottom-to-up` mode, typing at Line 1 and pressing Enter automatically shifts the line down to Line 2 while returning the cursor to Line 1 pos 0.
+  - Added a dedicated typing direction toggle button in the Shell Title Bar with dynamic `ArrowDownToLine` / `ArrowUpToLine` state icons and accent highlighting.
+  - Added a `Typing Direction` toggle option in the `Edit` menu dropdown and a selection control in `Settings -> Editor Settings`.
+- **Contract & Architecture Integrity**:
+  - Updated canonical schemas in `contracts/data_shapes.ts` and `generated-documents/context/contracts/data_shapes.ts`.
+  - Added unit test coverage in `tests/settingsStore.test.ts` (33/33 test files passing, 323/323 unit tests passing).
+- **Packaging & Code-Signing**:
+  - Bumped version to `0.3.8` across `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`.
+  - Produced signed release artifacts:
+    - `dist-portable/CNTXT_0.3.8_portable.exe` (13.48 MB)
+    - `dist-installer/CNTXT_0.3.8_x64-setup.exe` (5.93 MB)
+    - `dist-installer/CNTXT_0.3.8_x64_en-US.msi` (6.96 MB)
+
+### 16. Android Mobile Port Feature Backlog (Deferred Desktop Improvements for Mobile Android Build Team)
+The following features were evaluated during the desktop v0.3.8 cycle and identified as specifically critical for mobile ergonomics and device constraints on Android (where screen space is constrained, touch typing is predominant, and large files require selective reading). They are documented here for the Android development team:
+
+1. **Large Document Truncation & Selective Section Chunking (TOC-Driven)**:
+   - *Mobile Need*: Low-memory mobile devices experience WebView lag when rendering large markdown files (>500KB - 2MB).
+   - *Specification*: On opening a file exceeding the size threshold (e.g. >100KB or >2000 lines), present a modal allowing the user to select specific sections from the TOC outline to load into the active editor buffer, instead of parsing the entire document at once.
+   - *TOC Panel Integration*: Allow users to jump or dynamically swap visible sections directly from the TOC outline drawer.
+
+2. **Mobile Variable Fill-Up Form Modal (Full-Screen Ergonomics & Virtual Keyboard Clearance)**:
+   - *Mobile Need*: The current desktop `VariableFillerModal` has fixed dialog constraints that get obscured by Android on-screen software keyboards (IME).
+   - *Specification*: Adapt `VariableFillerModal` on mobile to render in full-screen or bottom-sheet drawer mode with `padding-bottom` adjusting dynamically to virtual keyboard viewport height (Visual Viewport API / `window.visualViewport.height`). Ensure oversized input fields and clear Next/Submit action sticky bars.
+
+3. **Granular Variable & Row Extraction**:
+   - *Mobile Need*: Filling out repetitive forms, extracting answered prompts, or isolating variable rows without manually scrolling and selecting text on a touch screen.
+   - *Specification*: Provide a modal/action to extract document content based on variable state:
+     - `Extract Answered Variables Only`: Pulls all `{{variable}}` keys that have been replaced/filled out.
+     - `Extract Rows With Variables`: Returns only lines/paragraphs containing template variables.
+     - `Extract Rows Without Variables`: Strips variable lines, keeping only static text.
+     - `Select Text > Extract`: Quick touch context menu action to isolate variables from the active text selection.
+
+4. **TOC Quick Append to Selection**:
+   - *Mobile Need*: On touch devices, inserting heading anchors or sub-sections into existing notes is cumbersome.
+   - *Specification*: In the mobile TOC outline drawer, allow tapping an item with an "Append to Selection / Insert at Cursor" touch button, inserting the referenced section or link directly at the current caret position.
+

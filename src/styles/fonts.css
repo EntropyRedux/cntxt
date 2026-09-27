@@ -1,9 +1,11 @@
 /* Local font bundles — optimized essential weights */
 /* Variable fonts: single compact file covers all weights (300–800) */
 @import '@fontsource-variable/plus-jakarta-sans';
+@import '@fontsource-variable/plus-jakarta-sans/wght-italic.css';
 @import '@fontsource-variable/jetbrains-mono';
 @import '@fontsource-variable/jetbrains-mono/wght-italic.css';
 @import '@fontsource-variable/inter';
+@import '@fontsource-variable/inter/wght-italic.css';
 @import '@fontsource-variable/fira-code';
 @import '@fontsource-variable/inconsolata';
 @import '@fontsource-variable/literata';
@@ -19,8 +21,22 @@
 /* Font family aliases for system resilience */
 @font-face {
   font-family: 'JetBrains Mono';
-  src: local('JetBrains Mono Variable');
+  src: local('JetBrains Mono Variable'), local('JetBrainsMono');
   font-weight: 100 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: local('JetBrains Mono Variable'), local('JetBrainsMono-Italic'), local('JetBrains Mono Italic');
+  font-weight: 100 900;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  src: local('Fira Code Variable'), local('FiraCode-Regular');
+  font-weight: 300 700;
   font-style: normal;
 }
 
@@ -28,5 +44,19 @@
   font-family: 'Fira Code';
   src: local('Fira Code Variable');
   font-weight: 300 700;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: local('Inter Variable'), local('Inter');
+  font-weight: 100 900;
   font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: local('Inter Variable'), local('Inter-Italic');
+  font-weight: 100 900;
+  font-style: italic;
 }

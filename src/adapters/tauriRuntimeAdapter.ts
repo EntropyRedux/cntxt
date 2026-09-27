@@ -13,6 +13,7 @@ import {
   IPlatformBridge, 
   IThemeBridge, 
   BridgeFileResult,
+  BridgeFolderResult,
   BridgeDirectoryEntry, 
   SupportedLanguage,
   WindowResizeDirection
@@ -61,14 +62,32 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   private async invokeTauri<T>(cmd: string, args: Record<string, any> = {}): Promise<T | null> {
     try {
-      const tauri = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__;
+      const tauri = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__?.core || (window as any).__TAURI__;
       if (tauri && typeof tauri.invoke === 'function') {
         return await tauri.invoke(cmd, args);
       }
+      const { invoke } = await import('@tauri-apps/api/core');
+      return await invoke<T>(cmd, args);
     } catch (e) {
       console.warn(`[TauriRuntimeAdapter] invoke(${cmd}) failed:`, e);
     }
     return null;
+  }
+
+  private async invokeTauriVoid(cmd: string, args: Record<string, any> = {}): Promise<boolean> {
+    try {
+      const tauri = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__?.core || (window as any).__TAURI__;
+      if (tauri && typeof tauri.invoke === 'function') {
+        await tauri.invoke(cmd, args);
+        return true;
+      }
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke(cmd, args);
+      return true;
+    } catch (e) {
+      console.warn(`[TauriRuntimeAdapter] invokeVoid(${cmd}) failed:`, e);
+    }
+    return false;
   }
 
   public async getSessionToken(): Promise<string> {
@@ -272,15 +291,14 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         if (this.platform.isMobile && path.startsWith('content://') && (window as any).AndroidBridge) {
           // Write to a temporary POSIX file in the sandboxed app cache, then bridge to SAF
           const tempPath = `/data/user/0/com.cntxt.desktop/cache/saf_write_temp.txt`;
-          const writeSuccess = await this.invokeTauri<boolean>('write_file', { path: tempPath, content });
-          if (writeSuccess !== null) {
+          const writeSuccess = await this.invokeTauriVoid('write_file', { path: tempPath, content });
+          if (writeSuccess) {
             return (window as any).AndroidBridge.saveToSaf(path, tempPath);
           }
           return false;
         }
 
-        const result = await this.invokeTauri('write_file', { path, content });
-        return result !== null;
+        return await this.invokeTauriVoid('write_file', { path, content });
       } catch (err) {
         console.error('[TauriRuntimeAdapter] saveFile error:', err);
         return false;
@@ -292,8 +310,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         const savePath = await this.invokeTauri<string | null>('save_file_dialog', { defaultName: suggestedName });
         if (!savePath) return null;
 
-        await this.invokeTauri('write_file', { path: savePath, content });
-        return savePath;
+        const writeSuccess = await this.invokeTauriVoid('write_file', { path: savePath, content });
+        return writeSuccess ? savePath : null;
       } catch (err) {
         console.error('[TauriRuntimeAdapter] saveFileAs error:', err);
         return null;
@@ -463,8 +481,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     },
     writeText: async (text: string): Promise<boolean> => {
       try {
-        const result = await this.invokeTauri('clipboard_write_text', { text });
-        if (result !== null) return true;
+        const ok = await this.invokeTauriVoid('clipboard_write_text', { text });
+        if (ok) return true;
         await navigator.clipboard.writeText(text);
         return true;
       } catch (err) {
@@ -481,14 +499,14 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       return this.inMemoryFallback.get(key) ?? null;
     },
     setItem: async (key: string, value: string): Promise<boolean> => {
-      const res = await this.invokeTauri('kv_set', { key, value });
-      if (res !== null) return true;
+      const ok = await this.invokeTauriVoid('kv_set', { key, value });
+      if (ok) return true;
       this.inMemoryFallback.set(key, value);
       return true;
     },
     removeItem: async (key: string): Promise<boolean> => {
-      const res = await this.invokeTauri('kv_remove', { key });
-      if (res !== null) return true;
+      const ok = await this.invokeTauriVoid('kv_remove', { key });
+      if (ok) return true;
       this.inMemoryFallback.delete(key);
       return true;
     },
@@ -578,19 +596,16 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
   // Sensitive native operations requiring token verification
   public async deleteFile(path: string): Promise<boolean> {
     const token = await this.getSessionToken();
-    const res = await this.invokeTauri('delete_file', { path, authToken: token });
-    return res !== null;
+    return await this.invokeTauriVoid('delete_file', { path, authToken: token });
   }
 
   public async openFileExplorer(path: string): Promise<boolean> {
     const token = await this.getSessionToken();
-    const res = await this.invokeTauri('open_file_explorer', { path, authToken: token });
-    return res !== null;
+    return await this.invokeTauriVoid('open_file_explorer', { path, authToken: token });
   }
 
   public async openExternalUrl(url: string): Promise<boolean> {
     const token = await this.getSessionToken();
-    const res = await this.invokeTauri('open_external', { url, authToken: token });
-    return res !== null;
+    return await this.invokeTauriVoid('open_external', { url, authToken: token });
   }
 }

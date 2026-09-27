@@ -1,6 +1,8 @@
 import React from 'react';
 import { CommandPalette } from '../components/Modals/CommandPalette';
 import { VariableFillerModal } from '../components/Modals/VariableFillerModal';
+import { VariableExtractionModal } from '../components/Modals/VariableExtractionModal';
+import { LargeDocModal } from '../components/Modals/LargeDocModal';
 import { ShortcutsModal } from '../components/Modals/ShortcutsModal';
 import { RibbonCustomizerModal } from '../components/Modals/RibbonCustomizerModal';
 import { FormattingCustomizerModal } from '../components/Modals/FormattingCustomizerModal';
@@ -29,6 +31,8 @@ export const ShellModalLayer: React.FC<ShellModalLayerProps> = ({
       />
 
       <VariableFillerModal />
+      <VariableExtractionModal />
+      <LargeDocModal />
       <RibbonCustomizerModal />
       <FormattingCustomizerModal />
       <InsertImageModal />

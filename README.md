@@ -2,16 +2,16 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.3.2) — FG-08 Android APK native mobile runtime, dual-entry-point architecture, FG-07 Editor Resiliency, multi-tab state preservation, and power user tools complete. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.3.9) — FG-09 Large Document Truncation & Mobile UI Ergonomics, FG-08 Android APK native mobile runtime, dual-entry-point architecture, FG-07 Editor Resiliency, multi-tab state preservation, and power user tools complete. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.3.2)
+## Downloads (v0.3.9)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.3.2_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.2/CNTXT_0.3.2_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.3.2_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.2/CNTXT_0.3.2_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT-portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.2/CNTXT-portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.3.9_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.9/CNTXT_0.3.9_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.3.9_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.9/CNTXT_0.3.9_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.3.9_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.9/CNTXT_0.3.9_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
@@ -97,20 +97,14 @@ are found.
 
 ## Current Status & Verification
  
-- **Production Release (v0.3.2)**:
-  - **Linux Packages & Parity**: Official Debian installer package (`CNTXT_0.3.2_amd64.deb`) and standalone Linux portable binary (`cntxt-portable`). Frameless GTK3/WebKitGTK client-side resize handles with responsive cursors, and Tiered Keyring with transparent encrypted fallback for headless/non-D-Bus environments.
-  - **Android SAF Deep Traversal Fix**: Workspace Explorer now implements robust `DocumentsContract.buildChildDocumentsUriUsingTree` querying for infinitely deep subfolder traversal, bypassing Android's default 3-level limitation.
-  - **Android APK Support (FG-08)**: Fully automated release APK packaging via `npm run package:android` (`scripts/build-android.ps1`), compiled with Rust JNI `cdylib` and Gradle, signed with release keystore (`app-arm64-release.apk`), and verified live via ADB on physical Android hardware.
-  - **Signed Windows Installer Packages**: Official Windows NSIS installer (`dist-installer/CNTXT_0.3.2_x64-setup.exe`) and WiX MSI (`dist-installer/CNTXT_0.3.2_x64_en-US.msi`), signed with SHA256 Authenticode and DigiCert RFC 3161 timestamps via `npm run package:sign`. Standalone portable executable in `dist-portable/CNTXT-portable.exe`.
-  - **Automated Test Coverage**: 321 unit tests passing across 33 suites via Vitest (`npm test`); 21 Playwright E2E tests green in headless Chromium (`npm run test:e2e`).
-  - **Platform Purity**: `npm run lint` scans 119 files with zero platform leaks outside `src/adapters/` and 100% contract parity.
-  - **Window Resize Remediation**: Synchronous dark WebView2 background (`#141417`), dark theme, and percentage sizing eliminating resize drag lag and white canvas artifacts.
-  - **Per-Tab Undo/Redo & State Preservation**: Persistent single `EditorView` with isolated undo/redo history stacks and scroll offset caching across unlimited tab switches.
-  - **Extended Markdown Syntax**: Full support for `***bold+italic***`, `==highlight==`, `~subscript~`, and `^superscript^` in both RAW and Rendered modes.
-  - **Search-Unveil across Rendered Blocks**: Live search in tables, diagrams, and math blocks automatically unveils raw source markdown for instantaneous inline editing.
-  - **Security Hardening**: Main-window command gating, path canonicalization, system root whitelisting, dangerous shell metacharacter sanitization, and sandboxed JS execution.
-  - **Interactive Action System & Formulas**: Clickable in-document action buttons (`[[action:id]]`), extensible `FormulaEngine` registry with 50+ built-ins, and tri-state selection behavior (`auto`, `replace`, `insert`).
-  - **Built-in Power User & Markdown Guides**: Interactive tutorials accessible directly from the Help menu with live action buttons and formula calculators.
+- **Production Release (v0.3.9)**:
+  - **Large Document Truncation & TOC Chunk Loading**: Intercepts large files exceeding configurable thresholds (`enableLargeDocDetection`, default 500KB / 10,000 lines; 150KB / 2,500 lines in touch mode) with an interactive table-of-contents checklist to load individual sections or the entire file safely.
+  - **Modernized Adaptive Variable Filler Modal**: Dual-mode layout featuring desktop 50/50 split and mobile full-screen segmented sheet (`[ Form ]` / `[ Preview ]`), dynamic `window.visualViewport` sizing to clear software keyboards, sticky `< Prev` / `Next >` navigation strip with required count, and auto-growing textareas.
+  - **Granular Variable Extraction Operations**: 4 built-in action presets under `EXTRACTION` category: `Extract Answered Variables` (Markdown summary table), `Extract Rows With Variables` (filtered rows), `Extract Rows Without Variables` (static boilerplate), and `Selection: Extract Variables` (checklist).
+  - **Draggable & Edge-Anchored Variable Navigator FAB**: Original canvas-level floating navigator upgraded with zero-latency 120fps direct drag transforms, jitter-free hover, and magnetic horizontal edge-snapping (12px left/right margins) within the editor canvas. Single-tap to jump to next variable, double-tap to open form filler.
+  - **Signed Windows Installer Packages**: Official Windows NSIS setup (`dist-installer/CNTXT_0.3.9_x64-setup.exe`), WiX MSI (`dist-installer/CNTXT_0.3.9_x64_en-US.msi`), and standalone zero-install executable (`dist-portable/CNTXT_0.3.9_portable.exe`), digitally signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
+  - **Automated Test Coverage**: 341 unit tests passing across 36 suites via Vitest (`npm test`); 21 Playwright E2E tests green in headless Chromium (`npm run test:e2e`).
+  - **Platform Purity**: `npm run lint` scans 121 files with zero platform leaks outside `src/adapters/` and 100% canonical contract parity.
 - **Living Context & Roadmap**:
   - Full living context and architecture logs: `generated-documents/context/living_context.md`.
   - Release history and change notes: [CHANGELOG.md](CHANGELOG.md).

@@ -23,6 +23,7 @@ import { useConfirmStore } from '../../store/confirmStore';
 import { useFileHistoryStore, PinnedItem, OpenedFileRecord } from '../../store/fileHistoryStore';
 import { useRuntimeBridge } from '../../adapters';
 import { safePersist } from '../../services/storageHelper';
+import { openDocumentWithLargeDocCheck } from '../../services/largeDocHelper';
 import { BridgeDirectoryEntry } from '../../ui-contract/bridgeContract';
 import { VirtualFile } from '../../../contracts/data_shapes';
 // MOCK: quarantined synthetic sample data for prototype demo mode
@@ -285,11 +286,22 @@ export const FileExplorer: React.FC = () => {
     const existing = tabs.find(t => (file.path && t.filePath === file.path) || t.title === file.name);
     if (existing) {
       if (fileContent !== undefined && existing.content !== fileContent && !existing.isDirty) {
-        useTabStore.getState().updateTabContent(existing.id, fileContent);
+        openDocumentWithLargeDocCheck({
+          title: file.name,
+          content: fileContent,
+          language: (file.language as any) || 'markdown',
+          filePath: file.path,
+          existingTabId: existing.id
+        });
       }
       setActiveTabId(existing.id);
     } else {
-      createTab(file.name, fileContent || '', (file.language as any) || 'markdown', file.path);
+      openDocumentWithLargeDocCheck({
+        title: file.name,
+        content: fileContent || '',
+        language: (file.language as any) || 'markdown',
+        filePath: file.path
+      });
     }
     recordOpenedFile({
       id: file.id || file.path || file.name,
@@ -367,8 +379,21 @@ export const FileExplorer: React.FC = () => {
     }
   };
 
-  const handleCreateNewFile = () => {
-    const rawName = prompt('Enter new file name:', 'new_prompt.md');
+  const getRootWorkspaceDir = (): string | null => {
+    if (workspacePath) return workspacePath;
+    for (const f of files) {
+      if (f.path) {
+        const match = f.path.match(/^(.*)[/\\][^/\\]+$/);
+        if (match) return match[1];
+      }
+    }
+    return null;
+  };
+
+  const handleCreateNewFile = (parentFolder?: VirtualFile) => {
+    const defaultName = 'new_prompt.md';
+    const folderLabel = parentFolder ? ` in "${parentFolder.name}"` : '';
+    const rawName = prompt(`Enter new file name${folderLabel}:`, defaultName);
     if (!rawName) return;
     const name = rawName.trim();
     const validation = validateFilename(name);
@@ -377,17 +402,63 @@ export const FileExplorer: React.FC = () => {
       return;
     }
 
+    const language = name.endsWith('.json') ? 'json' : name.endsWith('.js') || name.endsWith('.ts') ? 'javascript' : 'markdown';
+    const initialContent = `# ${name}\n\n`;
+
+    let targetPath: string | undefined = undefined;
+    if (parentFolder?.path) {
+      const sep = parentFolder.path.includes('\\') ? '\\' : '/';
+      targetPath = `${parentFolder.path.replace(/[/\\]+$/, '')}${sep}${name}`;
+    } else {
+      const rootDir = getRootWorkspaceDir();
+      if (rootDir) {
+        const sep = rootDir.includes('\\') ? '\\' : '/';
+        targetPath = `${rootDir.replace(/[/\\]+$/, '')}${sep}${name}`;
+      }
+    }
+
     const newFile: VirtualFile = {
-      id: `file_${Date.now()}`,
+      id: targetPath || `file_${Date.now()}`,
       name,
       type: 'file',
-      content: `# ${name}\n\nCreated: {=NOW()}`,
-      language: name.endsWith('.json') ? 'json' : name.endsWith('.js') ? 'javascript' : 'markdown'
+      path: targetPath,
+      content: initialContent,
+      language
     };
 
-    const updated = [...files, newFile];
-    setFiles(updated);
-    safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'virtual files');
+    if (targetPath && bridge.fs.saveFile) {
+      bridge.fs.saveFile(targetPath, initialContent).then((success) => {
+        if (success) {
+          addNotification('File Created', `${name} created on disk`, 'success');
+        }
+      }).catch((err) => {
+        console.warn('[FileExplorer] Could not write new file to disk:', err);
+      });
+    }
+
+    if (parentFolder) {
+      const addRecursively = (list: VirtualFile[]): VirtualFile[] => {
+        return list.map(item => {
+          if (item.id === parentFolder.id || (item.path && item.path === parentFolder.path)) {
+            const currentChildren = item.children || [];
+            return { ...item, children: [...currentChildren, newFile] };
+          }
+          if (item.children) {
+            return { ...item, children: addRecursively(item.children) };
+          }
+          return item;
+        });
+      };
+      const updated = addRecursively(files);
+      setFiles(updated);
+      safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'virtual files');
+      setExpandedFolders(prev => ({ ...prev, [parentFolder.id]: true }));
+    } else {
+      const updated = [...files, newFile];
+      setFiles(updated);
+      safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'virtual files');
+    }
+
     handleOpenFile(newFile);
     addNotification('File Created', name, 'success');
   };
@@ -606,7 +677,7 @@ export const FileExplorer: React.FC = () => {
         <span>Explorer</span>
         <div className="flex items-center gap-1">
           <button
-            onClick={handleCreateNewFile}
+            onClick={() => handleCreateNewFile()}
             title="New File"
             aria-label="New File"
             className="p-1 hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors cursor-pointer"
@@ -688,22 +759,33 @@ export const FileExplorer: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                files.map(item => (
-                  <FileTreeNode
-                    key={item.id}
-                    item={item}
-                    activeFileName={activeFileName}
-                    activeFilePath={activeFilePath}
-                    expandedFolders={expandedFolders}
-                    toggleFolder={toggleFolder}
-                    onOpenFile={handleOpenFile}
-                    isPinned={isPinned}
-                    onTogglePin={handleTogglePin}
-                    isRoot={true}
-                    onRemoveWorkspace={handleRemoveWorkspace}
-                    onContextMenu={handleItemContextMenu}
-                  />
-                ))
+                <>
+                  {files.map(item => (
+                    <FileTreeNode
+                      key={item.id}
+                      item={item}
+                      activeFileName={activeFileName}
+                      activeFilePath={activeFilePath}
+                      expandedFolders={expandedFolders}
+                      toggleFolder={toggleFolder}
+                      onOpenFile={handleOpenFile}
+                      isPinned={isPinned}
+                      onTogglePin={handleTogglePin}
+                      isRoot={true}
+                      onRemoveWorkspace={handleRemoveWorkspace}
+                      onContextMenu={handleItemContextMenu}
+                      onCreateFileInFolder={handleCreateNewFile}
+                    />
+                  ))}
+                  <button
+                    onClick={() => handleCreateNewFile(undefined)}
+                    className="flex items-center gap-1.5 py-1.5 px-2 text-[10.5px] text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors cursor-pointer w-full text-left font-medium mt-1 group border-t border-[var(--border-subtle)]"
+                    title="Create new file in workspace root"
+                  >
+                    <FilePlus className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] shrink-0" />
+                    <span>+ New file</span>
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -1093,7 +1175,8 @@ const FileTreeNode: React.FC<{
   isRoot?: boolean;
   onRemoveWorkspace?: (id: string, name: string) => void;
   onContextMenu?: (e: React.MouseEvent, item: VirtualFile) => void;
-}> = ({ item, activeFileName, activeFilePath, expandedFolders, toggleFolder, onOpenFile, isPinned, onTogglePin, isRoot, onRemoveWorkspace, onContextMenu }) => {
+  onCreateFileInFolder?: (folder: VirtualFile) => void;
+}> = ({ item, activeFileName, activeFilePath, expandedFolders, toggleFolder, onOpenFile, isPinned, onTogglePin, isRoot, onRemoveWorkspace, onContextMenu, onCreateFileInFolder }) => {
   const pinned = isPinned(item.id) || isPinned(item.name);
 
   if (item.type === 'folder') {
@@ -1148,28 +1231,59 @@ const FileTreeNode: React.FC<{
         {isExpanded && (
           <div className="pl-3 border-l border-[var(--border-primary)] ml-2 my-0.5 space-y-0.5">
             {item.children && item.children.length > 0 ? (
-              item.children.map(child => (
-                <FileTreeNode
-                  key={child.id}
-                  item={child}
-                  activeFileName={activeFileName}
-                  activeFilePath={activeFilePath}
-                  expandedFolders={expandedFolders}
-                  toggleFolder={toggleFolder}
-                  onOpenFile={onOpenFile}
-                  isPinned={isPinned}
-                  onTogglePin={onTogglePin}
-                  onContextMenu={onContextMenu}
-                />
-              ))
+              <>
+                {item.children.map(child => (
+                  <FileTreeNode
+                    key={child.id}
+                    item={child}
+                    activeFileName={activeFileName}
+                    activeFilePath={activeFilePath}
+                    expandedFolders={expandedFolders}
+                    toggleFolder={toggleFolder}
+                    onOpenFile={onOpenFile}
+                    isPinned={isPinned}
+                    onTogglePin={onTogglePin}
+                    onContextMenu={onContextMenu}
+                    onCreateFileInFolder={onCreateFileInFolder}
+                  />
+                ))}
+                {onCreateFileInFolder && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCreateFileInFolder(item);
+                    }}
+                    className="flex items-center gap-1.5 py-1 px-1.5 text-[10px] text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors cursor-pointer w-full text-left font-medium group mt-0.5"
+                    title={`Create new file inside "${item.name}"`}
+                  >
+                    <FilePlus className="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] shrink-0" />
+                    <span>+ New file</span>
+                  </button>
+                )}
+              </>
             ) : item.children === undefined ? (
               <div className="text-[10px] text-[var(--text-muted)] italic py-1 px-1.5 flex items-center gap-1.5 opacity-70 select-none">
                 <span className="w-2.5 h-2.5 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin"></span>
                 <span>Loading...</span>
               </div>
             ) : (
-              <div className="text-[10px] text-[var(--text-muted)] italic py-1 px-1.5 select-none">
-                (empty folder)
+              <div className="py-0.5 space-y-0.5">
+                <div className="text-[10px] text-[var(--text-muted)] italic py-0.5 px-1.5 select-none">
+                  (empty folder)
+                </div>
+                {onCreateFileInFolder && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCreateFileInFolder(item);
+                    }}
+                    className="flex items-center gap-1.5 py-1 px-1.5 text-[10px] text-[var(--text-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] rounded transition-colors cursor-pointer w-full text-left font-medium group"
+                    title={`Create new file inside "${item.name}"`}
+                  >
+                    <FilePlus className="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] shrink-0" />
+                    <span>+ New file</span>
+                  </button>
+                )}
               </div>
             )}
           </div>

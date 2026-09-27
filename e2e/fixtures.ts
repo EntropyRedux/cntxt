@@ -14,7 +14,7 @@ export const test = base.extend<{ app: void } & E2EOptions>({
         },
         [demo]
       );
-      await page.goto('/');
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
       await use();
     },
     { auto: true },

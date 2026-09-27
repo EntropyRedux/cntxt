@@ -17,6 +17,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useFileHistoryStore } from '../store/fileHistoryStore';
 import { useImageModalStore } from '../store/imageModalStore';
 import { compressAndConvertToDataUrl, generateImageAlt } from '../services/imageService';
+import { openDocumentWithLargeDocCheck } from '../services/largeDocHelper';
 import { SupportedLanguage } from '../types';
 
 declare global {
@@ -421,7 +422,11 @@ export const ShellFrame: React.FC = () => {
         const content = await file.text();
         const ext = file.name.split('.').pop()?.toLowerCase();
         const lang: SupportedLanguage = ext === 'json' ? 'json' : ext === 'js' ? 'javascript' : ext === 'py' ? 'python' : 'markdown';
-        createTab(file.name, content, lang);
+        openDocumentWithLargeDocCheck({
+          title: file.name,
+          content,
+          language: lang
+        });
       }
     }
   };

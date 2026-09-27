@@ -69,9 +69,9 @@ async fn open_external(
         return Err("Only https:// and http:// URLs are permitted".into());
     }
 
-    let forbidden_chars = ['&', '|', ';', '`', '$', '\n', '\r', '"', '\'', '<', '>'];
+    let forbidden_chars = ['\0', '\n', '\r', '"', '\'', '`', '$', '<', '>', '|'];
     if trimmed.chars().any(|c| forbidden_chars.contains(&c)) {
-        return Err("URL contains illegal shell metacharacters".into());
+        return Err("URL contains illegal characters".into());
     }
 
     open::that_detached(trimmed).map_err(|e| format!("Failed to open URL: {}", e))?;

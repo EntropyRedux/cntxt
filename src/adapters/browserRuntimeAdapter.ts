@@ -502,4 +502,8 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     }
     return false;
   }
+
+  public async getSessionToken(): Promise<string> {
+    return 'browser-session-token';
+  }
 }

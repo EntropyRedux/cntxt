@@ -5,7 +5,7 @@ import { useTabStore } from '../../store/tabStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
-import { useFormattingStore } from '../../store/formattingStore';
+import { useFormattingStore, PRESET_FORMATTING_BUTTONS } from '../../store/formattingStore';
 import { useImageModalStore } from '../../store/imageModalStore';
 import { executeFormatting } from '../../services/editor/formattingService';
 import { executeActionById } from '../../services/actionExecutor';
@@ -175,7 +175,25 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
 
       case 'formatting': {
         const fmtButtons = useFormattingStore.getState().buttons;
-        const fmtBtn = fmtButtons.find(b => b.id === item.targetId || b.id === item.id);
+        let fmtBtn = fmtButtons.find(b => b.id === item.targetId || b.id === item.id);
+        if (!fmtBtn) {
+          const preset = PRESET_FORMATTING_BUTTONS.find(p => p.id === item.targetId || p.id === item.id);
+          if (preset) {
+            fmtBtn = preset;
+          } else if (item.prefix || item.targetId) {
+            fmtBtn = {
+              id: item.id,
+              label: item.label,
+              icon: item.icon,
+              title: item.tooltip || `${item.label} formatting`,
+              prefix: item.prefix || item.targetId || '',
+              suffix: item.suffix !== undefined ? item.suffix : (item.prefix || item.targetId || ''),
+              type: item.formatType || 'wrap',
+              enabled: true,
+              order: item.order
+            };
+          }
+        }
         if (fmtBtn) {
           executeFormatting(fmtBtn, activeTab?.id);
         }

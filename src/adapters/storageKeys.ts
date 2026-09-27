@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   TEMPLATES_UI: 'contextpad_templates_ui',
   RIBBON: 'contextpad_modular_ribbon',
   FORMATTING_BUTTONS: 'contextpad_formatting_buttons',
+  FORMATTING_CATEGORIES: 'contextpad_formatting_categories',
   FORMATTING_MULTIROW: 'contextpad_formatting_multirow',
   FORMATTING_SIZE: 'contextpad_formatting_size',
   TABS_META: 'contextpad_tabs_meta',

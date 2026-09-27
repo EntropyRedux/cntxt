@@ -109,6 +109,18 @@ export const DEFAULT_RIBBON_ITEMS: RibbonItem[] = [
     enabled: true,
     showLabel: false,
     order: 8,
+  },
+  {
+    id: 'rb_insert_var',
+    label: 'Insert Variable',
+    icon: 'Variable',
+    type: 'formatting',
+    targetId: 'fmt_variable',
+    color: 'accent',
+    tooltip: 'Wrap selected text or insert variable placeholder {{variable}}',
+    enabled: true,
+    showLabel: false,
+    order: 9,
   }
 ];
 

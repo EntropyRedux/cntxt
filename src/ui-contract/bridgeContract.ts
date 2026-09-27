@@ -127,12 +127,6 @@ export interface IRuntimeBridge {
   theme: IThemeBridge;
   shareContent?: (text: string) => Promise<boolean>;
   getSessionToken: () => Promise<string>;
-}
-  window: IWindowBridge;
-  clipboard: IClipboardBridge;
-  storage: IStorageBridge;
-  platform: IPlatformBridge;
-  theme: IThemeBridge;
   deleteFile?: (path: string) => Promise<boolean>;
   openFileExplorer?: (path: string) => Promise<boolean>;
   openExternalUrl?: (url: string) => Promise<boolean>;

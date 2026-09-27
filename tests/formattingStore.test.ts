@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useFormattingStore, PRESET_FORMATTING_BUTTONS } from '../src/store/formattingStore';
+import { useFormattingStore, PRESET_FORMATTING_BUTTONS, DEFAULT_FORMATTING_CATEGORIES } from '../src/store/formattingStore';
 
 describe('FormattingStore', () => {
   beforeEach(() => {
@@ -11,8 +11,9 @@ describe('FormattingStore', () => {
     
     useFormattingStore.setState({
       buttons: freshButtons,
-      buttonSize: 'default' as const,
-      multiRow: false
+      buttonSize: 'medium',
+      isMultiRowExpanded: false,
+      categoryOrder: [...DEFAULT_FORMATTING_CATEGORIES]
     });
   });
 
@@ -83,14 +84,18 @@ describe('FormattingStore', () => {
     expect(buttons.find(b => b.id === newBtn.id)).toBeUndefined();
   });
 
-  it('disables built-in button instead of removing', () => {
+  it('removes built-in button from active buttons and allows re-adding from preset library', () => {
     const store = useFormattingStore.getState();
     expect(store.buttons.find(b => b.id === 'fmt_h1')?.enabled).toBe(true);
     
     store.removeButton('fmt_h1');
     const h1 = useFormattingStore.getState().buttons.find(b => b.id === 'fmt_h1');
-    expect(h1).toBeDefined();
-    expect(h1?.enabled).toBe(false);
+    expect(h1).toBeUndefined();
+
+    store.addPresetButton('fmt_h1');
+    const readded = useFormattingStore.getState().buttons.find(b => b.id === 'fmt_h1');
+    expect(readded).toBeDefined();
+    expect(readded?.enabled).toBe(true);
   });
 
   it('resets to defaults', () => {
@@ -115,4 +120,49 @@ describe('FormattingStore', () => {
     expect(bold?.prefix).toBe('**');
     expect(bold?.suffix).toBe('**');
   });
+
+  it('manages formatting categories properly (add, rename, delete, move)', () => {
+    // Add category
+    const added = useFormattingStore.getState().addCategory('Science');
+    expect(added).toBe(true);
+    expect(useFormattingStore.getState().categoryOrder.includes('SCIENCE')).toBe(true);
+
+    // Custom button with new category
+    const btn = useFormattingStore.getState().addButton({
+      label: 'Formula',
+      icon: 'Atom',
+      type: 'wrap',
+      prefix: '$',
+      suffix: '$',
+      category: 'SCIENCE'
+    });
+    expect(btn.category).toBe('SCIENCE');
+
+    const categoriesWithScience = useFormattingStore.getState().getAllCategories();
+    const scienceCat = categoriesWithScience.find(c => c.name === 'SCIENCE');
+    expect(scienceCat).toBeDefined();
+    expect(scienceCat?.count).toBe(1);
+
+    // Rename category
+    const renamed = useFormattingStore.getState().renameCategory('SCIENCE', 'STEM');
+    expect(renamed).toBe(true);
+    expect(useFormattingStore.getState().categoryOrder.includes('STEM')).toBe(true);
+    expect(useFormattingStore.getState().categoryOrder.includes('SCIENCE')).toBe(false);
+
+    const updatedBtn = useFormattingStore.getState().buttons.find(b => b.id === btn.id);
+    expect(updatedBtn?.category).toBe('STEM');
+
+    // Move category
+    useFormattingStore.getState().moveCategory('STEM', 'up');
+    const stemIndex = useFormattingStore.getState().categoryOrder.indexOf('STEM');
+    expect(stemIndex).toBeLessThan(useFormattingStore.getState().categoryOrder.length - 1);
+
+    // Delete category
+    const deleted = useFormattingStore.getState().deleteCategory('STEM', 'CUSTOM');
+    expect(deleted).toBe(true);
+    expect(useFormattingStore.getState().categoryOrder.includes('STEM')).toBe(false);
+    const reallocatedBtn = useFormattingStore.getState().buttons.find(b => b.id === btn.id);
+    expect(reallocatedBtn?.category).toBe('CUSTOM');
+  });
 });
+

@@ -43,12 +43,27 @@ if (fs.existsSync(bundleDir)) {
   fs.rmSync(bundleDir, { recursive: true, force: true });
 }
 
-// 3. Build frontend bundle with Vite
-console.log('📦 Compiling frontend assets with Vite...');
-execSync('npm run build', { cwd: rootDir, stdio: 'inherit' });
+// 2c. Clean stale Cargo fingerprints to guarantee 100% fresh compilation of cntxt binary
+const targetFingerprintDir = path.join(rootDir, 'src-tauri', 'target', 'release', '.fingerprint');
+if (fs.existsSync(targetFingerprintDir)) {
+  console.log('🧹 Purging stale cntxt Cargo fingerprints...');
+  const entries = fs.readdirSync(targetFingerprintDir);
+  for (const entry of entries) {
+    if (entry.startsWith('cntxt-')) {
+      const fullPath = path.join(targetFingerprintDir, entry);
+      try {
+        fs.rmSync(fullPath, { recursive: true, force: true });
+      } catch (err) {
+        console.warn(`Could not remove fingerprint ${entry}: ${err.message}`);
+      }
+    }
+  }
+}
 
-// 4. Build Tauri release binary with single-threaded cargo gate (CARGO_BUILD_JOBS=1)
-console.log('🦀 Compiling native release executable (CARGO_BUILD_JOBS=1)...');
+
+// 3. Build Tauri release binary with single-threaded cargo gate (CARGO_BUILD_JOBS=1)
+// Note: Tauri CLI automatically executes beforeBuildCommand ("npm run build") to compile frontend assets
+console.log('🦀 Compiling native release executable and bundles (CARGO_BUILD_JOBS=1)...');
 process.env.CARGO_BUILD_JOBS = '1';
 execSync('npx @tauri-apps/cli build', { cwd: rootDir, stdio: 'inherit', env: process.env });
 
@@ -125,5 +140,3 @@ for (const { src, label } of bundlesToCopy) {
 if (copiedCount > 0) {
   console.log(`✅ ${copiedCount} installer(s) copied to dist-installer/`);
 }
-=======
->>>>>>> b70a8c76f9a76c1e7d365a679a76b83ed2dfb5f4

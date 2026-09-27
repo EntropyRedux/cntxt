@@ -28,6 +28,8 @@ interface SettingsState {
   toggleStatusBar: () => void;
   toggleTouchMode: () => void;
   toggleMobileAccessoryBar: () => void;
+  toggleTypingDirection: () => void;
+  setTypingDirection: (direction: 'top-to-bottom' | 'bottom-to-up') => void;
   setActiveSidebarTab: (tab: ViewSettings['activeSidebarTab']) => void;
   setTheme: (theme: ViewSettings['theme']) => void;
   setModel: (modelId: string) => void;
@@ -57,6 +59,7 @@ const DEFAULT_SETTINGS: ViewSettings = {
   fontSize: 14,
   fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code Variable', 'Fira Code', Menlo, Monaco, 'Courier New', monospace",
   wordWrap: true,
+  typingDirection: 'top-to-bottom',
   editorMaxWidth: 'standard',
   editorPadding: 'normal',
   theme: 'contextpad-dark',
@@ -84,6 +87,9 @@ const DEFAULT_SETTINGS: ViewSettings = {
   enableLiveDomSync: true,
   enableLiveMarkdownSync: true,
   autosaveIntervalMs: 1000,
+  enableLargeDocDetection: true,
+  largeDocThresholdKb: 500,
+  largeDocThresholdLines: 10000,
   autocompleteConfig: {
     enableKeywords: true,
     enableTemplates: true,
@@ -118,6 +124,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     if (platform?.isTouch) {
       initialSettings.uiDensity = 'touch';
       initialSettings.touchOptimized = true;
+      initialSettings.largeDocThresholdKb = 150;
+      initialSettings.largeDocThresholdLines = 2500;
     }
 
     if (activeStorage) {
@@ -238,6 +246,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   toggleMobileAccessoryBar: () => {
     const show = !get().settings.showMobileAccessoryBar;
     get().updateSettings({ showMobileAccessoryBar: show });
+  },
+
+  toggleTypingDirection: () => {
+    const nextDirection = get().settings.typingDirection === 'bottom-to-up' ? 'top-to-bottom' : 'bottom-to-up';
+    get().updateSettings({ typingDirection: nextDirection });
+  },
+
+  setTypingDirection: (typingDirection) => {
+    get().updateSettings({ typingDirection });
   },
 
   setActiveSidebarTab: (tab) => {
