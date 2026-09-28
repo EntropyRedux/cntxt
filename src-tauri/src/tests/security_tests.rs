@@ -1,6 +1,6 @@
 use std::path::Path;
-use crate::commands::file::is_system_root;
-use crate::app_info_payload;
+use crate::commands::file::{is_system_root, validate_path};
+use crate::{app_info_payload, validate_external_url};
 
 #[test]
 fn test_app_info_payload_has_no_session_id() {
@@ -45,24 +45,60 @@ fn test_is_system_root_detection() {
 
 #[test]
 fn test_url_forbidden_characters() {
-    let forbidden_chars = ['\0', '\n', '\r', '"', '\'', '`', '$', '<', '>', '|', '&', ';'];
-
+    // Tests production validate_external_url directly
     let valid_url = "https://example.com/docs?query=test";
-    assert!(!valid_url.chars().any(|c| forbidden_chars.contains(&c)));
+    assert!(validate_external_url(valid_url).is_ok());
 
+    let http_url = "http://localhost:5173/preview";
+    assert!(validate_external_url(http_url).is_ok());
+
+    // Prohibited schemes
+    assert!(validate_external_url("file:///etc/passwd").is_err());
+    assert!(validate_external_url("javascript:alert(1)").is_err());
+    assert!(validate_external_url("data:text/html,test").is_err());
+
+    // Shell metacharacters & injection vectors
     let malicious_urls = [
         "https://example.com; calc.exe",
         "https://example.com & notepad.exe",
         "https://example.com | dir",
         "https://example.com/test?a=`whoami`",
         "https://example.com/test?a=$(whoami)",
+        "https://example.com/\0injected",
+        "https://example.com/\ninjected",
+        "https://example.com/<script>",
+        "https://example.com/\"quoted\"",
     ];
 
     for malicious in &malicious_urls {
         assert!(
-            malicious.chars().any(|c| forbidden_chars.contains(&c)),
-            "URL should have been flagged as malicious: {}",
+            validate_external_url(malicious).is_err(),
+            "Production validate_external_url must reject malicious URL: {}",
             malicious
         );
+    }
+}
+
+#[test]
+fn test_validate_path_security() {
+    // Empty path
+    assert!(validate_path("").is_err());
+    assert!(validate_path("   ").is_err());
+
+    // Directory traversal attacks
+    assert!(validate_path("../secret.txt").is_err());
+    assert!(validate_path("folder/../../secret.txt").is_err());
+    assert!(validate_path(r"folder\..\..\secret.txt").is_err());
+
+    // System root rejection
+    #[cfg(target_os = "windows")]
+    {
+        assert!(validate_path(r"C:\").is_err());
+        assert!(validate_path(r"c:\windows").is_err());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        assert!(validate_path("/").is_err());
+        assert!(validate_path("/etc").is_err());
     }
 }

@@ -39,7 +39,18 @@ interface TabState {
   resetWelcomeTab: () => Promise<void>;
   openMarkdownGuideTab: () => string;
   openPowerUserGuideTab: () => string;
-  initializeTabs: (storage?: IStorageBridge) => Promise<void>;
+  initializeTabs: (storage?: IStorageBridge, disableDemoWelcome?: boolean) => Promise<void>;
+}
+
+declare global {
+  interface Window {
+    __CONTEXTPAD_DEMO__?: boolean;
+  }
+}
+
+export function isDemoModeExplicitlyDisabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.__CONTEXTPAD_DEMO__ === false;
 }
 
 export const useTabStore = create<TabState>((set, get) => ({
@@ -48,7 +59,7 @@ export const useTabStore = create<TabState>((set, get) => ({
   isSaving: false,
   isHydrating: true,
 
-  initializeTabs: async (storage?: IStorageBridge) => {
+  initializeTabs: async (storage?: IStorageBridge, disableDemoWelcome?: boolean) => {
     if (storage) {
       activeStorage = storage;
     }
@@ -78,7 +89,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       set({ tabs: cached.tabs, activeTabId: cachedActiveId, isHydrating: false });
       // Continue IPC load silently to refresh stale content
     }
-    const isExplicitlyNoDemo = typeof window !== 'undefined' && (window as any).__CONTEXTPAD_DEMO__ === false;
+    const isExplicitlyNoDemo = disableDemoWelcome ?? isDemoModeExplicitlyDisabled();
 
     if (!activeStorage) {
       if (!cached) {

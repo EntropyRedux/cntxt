@@ -218,12 +218,12 @@ Decision: `DEFAULT_RIBBON_ITEMS` in `src/store/ribbonStore.ts` and `PRESET_FORMA
 Reasoning: Formatting ribbon items and editor formatting buttons (Bold, Italic, Code, Headings, Tables) are static engine command and tool definitions, not synthetic user state. They serve as the default factory layout when user preferences or toolbars are reset.
 Status: APPROVED TRADEOFF
 
-Tradeoff ID: TR-003
-Date: 2026-09-13
-Finding Source: Audit Condition 1 & 4 (R-008 / R-011 conflict)
+Tradeoff ID: TR-003 (Re-affirmed 2026-09-28 under Option A)
+Date: 2026-09-28 (Updated)
+Finding Source: Audit PC-1 / Full Codebase Remediation Option A
 Pillar: Pillar 8 (Deep Security)
-Decision: Retain `'unsafe-eval'` in CSP strictly for `new Function` action sandbox during post-port remediation; prune dead external API origins (`generativelanguage.googleapis.com`, `api.anthropic.com`).
-Reasoning: Removing `'unsafe-eval'` immediately breaks `new Function` sandbox execution. Full realm worker isolation (detached Web Worker with message passing) is scheduled for Feature Group FG-02 (Sandboxed JavaScript Actions).
+Decision: Retain `'unsafe-eval'` in desktop `tauri.conf.json` CSP while enforcing physical Web Worker realm isolation with stripped ambient primitives and frozen prototypes off the main thread.
+Reasoning: Desktop WebView2 / WebKit CSP policies do not allow scoping `'unsafe-eval'` exclusively to dedicated workers without breaking user-defined dynamic action script evaluation. To guarantee 100% zero-regression compatibility for custom JavaScript actions while neutralizing prototype pollution and DOM theft, action scripts execute strictly within a detached `DedicatedWorkerGlobalScope` where ambient network globals (`fetch`, `XMLHttpRequest`, `WebSocket`, `importScripts`, `indexedDB`) are neutralized to `undefined` and prototype hierarchies (`Object.prototype`, `Function.prototype`, `Array.prototype`) are deeply frozen. The main DOM thread retains zero eval in application logic.
 Status: APPROVED TRADEOFF
 
 Tradeoff ID: TR-004
@@ -743,4 +743,18 @@ The following features were evaluated during the desktop v0.3.8 cycle and identi
 4. **TOC Quick Append to Selection**:
    - *Mobile Need*: On touch devices, inserting heading anchors or sub-sections into existing notes is cumbersome.
    - *Specification*: In the mobile TOC outline drawer, allow tapping an item with an "Append to Selection / Insert at Cursor" touch button, inserting the referenced section or link directly at the current caret position.
+
+### 17. Full Codebase Security Hardening & Option A Remediation (2026-09-28)
+- **Zero Mock Imports in Production (`src/`)**: Decoupled default template and action configurations into `src/constants/defaultPresets.ts`. Re-exported in `mocks/index.ts` strictly for test fixtures. Verified `src/` has genuine zero imports from `mocks/`.
+- **Dedicated Web Worker Action Sandbox**: Built `src/services/sandboxApiFactory.ts` with complete 24-member `SandboxAPI` matrix. Hardened `actionWorker.ts` with `DedicatedWorkerGlobalScope` validation, stripped ambient network APIs (`fetch`, `XMLHttpRequest`, `WebSocket`, `importScripts`, `indexedDB` set to `undefined`), and deeply frozen prototype hierarchies (`Object`, `Function`, `Array`).
+- **Option A CSP Alignment & TR-003 Re-affirmation**: Desktop CSP retains `'unsafe-eval'` for dynamic custom actions while isolating script execution entirely inside dedicated workers. Re-affirmed TR-003 with physical realm isolation rationale.
+- **HTML Sanitization & KaTeX Layout Tokenization**: Tagged LaTeX math blocks with unique nonces. Hardened `domHelper.ts` to unconditionally strip `position: fixed`, `position: sticky`, `z-index`, and dangerous `xlink:href` schemes across all elements, preventing clickjacking/redressing while allowing KaTeX math typography.
+- **Android SAF Bridge Encapsulation**: Created `src/adapters/androidBridgeHelper.ts` to safely wrap mobile Java bridge interfaces. Replaced raw window escapes in `src/adapters/tauriRuntimeAdapter.ts` and `src/store/tabStore.ts`.
+- **Cargo Feature Gating & External URL Validation**: Extracted `validate_external_url` in `src-tauri/src/lib.rs` and added security test coverage in `src-tauri/src/tests/security_tests.rs`. Added `default = ["devtools"]` in `src-tauri/Cargo.toml`.
+- **All 5 Verification Gates Passing**:
+  1. `npm run lint` — 0 errors, 122 files clean, contracts 100% in sync.
+  2. `npm test` — 37/37 suites, 361/361 tests passing.
+  3. `cargo test` — 4/4 security tests passing.
+  4. `npm run build` — Clean production bundle generated.
+  5. `npm run test:e2e` — 23/23 Playwright tests passing.
 

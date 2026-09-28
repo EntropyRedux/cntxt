@@ -1,54 +1,54 @@
+/**
+ * ACTION WORKER REALM (src/services/actionWorker.ts)
+ * 
+ * Standalone Dedicated Web Worker executing user actions in an isolated thread.
+ * Zero access to main DOM window, CodeMirror editor instance, or Tauri IPC bindings.
+ */
+
 import { FormulaEngine } from './formulaParser';
-import { SandboxAPI } from '../types';
+import {
+  createSandboxAPI,
+  ActionSnapshot,
+  ActionMutation,
+  WorkerInMessage,
+  WorkerOutMessage
+} from './sandboxApiFactory';
 
-export interface ActionScopeSnapshot {
-  content: string;
-  selection: string;
-  tabTitle: string;
-  cursor: { line: number; col: number };
-  clipboardText: string;
-}
+// L-01: Strict worker scope verification
+type WorkerGlobalScopeConstructor = new () => unknown;
+const workerScope = (globalThis as unknown as { DedicatedWorkerGlobalScope?: WorkerGlobalScopeConstructor })
+  .DedicatedWorkerGlobalScope;
+const isDedicatedWorker =
+  typeof workerScope !== 'undefined' && typeof self !== 'undefined' && self instanceof workerScope;
 
-export type ActionMutation =
-  | { type: 'setContent'; value: string }
-  | { type: 'replaceSelection'; value: string }
-  | { type: 'wrapSelection'; prefix: string; suffix: string }
-  | { type: 'insertAtCursor'; value: string }
-  | { type: 'setCursor'; line: number; col: number }
-  | { type: 'setTabTitle'; value: string }
-  | { type: 'notify'; message: string; level: 'info' | 'success' | 'warning' | 'error' }
-  | { type: 'openTab'; title: string; content: string; language?: string }
-  | { type: 'openVariableModal' }
-  | { type: 'copyToClipboard'; value: string };
+if (isDedicatedWorker) {
+  // Strip ambient capabilities from worker global scope
+  try {
+    const g = self as unknown as Record<string, unknown>;
+    g.fetch = undefined;
+    g.XMLHttpRequest = undefined;
+    g.WebSocket = undefined;
+    g.importScripts = undefined;
+    g.indexedDB = undefined; // platform-leak-ignore: neutralizing ambient worker global
+  } catch {
+    // Non-configurable in certain environments
+  }
 
-export interface WorkerInMessage {
-  type: 'EXECUTE';
-  code: string;
-  snapshot: ActionScopeSnapshot;
-  reqId: string;
-}
+  // Freeze prototypes in the worker realm to protect against prototype climbing/tampering
+  try {
+    Object.freeze(Object.prototype);
+    Object.freeze(Function.prototype);
+    Object.freeze(Array.prototype);
+  } catch {
+    // Ignore if already frozen or restricted
+  }
 
-export interface WorkerOutSuccessMessage {
-  type: 'SUCCESS';
-  reqId: string;
-  result: unknown;
-  journal: ActionMutation[];
-}
-
-export interface WorkerOutErrorMessage {
-  type: 'ERROR';
-  reqId: string;
-  error: string;
-}
-
-// In dedicated worker scope
-if (typeof self !== 'undefined' && typeof (self as any).postMessage === 'function') {
-  self.onmessage = async (event: MessageEvent<WorkerInMessage | { type: 'DIALOG_RESPONSE'; reqId: string; value: any }>) => {
+  self.onmessage = async (event: MessageEvent<WorkerInMessage>) => {
     const data = event.data;
     if (data.type !== 'EXECUTE') return;
 
-    const { code, snapshot, reqId } = data;
-    const currentSnapshot: ActionScopeSnapshot = { ...snapshot };
+    const { code, snapshot } = data;
+    const currentSnapshot: ActionSnapshot = { ...snapshot };
     const journal: ActionMutation[] = [];
 
     const safeConsole = Object.freeze({
@@ -57,163 +57,93 @@ if (typeof self !== 'undefined' && typeof (self as any).postMessage === 'functio
       error: (...args: unknown[]) => console.error('[CNTXT Action Worker]', ...args)
     });
 
-    const safeApi: SandboxAPI = {
-      getText: () => currentSnapshot.content,
-      getContent: () => currentSnapshot.content,
-      setText: (newText: string) => {
-        currentSnapshot.content = newText;
-        journal.push({ type: 'setContent', value: newText });
+    const safeApi = createSandboxAPI({
+      getSnapshot: () => currentSnapshot,
+      applyMutation: (mutation: ActionMutation) => {
+        journal.push(mutation);
+        if (mutation.type === 'setText') {
+          currentSnapshot.text = mutation.text;
+        } else if (mutation.type === 'replaceSelection') {
+          currentSnapshot.selection = mutation.text;
+        } else if (mutation.type === 'insertAtCursor') {
+          currentSnapshot.text += mutation.text;
+        } else if (mutation.type === 'wrapSelection') {
+          currentSnapshot.selection = `${mutation.before}${currentSnapshot.selection}${mutation.after}`;
+        }
       },
-      setContent: (newText: string) => {
-        currentSnapshot.content = newText;
-        journal.push({ type: 'setContent', value: newText });
+      requestDialogPrompt: async (title: string, defaultValue = ''): Promise<string | null> => {
+        return new Promise((resolve) => {
+          // L-02: Cryptographic UUID for dialog correlation
+          const reqId = `dlg_${crypto.randomUUID()}`;
+          const responseHandler = (e: MessageEvent<WorkerInMessage>) => {
+            if (e.data?.type === 'DIALOG_RESPONSE' && e.data.reqId === reqId) {
+              self.removeEventListener('message', responseHandler);
+              resolve(typeof e.data.value === 'string' ? e.data.value : null);
+            }
+          };
+          self.addEventListener('message', responseHandler);
+          const outMsg: WorkerOutMessage = {
+            type: 'DIALOG_PROMPT',
+            reqId,
+            title,
+            defaultValue
+          };
+          self.postMessage(outMsg);
+        });
       },
-      getSelection: () => currentSnapshot.selection,
-      replaceSelection: (replacement: string) => {
-        currentSnapshot.selection = '';
-        journal.push({ type: 'replaceSelection', value: replacement });
+      requestDialogConfirm: async (title: string, message: string): Promise<boolean> => {
+        return new Promise((resolve) => {
+          // L-02: Cryptographic UUID for dialog correlation
+          const reqId = `dlg_${crypto.randomUUID()}`;
+          const responseHandler = (e: MessageEvent<WorkerInMessage>) => {
+            if (e.data?.type === 'DIALOG_RESPONSE' && e.data.reqId === reqId) {
+              self.removeEventListener('message', responseHandler);
+              resolve(Boolean(e.data.value));
+            }
+          };
+          self.addEventListener('message', responseHandler);
+          const outMsg: WorkerOutMessage = {
+            type: 'DIALOG_CONFIRM',
+            reqId,
+            title,
+            message
+          };
+          self.postMessage(outMsg);
+        });
       },
-      wrapSelection: (prefix: string, suffix?: string) => {
-        const s = suffix ?? prefix;
-        currentSnapshot.selection = `${prefix}${currentSnapshot.selection}${s}`;
-        journal.push({ type: 'wrapSelection', prefix, suffix: s });
-      },
-      insertText: (text: string) => {
-        journal.push({ type: 'insertAtCursor', value: text });
-      },
-      insertAtCursor: (text: string) => {
-        journal.push({ type: 'insertAtCursor', value: text });
-      },
-      getCursor: () => currentSnapshot.cursor,
-      setCursor: (line: number, col: number) => {
-        currentSnapshot.cursor = { line, col };
-        journal.push({ type: 'setCursor', line, col });
-      },
-      getTabTitle: () => currentSnapshot.tabTitle,
-      setTabTitle: (title: string) => {
-        currentSnapshot.tabTitle = title;
-        journal.push({ type: 'setTabTitle', value: title });
-      },
-      toast: (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
-        journal.push({ type: 'notify', message, level: type });
-      },
-      notify: (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
-        journal.push({ type: 'notify', message, level: type });
-      },
-      openTab: (title: string, content: string, language?: string) => {
-        journal.push({ type: 'openTab', title, content, language });
-      },
-      createTab: (title: string, content: string, language?: string) => {
-        journal.push({ type: 'openTab', title, content, language });
-      },
-      openVariableModal: () => {
-        journal.push({ type: 'openVariableModal' });
-      },
-      evaluateFormula: (formula: string): any => {
+      evaluateFormula: (formula: string): unknown => {
         const formulaEngine = new FormulaEngine({
-          lineCount: currentSnapshot.content.split('\n').length,
-          charCount: currentSnapshot.content.length,
-          wordCount: (currentSnapshot.content.trim().match(/\S+/g) || []).length,
+          lineCount: currentSnapshot.lineCount,
+          charCount: currentSnapshot.characterCount,
+          wordCount: currentSnapshot.wordCount,
           selectedText: currentSnapshot.selection
         });
         const res = formulaEngine.evaluate(formula);
         return res.success ? res.value : null;
-      },
-      copyToClipboard: async (text: string): Promise<void> => {
-        currentSnapshot.clipboardText = text;
-        journal.push({ type: 'copyToClipboard', value: text });
-      },
-      copy: async (text: string): Promise<void> => {
-        currentSnapshot.clipboardText = text;
-        journal.push({ type: 'copyToClipboard', value: text });
-      },
-      getClipboard: async (): Promise<string> => {
-        return currentSnapshot.clipboardText;
-      },
-      dialog: {
-        prompt: async (message: string, defaultValue = ''): Promise<string | null> => {
-          return new Promise((resolve) => {
-            const dialogId = `dlg_${Math.random().toString(36).slice(2)}`;
-            const responseHandler = (e: MessageEvent) => {
-              if (e.data?.type === 'DIALOG_RESPONSE' && e.data?.dialogId === dialogId) {
-                self.removeEventListener('message', responseHandler);
-                resolve(e.data.value ?? null);
-              }
-            };
-            self.addEventListener('message', responseHandler);
-            (self as any).postMessage({ type: 'DIALOG_PROMPT', reqId, dialogId, message, defaultValue });
-          });
-        },
-        confirm: async (message: string): Promise<boolean> => {
-          return new Promise((resolve) => {
-            const dialogId = `dlg_${Math.random().toString(36).slice(2)}`;
-            const responseHandler = (e: MessageEvent) => {
-              if (e.data?.type === 'DIALOG_RESPONSE' && e.data?.dialogId === dialogId) {
-                self.removeEventListener('message', responseHandler);
-                resolve(Boolean(e.data.value));
-              }
-            };
-            self.addEventListener('message', responseHandler);
-            (self as any).postMessage({ type: 'DIALOG_CONFIRM', reqId, dialogId, message });
-          });
-        }
-      },
-      utils: {
-        base64Encode: (str: string): string => {
-          const bytes = new TextEncoder().encode(str);
-          let binString = '';
-          for (let i = 0; i < bytes.length; i++) {
-            binString += String.fromCharCode(bytes[i]);
-          }
-          return btoa(binString);
-        },
-        base64Decode: (str: string): string => {
-          const binString = atob(str);
-          const bytes = new Uint8Array(binString.length);
-          for (let i = 0; i < binString.length; i++) {
-            bytes[i] = binString.charCodeAt(i);
-          }
-          return new TextDecoder().decode(bytes);
-        },
-        formatJSON: (jsonStr: string): string => {
-          try {
-            return JSON.stringify(JSON.parse(jsonStr), null, 2);
-          } catch {
-            return jsonStr;
-          }
-        },
-        slugify: (str: string): string => str
-          .toLowerCase()
-          .trim()
-          .replace(/[^\w\s-]/g, '')
-          .replace(/[\s_-]+/g, '-')
-          .replace(/^-+|-+$/g, ''),
-        countWords: (str: string): number => str.trim() ? str.trim().split(/\s+/).length : 0,
-        countChars: (str: string): number => str.length,
-        now: (): string => new Date().toISOString()
       }
-    };
+    });
 
     try {
+      // Option A: Script compilation in worker realm
       const runner = new Function(
         'api',
         'console',
         `"use strict"; return (async function() { ${code} })();`
       );
 
-      const result = await runner(safeApi, safeConsole);
-      (self as any).postMessage({
+      await runner(safeApi, safeConsole);
+
+      const successMsg: WorkerOutMessage = {
         type: 'SUCCESS',
-        reqId,
-        result,
         journal
-      });
+      };
+      self.postMessage(successMsg);
     } catch (err: unknown) {
-      (self as any).postMessage({
+      const errorMsg: WorkerOutMessage = {
         type: 'ERROR',
-        reqId,
         error: err instanceof Error ? err.message : String(err)
-      });
+      };
+      self.postMessage(errorMsg);
     }
   };
 }

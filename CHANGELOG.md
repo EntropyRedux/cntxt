@@ -9,28 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.10] — 2026-09-28
 
-### Full Codebase Security Hardening & Architectural Remediation (Plan v4)
-- **Table Cell & Widget Sanitization with KaTeX Layout Preservation**:
-  - Implemented mathematical collision-avoidance tokenization for table cell contents, pre-extracting `$math$` spans into nonce tokens before markdown parsing and HTML entity escaping.
-  - Hardened `sanitizePreviewHtml` in `domHelper.ts` to block `<style>` tags, unquoted `on*` event handlers, and `data:` URIs while preserving essential KaTeX vertical alignment styles (`top`, `position`, `left`, `height`) on math subtrees.
-  - Rebuilt live markdown missing-action badges to use safe DOM node creation instead of raw `innerHTML`.
-- **Action Sandbox Dedicated Web Worker Realm Isolation**:
-  - Migrated JavaScript action execution to a Dedicated Web Worker (`actionWorker.ts`) with snapshot-journal protocol, separating script evaluation completely from the main DOM realm.
-  - Implemented complete 24-member `SandboxAPI` matrix including modern base64 encoding (`TextEncoder`/`TextDecoder`), formula engine evaluation, document mutations, and async modal dialog RPC.
-  - Added 4000ms execution watchdog timer with `worker.terminate()` and AST/regex pre-flight scanner for prototype/constructor security.
-- **Native IPC Authorization & Native Confirmation in Rust**:
-  - Replaced session tokens with native confirmation dialogs via `rfd::MessageDialog` (`spawn_blocking`) on sensitive operations (`delete_file`, `open_external`).
-  - Added `APPDATA` and `LOCALAPPDATA` canonical roots to protected system directory checks.
-  - Gated devtools commands behind `is_authorized_window` and `debug_assertions`.
-  - Added Rust unit test suite (`src-tauri/src/tests/security_tests.rs`) verifying root protections, URL forbidden characters, and app info payloads.
-- **Production CSP Hardening & TR-003 Retirement**:
-  - Stripped `'unsafe-inline'` and `'unsafe-eval'` from Tauri CSP (`script-src 'self'`).
-  - Removed static CSP meta tag from `index.html` to support Vite dev server HMR while enforcing Tauri production CSP in webviews.
-- **Mock Quarantine Inversion & Platform Leak Inversion**:
-  - Inverted mock quarantine: removed all imports from `mocks/index.ts` across `src/` production code (`FileExplorer.tsx`, `actionStore.ts`, `tabStore.ts`, `templateStore.ts`, `fileHistoryStore.ts`). Collections initialize 100% empty.
-  - Added `consumeSharedText` to `IPlatformBridge` and inverted `AndroidBridge` access to the adapter layer; added `AndroidBridge` to platform leak check script.
-  - Deleted dead components: `TitleBar.tsx`, `MenuBar.tsx`, `MobileBottomNav.tsx`.
-  - Removed unused `marked` dependency from `package.json` and quarantined `dist-android/` in `.gitignore`.
+### Full Codebase Security Hardening & Option A Remediation
+- **Physical Mock Quarantine Decoupling (Pillar 1)**:
+  - Extracted production default presets into `src/constants/defaultPresets.ts`, completely decoupling runtime assets from test mocks.
+  - Re-exported presets in `mocks/index.ts` strictly for test fixtures.
+  - Replaced legacy dynamic mock imports in `browserRuntimeAdapter.ts`; verified `src/` now has genuine zero imports from `mocks/`.
+- **Unified Sandbox API Factory & Worker Realm Isolation (Pillars 8 & 9)**:
+  - Created `src/services/sandboxApiFactory.ts` providing a single source of truth for the complete 24-member `SandboxAPI` matrix (including `slugify`, `formatJSON`, `base64Encode/Decode`, `countWords`, and `dialog` RPC).
+  - Hardened `src/services/actionWorker.ts` with `DedicatedWorkerGlobalScope` validation, ambient capability stripping (`fetch`, `XMLHttpRequest`, `WebSocket`, `importScripts`, `indexedDB` set to `undefined`), and deeply frozen prototype hierarchies (`Object`, `Function`, `Array`).
+  - Added Playwright integration suite `e2e/actionSandboxRealm.spec.ts` verifying sandbox execution and ambient network capability neutralization.
+- **Option A CSP Alignment & TR-003 Re-affirmation (Pillar 8)**:
+  - Hardened `src-tauri/tauri.conf.json` with `"withGlobalTauri": false` and desktop CSP retaining `'unsafe-eval'`.
+  - Re-affirmed `TR-003` in `living_context.md` with physical worker realm isolation justification, guaranteeing zero eval capabilities on the main DOM thread while preserving 100% action compatibility.
+- **HTML Sanitization & KaTeX Layout Tokenization (Pillars 8 & 9)**:
+  - Tagged parsed math spans with unique nonces (`data-cntxt-math`).
+  - Hardened `domHelper.ts` to unconditionally strip `position: fixed`, `position: sticky`, `z-index`, and dangerous `xlink:href` schemes across all elements, preventing UI redressing and clickjacking while preserving KaTeX math typography.
+- **Platform Adapter Boundary Encapsulation (Pillars 2, 3 & 4)**:
+  - Created `src/adapters/androidBridgeHelper.ts` to encapsulate Android Storage Access Framework Java bridge calls.
+  - Replaced raw window escapes in `src/adapters/tauriRuntimeAdapter.ts` and `src/store/tabStore.ts`.
+  - Tightened `scripts/check-platform-leaks.mjs` with explicit adapter allowlist.
+- **Native IPC Authorization & Cargo Features (Pillar 8)**:
+  - Extracted `validate_external_url` in `src-tauri/src/lib.rs` and added comprehensive unit test suite in `src-tauri/src/tests/security_tests.rs`.
+  - Gated devtools in `src-tauri/Cargo.toml` with `default = ["devtools"]`.
+- **Verification Gates**:
+  - All 5 gates passed: `npm run lint` (0 errors), `npm test` (37/37 suites, 361/361 tests passing), `cargo test` (4/4 security tests passing), `npm run build` (clean bundle), `npm run test:e2e` (23/23 Playwright tests passing).
 
 ## [0.3.9] — 2026-09-27
 

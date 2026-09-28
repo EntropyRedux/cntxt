@@ -14,13 +14,15 @@ name = "cntxt"
 path = "src/main.rs"
 
 [features]
+default = ["devtools"]
 custom-protocol = ["tauri/custom-protocol"]
+devtools = ["tauri/devtools"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["devtools"] }
+tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -86,7 +86,7 @@ export function formatTableCellHtml(text: string): string {
   let tokenized = text.replace(/(?<!\$)\$(?!\$)((?:\\\$|[^\$\n])+?)(?<!\$)\$(?!\$)/g, (_, formula) => {
     const key = `@@CNTXT_MATH_${nonce}_${mathPlaceholders.size}@@`;
     const res = renderLatex(formula, false);
-    mathPlaceholders.set(key, `<span class="cm-table-math inline-flex align-middle">${res.html}</span>`);
+    mathPlaceholders.set(key, `<span class="cm-table-math inline-flex align-middle" data-cntxt-math="${nonce}">${res.html}</span>`);
     return key;
   });
 

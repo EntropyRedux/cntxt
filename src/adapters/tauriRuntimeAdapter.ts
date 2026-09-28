@@ -23,6 +23,7 @@ import { applyThemeTokensToElement } from '../../theme/index';
 import { ThemeName } from '../ui-contract/themeContract';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useNotificationStore } from '../store/notificationStore';
+import { getAndroidBridge } from './androidBridgeHelper';
 
 const CRITICAL_IPC_COMMANDS = ['read_file', 'write_file', 'delete_file', 'store_api_key', 'delete_api_key'];
 
@@ -104,8 +105,9 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
   }
 
   public shareContent = async (text: string): Promise<boolean> => {
-    if (this.platform.isMobile && (window as any).AndroidBridge) {
-      (window as any).AndroidBridge.shareText(text);
+    const bridge = getAndroidBridge();
+    if (this.platform.isMobile && bridge?.shareText) {
+      bridge.shareText(text);
       return true;
     }
     return false;
@@ -114,7 +116,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
   public fs: IFileSystemBridge = {
     openFile: async (): Promise<BridgeFileResult | null> => {
       try {
-        if (this.platform.isMobile && (window as any).AndroidBridge) {
+        const bridge = getAndroidBridge();
+        if (this.platform.isMobile && bridge?.launchOpenDocument) {
           return new Promise<BridgeFileResult | null>((resolve) => {
             const handleSafEvent = async (e: Event) => {
               const customEvent = e as CustomEvent<string>;
@@ -146,7 +149,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
               }
             };
             window.addEventListener('saf:file_picked', handleSafEvent);
-            (window as any).AndroidBridge.launchOpenDocument();
+            bridge.launchOpenDocument();
           });
         }
 
@@ -171,7 +174,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     openDirectory: async () => {
       try {
-        if (this.platform.isMobile && (window as any).AndroidBridge) {
+        const bridge = getAndroidBridge();
+        if (this.platform.isMobile && bridge?.launchOpenDocumentTree) {
           return new Promise<BridgeFolderResult | null>((resolve) => {
             const handleSafFolderEvent = (e: Event) => {
               const customEvent = e as CustomEvent<string>;
@@ -193,7 +197,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
               }
             };
             window.addEventListener('saf:folder_picked', handleSafFolderEvent);
-            (window as any).AndroidBridge.launchOpenDocumentTree();
+            bridge.launchOpenDocumentTree();
           });
         }
 
@@ -227,8 +231,9 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     readDirectory: async (path: string): Promise<BridgeDirectoryEntry[] | null> => {
       try {
-        if (this.platform.isMobile && path.startsWith('content://') && (window as any).AndroidBridge) {
-          const jsonArrayStr = (window as any).AndroidBridge.readDirectory(path);
+        const androidBridge = getAndroidBridge();
+        if (this.platform.isMobile && path.startsWith('content://') && androidBridge?.readDirectory) {
+          const jsonArrayStr = androidBridge.readDirectory(path);
           if (!jsonArrayStr) return null;
 
           try {
@@ -269,8 +274,9 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     readFile: async (path: string): Promise<string | null> => {
       try {
-        if (this.platform.isMobile && path.startsWith('content://') && (window as any).AndroidBridge) {
-          const tempPath = (window as any).AndroidBridge.createTempFileForRead(path);
+        const androidBridge = getAndroidBridge();
+        if (this.platform.isMobile && path.startsWith('content://') && androidBridge?.createTempFileForRead) {
+          const tempPath = androidBridge.createTempFileForRead(path);
           if (tempPath) {
             return await this.invokeTauri<string>('read_file', { path: tempPath });
           }
@@ -287,12 +293,13 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     saveFile: async (path: string, content: string): Promise<boolean> => {
       try {
-        if (this.platform.isMobile && path.startsWith('content://') && (window as any).AndroidBridge) {
+        const androidBridge = getAndroidBridge();
+        if (this.platform.isMobile && path.startsWith('content://') && androidBridge?.saveToSaf) {
           // Write to a temporary POSIX file in the sandboxed app cache, then bridge to SAF
           const tempPath = `/data/user/0/com.cntxt.desktop/cache/saf_write_temp.txt`;
           const writeSuccess = await this.invokeTauriVoid('write_file', { path: tempPath, content });
           if (writeSuccess) {
-            return (window as any).AndroidBridge.saveToSaf(path, tempPath);
+            return androidBridge.saveToSaf(path, tempPath);
           }
           return false;
         }
@@ -575,8 +582,9 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       (('ontouchstart' in window || (navigator.maxTouchPoints > 0)) && window.innerWidth < 768)
     ),
     consumeSharedText: () => {
-      if (typeof window !== 'undefined' && (window as any).AndroidBridge?.consumeSharedText) {
-        return (window as any).AndroidBridge.consumeSharedText() || null;
+      const androidBridge = getAndroidBridge();
+      if (androidBridge?.consumeSharedText) {
+        return androidBridge.consumeSharedText() || null;
       }
       return null;
     }

@@ -15,7 +15,19 @@ const FORBIDDEN_TOKENS = [
 ];
 
 const ROOT_SRC = path.resolve('src');
-const EXCLUDED_DIR = path.resolve('src/adapters');
+
+// Explicit boundary adapters that are authorized to access platform/DOM APIs
+const ALLOWED_PLATFORM_ADAPTERS = new Set([
+  path.resolve('src/adapters/tauriRuntimeAdapter.ts'),
+  path.resolve('src/adapters/browserRuntimeAdapter.ts'),
+  path.resolve('src/adapters/browserIndexedDB.ts'),
+  path.resolve('src/adapters/androidBridgeHelper.ts'),
+  path.resolve('src/adapters/tabSessionCache.ts'),
+  path.resolve('src/adapters/domHelper.ts'),
+  path.resolve('src/adapters/runtimeBridge.tsx'),
+  path.resolve('src/adapters/eventDispatcher.ts'),
+  path.resolve('src/adapters/index.ts'),
+]);
 
 let totalViolations = 0;
 let filesScanned = 0;
@@ -27,11 +39,11 @@ function scanDirectory(dir) {
     const fullPath = path.join(dir, entry.name);
 
     if (entry.isDirectory()) {
-      if (fullPath === EXCLUDED_DIR) {
-        continue;
-      }
       scanDirectory(fullPath);
     } else if (entry.isFile() && /\.(ts|tsx|js|jsx)$/.test(entry.name)) {
+      if (ALLOWED_PLATFORM_ADAPTERS.has(fullPath)) {
+        continue;
+      }
       filesScanned++;
       checkFile(fullPath);
     }
@@ -43,6 +55,10 @@ function checkFile(filePath) {
   const lines = content.split('\n');
 
   lines.forEach((line, index) => {
+    if (line.includes('// platform-leak-ignore')) {
+      return;
+    }
+
     for (const token of FORBIDDEN_TOKENS) {
       if (line.includes(token)) {
         console.error(
@@ -56,13 +72,13 @@ function checkFile(filePath) {
   });
 }
 
-console.log('🔍 Checking for platform leaks outside src/adapters/ ...');
+console.log('🔍 Checking for platform leaks across codebase (excluding authorized adapters) ...');
 scanDirectory(ROOT_SRC);
 
 if (totalViolations > 0) {
   console.error(`\n❌ Failed with ${totalViolations} platform leak violation(s) across ${filesScanned} files scanned.`);
   process.exit(1);
 } else {
-  console.log(`\x1b[32m✔ Clean!\x1b[0m Scanned ${filesScanned} files. Zero platform leaks found outside src/adapters/.`);
+  console.log(`\x1b[32m✔ Clean!\x1b[0m Scanned ${filesScanned} files. Zero platform leaks found outside authorized adapters.`);
   process.exit(0);
 }

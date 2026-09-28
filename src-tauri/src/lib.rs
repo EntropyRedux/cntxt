@@ -40,15 +40,7 @@ async fn get_system_info(window: tauri::Window) -> Result<Value, String> {
     }))
 }
 
-#[tauri::command]
-async fn open_external(
-    window: tauri::Window,
-    url: String,
-) -> Result<(), String> {
-    if !commands::is_authorized_window(&window) {
-        return Err("Unauthorized window origin for external process execution".into());
-    }
-
+pub fn validate_external_url(url: &str) -> Result<&str, String> {
     let trimmed = url.trim();
     if !trimmed.starts_with("https://") && !trimmed.starts_with("http://") {
         return Err("Only https:// and http:// URLs are permitted".into());
@@ -58,6 +50,19 @@ async fn open_external(
     if trimmed.chars().any(|c| forbidden_chars.contains(&c)) {
         return Err("URL contains illegal characters".into());
     }
+    Ok(trimmed)
+}
+
+#[tauri::command]
+async fn open_external(
+    window: tauri::Window,
+    url: String,
+) -> Result<(), String> {
+    if !commands::is_authorized_window(&window) {
+        return Err("Unauthorized window origin for external process execution".into());
+    }
+
+    let trimmed = validate_external_url(&url)?;
 
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {

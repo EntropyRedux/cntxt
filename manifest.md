@@ -18,10 +18,10 @@ All background processes (live token estimation, autosave loop, live markdown sy
 - Experimental Settings Visibility: Controlled by `settings.enableExperimentalSettings` (default: `false`).
 
 ### Quality & Verification Gates
-- Playwright 1.63.0 suite (`npm run test:e2e`): 21 Chromium tests green across 5 spec files (`e2e/editor`, `e2e/empty-state`, `e2e/preview`, `e2e/ribbon`, `e2e/slash-menu`), driven by `e2e/fixtures.ts` demo-mode bootstrap (`window.__CONTEXTPAD_DEMO__`).
-- Unit suite: 223 Vitest tests across 24 suites (`npm test`) 100% passing.
-- Platform Purity: 0 platform leaks across 118 files (`npm run lint`), 100% contract parity.
-- Signed Installers: Official NSIS setup (`dist-installer/CNTXT_0.3.0_x64-setup.exe`) and WiX MSI (`dist-installer/CNTXT_0.3.0_x64_en-US.msi`) signed with SHA256 Authenticode and DigiCert RFC 3161 timestamps. Standalone portable in `dist-portable/CNTXT-portable.exe`.
+- Playwright 1.63.0 suite (`npm run test:e2e`): 23 Chromium tests green across 6 spec files (`e2e/actionSandboxRealm`, `e2e/editor`, `e2e/empty-state`, `e2e/preview`, `e2e/ribbon`, `e2e/slash-menu`).
+- Unit suite: 361 Vitest tests across 37 suites (`npm test`) 100% passing.
+- Native Rust security suite: 4 tests passing (`cargo test`) verifying path validation, URL character filtering, and system root protection.
+- Platform Purity: 0 platform leaks across 122 files (`npm run lint`), 100% contract parity.
 
 ---
 

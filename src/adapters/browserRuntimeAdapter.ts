@@ -438,15 +438,15 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     getItem: async (key: string): Promise<string | null> => {
       const item = await browserDB.getItem(key);
       if (item !== null) return item;
-      // In web demo/test environment, seed initial prototype mocks from quarantine on first empty read
+      // In web demo/test environment, seed initial default presets on first empty read
       if (key === STORAGE_KEYS.ACTIONS) {
-        const { DEFAULT_ACTIONS } = await import('../../mocks/index');
+        const { DEFAULT_ACTIONS } = await import('../constants/defaultPresets');
         const serialized = JSON.stringify(DEFAULT_ACTIONS);
         await browserDB.setItem(key, serialized);
         return serialized;
       }
       if (key === STORAGE_KEYS.TEMPLATES) {
-        const { DEFAULT_TEMPLATES } = await import('../../mocks/index');
+        const { DEFAULT_TEMPLATES } = await import('../constants/defaultPresets');
         const serialized = JSON.stringify(DEFAULT_TEMPLATES);
         await browserDB.setItem(key, serialized);
         return serialized;

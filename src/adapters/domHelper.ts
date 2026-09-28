@@ -285,7 +285,7 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
   if (!dirtyHtml) return '';
 
   if (typeof DOMParser === 'undefined') {
-    // Regex fallback for non-DOM environments
+    // Regex fallback for non-DOM / headless testing environments
     return dirtyHtml
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
@@ -294,8 +294,9 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
       .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
       .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '')
       .replace(/\s+on[a-zA-Z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s&]+)/gi, '')
-      .replace(/href\s*=\s*["']?\s*(?:javascript|file|vbscript):[^"'>\s]*/gi, 'href="#"')
-      .replace(/src\s*=\s*["']?\s*(?:javascript|file|vbscript|data):[^"'>\s]*/gi, '');
+      .replace(/(?:href|xlink:href|formaction)\s*=\s*["']?\s*(?:javascript|file|vbscript|data):[^"'>\s]*/gi, 'href="#"')
+      .replace(/(?:src|srcset)\s*=\s*["']?\s*(?:javascript|file|vbscript|data):[^"'>\s]*/gi, '')
+      .replace(/\bstyle\s*=\s*["'][^"']*(?:position|z-index|top|bottom|left|right)[^"']*["']/gi, '');
   }
 
   try {
@@ -310,7 +311,7 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
 
     const allElements = doc.querySelectorAll('*');
     allElements.forEach(el => {
-      // Strip event handlers (on*)
+      // 1. Strip event handlers (on*)
       const attrsToRemove: string[] = [];
       for (let i = 0; i < el.attributes.length; i++) {
         const attrName = el.attributes[i].name;
@@ -320,49 +321,69 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
       }
       attrsToRemove.forEach(attr => el.removeAttribute(attr));
 
-      // Sanitize href
-      if (el.hasAttribute('href')) {
-        const href = (el.getAttribute('href') || '').trim();
-        const lower = href.toLowerCase();
-        if (
-          lower.startsWith('javascript:') ||
-          lower.startsWith('file:') ||
-          lower.startsWith('vbscript:') ||
-          lower.startsWith('data:')
-        ) {
-          el.setAttribute('href', '#');
-        }
-      }
-
-      // Sanitize src
-      if (el.hasAttribute('src')) {
-        const src = (el.getAttribute('src') || '').trim();
-        const lower = src.toLowerCase();
-        if (
-          lower.startsWith('javascript:') ||
-          lower.startsWith('file:') ||
-          lower.startsWith('vbscript:') ||
-          lower.startsWith('data:')
-        ) {
-          el.removeAttribute('src');
-        }
-      }
-
-      // Sanitize inline style attributes on non-KaTeX elements (prevent UI redressing)
-      if (el.hasAttribute('style')) {
-        const isKatex = el.closest('.katex, .cm-table-math') !== null;
-        if (!isKatex) {
-          const style = el.getAttribute('style') || '';
-          // Strip dangerous positioning properties from arbitrary user styles
-          const sanitizedStyle = style
-            .replace(/(?:^|;)\s*(?:position|z-index|top|bottom|left|right)\s*:[^;]*/gi, '')
-            .trim()
-            .replace(/^;+/, '');
-          if (sanitizedStyle) {
-            el.setAttribute('style', sanitizedStyle);
-          } else {
-            el.removeAttribute('style');
+      // 2. Sanitize href, formaction, and SVG xlink:href (H-02)
+      ['href', 'formaction', 'xlink:href'].forEach(attr => {
+        if (el.hasAttribute(attr)) {
+          const val = (el.getAttribute(attr) || '').trim();
+          const lower = val.toLowerCase();
+          if (
+            lower.startsWith('javascript:') ||
+            lower.startsWith('file:') ||
+            lower.startsWith('vbscript:') ||
+            lower.startsWith('data:')
+          ) {
+            el.setAttribute(attr, '#');
           }
+        }
+      });
+
+      // 3. Sanitize src and srcset
+      ['src', 'srcset'].forEach(attr => {
+        if (el.hasAttribute(attr)) {
+          const src = (el.getAttribute(attr) || '').trim();
+          const lower = src.toLowerCase();
+          if (
+            lower.startsWith('javascript:') ||
+            lower.startsWith('file:') ||
+            lower.startsWith('vbscript:') ||
+            lower.startsWith('data:')
+          ) {
+            el.removeAttribute(attr);
+          }
+        }
+      });
+
+      // 4. Sanitize inline style attributes (C-03 UI-redressing & clickjacking prevention)
+      if (el.hasAttribute('style')) {
+        const style = el.getAttribute('style') || '';
+
+        // Only genuine inline math spans created by the parser can retain non-stacking layout styles
+        // Non-span elements (like arbitrary <div> with user class="katex") are NEVER KaTeX
+        const isVerifiedMathSpan =
+          el.tagName.toLowerCase() === 'span' &&
+          (el.hasAttribute('data-cntxt-math') ||
+            el.closest('[data-cntxt-math]') !== null ||
+            el.closest('span.cm-table-math') !== null);
+
+        // ALWAYS unconditionally strip fixed/sticky positioning and z-index from ALL elements without exception
+        let sanitizedStyle = style.replace(
+          /(?:^|;)\s*(?:position\s*:\s*fixed|position\s*:\s*sticky|z-index)\s*:[^;]*/gi,
+          ''
+        );
+
+        if (!isVerifiedMathSpan) {
+          // Arbitrary user elements are completely prohibited from using any positioning properties
+          sanitizedStyle = sanitizedStyle.replace(
+            /(?:^|;)\s*(?:position|z-index|top|bottom|left|right)\s*:[^;]*/gi,
+            ''
+          );
+        }
+
+        sanitizedStyle = sanitizedStyle.trim().replace(/^;+/, '');
+        if (sanitizedStyle) {
+          el.setAttribute('style', sanitizedStyle);
+        } else {
+          el.removeAttribute('style');
         }
       }
     });

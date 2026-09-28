@@ -62,7 +62,9 @@ export default defineConfig(() => {
     },
     envPrefix: ['VITE_', 'TAURI_'],
     test: {
+      environment: 'node',
       exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+      setupFiles: ['./tests/setup/vitest.setup.ts'],
     },
     esbuild: {
       sourcemap: false,
