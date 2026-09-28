@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.3.10] — 2026-09-28
+## [0.4.0] — 2026-09-28
 
 ### Full Codebase Security Hardening & Option A Remediation
 - **Physical Mock Quarantine Decoupling (Pillar 1)**:

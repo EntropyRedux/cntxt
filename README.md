@@ -2,16 +2,16 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.3.9) — FG-09 Large Document Truncation & Mobile UI Ergonomics, FG-08 Android APK native mobile runtime, dual-entry-point architecture, FG-07 Editor Resiliency, multi-tab state preservation, and power user tools complete. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.4.0) — Full Codebase Security Remediation, Dedicated Worker Realm Isolation, zero mock imports in production code, and hardened native IPC architecture complete. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.3.9)
+## Downloads (v0.4.0)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.3.9_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.9/CNTXT_0.3.9_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.3.9_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.9/CNTXT_0.3.9_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.3.9_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.9/CNTXT_0.3.9_portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.4.0_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.4.0/CNTXT_0.4.0_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.4.0_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.4.0/CNTXT_0.4.0_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.4.0_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.4.0/CNTXT_0.4.0_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
@@ -97,14 +97,14 @@ are found.
 
 ## Current Status & Verification
  
-- **Production Release (v0.3.9)**:
-  - **Large Document Truncation & TOC Chunk Loading**: Intercepts large files exceeding configurable thresholds (`enableLargeDocDetection`, default 500KB / 10,000 lines; 150KB / 2,500 lines in touch mode) with an interactive table-of-contents checklist to load individual sections or the entire file safely.
-  - **Modernized Adaptive Variable Filler Modal**: Dual-mode layout featuring desktop 50/50 split and mobile full-screen segmented sheet (`[ Form ]` / `[ Preview ]`), dynamic `window.visualViewport` sizing to clear software keyboards, sticky `< Prev` / `Next >` navigation strip with required count, and auto-growing textareas.
-  - **Granular Variable Extraction Operations**: 4 built-in action presets under `EXTRACTION` category: `Extract Answered Variables` (Markdown summary table), `Extract Rows With Variables` (filtered rows), `Extract Rows Without Variables` (static boilerplate), and `Selection: Extract Variables` (checklist).
-  - **Draggable & Edge-Anchored Variable Navigator FAB**: Original canvas-level floating navigator upgraded with zero-latency 120fps direct drag transforms, jitter-free hover, and magnetic horizontal edge-snapping (12px left/right margins) within the editor canvas. Single-tap to jump to next variable, double-tap to open form filler.
-  - **Signed Windows Installer Packages**: Official Windows NSIS setup (`dist-installer/CNTXT_0.3.9_x64-setup.exe`), WiX MSI (`dist-installer/CNTXT_0.3.9_x64_en-US.msi`), and standalone zero-install executable (`dist-portable/CNTXT_0.3.9_portable.exe`), digitally signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
-  - **Automated Test Coverage**: 341 unit tests passing across 36 suites via Vitest (`npm test`); 21 Playwright E2E tests green in headless Chromium (`npm run test:e2e`).
-  - **Platform Purity**: `npm run lint` scans 121 files with zero platform leaks outside `src/adapters/` and 100% canonical contract parity.
+- **Production Release (v0.4.0)**:
+  - **Zero Mock Imports in Production**: Complete physical isolation of default presets in `src/constants/defaultPresets.ts` with verified zero imports from `mocks/` across `src/`.
+  - **Dedicated Web Worker Realm Isolation**: 24-member `SandboxAPI` matrix executed inside isolated Web Worker realm with stripped ambient network globals (`fetch`, `XMLHttpRequest`, `WebSocket`, `importScripts`, `indexedDB`) and deeply frozen prototype hierarchies.
+  - **Option A CSP Alignment**: Desktop CSP retaining `'unsafe-eval'` for full custom action compatibility while enforcing physical worker isolation off the main DOM thread.
+  - **HTML Sanitization & KaTeX Layout Tokenization**: Mathematical collision-avoidance tokenization preserving KaTeX math typography while strictly blocking script injection, fixed/sticky clickjacking, and dangerous URI schemes.
+  - **Signed Windows Installer Packages**: Official Windows NSIS setup (`dist-installer/CNTXT_0.4.0_x64-setup.exe`), WiX MSI (`dist-installer/CNTXT_0.4.0_x64_en-US.msi`), and standalone zero-install executable (`dist-portable/CNTXT_0.4.0_portable.exe`), digitally signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
+  - **Automated Test Coverage**: 361 unit tests passing across 37 suites via Vitest (`npm test`); 23 Playwright E2E tests green in headless Chromium (`npm run test:e2e`); 4 Rust security tests passing (`cargo test`).
+  - **Platform Purity**: `npm run lint` scans 122 files with zero platform leaks outside authorized adapters and 100% canonical contract parity.
 - **Living Context & Roadmap**:
   - Full living context and architecture logs: `generated-documents/context/living_context.md`.
   - Release history and change notes: [CHANGELOG.md](CHANGELOG.md).

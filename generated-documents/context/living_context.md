@@ -744,13 +744,19 @@ The following features were evaluated during the desktop v0.3.8 cycle and identi
    - *Mobile Need*: On touch devices, inserting heading anchors or sub-sections into existing notes is cumbersome.
    - *Specification*: In the mobile TOC outline drawer, allow tapping an item with an "Append to Selection / Insert at Cursor" touch button, inserting the referenced section or link directly at the current caret position.
 
-### 17. Full Codebase Security Hardening & Option A Remediation (2026-09-28)
+### 17. Full Codebase Security Hardening & Option A Remediation (v0.4.0 Release — 2026-09-28)
 - **Zero Mock Imports in Production (`src/`)**: Decoupled default template and action configurations into `src/constants/defaultPresets.ts`. Re-exported in `mocks/index.ts` strictly for test fixtures. Verified `src/` has genuine zero imports from `mocks/`.
 - **Dedicated Web Worker Action Sandbox**: Built `src/services/sandboxApiFactory.ts` with complete 24-member `SandboxAPI` matrix. Hardened `actionWorker.ts` with `DedicatedWorkerGlobalScope` validation, stripped ambient network APIs (`fetch`, `XMLHttpRequest`, `WebSocket`, `importScripts`, `indexedDB` set to `undefined`), and deeply frozen prototype hierarchies (`Object`, `Function`, `Array`).
 - **Option A CSP Alignment & TR-003 Re-affirmation**: Desktop CSP retains `'unsafe-eval'` for dynamic custom actions while isolating script execution entirely inside dedicated workers. Re-affirmed TR-003 with physical realm isolation rationale.
 - **HTML Sanitization & KaTeX Layout Tokenization**: Tagged LaTeX math blocks with unique nonces. Hardened `domHelper.ts` to unconditionally strip `position: fixed`, `position: sticky`, `z-index`, and dangerous `xlink:href` schemes across all elements, preventing clickjacking/redressing while allowing KaTeX math typography.
 - **Android SAF Bridge Encapsulation**: Created `src/adapters/androidBridgeHelper.ts` to safely wrap mobile Java bridge interfaces. Replaced raw window escapes in `src/adapters/tauriRuntimeAdapter.ts` and `src/store/tabStore.ts`.
 - **Cargo Feature Gating & External URL Validation**: Extracted `validate_external_url` in `src-tauri/src/lib.rs` and added security test coverage in `src-tauri/src/tests/security_tests.rs`. Added `default = ["devtools"]` in `src-tauri/Cargo.toml`.
+- **Packaging & Version Bump**:
+  - Bumped version to `0.4.0` across `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`.
+  - Windows release executables built and Authenticode signed with SHA256 + RFC 3161 timestamps:
+    - Portable executable: `dist-portable/CNTXT_0.4.0_portable.exe`
+    - Standard NSIS setup: `dist-installer/CNTXT_0.4.0_x64-setup.exe`
+    - Enterprise MSI installer: `dist-installer/CNTXT_0.4.0_x64_en-US.msi`
 - **All 5 Verification Gates Passing**:
   1. `npm run lint` — 0 errors, 122 files clean, contracts 100% in sync.
   2. `npm test` — 37/37 suites, 361/361 tests passing.
