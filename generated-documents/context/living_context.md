@@ -13,22 +13,22 @@ Active Stage:
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-09 Complete & Verified; Android APK Native Mobile Runtime Live)
-  [x] Refactor (Full Codebase Remediation Plan v4: Table KaTeX HTML/CSS Sanitization, Dedicated Web Worker Sandbox Isolation, Native Confirmation & Protected Roots, CSP Hardening & Zero-Mock Quarantine)
+  [ ] Refactor (Remediation Backlog: CSP Worker Execution, Sandbox Isolation, KaTeX Style Security, Zero-Mock Presets)
   [x] Testing (Vitest 348/348 Live across 36 suites, Playwright E2E Live, Rust Security Test Suite Live)
-  [x] Packaging & Release (Signed Windows Setup/MSI in dist-installer/ + Standalone Portable in dist-portable/)
+  [ ] Packaging & Release (Gated until Remediation Backlog clean)
 
-Current Feature Group: Full Codebase Remediation (Plan v4)
-Status: completed / verified (2026-09-28)
+Current Feature Group: Full Codebase Audit Remediation Backlog
+Status: in-progress (remediation required following Pass 2 audit FAIL)
 Background Processes: none
 Unit Tests: written [x] passing [x] (348/348 unit tests across 36 test suites clean, 3 Rust security tests clean)
-Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-27.md (Completed)
+Active Plan: /generated-documents/audits/raw_findings_full_codebase_2026-09-28.md (Remediation Backlog)
 Notes:
-- Task 1.1: Markdown Table Cell & Widget Sanitization with KaTeX Layout Preservation (pre-extraction of $...$ into token spans, entity escaping, layout style retention).
-- Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation with complete 24-member API matrix (snapshot-journal protocol, modern base64, watchdog timer, AST/prototype scanner).
-- Task 1.3: Native IPC Authorization, Native Confirmation (`rfd::MessageDialog` spawn_blocking) for delete and external links, APPDATA/LOCALAPPDATA system roots, devtools debug-gated, session token eliminated.
-- Task 1.4: Production CSP Hardened (`script-src 'self'`; unsafe-inline and unsafe-eval completely removed from main realm).
-- Task 2.1 - 2.4: Platform leak inversion (`consumeSharedText`), error toast notifications on critical IPC failures, physical mock quarantine 100% clean (zero imports from `mocks/` in `src/`), dead code deleted (`TitleBar.tsx`, `MenuBar.tsx`, `MobileBottomNav.tsx`), `marked` dependency removed, `dist-android/` quarantined in `.gitignore`.
-Last Audit Reconciliation: 2026-09-28 — PASS (Plan v4 Reconciled)
+- Task 1.1: Markdown Table Cell & Widget Sanitization with KaTeX Layout Preservation (pre-extraction of $...$ into token spans, entity escaping).
+- Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation with complete 24-member API matrix.
+- Task 1.3: Native IPC Authorization, Native Confirmation (`rfd::MessageDialog` spawn_blocking) for delete and external links, APPDATA/LOCALAPPDATA system roots, devtools debug-gated.
+- Task 1.4: Production CSP Hardened (`script-src 'self'`).
+- Task 2.1 - 2.4: Platform leak inversion (`consumeSharedText`), error toast notifications on critical IPC failures, dead code deleted (`TitleBar.tsx`, `MenuBar.tsx`, `MobileBottomNav.tsx`), `marked` dependency removed, `dist-android/` quarantined in `.gitignore`.
+Last Audit Reconciliation: 2026-09-28 — FAIL (Pass 2 Reconciled: 4 Critical, 5 High defects pending remediation)
 Last Git Checkpoint: 2026-09-28 — Full Codebase Remediation v4 Completed
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
