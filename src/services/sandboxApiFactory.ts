@@ -33,6 +33,37 @@ export type WorkerOutMessage =
   | { type: 'DIALOG_PROMPT'; reqId: string; title: string; defaultValue: string }
   | { type: 'DIALOG_CONFIRM'; reqId: string; title: string; message: string };
 
+
+export const FORBIDDEN_ACTION_PATTERN = /\bconstructor\b|\[\s*['"`]constructor['"`]\s*\]|__proto__|prototype|\beval\b|\bimport\s*\(|\bimport\b/i;
+
+export function validateActionSyntax(code: string): void {
+  if (FORBIDDEN_ACTION_PATTERN.test(code)) {
+    throw new Error('Security Error: Prototype, constructor, and dynamic import access are prohibited in sandboxed actions.');
+  }
+}
+
+export function isValidActionMutation(m: unknown): m is ActionMutation {
+  if (!m || typeof m !== 'object') return false;
+  const item = m as Record<string, unknown>;
+  switch (item.type) {
+    case 'setText':
+    case 'replaceSelection':
+    case 'insertAtCursor':
+    case 'copyToClipboard':
+      return typeof item.text === 'string';
+    case 'wrapSelection':
+      return typeof item.before === 'string' && typeof item.after === 'string';
+    case 'toast':
+      return typeof item.message === 'string' && ['info', 'success', 'warning', 'error'].includes(item.toastType as string);
+    case 'openTab':
+      return typeof item.title === 'string' && typeof item.content === 'string';
+    case 'openVariableModal':
+      return true;
+    default:
+      return false;
+  }
+}
+
 export interface SandboxDialog {
   prompt: (title: string, defaultValue?: string) => Promise<string | null>;
   confirm: (titleOrMessage: string, message?: string) => Promise<boolean>;

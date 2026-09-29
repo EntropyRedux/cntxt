@@ -20,11 +20,11 @@ Active Stage:
 Current Feature Group: Full Codebase Audit Remediation Backlog (R2 Verification Follow-up)
 Status: in-progress (remediation required following Pass 1 R2 audit FAIL on C-02)
 Background Processes: none
-Unit Tests: written [x] passing [x] (361/361 unit tests across 37 test suites clean, 4 Rust security tests clean, 23/23 Playwright E2E clean)
+Unit Tests: written [x] passing [x] (363/363 unit tests across 37 test suites clean, 4 Rust security tests clean, 23/23 Playwright E2E clean)
 Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-29.md (Plan v6)
 Notes:
 - Task 1.1: Markdown Table Cell & Widget Sanitization with KaTeX Layout Preservation (pre-extraction of $...$ into token spans, entity escaping).
-- Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation (C-02 capability restriction pending in upcoming remediation phase).
+- Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation (C-02 / L-02 / M-03 partial implemented): ambient capabilities neutralized across self/globalThis/prototypes (fetch, xhr, ws, indexedDB, caches, location, postMessage); nativePostMessage private binding; validateActionSyntax pre-scan blocks dynamic imports and constructor climbing; isValidActionMutation schema validation; crypto.randomUUID for dialog requests.
 - Task 1.3: Native IPC Authorization, Native Confirmation (`rfd::MessageDialog` spawn_blocking) for delete and external links, APPDATA/LOCALAPPDATA system roots, devtools debug-gated.
 - Task 1.4: Production CSP: `script-src 'self' 'unsafe-eval'` (unsafe-eval active pending C-02 structured action AST / worker capability isolation).
 - Task 2.1 - 2.4: Platform leak inversion (`consumeSharedText`), error toast notifications on critical IPC failures, dead code deleted (`TitleBar.tsx`, `MenuBar.tsx`, `MobileBottomNav.tsx`), `marked` dependency removed, `dist-android/` quarantined in `.gitignore`.

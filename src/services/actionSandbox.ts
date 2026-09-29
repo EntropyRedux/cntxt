@@ -11,7 +11,9 @@ import {
   ActionMutation,
   WorkerInMessage,
   WorkerOutMessage,
-  createSandboxAPI
+  createSandboxAPI,
+  validateActionSyntax,
+  isValidActionMutation
 } from './sandboxApiFactory';
 
 function commitMutations(
@@ -21,6 +23,10 @@ function commitMutations(
 ) {
   const activeTab = getActiveTab ? getActiveTab() : undefined;
   for (const m of mutations) {
+    if (!isValidActionMutation(m)) {
+      console.warn('[CNTXT Sandbox] Rejected malformed action mutation:', m);
+      continue;
+    }
     switch (m.type) {
       case 'setText':
         if (typeof rawApi?.setText === 'function') rawApi.setText(m.text);
@@ -78,11 +84,7 @@ function commitMutations(
  * with resilient fallback runner for headless testing environments.
  */
 export async function executeInSandbox(code: string, rawApi?: Partial<SandboxAPI>): Promise<unknown> {
-  // Pre-flight defensive scanner blocking prototype tampering and unauthorized dynamic imports
-  const FORBIDDEN_PATTERN = /\bconstructor\b|\[\s*['"`]constructor['"`]\s*\]|__proto__|prototype|\beval\b|\bimport\s*\(|\bimport\b/i;
-  if (FORBIDDEN_PATTERN.test(code)) {
-    throw new Error('Security Error: Prototype, constructor, and dynamic import access are prohibited in sandboxed actions.');
-  }
+  validateActionSyntax(code);
 
   const getActiveTab = () => {
     const state = useTabStore.getState();

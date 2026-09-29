@@ -82,5 +82,33 @@ describe('executeInSandbox Security Hardening', () => {
     const res = await executeInSandbox('return api.evaluateFormula("10 + 20");', mockApi);
     expect(res).toBe(30);
   });
-});
+  it('validates mutations with isValidActionMutation schema guard', async () => {
+    const { isValidActionMutation } = await import('../src/services/sandboxApiFactory');
+    expect(isValidActionMutation({ type: 'setText', text: 'valid' })).toBe(true);
+    expect(isValidActionMutation({ type: 'toast', message: 'ok', toastType: 'info' })).toBe(true);
+    expect(isValidActionMutation({ type: 'openTab', title: 'Doc', content: '# Hi' })).toBe(true);
+    
+    // Malformed mutations rejected
+    expect(isValidActionMutation(null)).toBe(false);
+    expect(isValidActionMutation({})).toBe(false);
+    expect(isValidActionMutation({ type: 'unknownType' })).toBe(false);
+    expect(isValidActionMutation({ type: 'setText' })).toBe(false); // missing text
+    expect(isValidActionMutation({ type: 'toast', message: 123, toastType: 'invalid' })).toBe(false);
+  });
 
+  it('notifies user on formatJSON syntax errors via toast mutation', async () => {
+    let notifiedMsg = '';
+    let notifiedType = '';
+    const recordingApi = {
+      ...mockApi,
+      toast: (msg: string, type?: string) => {
+        notifiedMsg = msg;
+        notifiedType = type || '';
+      }
+    };
+    const res = await executeInSandbox('return api.utils.formatJSON("{ bad json }");', recordingApi);
+    expect(res).toBe('{ bad json }');
+    expect(notifiedMsg).toContain('JSON format error');
+    expect(notifiedType).toBe('warning');
+  });
+});
