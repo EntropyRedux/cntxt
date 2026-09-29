@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { ErrorBoundary, ErrorBoundaryProps, ErrorBoundaryState } from '../src/components/Common/ErrorBoundary';
 

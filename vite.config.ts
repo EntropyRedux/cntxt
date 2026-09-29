@@ -22,7 +22,6 @@ export default defineConfig(() => {
         'zustand',
         'lucide-react',
         'canvas-confetti',
-        'marked',
         'katex',
         '@codemirror/state',
         '@codemirror/view',

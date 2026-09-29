@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { fileURLToPath } from 'url';
 import { BrowserRuntimeAdapter } from '../src/adapters/browserRuntimeAdapter';
 import { useSettingsStore } from '../src/store/settingsStore';
 
@@ -73,10 +74,13 @@ describe('DeviceProfile mobile detection (browser adapter decision table)', () =
     expect(p.os).toBe('web');
   });
 
-  it('tauri adapter falls back to windows while browser falls back to web (documented divergence)', async () => {
+    it('tauri adapter falls back to windows while browser falls back to web (documented divergence)', async () => {
     // Verified from source: identical ua/platform chains except the terminal default.
-    const browserSrc = await import('fs').then(fs => fs.readFileSync('src/adapters/browserRuntimeAdapter.ts', 'utf-8'));
-    const tauriSrc = await import('fs').then(fs => fs.readFileSync('src/adapters/tauriRuntimeAdapter.ts', 'utf-8'));
+    const fs = await import('fs');
+    const path = await import('path');
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const browserSrc = fs.readFileSync(path.resolve(projectRoot, 'src/adapters/browserRuntimeAdapter.ts'), 'utf-8');
+    const tauriSrc = fs.readFileSync(path.resolve(projectRoot, 'src/adapters/tauriRuntimeAdapter.ts'), 'utf-8');
     expect(browserSrc).toContain("return 'web';");
     expect(tauriSrc).toContain("return 'windows';");
   });

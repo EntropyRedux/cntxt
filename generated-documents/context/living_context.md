@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.36
-Last Updated: 2026-09-28
-Last Updated By: Production Implementation Agent (Full Codebase Remediation Plan v4 Finalized)
+Version: v1.38
+Last Updated: 2026-09-29
+Last Updated By: Prod Agent (Post-Verification & Test Infrastructure Remediation)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -12,24 +12,26 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-09 Complete & Verified; Android APK Native Mobile Runtime Live)
-  [ ] Refactor (Remediation Backlog: CSP Worker Execution, Sandbox Isolation, KaTeX Style Security, Zero-Mock Presets)
-  [x] Testing (Vitest 348/348 Live across 36 suites, Playwright E2E Live, Rust Security Test Suite Live)
+  [ ] Feature Implementation (FG-01..FG-09 Complete & Verified; Android APK Native Mobile Runtime Live)
+  [x] Refactor (Remediation Backlog: C-02 Sandbox Capability Isolation, IPC Authorization, LCD Re-baselining)
+    [x] Testing (Vitest 361/361 Live across 37 suites, Playwright E2E 23/23 Live, Rust Security Test Suite 4/4 Live)
   [ ] Packaging & Release (Gated until Remediation Backlog clean)
 
-Current Feature Group: Full Codebase Audit Remediation Backlog
-Status: in-progress (remediation required following Pass 2 audit FAIL)
+Current Feature Group: Full Codebase Audit Remediation Backlog (R2 Verification Follow-up)
+Status: in-progress (remediation required following Pass 1 R2 audit FAIL on C-02)
 Background Processes: none
-Unit Tests: written [x] passing [x] (348/348 unit tests across 36 test suites clean, 3 Rust security tests clean)
-Active Plan: /generated-documents/audits/raw_findings_full_codebase_2026-09-28.md (Remediation Backlog)
+Unit Tests: written [x] passing [x] (361/361 unit tests across 37 test suites clean, 4 Rust security tests clean, 23/23 Playwright E2E clean)
+Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-28.md (Plan v5 under revision for C-02)
 Notes:
 - Task 1.1: Markdown Table Cell & Widget Sanitization with KaTeX Layout Preservation (pre-extraction of $...$ into token spans, entity escaping).
-- Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation with complete 24-member API matrix.
+- Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation (C-02 capability restriction pending in upcoming remediation phase).
 - Task 1.3: Native IPC Authorization, Native Confirmation (`rfd::MessageDialog` spawn_blocking) for delete and external links, APPDATA/LOCALAPPDATA system roots, devtools debug-gated.
-- Task 1.4: Production CSP Hardened (`script-src 'self'`).
+- Task 1.4: Production CSP: `script-src 'self' 'unsafe-eval'` (unsafe-eval active pending C-02 structured action AST / worker capability isolation).
 - Task 2.1 - 2.4: Platform leak inversion (`consumeSharedText`), error toast notifications on critical IPC failures, dead code deleted (`TitleBar.tsx`, `MenuBar.tsx`, `MobileBottomNav.tsx`), `marked` dependency removed, `dist-android/` quarantined in `.gitignore`.
-Last Audit Reconciliation: 2026-09-28 — FAIL (Pass 2 Reconciled: 4 Critical, 5 High defects pending remediation)
-Last Git Checkpoint: 2026-09-28 — Full Codebase Remediation v4 Completed
+- Verification Gate Remediation (2026-09-29): Fixed test infrastructure for `errorBoundary.recovery.test.tsx` (restored `@testing-library/*`, installed `jsdom`, registered `@testing-library/jest-dom/vitest`); resolved project root path resolution in `deviceProfileMobile.test.ts`; verified clean compilation of `cargo test` (4/4 security tests); all 23 Playwright E2E tests clean.
+- Build Hygiene: Pruned removed `'marked'` from `vite.config.ts` `optimizeDeps.include`; standardized `index.html:8` comment encoding.
+Last Audit Reconciliation: 2026-09-28 — FAIL (Pass 1 R2 Re-audit: C-02 unaddressed, 3 gates red at commit 7bce8b0, LCD factual reconciliation required)
+Last Git Checkpoint: 2026-09-28 — Release v0.4.0 (gates now brought green in working tree)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
