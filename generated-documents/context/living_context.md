@@ -21,7 +21,7 @@ Current Feature Group: Full Codebase Audit Remediation Backlog (R2 Verification 
 Status: in-progress (remediation required following Pass 1 R2 audit FAIL on C-02)
 Background Processes: none
 Unit Tests: written [x] passing [x] (361/361 unit tests across 37 test suites clean, 4 Rust security tests clean, 23/23 Playwright E2E clean)
-Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-28.md (Plan v5 under revision for C-02)
+Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-29.md (Plan v6)
 Notes:
 - Task 1.1: Markdown Table Cell & Widget Sanitization with KaTeX Layout Preservation (pre-extraction of $...$ into token spans, entity escaping).
 - Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation (C-02 capability restriction pending in upcoming remediation phase).
