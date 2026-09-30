@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.38
-Last Updated: 2026-09-29
-Last Updated By: Prod Agent (Post-Verification & Test Infrastructure Remediation)
+Version: v1.39
+Last Updated: 2026-09-30
+Last Updated By: Prod Agent (Full Codebase Remediation v6 Implemented & Verified)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -13,25 +13,25 @@ Active Stage:
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
   [ ] Feature Implementation (FG-01..FG-09 Complete & Verified; Android APK Native Mobile Runtime Live)
-  [x] Refactor (Remediation Backlog: C-02 Sandbox Capability Isolation, IPC Authorization, LCD Re-baselining)
-    [x] Testing (Vitest 361/361 Live across 37 suites, Playwright E2E 23/23 Live, Rust Security Test Suite 4/4 Live)
-  [ ] Packaging & Release (Gated until Remediation Backlog clean)
+  [x] Refactor (Remediation Backlog: C-02, H-01, H-03, H-05, M-03, M-04, L-02, L-03 Completely Resolved & Verified)
+    [x] Testing (Vitest 364/364 Live across 37 suites, Playwright E2E 24/24 Live, Rust Security Test Suite 5/5 Live)
+  [ ] Packaging & Release (Ready for Pass 1 Re-Audit Verification)
 
-Current Feature Group: Full Codebase Audit Remediation Backlog (R2 Verification Follow-up)
-Status: in-progress (remediation required following Pass 1 R2 audit FAIL on C-02)
+Current Feature Group: Full Codebase Audit Remediation Backlog (Refactor Plan v6 Complete)
+Status: ready-for-audit (all gates 100% green; C-02, H-01, H-03, H-05, M-03, M-04, L-02, L-03 implemented and tested)
 Background Processes: none
-Unit Tests: written [x] passing [x] (363/363 unit tests across 37 test suites clean, 4 Rust security tests clean, 23/23 Playwright E2E clean)
-Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-29.md (Plan v6)
+Unit Tests: written [x] passing [x] (364/364 unit tests across 37 test suites clean, 5 Rust security tests clean, 24/24 Playwright E2E clean)
+Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-29.md (Plan v6 - Complete)
 Notes:
 - Task 1.1: Markdown Table Cell & Widget Sanitization with KaTeX Layout Preservation (pre-extraction of $...$ into token spans, entity escaping).
-- Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation (C-02 / L-02 / M-03 partial implemented): ambient capabilities neutralized across self/globalThis/prototypes (fetch, xhr, ws, indexedDB, caches, location, postMessage); nativePostMessage private binding; validateActionSyntax pre-scan blocks dynamic imports and constructor climbing; isValidActionMutation schema validation; crypto.randomUUID for dialog requests.
-- Task 1.3: Native IPC Authorization, Native Confirmation (`rfd::MessageDialog` spawn_blocking) for delete and external links, APPDATA/LOCALAPPDATA system roots, devtools debug-gated.
-- Task 1.4: Production CSP: `script-src 'self' 'unsafe-eval'` (unsafe-eval active pending C-02 structured action AST / worker capability isolation).
-- Task 2.1 - 2.4: Platform leak inversion (`consumeSharedText`), error toast notifications on critical IPC failures, dead code deleted (`TitleBar.tsx`, `MenuBar.tsx`, `MobileBottomNav.tsx`), `marked` dependency removed, `dist-android/` quarantined in `.gitignore`.
-- Verification Gate Remediation (2026-09-29): Fixed test infrastructure for `errorBoundary.recovery.test.tsx` (restored `@testing-library/*`, installed `jsdom`, registered `@testing-library/jest-dom/vitest`); resolved project root path resolution in `deviceProfileMobile.test.ts`; verified clean compilation of `cargo test` (4/4 security tests); all 23 Playwright E2E tests clean.
-- Build Hygiene: Pruned removed `'marked'` from `vite.config.ts` `optimizeDeps.include`; standardized `index.html:8` comment encoding.
-Last Audit Reconciliation: 2026-09-28 — FAIL (Pass 1 R2 Re-audit: C-02 unaddressed, 3 gates red at commit 7bce8b0, LCD factual reconciliation required)
-Last Git Checkpoint: 2026-09-28 — Release v0.4.0 (gates now brought green in working tree)
+- Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation (C-02 / H-05 / L-02 / M-03 Complete): ambient capabilities neutralized across self/globalThis/prototypes (fetch, xhr, ws, eventSource, worker, sharedWorker, broadcastChannel, importScripts, indexedDB, caches, location, postMessage); nativePostMessage private binding; validateActionSyntax pre-scan blocks dynamic imports and constructor climbing; isValidActionMutation schema validation; crypto.randomUUID for dialog requests; non-vacuous real worker tests in Playwright (3/3 passing).
+- Task 1.3: Native IPC Cryptographic Token Authorization (H-01 Complete): 256-bit ephemeral session token generated at Tauri startup; all mutating endpoints (file, storage, clipboard, secrets) validate token via is_authorized_request; automated token attachment in TauriRuntimeAdapter; tested in security_tests.rs (5/5 passing).
+- Task 1.4: Decoupled Android SAF from Tauri Adapter (H-03 Complete): created AndroidRuntimeAdapter extending TauriRuntimeAdapter; pruned all Android SAF branches from desktop adapter; check-platform-leaks verified clean (122 files scanned, 0 leaks).
+- Task 1.5: Inverted Demo Welcome Control (M-04 Complete): explicit setDemoWelcomeDisabled and isDemoWelcomeDisabled programmatic controls in tabStore.ts; test coverage in tabStore.test.ts (10/10 passing).
+- Task 1.6: Actionable Diagnostics (L-03 Complete): formatJSON dispatches warning toasts on parse exceptions instead of silent returns.
+- Verification Gate Snapshot (2026-09-30): npm run lint (0 errors, 122 files clean, 100% contract sync); cargo test (5/5 security tests); npm test (364/364 unit tests, 37 suites); npm run test:e2e (24/24 Playwright tests, 6 suites); npm run build (clean production build).
+Last Audit Reconciliation: 2026-09-28 — FAIL (Reconciled by Prod Agent via Refactor Plan v6, all findings now remediated)
+Last Git Checkpoint: 2026-09-30 — e012943 fix(sandbox,store): invert demo welcome control and verify true worker realm isolation
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
@@ -765,4 +765,32 @@ The following features were evaluated during the desktop v0.3.8 cycle and identi
   3. `cargo test` — 4/4 security tests passing.
   4. `npm run build` — Clean production bundle generated.
   5. `npm run test:e2e` — 23/23 Playwright tests passing.
-
+
+### 18. Full Codebase Remediation v6 & Dual-Agent Verification Preparation (2026-09-30)
+- **C-02 & H-05: Dedicated Web Worker Action Sandbox Capability Stripping & True Realm Verification**:
+  - Inside `src/services/actionWorker.ts`, ambient network and storage capabilities (`fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `Worker`, `SharedWorker`, `BroadcastChannel`, `importScripts`, `indexedDB`, `caches`, `location`, `postMessage`) are deleted, neutralized, and frozen across `self`, `globalThis`, and prototype chains before user code executes.
+  - `validateActionSyntax(code)` in `sandboxApiFactory.ts` pre-scans code for forbidden metaprogramming patterns, blocking dynamic imports (`import(...)`, `import.meta`), constructor climbers (`constructor.constructor`, `__proto__`), and `eval`.
+  - True worker realm verification tests in `e2e/actionSandboxRealm.spec.ts` execute against dedicated Web Workers in real browser contexts, confirming ambient capability stripping and security error rejections (3/3 passing, 24/24 E2E suite clean).
+- **H-01: Native IPC Cryptographic Token Authorization**:
+  - Generated a cryptographically secure 256-bit ephemeral session token at Tauri startup in Rust memory (`src-tauri/src/commands/mod.rs`, `src-tauri/src/lib.rs`).
+  - Injected securely into webview initialization script on desktop runtimes, captured and cleared by `src/adapters/tauriRuntimeAdapter.ts`.
+  - Mutating IPC commands (`file::*`, `storage::*`, `clipboard::*`, `secrets::*`) validate `session_token` via `is_authorized_request(&window, token)`, rejecting unauthorized requests regardless of window label.
+  - Added Rust security test `test_ipc_session_token_authorization` in `security_tests.rs` (5/5 tests passing).
+- **H-03: Decoupled Android SAF from Tauri Adapter**:
+  - Created `src/adapters/androidRuntimeAdapter.ts` extending `TauriRuntimeAdapter` to isolate all Android-specific SAF logic (`openFile`, `saveFile`, `readDirectory`, `consumeSharedText`, `shareContent`).
+  - Pruned all Android SAF branches and bridge references from `src/adapters/tauriRuntimeAdapter.ts`.
+  - `runtimeBridge.tsx` dynamically selects `AndroidRuntimeAdapter` on mobile and `TauriRuntimeAdapter` on desktop.
+  - `check-platform-leaks.mjs` verifies 122 files clean with zero unauthorized platform leaks.
+- **M-03: Runtime Action Journal Mutation Schema Validation**:
+  - Enforced `isValidActionMutation(m)` in `src/services/actionSandbox.ts` before applying mutations, preventing unvalidated worker journal payload execution.
+- **M-04: Demo Mode Dependency Inversion**:
+  - Exported `setDemoWelcomeDisabled` and `isDemoWelcomeDisabled` from `src/store/tabStore.ts`, allowing explicit programmatic control rather than requiring ambient window flags.
+- **L-02 & L-03: Security & Diagnostic Hygiene**:
+  - Replaced pseudo-random dialog correlation IDs in `actionWorker.ts` with `crypto.randomUUID()`.
+  - Added warning toast notifications on JSON formatting exceptions in `sandboxApiFactory.ts`.
+- **Verification Gates Status (All 5 Gates Green)**:
+  1. `npm run lint` — 0 errors across 122 files, 0 platform leaks, 100% contract sync.
+  2. `cargo test --manifest-path src-tauri/Cargo.toml` — 5/5 security tests passing.
+  3. `npm test` — 37/37 suites, 364/364 unit tests passing.
+  4. `npm run test:e2e` — 6/6 spec files, 24/24 Playwright tests passing.
+  5. `npm run build` — Clean production bundle generated in 32s.
