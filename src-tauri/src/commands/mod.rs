@@ -29,7 +29,10 @@ pub fn is_authorized_token(token: Option<&str>) -> bool {
     let expected = current_session_token();
     match (expected, token) {
         (Some(exp), Some(provided)) => exp == provided,
-        (None, _) => true, // uninitialized (tests)
+        #[cfg(test)]
+        (None, _) => true, // uninitialized only allowed in test builds
+        #[cfg(not(test))]
+        (None, _) => false, // fail closed in production
         (Some(_), None) => false, // initialized, missing token
     }
 }

@@ -72,12 +72,19 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   protected async invokeTauri<T>(cmd: string, args: Record<string, any> = {}): Promise<T | null> {
     try {
+      if (!this.sessionToken && typeof window !== 'undefined' && (window as any).__CNTXT_SESSION_TOKEN__) {
+        this.sessionToken = (window as any).__CNTXT_SESSION_TOKEN__;
+      }
+      const mergedArgs = {
+        sessionToken: this.sessionToken,
+        ...args
+      };
       const tauri = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__?.core || (window as any).__TAURI__;
       if (tauri && typeof tauri.invoke === 'function') {
-        return await tauri.invoke(cmd, args);
+        return await tauri.invoke(cmd, mergedArgs);
       }
       const { invoke } = await import('@tauri-apps/api/core');
-      return await invoke<T>(cmd, args);
+      return await invoke<T>(cmd, mergedArgs);
     } catch (e: any) {
       console.warn(`[TauriRuntimeAdapter] invoke(${cmd}) failed:`, e);
       if (CRITICAL_IPC_COMMANDS.includes(cmd)) {
@@ -90,13 +97,20 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   protected async invokeTauriVoid(cmd: string, args: Record<string, any> = {}): Promise<boolean> {
     try {
+      if (!this.sessionToken && typeof window !== 'undefined' && (window as any).__CNTXT_SESSION_TOKEN__) {
+        this.sessionToken = (window as any).__CNTXT_SESSION_TOKEN__;
+      }
+      const mergedArgs = {
+        sessionToken: this.sessionToken,
+        ...args
+      };
       const tauri = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__?.core || (window as any).__TAURI__;
       if (tauri && typeof tauri.invoke === 'function') {
-        await tauri.invoke(cmd, args);
+        await tauri.invoke(cmd, mergedArgs);
         return true;
       }
       const { invoke } = await import('@tauri-apps/api/core');
-      await invoke(cmd, args);
+      await invoke(cmd, mergedArgs);
       return true;
     } catch (e: any) {
       console.warn(`[TauriRuntimeAdapter] invokeVoid(${cmd}) failed:`, e);

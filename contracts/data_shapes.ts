@@ -190,13 +190,56 @@ export type ActionCategory =
 
 export type ActionSelectionBehavior = 'auto' | 'replace' | 'insert';
 
+export type ActionTransformName =
+  | 'summarize'
+  | 'formatTable'
+  | 'slugify'
+  | 'extractTasks'
+  | 'formatJSON'
+  | 'deduplicateLines'
+  | 'sortLinesAsc'
+  | 'sortLinesDesc'
+  | 'trimLines'
+  | 'uppercase'
+  | 'lowercase'
+  | 'titlecase'
+  | 'boldSelection'
+  | 'italicSelection'
+  | 'codeSelection'
+  | 'bulletlistSelection'
+  | 'checklistSelection'
+  | 'insertToday'
+  | 'insertUuid'
+  | 'extractVariables'
+  | 'extractRowsWithVars'
+  | 'extractRowsWithoutVars'
+  | 'selectionExtractVars'
+  | 'tableToCsv'
+  | 'wrapPromptContext'
+  | 'bakeFormulas'
+  | 'extractAndFillVariables'
+  | string;
+
+export type ActionOp =
+  | { type: 'setText'; text: string }
+  | { type: 'insertAtCursor'; text: string }
+  | { type: 'wrapSelection'; before: string; after: string }
+  | { type: 'replaceSelection'; text: string }
+  | { type: 'transform'; transform: ActionTransformName; args?: Record<string, string | number | boolean> }
+  | { type: 'formula'; expression: string }
+  | { type: 'toast'; message: string; toastType?: 'info' | 'success' | 'warning' | 'error' }
+  | { type: 'openTab'; title: string; content: string; language?: string }
+  | { type: 'openVariableModal' }
+  | { type: 'copyToClipboard'; text?: string };
+
 export interface Action {
   id: string;
   name: string;
   description: string;
   type?: 'button' | 'command';
-  codeType?: 'formula' | 'javascript';
+  codeType?: 'formula' | 'javascript' | 'declarative';
   code: string; // JavaScript or FORMULA: executed in sandbox / formula engine
+  pipeline?: ActionOp[]; // Declarative operation pipeline — zero dynamic code generation
   category: ActionCategory;
   selectionBehavior?: ActionSelectionBehavior;
   enabled?: boolean;

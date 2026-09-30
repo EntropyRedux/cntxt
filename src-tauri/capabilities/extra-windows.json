@@ -1,10 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "extra-windows",
-  "description": "Capabilities for dynamically created secondary CNTXT windows (window-{uuid})",
-  "windows": ["window-*"],
+  "description": "Hardened capabilities for dynamically created secondary CNTXT windows (window-{uuid})",
+  "windows": [
+    "window-*"
+  ],
   "permissions": [
-    "core:default",
     "core:event:default",
     "core:event:allow-emit",
     "core:event:allow-emit-to",
@@ -15,8 +16,6 @@
     "core:window:allow-start-dragging",
     "core:window:allow-start-resize-dragging",
     "core:window:allow-close",
-    "core:webview:default",
-    "core:webview:allow-create-webview-window",
     "dialog:default"
   ]
 }

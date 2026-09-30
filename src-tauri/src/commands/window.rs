@@ -1,7 +1,10 @@
 use tauri::Window;
 
 #[tauri::command]
-pub fn minimize_window(window: Window) {
+pub fn minimize_window(window: Window, session_token: Option<String>) {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
+        return;
+    }
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         let _ = window.minimize();
@@ -13,7 +16,10 @@ pub fn minimize_window(window: Window) {
 }
 
 #[tauri::command]
-pub fn maximize_window(window: Window) {
+pub fn maximize_window(window: Window, session_token: Option<String>) {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
+        return;
+    }
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         let _ = window.maximize();
@@ -25,7 +31,10 @@ pub fn maximize_window(window: Window) {
 }
 
 #[tauri::command]
-pub fn unmaximize_window(window: Window) {
+pub fn unmaximize_window(window: Window, session_token: Option<String>) {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
+        return;
+    }
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         let _ = window.unmaximize();
@@ -37,7 +46,10 @@ pub fn unmaximize_window(window: Window) {
 }
 
 #[tauri::command]
-pub fn close_window(window: Window) {
+pub fn close_window(window: Window, session_token: Option<String>) {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
+        return;
+    }
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         let _ = window.close();
@@ -49,7 +61,10 @@ pub fn close_window(window: Window) {
 }
 
 #[tauri::command]
-pub fn is_maximized(window: Window) -> bool {
+pub fn is_maximized(window: Window, session_token: Option<String>) -> bool {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
+        return false;
+    }
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         window.is_maximized().unwrap_or(false)
@@ -62,7 +77,10 @@ pub fn is_maximized(window: Window) -> bool {
 }
 
 #[tauri::command]
-pub fn start_dragging(window: Window) {
+pub fn start_dragging(window: Window, session_token: Option<String>) {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
+        return;
+    }
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         let _ = window.start_dragging();
@@ -74,7 +92,10 @@ pub fn start_dragging(window: Window) {
 }
 
 #[tauri::command]
-pub fn toggle_maximize(window: Window) {
+pub fn toggle_maximize(window: Window, session_token: Option<String>) {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
+        return;
+    }
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         if window.is_maximized().unwrap_or(false) {
@@ -90,13 +111,15 @@ pub fn toggle_maximize(window: Window) {
 }
 
 #[tauri::command]
-pub fn open_devtools(window: tauri::WebviewWindow) {
+pub fn open_devtools(window: tauri::WebviewWindow, session_token: Option<String>) {
+    let raw_win = window.as_ref().window();
+    if !super::is_authorized_request(&raw_win, session_token.as_deref()) {
+        return;
+    }
     #[cfg(debug_assertions)]
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
-        if super::is_authorized_label(window.label()) {
-            window.open_devtools();
-        }
+        window.open_devtools();
     }
     #[cfg(not(all(debug_assertions, not(any(target_os = "android", target_os = "ios")))))]
     {
@@ -105,16 +128,18 @@ pub fn open_devtools(window: tauri::WebviewWindow) {
 }
 
 #[tauri::command]
-pub fn toggle_devtools(window: tauri::WebviewWindow) {
+pub fn toggle_devtools(window: tauri::WebviewWindow, session_token: Option<String>) {
+    let raw_win = window.as_ref().window();
+    if !super::is_authorized_request(&raw_win, session_token.as_deref()) {
+        return;
+    }
     #[cfg(debug_assertions)]
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
-        if super::is_authorized_label(window.label()) {
-            if window.is_devtools_open() {
-                window.close_devtools();
-            } else {
-                window.open_devtools();
-            }
+        if window.is_devtools_open() {
+            window.close_devtools();
+        } else {
+            window.open_devtools();
         }
     }
     #[cfg(not(all(debug_assertions, not(any(target_os = "android", target_os = "ios")))))]
@@ -122,5 +147,3 @@ pub fn toggle_devtools(window: tauri::WebviewWindow) {
         let _ = window;
     }
 }
-
-

@@ -125,3 +125,93 @@ fn test_ipc_session_token_authorization() {
 
     clear_session_token();
 }
+
+#[test]
+fn test_read_dir_redacts_env() {
+    use std::fs::{self, File};
+    use crate::commands::file::read_dir_internal;
+
+    let temp_dir = std::env::temp_dir().join(format!("cntxt_test_env_{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(&temp_dir).expect("create temp dir");
+
+    File::create(temp_dir.join(".env")).expect("create .env");
+    File::create(temp_dir.join(".env.local")).expect("create .env.local");
+    File::create(temp_dir.join(".gitignore")).expect("create .gitignore");
+    File::create(temp_dir.join("notes.md")).expect("create notes.md");
+
+    let entries = read_dir_internal(&temp_dir, 0, 1).expect("read_dir_internal");
+    let names: Vec<String> = entries.iter().map(|e| e.name.clone()).collect();
+
+    // Critical invariant: .env and .env.local must be redacted
+    assert!(!names.contains(&".env".to_string()), ".env must be redacted");
+    assert!(!names.contains(&".env.local".to_string()), ".env.local must be redacted");
+
+    // Whitelisted dotfiles and regular files must be present
+    assert!(names.contains(&".gitignore".to_string()), ".gitignore should be included");
+    assert!(names.contains(&"notes.md".to_string()), "notes.md should be included");
+
+    let _ = fs::remove_dir_all(&temp_dir);
+}
+
+#[test]
+fn test_secrets_os_keyring_no_plaintext_fallback() {
+    let secrets_source = include_str!("../commands/secrets.rs");
+    assert!(!secrets_source.contains(".secrets_fallback.json"), "Zero plaintext fallback files allowed");
+    assert!(!secrets_source.contains("save_fallback"), "Zero fallback saving allowed");
+    assert!(!secrets_source.contains("load_fallback"), "Zero fallback loading allowed");
+    assert!(secrets_source.contains("Entry::new"), "Must use OS Keyring Entry");
+}
+
+#[test]
+fn test_commands_token_gating_reflection() {
+    let file_rs = include_str!("../commands/file.rs");
+    let secrets_rs = include_str!("../commands/secrets.rs");
+    let window_rs = include_str!("../commands/window.rs");
+
+    // All mutating and sensitive file commands must validate session token
+    let sensitive_file_cmds = [
+        "pub async fn read_file",
+        "pub async fn write_file",
+        "pub async fn delete_file",
+        "pub async fn rename_file",
+        "pub fn read_directory",
+        "pub fn get_file_name",
+        "pub fn detect_language_from_path",
+        "pub fn get_file_modified_time",
+        "pub async fn open_file_explorer",
+        "pub fn get_dir_name",
+    ];
+    for cmd in &sensitive_file_cmds {
+        assert!(file_rs.contains(cmd), "Command {} must exist in file.rs", cmd);
+    }
+    assert!(file_rs.matches("session_token: Option<String>").count() >= 10);
+
+    // All secrets commands must require session token
+    let secrets_cmds = [
+        "pub fn store_api_key",
+        "pub fn get_api_key",
+        "pub fn delete_api_key",
+        "pub fn has_api_key",
+    ];
+    for cmd in &secrets_cmds {
+        assert!(secrets_rs.contains(cmd), "Command {} must exist in secrets.rs", cmd);
+    }
+    assert_eq!(secrets_rs.matches("session_token: Option<String>").count(), 4);
+
+    // All window commands must require session token
+    let window_cmds = [
+        "pub fn minimize_window",
+        "pub fn maximize_window",
+        "pub fn unmaximize_window",
+        "pub fn close_window",
+        "pub fn is_maximized",
+        "pub fn start_dragging",
+        "pub fn toggle_maximize",
+        "pub fn open_devtools",
+        "pub fn toggle_devtools",
+    ];
+    for cmd in &window_cmds {
+        assert!(window_rs.contains(cmd), "Command {} must exist in window.rs", cmd);
+    }
+    assert_eq!(window_rs.matches("session_token: Option<String>").count(), 9);
+}

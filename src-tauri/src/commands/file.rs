@@ -233,11 +233,12 @@ pub async fn save_file_dialog(window: Window, default_name: Option<String>, sess
 }
 
 #[tauri::command]
-pub fn get_file_name(window: Window, path: String) -> Result<String, String> {
-    if !super::is_authorized_window(&window) {
+pub fn get_file_name(window: Window, path: String, session_token: Option<String>) -> Result<String, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
-    PathBuf::from(&path)
+    let safe_path = validate_path(&path)?;
+    safe_path
         .file_name()
         .and_then(|name| name.to_str())
         .map(|s| s.to_string())
@@ -245,12 +246,15 @@ pub fn get_file_name(window: Window, path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn detect_language_from_path(window: Window, path: String) -> String {
-    if !super::is_authorized_window(&window) {
+pub fn detect_language_from_path(window: Window, path: String, session_token: Option<String>) -> String {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return "text".to_string();
     }
-    let path_buf = PathBuf::from(&path);
-    let extension = path_buf.extension()
+    let safe_path = match validate_path(&path) {
+        Ok(p) => p,
+        Err(_) => return "text".to_string(),
+    };
+    let extension = safe_path.extension()
         .and_then(|ext| ext.to_str())
         .unwrap_or("");
 
@@ -278,14 +282,14 @@ pub fn detect_language_from_path(window: Window, path: String) -> String {
         "swift" => "swift",
         "kt" | "kts" => "kotlin",
         "sql" => "sql",
-        _ => "text", // Default to plain text
+        _ => "text",
     }
     .to_string()
 }
 
 #[tauri::command]
-pub fn get_file_modified_time(window: Window, path: String) -> Result<u64, String> {
-    if !super::is_authorized_window(&window) {
+pub fn get_file_modified_time(window: Window, path: String, session_token: Option<String>) -> Result<u64, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     let safe_path = validate_path(&path)?;
@@ -336,7 +340,7 @@ pub struct FileNode {
     pub children: Option<Vec<FileNode>>,
 }
 
-fn read_dir_internal(dir_path: &Path, depth: usize, max_depth: usize) -> Result<Vec<FileNode>, String> {
+pub fn read_dir_internal(dir_path: &Path, depth: usize, max_depth: usize) -> Result<Vec<FileNode>, String> {
     if depth > max_depth {
         return Ok(Vec::new());
     }
@@ -366,7 +370,7 @@ fn read_dir_internal(dir_path: &Path, depth: usize, max_depth: usize) -> Result<
         let file_name = entry.file_name().to_string_lossy().to_string();
 
         // Skip hidden files/directories (except .env and .gitignore)
-        if file_name.starts_with('.') && file_name != ".env" && file_name != ".gitignore" {
+        if file_name.starts_with('.') && file_name != ".gitignore" {
             continue;
         }
 
@@ -408,8 +412,8 @@ fn read_dir_internal(dir_path: &Path, depth: usize, max_depth: usize) -> Result<
 }
 
 #[tauri::command]
-pub fn read_directory(window: Window, path: String) -> Result<Vec<FileNode>, String> {
-    if !super::is_authorized_window(&window) {
+pub fn read_directory(window: Window, path: String, session_token: Option<String>) -> Result<Vec<FileNode>, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     let dir_path = validate_path(&path)?;
@@ -418,7 +422,6 @@ pub fn read_directory(window: Window, path: String) -> Result<Vec<FileNode>, Str
         return Err("Path is not a directory".to_string());
     }
 
-    // Depth 0: direct entries, depth 1: immediate subfolders pre-populated
     read_dir_internal(&dir_path, 0, 1)
 }
 
@@ -437,8 +440,9 @@ pub async fn rename_file(window: Window, old_path: String, new_path: String, ses
 pub async fn delete_file(
     window: Window,
     path: String,
+    session_token: Option<String>,
 ) -> Result<(), String> {
-    if !super::is_authorized_window(&window) {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin for sensitive native operation".to_string());
     }
 
@@ -465,11 +469,14 @@ pub async fn delete_file(
         }
     }
 
-    if safe_path.is_dir() {
-        fs::remove_dir_all(&safe_path)
+    // Re-canonicalize immediately before removal to close TOCTOU window
+    let re_validated_path = validate_path(&path)?;
+
+    if re_validated_path.is_dir() {
+        fs::remove_dir_all(&re_validated_path)
             .map_err(|e| format!("Failed to delete directory: {}", e))
     } else {
-        fs::remove_file(&safe_path)
+        fs::remove_file(&re_validated_path)
             .map_err(|e| format!("Failed to delete file: {}", e))
     }
 }
@@ -478,8 +485,9 @@ pub async fn delete_file(
 pub async fn open_file_explorer(
     window: Window,
     path: String,
+    session_token: Option<String>,
 ) -> Result<(), String> {
-    if !super::is_authorized_window(&window) {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin for file explorer invocation".to_string());
     }
 
@@ -531,12 +539,12 @@ pub async fn open_file_explorer(
 }
 
 #[tauri::command]
-pub fn get_dir_name(window: Window, path: String) -> Result<String, String> {
-    if !super::is_authorized_window(&window) {
+pub fn get_dir_name(window: Window, path: String, session_token: Option<String>) -> Result<String, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
-    let path = std::path::Path::new(&path);
-    if let Some(parent) = path.parent() {
+    let safe_path = validate_path(&path)?;
+    if let Some(parent) = safe_path.parent() {
         Ok(parent.to_string_lossy().into_owned())
     } else {
         Err("No parent directory found".into())

@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.39
-Last Updated: 2026-09-30
-Last Updated By: Prod Agent (Full Codebase Remediation v6 Implemented & Verified)
+Version: v1.40
+Last Updated: 2026-10-01
+Last Updated By: Prod Agent (Full Codebase Remediation Plan v8 Implemented & Verified)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -13,25 +13,24 @@ Active Stage:
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
   [ ] Feature Implementation (FG-01..FG-09 Complete & Verified; Android APK Native Mobile Runtime Live)
-  [x] Refactor (Remediation Backlog: C-02, H-01, H-03, H-05, M-03, M-04, L-02, L-03 Completely Resolved & Verified)
-    [x] Testing (Vitest 364/364 Live across 37 suites, Playwright E2E 24/24 Live, Rust Security Test Suite 5/5 Live)
+  [x] Refactor (Remediation Backlog: P-01 through P-20 Completely Resolved & Verified)
+    [x] Testing (Vitest 370/370 Live across 37 suites, Playwright E2E 24/24 Live, Rust Security Test Suite 8/8 Live)
   [ ] Packaging & Release (Ready for Pass 1 Re-Audit Verification)
 
-Current Feature Group: Full Codebase Audit Remediation Backlog (Refactor Plan v6 Complete)
-Status: ready-for-audit (all gates 100% green; C-02, H-01, H-03, H-05, M-03, M-04, L-02, L-03 implemented and tested)
+Current Feature Group: Full Codebase Audit Remediation Backlog (Refactor Plan v8 Complete)
+Status: ready-for-audit (all gates 100% green; P-01 through P-20 implemented and tested)
 Background Processes: none
-Unit Tests: written [x] passing [x] (364/364 unit tests across 37 test suites clean, 5 Rust security tests clean, 24/24 Playwright E2E clean)
-Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-09-29.md (Plan v6 - Complete)
+Unit Tests: written [x] passing [x] (370/370 unit tests across 37 test suites clean, 8 Rust security tests clean, 24/24 Playwright E2E clean)
+Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-10-01.md (Plan v8 - Complete)
 Notes:
-- Task 1.1: Markdown Table Cell & Widget Sanitization with KaTeX Layout Preservation (pre-extraction of $...$ into token spans, entity escaping).
-- Task 1.2: Action Sandbox Dedicated Web Worker Realm Isolation (C-02 / H-05 / L-02 / M-03 Complete): ambient capabilities neutralized across self/globalThis/prototypes (fetch, xhr, ws, eventSource, worker, sharedWorker, broadcastChannel, importScripts, indexedDB, caches, location, postMessage); nativePostMessage private binding; validateActionSyntax pre-scan blocks dynamic imports and constructor climbing; isValidActionMutation schema validation; crypto.randomUUID for dialog requests; non-vacuous real worker tests in Playwright (3/3 passing).
-- Task 1.3: Native IPC Cryptographic Token Authorization (H-01 Complete): 256-bit ephemeral session token generated at Tauri startup; all mutating endpoints (file, storage, clipboard, secrets) validate token via is_authorized_request; automated token attachment in TauriRuntimeAdapter; tested in security_tests.rs (5/5 passing).
-- Task 1.4: Decoupled Android SAF from Tauri Adapter (H-03 Complete): created AndroidRuntimeAdapter extending TauriRuntimeAdapter; pruned all Android SAF branches from desktop adapter; check-platform-leaks verified clean (122 files scanned, 0 leaks).
-- Task 1.5: Inverted Demo Welcome Control (M-04 Complete): explicit setDemoWelcomeDisabled and isDemoWelcomeDisabled programmatic controls in tabStore.ts; test coverage in tabStore.test.ts (10/10 passing).
-- Task 1.6: Actionable Diagnostics (L-03 Complete): formatJSON dispatches warning toasts on parse exceptions instead of silent returns.
-- Verification Gate Snapshot (2026-09-30): npm run lint (0 errors, 122 files clean, 100% contract sync); cargo test (5/5 security tests); npm test (364/364 unit tests, 37 suites); npm run test:e2e (24/24 Playwright tests, 6 suites); npm run build (clean production build).
-Last Audit Reconciliation: 2026-09-30 — FAIL (Reconciled findings P-01..P-20 from raw_findings_full_codebase_verification_2026-09-30.md; 3 Critical [P-01, P-02, P-03] and 6 High open valid defects requiring Tier 1 remediation before release)
-Last Git Checkpoint: 2026-09-30 — 956ab23 docs(context): update living context document to v1.39
+- Task 1: Cargo Profile & Feature Lockdown (P-05): default = [] (devtools strictly opt-in); production profile with codegen-units = 1, lto = "thin", incremental = false, opt-level = 3, strip = true.
+- Task 2: Path Security & .env Redaction (P-04): validate_path enforced across get_file_name, detect_language_from_path, get_file_modified_time, open_file_explorer, get_dir_name; .env redacted in read_directory; TOCTOU race window closed in delete_file via immediate pre-deletion re-canonicalization; FileNode #[serde(deny_unknown_fields)].
+- Task 3: Secure OS Keyring Secrets Engine (P-02, P-18): completely removed .secrets_fallback.json; desktop strictly routes through keyring::Entry; mobile rejects plaintext fallback; has_api_key returns Result<bool, String>; secret deletion error swallowing eliminated.
+- Task 4: Universal IPC Cryptographic Token Authorization & Capabilities (P-03, P-14): session_token gating enforced across delete_file, read_directory, file inspection, secrets::*, and window::*; is_authorized_token fails closed on None in production; dropped core:default and webview window creation capabilities.
+- Task 5: Declarative Action Model & Complete Sandbox Elimination (P-01, P-07, P-08): removed 'unsafe-eval' from CSP (script-src 'self'); built declarative ActionEngine with AST pipeline executor and registered transform engine; converted all built-in actions to pipelines; deleted unsandboxed fallback runners in actionSandbox.ts and actionWorker.ts.
+- Verification Gate Snapshot (2026-10-01): npm run lint (0 errors, 123 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (370/370 unit tests, 37 suites); npm run test:e2e (24/24 Playwright tests, 6 suites); npm run build (clean production build).
+Last Audit Reconciliation: 2026-10-01 — All 18 valid defects from Pass 1 Audit (P-01..P-20) remediated, outcome-asserted, and verified across all gates.
+Last Git Checkpoint: 2026-10-01 — Refactor Plan v8 Remediation Complete
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
@@ -794,3 +793,34 @@ The following features were evaluated during the desktop v0.3.8 cycle and identi
   3. `npm test` — 37/37 suites, 364/364 unit tests passing.
   4. `npm run test:e2e` — 6/6 spec files, 24/24 Playwright tests passing.
   5. `npm run build` — Clean production bundle generated in 32s.
+
+### 19. Full Codebase Remediation v8 & Declarative Engine Hardening (2026-10-01)
+- **P-01 & P-08: Complete Elimination of `new Function` / `eval` & CSP Lockdown (`script-src 'self'`)**:
+  - Replaced dynamic string code execution with a deterministic Declarative Action Pipeline Executor (`ActionOp[]`) and registered transform engine (`ActionEngine`) in `src/services/actionEngine.ts`.
+  - Removed `'unsafe-eval'` from Tauri CSP in `src-tauri/tauri.conf.json` (`script-src 'self'`).
+  - Converted all built-in action presets in `src/constants/defaultPresets.ts` to declarative operations (`pipeline`).
+  - Deleted unsandboxed fallback runners in `actionSandbox.ts` and `actionWorker.ts`.
+- **P-02 & P-18: Secure OS Keyring Secrets Engine (Zero Plaintext Fallback)**:
+  - Deleted `.secrets_fallback.json` reading and writing completely from `src-tauri/src/commands/secrets.rs`.
+  - Desktop secrets strictly route through native OS Keyring (`keyring::Entry`); mobile platforms fail closed.
+  - `has_api_key` returns `Result<bool, String>`; eliminated error swallowing on secret deletion.
+- **P-03 & P-14: Universal IPC Cryptographic Token Authorization & Capabilities**:
+  - Gated 100% of sensitive Tauri commands (`delete_file`, `read_directory`, file inspection, `secrets::*`, `window::*`) with ephemeral `session_token`.
+  - Configured `is_authorized_token` to fail closed on `None` in production builds (`#[cfg(not(test))]`).
+  - Automatically merged `sessionToken` into `invokeTauri` and `invokeTauriVoid` in `tauriRuntimeAdapter.ts`.
+  - Dropped unnecessary Tauri capability permissions (`core:default`, `core:webview:default`, `core:webview:allow-create-webview-window`).
+- **P-04: Path Security, TOCTOU Hardening & .env Redaction**:
+  - Routed all file inspection commands (`get_file_name`, `detect_language_from_path`, `get_file_modified_time`, `open_file_explorer`, `get_dir_name`) through `validate_path`.
+  - Redacted `.env` files from `read_directory`.
+  - Re-canonicalized target paths immediately before deletion in `delete_file` to eliminate TOCTOU race conditions.
+  - Added `#[serde(deny_unknown_fields)]` to `FileNode`.
+- **P-05: Cargo Profile & Dependency Lockdown**:
+  - Set `default = []` in `src-tauri/Cargo.toml` so devtools are strictly opt-in.
+  - Configured production release profile with `codegen-units = 1`, `lto = "thin"`, `incremental = false`, `opt-level = 3`, and `strip = true`.
+- **Verification Gates Status (All 5 Gates Green)**:
+  1. `npm run lint` — 0 errors across 123 files, 0 platform leaks, 100% canonical contract sync.
+  2. `cargo test --manifest-path src-tauri/Cargo.toml` — 8/8 security tests passing (including IPC token gating reflection, keyring isolation, path validation, and .env redaction).
+  3. `npm test` — 37/37 suites, 370/370 unit tests passing.
+  4. `npm run test:e2e` — 6/6 spec files, 24/24 Playwright tests passing (including worker realm isolation).
+  5. `npm run build` — Clean production bundle generated with zero CSP violations.
+

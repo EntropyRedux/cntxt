@@ -104,4 +104,55 @@ describe('FG-08 regression gates', () => {
     const window = read('src-tauri/src/commands/window.rs');
     expect(window).toContain('#[cfg(not(any(target_os = "android", target_os = "ios")))]');
   });
+
+  it('tauri.conf.json CSP has zero unsafe-eval or unsafe-inline in script-src (P-01)', () => {
+    const tauriConf = JSON.parse(read('src-tauri/tauri.conf.json'));
+    const csp = tauriConf.app?.security?.csp || '';
+    expect(csp).toBeDefined();
+    const scriptSrcMatch = csp.match(/script-src\s+([^;]+)/);
+    expect(scriptSrcMatch).not.toBeNull();
+    const scriptSrc = scriptSrcMatch![1];
+    expect(scriptSrc).not.toContain("'unsafe-eval'");
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+  });
+
+  it('zero new Function or eval calls in src/services/ (P-01)', () => {
+    const serviceFiles = listSourceFiles(join(ROOT, 'src/services'));
+    for (const file of serviceFiles) {
+      const content = readFileSync(file, 'utf-8');
+      const codeOnly = content.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+      expect({ file, hasNewFunction: /\bnew\s+Function\b/.test(codeOnly) }).toEqual({ file, hasNewFunction: false });
+      expect({ file, hasEval: /\beval\s*\(/.test(codeOnly) }).toEqual({ file, hasEval: false });
+    }
+  });
+
+  it('secrets.rs has zero plaintext fallback file writing (P-02)', () => {
+    const secrets = read('src-tauri/src/commands/secrets.rs');
+    expect(secrets).not.toContain('.secrets_fallback.json');
+    expect(secrets).not.toContain('save_fallback');
+    expect(secrets).not.toContain('load_fallback');
+  });
+
+  it('capabilities do not grant core:default or allow-create-webview-window (P-03)', () => {
+    for (const capFile of ['src-tauri/capabilities/default.json', 'src-tauri/capabilities/extra-windows.json']) {
+      const cap = JSON.parse(read(capFile));
+      expect({ capFile, hasCoreDefault: cap.permissions.includes('core:default') }).toEqual({ capFile, hasCoreDefault: false });
+      expect({ capFile, hasCreateWebview: cap.permissions.includes('core:webview:allow-create-webview-window') }).toEqual({ capFile, hasCreateWebview: false });
+    }
+  });
+
+  it('read_dir_internal redacts .env files (P-04)', () => {
+    const fileRs = read('src-tauri/src/commands/file.rs');
+    expect(fileRs).not.toContain('file_name != ".env"');
+    expect(fileRs).toContain('if file_name.starts_with(\'.\') && file_name != ".gitignore"');
+  });
+
+  it('Cargo.toml excludes devtools from default features and specifies release optimizations (P-05)', () => {
+    const cargo = read('src-tauri/Cargo.toml');
+    expect(cargo).toMatch(/default\s*=\s*\[\s*\]/);
+    expect(cargo).toContain('codegen-units = 1');
+    expect(cargo).toContain('lto = "thin"');
+    expect(cargo).toContain('opt-level = 3');
+    expect(cargo).toContain('strip = true');
+  });
 });

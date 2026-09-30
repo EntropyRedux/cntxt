@@ -244,21 +244,11 @@ export const DEFAULT_ACTIONS: Action[] = [
     color: 'emerald',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Executive Summary Generator
-const text = api.getContent();
-if (!text.trim()) {
-  api.notify("Document is empty", "warning");
-  return;
-}
-api.notify("Analyzing text content...", "info");
-const lines = text.split('\\n').filter(l => l.trim().length > 0);
-const wordCount = text.split(/\\s+/).filter(Boolean).length;
-const charCount = text.length;
-
-const summary = \`## Executive Summary\\n\\n**Key Metrics:**\\n- Total Words: \${wordCount}\\n- Total Characters: \${charCount}\\n- Paragraphs: \${lines.length}\\n\\n**Core Takeaways:**\\n\` + lines.slice(0, 3).map(l => \`- \${l.replace(/^[#*\\-\\s]+/, '')}\`).join('\\n');
-
-api.insertAtCursor('\\n\\n' + summary);
-api.notify("Summary appended successfully!", "success");`
+    codeType: 'declarative',
+    code: 'TRANSFORM:summarize',
+    pipeline: [
+      { type: 'transform', transform: 'summarize' }
+    ]
   },
   {
     id: 'act_format_table',
@@ -270,25 +260,11 @@ api.notify("Summary appended successfully!", "success");`
     color: 'sky',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `const text = api.getContent();
-const lines = text.split('\\n');
-let modified = false;
-
-const newLines = lines.map(line => {
-  if (line.includes('|')) {
-    const cells = line.split('|').map(c => c.trim());
-    modified = true;
-    return cells.join(' | ');
-  }
-  return line;
-});
-
-if (modified) {
-  api.setContent(newLines.join('\\n'));
-  api.notify("Normalized markdown tables", "success");
-} else {
-  api.notify("No markdown table found in current document", "info");
-}`
+    codeType: 'declarative',
+    code: 'TRANSFORM:formatTable',
+    pipeline: [
+      { type: 'transform', transform: 'formatTable' }
+    ]
   },
   {
     id: 'act_slugify',
@@ -299,25 +275,11 @@ if (modified) {
     color: 'indigo',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `const sel = api.getSelection();
-const target = sel || api.getContent().split('\\n')[0];
-if (!target) {
-  api.notify("Nothing to slugify", "warning");
-  return;
-}
-const slug = target
-  .toLowerCase()
-  .trim()
-  .replace(/[^\\w\\s-]/g, '')
-  .replace(/[\\s_-]+/g, '-')
-  .replace(/^-+|-+$/g, '');
-
-if (sel) {
-  api.replaceSelection(slug);
-} else {
-  api.insertAtCursor(slug);
-}
-api.notify(\`Generated slug: \${slug}\`, "success");`
+    codeType: 'declarative',
+    code: 'TRANSFORM:slugify',
+    pipeline: [
+      { type: 'transform', transform: 'slugify' }
+    ]
   },
   {
     id: 'act_extract_todos',
@@ -328,16 +290,11 @@ api.notify(\`Generated slug: \${slug}\`, "success");`
     color: 'amber',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `const text = api.getContent();
-const matches = text.match(/^[ \\t]*- \\[([ xX])\\]\\s+(.+)$/gm);
-if (!matches || matches.length === 0) {
-  api.notify("No checklist tasks found (- [ ] ...)", "info");
-  return;
-}
-const header = "\\n\\n### Consolidated Task Checklist\\n";
-const tasks = matches.join('\\n');
-api.insertAtCursor(header + tasks + '\\n');
-api.notify(\`Extracted \${matches.length} tasks\`, "success");`
+    codeType: 'declarative',
+    code: 'TRANSFORM:extractTasks',
+    pipeline: [
+      { type: 'transform', transform: 'extractTasks' }
+    ]
   },
   {
     id: 'format-json-and-sort',
@@ -351,37 +308,11 @@ api.notify(\`Extracted \${matches.length} tasks\`, "success");`
     shortcut: 'Ctrl+Shift+F',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Format JSON and Sort Keys Action
-const text = api.getSelection() || api.getText();
-try {
-  const parsed = JSON.parse(text);
-  
-  function sortObjectKeys(obj) {
-    if (Array.isArray(obj)) {
-      return obj.map(sortObjectKeys);
-    } else if (obj !== null && typeof obj === 'object') {
-      return Object.keys(obj)
-        .sort()
-        .reduce((result, key) => {
-          result[key] = sortObjectKeys(obj[key]);
-          return result;
-        }, {});
-    }
-    return obj;
-  }
-  
-  const sorted = sortObjectKeys(parsed);
-  const formatted = JSON.stringify(sorted, null, 2);
-  
-  if (api.getSelection()) {
-    api.replaceSelection(formatted);
-  } else {
-    api.setText(formatted);
-  }
-  api.toast('JSON formatted and keys sorted successfully!', 'success');
-} catch (e) {
-  api.toast('Failed to parse JSON: ' + e.message, 'error');
-}`
+    codeType: 'declarative',
+    code: 'TRANSFORM:formatJSON',
+    pipeline: [
+      { type: 'transform', transform: 'formatJSON' }
+    ]
   },
   {
     id: 'extract-and-fill-variables',
@@ -394,18 +325,11 @@ try {
     icon: 'Variable',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Extract and Fill Template Variables Action
-const text = api.getText();
-const regex = /\\{\\{([^}]+)\\}\\}/g;
-const matches = [...text.matchAll(regex)];
-
-if (matches.length === 0) {
-  api.toast('No {{variable}} placeholders found in document', 'info');
-} else {
-  const uniqueVars = Array.from(new Set(matches.map(m => m[1].trim())));
-  api.toast(\`Found \${uniqueVars.length} template variable(s). Opening variable filler...\`, 'info');
-  api.openVariableModal();
-}`
+    codeType: 'declarative',
+    code: 'TRANSFORM:extractAndFillVariables',
+    pipeline: [
+      { type: 'transform', transform: 'extractAndFillVariables' }
+    ]
   },
   {
     id: 'table-to-csv-converter',
@@ -418,26 +342,11 @@ if (matches.length === 0) {
     icon: 'Table',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Markdown Table to CSV Converter
-const text = api.getSelection() || api.getText();
-const lines = text.split('\\n').filter(l => l.trim().startsWith('|') && l.trim().endsWith('|'));
-
-if (lines.length < 2) {
-  api.toast('Please select a valid markdown table (with | header and row lines)', 'warning');
-} else {
-  const cleanRows = lines
-    .filter(line => !line.match(/^\\|?\\s*[-:]+[-| :]*\\|?$/))
-    .map(line => {
-      return line
-        .split('|')
-        .slice(1, -1)
-        .map(cell => cell.trim().replace(/"/g, '""'));
-    });
-
-  const csvContent = cleanRows.map(row => row.map(cell => \`"\${cell}"\`).join(',')).join('\\n');
-  api.openTab('Table Export.csv', csvContent, 'text');
-  api.toast('Converted markdown table to CSV in new tab!', 'success');
-}`
+    codeType: 'declarative',
+    code: 'TRANSFORM:tableToCsv',
+    pipeline: [
+      { type: 'transform', transform: 'tableToCsv' }
+    ]
   },
   {
     id: 'deduplicate-and-sort-lines',
@@ -450,20 +359,11 @@ if (lines.length < 2) {
     icon: 'ListFilter',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Deduplicate and Sort Lines
-const isSelection = !!api.getSelection();
-const text = isSelection ? api.getSelection() : api.getText();
-const lines = text.split('\\n');
-const uniqueLines = Array.from(new Set(lines.map(l => l.trim()))).filter(l => l.length > 0);
-uniqueLines.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-
-const result = uniqueLines.join('\\n');
-if (isSelection) {
-  api.replaceSelection(result);
-} else {
-  api.setText(result);
-}
-api.toast(\`Deduplicated \${lines.length} lines down to \${uniqueLines.length} sorted unique lines\`, 'success');`
+    codeType: 'declarative',
+    code: 'TRANSFORM:deduplicateLines',
+    pipeline: [
+      { type: 'transform', transform: 'deduplicateLines' }
+    ]
   },
   {
     id: 'eval-all-formulas',
@@ -476,27 +376,11 @@ api.toast(\`Deduplicated \${lines.length} lines down to \${uniqueLines.length} s
     icon: 'Calculator',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Evaluate and Bake All Formulas
-const text = api.getText();
-const formulaRegex = /\\{=([^}]+)\\}/g;
-
-let count = 0;
-const evaluated = text.replace(formulaRegex, (match, expression) => {
-  try {
-    count++;
-    const res = api.evaluateFormula(expression.trim());
-    return res !== undefined ? String(res) : match;
-  } catch (e) {
-    return match;
-  }
-});
-
-if (count > 0) {
-  api.setText(evaluated);
-  api.toast(\`Successfully evaluated and baked \${count} formula(s) into text\`, 'success');
-} else {
-  api.toast('No {=FORMULA()} tags found in current document', 'info');
-}`
+    codeType: 'declarative',
+    code: 'TRANSFORM:bakeFormulas',
+    pipeline: [
+      { type: 'transform', transform: 'bakeFormulas' }
+    ]
   },
   {
     id: 'generate-prompt-chain',
@@ -509,25 +393,11 @@ if (count > 0) {
     icon: 'Sparkles',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Wrap with LLM Prompt Tags
-const text = api.getSelection() || api.getText();
-const wrapped = \`<prompt_context version="1.0" created="{=NOW()}">
-<instructions>
-\${text}
-</instructions>
-<output_guardrails>
-- Enforce strict JSON output when requesting data structures.
-- Do not provide conversational preamble or post-amble.
-- Think through edge cases before returning final answer.
-</output_guardrails>
-</prompt_context>\`;
-
-if (api.getSelection()) {
-  api.replaceSelection(wrapped);
-} else {
-  api.setText(wrapped);
-}
-api.toast('Wrapped in prompt context tags', 'success');`
+    codeType: 'declarative',
+    code: 'TRANSFORM:wrapPromptContext',
+    pipeline: [
+      { type: 'transform', transform: 'wrapPromptContext' }
+    ]
   },
   {
     id: 'act_uppercase',
@@ -540,6 +410,7 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'Type',
     codeType: 'formula',
     code: 'FORMULA:UPPER(selection)',
+    pipeline: [{ type: 'formula', expression: 'UPPER(selection)' }],
     createdAt: 1700000000000,
     updatedAt: 1700000000000
   },
@@ -554,6 +425,7 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'CaseLower',
     codeType: 'formula',
     code: 'FORMULA:LOWER(selection)',
+    pipeline: [{ type: 'formula', expression: 'LOWER(selection)' }],
     createdAt: 1700000000000,
     updatedAt: 1700000000000
   },
@@ -568,6 +440,7 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'Heading',
     codeType: 'formula',
     code: 'FORMULA:TITLE(selection)',
+    pipeline: [{ type: 'formula', expression: 'TITLE(selection)' }],
     createdAt: 1700000000000,
     updatedAt: 1700000000000
   },
@@ -582,6 +455,7 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'Bold',
     codeType: 'formula',
     code: 'FORMULA:BOLD(selection)',
+    pipeline: [{ type: 'formula', expression: 'BOLD(selection)' }],
     createdAt: 1700000000000,
     updatedAt: 1700000000000
   },
@@ -596,13 +470,14 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'Italic',
     codeType: 'formula',
     code: 'FORMULA:ITALIC(selection)',
+    pipeline: [{ type: 'formula', expression: 'ITALIC(selection)' }],
     createdAt: 1700000000000,
     updatedAt: 1700000000000
   },
   {
     id: 'act_code_selection',
     name: 'Inline Code Selection',
-    description: 'Wraps selected text in \`inline code\` backticks',
+    description: 'Wraps selected text in `inline code` backticks',
     type: 'button',
     category: 'Formatting',
     enabled: true,
@@ -610,6 +485,7 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'Code',
     codeType: 'formula',
     code: 'FORMULA:CODE(selection)',
+    pipeline: [{ type: 'formula', expression: 'CODE(selection)' }],
     createdAt: 1700000000000,
     updatedAt: 1700000000000
   },
@@ -624,6 +500,7 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'List',
     codeType: 'formula',
     code: 'FORMULA:BULLETLIST(selection)',
+    pipeline: [{ type: 'formula', expression: 'BULLETLIST(selection)' }],
     createdAt: 1700000000000,
     updatedAt: 1700000000000
   },
@@ -638,6 +515,7 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'CheckSquare',
     codeType: 'formula',
     code: 'FORMULA:CHECKLIST(selection)',
+    pipeline: [{ type: 'formula', expression: 'CHECKLIST(selection)' }],
     createdAt: 1700000000000,
     updatedAt: 1700000000000
   },
@@ -652,6 +530,7 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'Calendar',
     codeType: 'formula',
     code: 'FORMULA:TODAY()',
+    pipeline: [{ type: 'formula', expression: 'TODAY()' }],
     createdAt: 1700000000000,
     updatedAt: 1700000000000
   },
@@ -666,6 +545,7 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'Fingerprint',
     codeType: 'formula',
     code: 'FORMULA:UUID()',
+    pipeline: [{ type: 'formula', expression: 'UUID()' }],
     createdAt: 1700000000000,
     updatedAt: 1700000000000
   },
@@ -680,30 +560,11 @@ api.toast('Wrapped in prompt context tags', 'success');`
     icon: 'Table',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Extract Answered Variables Action
-const text = api.getContent();
-const regex = /\\{\\{([a-zA-Z0-9_-]+)(?:=([^}]+))?\\}\\}/g;
-const matches = [...text.matchAll(regex)];
-
-const varMap = new Map();
-for (const m of matches) {
-  const key = m[1].trim();
-  const val = m[2] ? m[2].trim() : '(unassigned)';
-  if (!varMap.has(key) || (varMap.get(key) === '(unassigned)' && val !== '(unassigned)')) {
-    varMap.set(key, val);
-  }
-}
-
-if (varMap.size === 0) {
-  api.toast('No variable tags {{...}} found in document', 'info');
-} else {
-  let table = '### Extracted Document Variables\\n| Variable | Value |\\n| :--- | :--- |\\n';
-  for (const [k, v] of varMap.entries()) {
-    table += \`| \${k} | \${v} |\\n\`;
-  }
-  await api.copyToClipboard(table);
-  api.toast(\`Copied \${varMap.size} extracted variable(s) to clipboard\`, 'success');
-}`
+    codeType: 'declarative',
+    code: 'TRANSFORM:extractAnsweredVariables',
+    pipeline: [
+      { type: 'transform', transform: 'extractAnsweredVariables' }
+    ]
   },
   {
     id: 'action-extract-rows-with-vars',
@@ -716,18 +577,11 @@ if (varMap.size === 0) {
     icon: 'ListFilter',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Extract Rows With Variables Action
-const text = api.getContent();
-const lines = text.split('\\n');
-const matching = lines.filter(l => /\\{\\{[^}]+\\}\\}/.test(l));
-
-if (matching.length === 0) {
-  api.toast('No rows containing {{variable}} tags found', 'info');
-} else {
-  const result = matching.join('\\n');
-  await api.copyToClipboard(result);
-  api.toast(\`Copied \${matching.length} row(s) with variables to clipboard\`, 'success');
-}`
+    codeType: 'declarative',
+    code: 'TRANSFORM:extractRowsWithVars',
+    pipeline: [
+      { type: 'transform', transform: 'extractRowsWithVars' }
+    ]
   },
   {
     id: 'action-extract-rows-without-vars',
@@ -740,18 +594,11 @@ if (matching.length === 0) {
     icon: 'FileText',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Extract Rows Without Variables Action
-const text = api.getContent();
-const lines = text.split('\\n');
-const staticLines = lines.filter(l => !/\\{\\{[^}]+\\}\\}/.test(l));
-
-if (staticLines.length === 0) {
-  api.toast('All rows in document contain {{variable}} tags', 'info');
-} else {
-  const result = staticLines.join('\\n');
-  await api.copyToClipboard(result);
-  api.toast(\`Copied \${staticLines.length} row(s) without variables to clipboard\`, 'success');
-}`
+    codeType: 'declarative',
+    code: 'TRANSFORM:extractRowsWithoutVars',
+    pipeline: [
+      { type: 'transform', transform: 'extractRowsWithoutVars' }
+    ]
   },
   {
     id: 'action-selection-extract-vars',
@@ -764,18 +611,10 @@ if (staticLines.length === 0) {
     icon: 'CheckSquare',
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
-    code: `// Selection: Extract Variables Action
-const sel = api.getSelection();
-const target = sel || api.getContent();
-const matches = [...target.matchAll(/\\{\\{([^}]+)\\}\\}/g)];
-
-if (matches.length === 0) {
-  api.toast('No {{variable}} tags found in ' + (sel ? 'selection' : 'document'), 'info');
-} else {
-  const unique = Array.from(new Set(matches.map(m => m[1].trim())));
-  const checklist = '### Variable Checklist\\n' + unique.map(v => \`- [ ] \\\`{{\${v}}}\\\`\`).join('\\n');
-  await api.copyToClipboard(checklist);
-  api.toast(\`Extracted \${unique.length} unique variable(s) to checklist and copied to clipboard\`, 'success');
-}`
+    codeType: 'declarative',
+    code: 'TRANSFORM:selectionExtractVars',
+    pipeline: [
+      { type: 'transform', transform: 'selectionExtractVars' }
+    ]
   }
 ];

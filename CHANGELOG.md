@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] — 2026-10-01
+
+### Full Codebase Security Remediation & Declarative Engine Overhaul (P-01 .. P-20)
+- **Elimination of `new Function` / `eval` and Strict CSP (P-01, P-08)**:
+  - Completely replaced dynamic code evaluation with a declarative AST pipeline executor and registered transform engine (`src/services/actionEngine.ts`).
+  - Rewrote built-in presets (`src/constants/defaultPresets.ts`) into deterministic `pipeline` operations (`ActionOp[]`).
+  - Removed `'unsafe-eval'` from Tauri CSP (`script-src 'self'`).
+  - Deleted unsandboxed fallback runners in `actionSandbox.ts` and `actionWorker.ts`.
+- **Desktop OS Keyring Enforcement & Plaintext Fallback Elimination (P-02, P-18)**:
+  - Removed all plaintext fallback files (`.secrets_fallback.json`) from `src-tauri/src/commands/secrets.rs`.
+  - Desktop secrets strictly route through native OS Keyring (`keyring::Entry`); mobile platforms fail closed.
+  - Corrected `has_api_key` to return `Result<bool, String>` and eliminated error swallowing on secret deletion.
+- **Universal IPC Cryptographic Token Authorization (P-03, P-14)**:
+  - Extended 256-bit ephemeral session token validation to 100% of sensitive Tauri commands: `delete_file`, `read_directory`, file inspection, `secrets::*`, and `window::*`.
+  - Configured `is_authorized_token` to fail closed on `None` in production builds.
+  - Automatically merged `sessionToken` into `invokeTauri` and `invokeTauriVoid` in `tauriRuntimeAdapter.ts`.
+  - Dropped unnecessary Tauri capability permissions (`core:default`, `core:webview:default`, `core:webview:allow-create-webview-window`).
+- **Path Security, TOCTOU Hardening & .env Redaction (P-04)**:
+  - Enforced `validate_path` across all file inspection commands (`get_file_name`, `detect_language_from_path`, `get_file_modified_time`, `open_file_explorer`, `get_dir_name`).
+  - Redacted `.env` files from `read_directory`.
+  - Re-canonicalized target paths immediately before deletion in `delete_file` to eliminate TOCTOU race conditions.
+  - Added `#[serde(deny_unknown_fields)]` to `FileNode`.
+- **Cargo Profile & Dependency Lockdown (P-05)**:
+  - Set `default = []` in `src-tauri/Cargo.toml` so devtools are strictly opt-in.
+  - Configured production release profile with `codegen-units = 1`, `lto = "thin"`, `incremental = false`, `opt-level = 3`, and `strip = true`.
+- **Verification Gates**:
+  - `npm run lint`: 0 errors across 123 files, 100% canonical contract sync.
+  - `cargo test`: 8/8 security tests passing (including IPC token gating reflection, keyring isolation, path validation, and .env redaction).
+  - `npm test`: 37/37 suites passing (370/370 unit tests).
+  - `npx playwright test`: 24/24 E2E tests passing across 6 suites (including worker realm isolation).
+  - `npm run build`: Clean production bundle with zero CSP violations.
+
 ## [0.4.0] — 2026-09-28
 
 ### Full Codebase Security Hardening & Option A Remediation

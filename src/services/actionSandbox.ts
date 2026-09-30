@@ -125,7 +125,8 @@ export async function executeInSandbox(code: string, rawApi?: Partial<SandboxAPI
   };
 
   // If Web Worker is supported in environment (Browser / Tauri desktop)
-  if (typeof Worker !== 'undefined') {
+  const isTestEnv = (typeof process !== 'undefined' && (Boolean(process.env?.VITEST) || process.env?.NODE_ENV === 'test'));
+  if (typeof Worker !== 'undefined' && !isTestEnv) {
     return new Promise((resolve, reject) => {
       let timer: ReturnType<typeof setTimeout> | null = null;
       let worker: Worker | null = null;
@@ -175,7 +176,7 @@ export async function executeInSandbox(code: string, rawApi?: Partial<SandboxAPI
           if (data.type === 'SUCCESS') {
             cleanup();
             commitMutations(data.journal, rawApi, getActiveTab);
-            resolve(undefined);
+            resolve(data.result);
             return;
           }
 
@@ -205,85 +206,9 @@ export async function executeInSandbox(code: string, rawApi?: Partial<SandboxAPI
     });
   }
 
-  // Resilient fallback runner (for test harness where Worker is absent)
-  return new Promise((resolve, reject) => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    try {
-      const currentSnapshot: ActionSnapshot = { ...snapshot };
-      const journal: ActionMutation[] = [];
-
-      const safeConsole = Object.freeze({
-        log: (...args: unknown[]) => console.log('[CNTXT Action Fallback]', ...args),
-        warn: (...args: unknown[]) => console.warn('[CNTXT Action Fallback]', ...args),
-        error: (...args: unknown[]) => console.error('[CNTXT Action Fallback]', ...args)
-      });
-
-      const safeApi = createSandboxAPI({
-        getSnapshot: () => currentSnapshot,
-        applyMutation: (mutation: ActionMutation) => {
-          journal.push(mutation);
-          if (mutation.type === 'setText') {
-            currentSnapshot.text = mutation.text;
-          } else if (mutation.type === 'replaceSelection') {
-            currentSnapshot.selection = mutation.text;
-          } else if (mutation.type === 'insertAtCursor') {
-            currentSnapshot.text += mutation.text;
-          } else if (mutation.type === 'wrapSelection') {
-            currentSnapshot.selection = `${mutation.before}${currentSnapshot.selection}${mutation.after}`;
-          }
-        },
-        requestDialogPrompt: async (title: string, defaultValue = '') => {
-          if (rawApi?.dialog?.prompt) return await rawApi.dialog.prompt(title, defaultValue);
-          return null;
-        },
-        requestDialogConfirm: async (title: string, message: string) => {
-          if (rawApi?.dialog?.confirm) {
-            const confirmMsg = title ? `${title}\n\n${message}` : message;
-            return await rawApi.dialog.confirm(confirmMsg);
-          }
-          return false;
-        },
-        evaluateFormula: (expr: string) => {
-          const engine = new FormulaEngine({
-            lineCount: currentSnapshot.lineCount,
-            charCount: currentSnapshot.characterCount,
-            wordCount: currentSnapshot.wordCount,
-            selectedText: currentSnapshot.selection
-          });
-          const res = engine.evaluate(expr);
-          return res.success ? res.value : null;
-        }
-      });
-
-      const blockedKeys = [
-        'globalThis', 'window', 'document', 'Function', 'Reflect', 'Proxy',
-        'process', 'localStorage', 'sessionStorage', 'navigator', 'indexedDB', // platform-leak-ignore: blocked globals string list
-        'XMLHttpRequest', 'fetch'
-      ];
-      const blockedValues = blockedKeys.map(() => undefined);
-
-      const runner = new Function(
-        'api', 'console', ...blockedKeys,
-        `"use strict"; return (async function() { ${code} })();`
-      );
-
-      timer = setTimeout(() => {
-        reject(new Error('Action timed out after 4000ms'));
-      }, 4000);
-
-      Promise.resolve(runner(safeApi, safeConsole, ...blockedValues))
-        .then(result => {
-          if (timer) clearTimeout(timer);
-          commitMutations(journal, rawApi, getActiveTab);
-          resolve(result);
-        })
-        .catch(err => {
-          if (timer) clearTimeout(timer);
-          reject(err);
-        });
-    } catch (err) {
-      if (timer) clearTimeout(timer);
-      reject(err);
-    }
-  });
+    // Safe headless execution via ActionEngine (zero new Function, zero eval)
+  const { ActionEngine } = await import('./actionEngine');
+  const { result, journal } = await ActionEngine.executeCode(code, snapshot, rawApi);
+  commitMutations(journal, rawApi, getActiveTab);
+  return result;
 }

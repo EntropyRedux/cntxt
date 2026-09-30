@@ -28,7 +28,7 @@ export type WorkerInMessage =
   | { type: 'DIALOG_RESPONSE'; reqId: string; value: string | boolean | null };
 
 export type WorkerOutMessage =
-  | { type: 'SUCCESS'; journal: ActionMutation[] }
+  | { type: 'SUCCESS'; journal: ActionMutation[]; result?: unknown }
   | { type: 'ERROR'; error: string }
   | { type: 'DIALOG_PROMPT'; reqId: string; title: string; defaultValue: string }
   | { type: 'DIALOG_CONFIRM'; reqId: string; title: string; message: string };
