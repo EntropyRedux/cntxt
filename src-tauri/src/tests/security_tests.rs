@@ -102,3 +102,26 @@ fn test_validate_path_security() {
         assert!(validate_path("/etc").is_err());
     }
 }
+
+#[test]
+fn test_ipc_session_token_authorization() {
+    use crate::commands::{init_session_token, clear_session_token, is_authorized_token};
+
+    clear_session_token();
+    // When uninitialized, behaves leniently for headless unit test harnesses
+    assert!(is_authorized_token(None));
+    assert!(is_authorized_token(Some("any")));
+
+    // When initialized with a secure session token
+    init_session_token("secure_token_abc123".to_string());
+
+    // Valid token matches
+    assert!(is_authorized_token(Some("secure_token_abc123")));
+
+    // Invalid or missing token is rejected
+    assert!(!is_authorized_token(Some("wrong_token")));
+    assert!(!is_authorized_token(None));
+    assert!(!is_authorized_token(Some("")));
+
+    clear_session_token();
+}

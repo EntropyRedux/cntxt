@@ -22,6 +22,7 @@ const ALLOWED_PLATFORM_ADAPTERS = new Set([
   path.resolve('src/adapters/browserRuntimeAdapter.ts'),
   path.resolve('src/adapters/browserIndexedDB.ts'),
   path.resolve('src/adapters/androidBridgeHelper.ts'),
+  path.resolve('src/adapters/androidRuntimeAdapter.ts'),
   path.resolve('src/adapters/tabSessionCache.ts'),
   path.resolve('src/adapters/domHelper.ts'),
   path.resolve('src/adapters/runtimeBridge.tsx'),

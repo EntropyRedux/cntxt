@@ -6,8 +6,8 @@ use tauri::Window;
 /// On mobile (Android/iOS), returns an error so invokeTauri yields null,
 /// prompting the TypeScript runtime bridge to fall back to navigator.clipboard.
 #[tauri::command]
-pub fn clipboard_read_text(window: Window) -> Result<String, String> {
-    if !super::is_authorized_window(&window) {
+pub fn clipboard_read_text(window: Window, session_token: Option<String>) -> Result<String, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
 
@@ -28,8 +28,8 @@ pub fn clipboard_read_text(window: Window) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn clipboard_write_text(window: Window, text: String) -> Result<(), String> {
-    if !super::is_authorized_window(&window) {
+pub fn clipboard_write_text(window: Window, text: String, session_token: Option<String>) -> Result<(), String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
 

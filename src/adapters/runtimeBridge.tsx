@@ -2,6 +2,7 @@ import React, { createContext, useContext, useMemo } from 'react';
 import { IRuntimeBridge } from '../ui-contract/bridgeContract';
 import { BrowserRuntimeAdapter } from './browserRuntimeAdapter';
 import { TauriRuntimeAdapter } from './tauriRuntimeAdapter';
+import { AndroidRuntimeAdapter } from './androidRuntimeAdapter';
 
 const RuntimeBridgeContext = createContext<IRuntimeBridge | null>(null);
 
@@ -43,7 +44,13 @@ let globalBridgeInstance: IRuntimeBridge | null = null;
 
 export const getRuntimeBridge = (): IRuntimeBridge => {
   if (!globalBridgeInstance) {
-    globalBridgeInstance = isTauriRuntime() ? new TauriRuntimeAdapter() : new BrowserRuntimeAdapter();
+    if (typeof window !== 'undefined' && Boolean((window as any).AndroidBridge)) {
+      globalBridgeInstance = new AndroidRuntimeAdapter();
+    } else if (isTauriRuntime()) {
+      globalBridgeInstance = new TauriRuntimeAdapter();
+    } else {
+      globalBridgeInstance = new BrowserRuntimeAdapter();
+    }
   }
   return globalBridgeInstance;
 };

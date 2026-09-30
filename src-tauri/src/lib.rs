@@ -157,6 +157,15 @@ pub fn run() {
             app.manage(Mutex::new(AppState::default()));
             app.manage(commands::storage::KvStore::default());
 
+            let session_token = Uuid::new_v4().to_string();
+            commands::init_session_token(session_token.clone());
+
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            if let Some(window) = app.get_webview_window("main") {
+                let script = format!("window.__CNTXT_SESSION_TOKEN__ = '{}';", session_token);
+                let _ = window.eval(&script);
+            }
+
             let args: Vec<String> = std::env::args().collect();
             let file_paths: Vec<String> = args
                 .iter()
@@ -209,6 +218,7 @@ pub fn run() {
             commands::clipboard::clipboard_read_text,
             commands::clipboard::clipboard_write_text,
             get_pending_files,
+            commands::get_session_token,
 
             get_app_info,
             get_system_info,

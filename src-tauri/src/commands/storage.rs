@@ -49,8 +49,8 @@ async fn ensure_loaded<'a>(app: &tauri::AppHandle, state: &'a Mutex<KvStoreState
 use tauri::{Emitter, Window};
 
 #[tauri::command]
-pub async fn kv_get(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<Option<String>, String> {
-    if !super::is_authorized_window(&window) {
+pub async fn kv_get(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String, session_token: Option<String>) -> Result<Option<String>, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     let lock = ensure_loaded(&app, &state.0).await;
@@ -58,8 +58,8 @@ pub async fn kv_get(window: Window, app: tauri::AppHandle, state: tauri::State<'
 }
 
 #[tauri::command]
-pub async fn kv_set(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String, value: String) -> Result<(), String> {
-    if !super::is_authorized_window(&window) {
+pub async fn kv_set(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String, value: String, session_token: Option<String>) -> Result<(), String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     let path = KvStore::store_path(&app)?;
@@ -83,8 +83,8 @@ pub async fn kv_set(window: Window, app: tauri::AppHandle, state: tauri::State<'
 
 
 #[tauri::command]
-pub async fn kv_remove(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<(), String> {
-    if !super::is_authorized_window(&window) {
+pub async fn kv_remove(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String, session_token: Option<String>) -> Result<(), String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     let path = KvStore::store_path(&app)?;
@@ -106,8 +106,8 @@ pub async fn kv_remove(window: Window, app: tauri::AppHandle, state: tauri::Stat
 
 
 #[tauri::command]
-pub async fn kv_has(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String) -> Result<bool, String> {
-    if !super::is_authorized_window(&window) {
+pub async fn kv_has(window: Window, app: tauri::AppHandle, state: tauri::State<'_, KvStore>, key: String, session_token: Option<String>) -> Result<bool, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     let lock = ensure_loaded(&app, &state.0).await;

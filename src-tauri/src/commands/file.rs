@@ -124,8 +124,8 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-pub async fn read_file(window: Window, path: String) -> Result<String, String> {
-    if !super::is_authorized_window(&window) {
+pub async fn read_file(window: Window, path: String, session_token: Option<String>) -> Result<String, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     let safe_path = validate_path(&path)?;
@@ -134,8 +134,8 @@ pub async fn read_file(window: Window, path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn write_file(window: Window, path: String, content: String) -> Result<(), String> {
-    if !super::is_authorized_window(&window) {
+pub async fn write_file(window: Window, path: String, content: String, session_token: Option<String>) -> Result<(), String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     let safe_path = validate_path(&path)?;
@@ -145,8 +145,8 @@ pub async fn write_file(window: Window, path: String, content: String) -> Result
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
-pub async fn open_file_dialog(window: Window) -> Result<Option<String>, String> {
-    if !super::is_authorized_window(&window) {
+pub async fn open_file_dialog(window: Window, session_token: Option<String>) -> Result<Option<String>, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     use rfd::FileDialog;
@@ -171,8 +171,8 @@ pub async fn open_file_dialog(window: Window) -> Result<Option<String>, String> 
 
 #[cfg(any(target_os = "android", target_os = "ios"))]
 #[tauri::command]
-pub async fn open_file_dialog(window: Window) -> Result<Option<String>, String> {
-    if !super::is_authorized_window(&window) {
+pub async fn open_file_dialog(window: Window, session_token: Option<String>) -> Result<Option<String>, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     use tauri_plugin_dialog::DialogExt;
@@ -185,8 +185,8 @@ pub async fn open_file_dialog(window: Window) -> Result<Option<String>, String> 
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
-pub async fn save_file_dialog(window: Window, default_name: Option<String>) -> Result<Option<String>, String> {
-    if !super::is_authorized_window(&window) {
+pub async fn save_file_dialog(window: Window, default_name: Option<String>, session_token: Option<String>) -> Result<Option<String>, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     use rfd::FileDialog;
@@ -216,8 +216,8 @@ pub async fn save_file_dialog(window: Window, default_name: Option<String>) -> R
 
 #[cfg(any(target_os = "android", target_os = "ios"))]
 #[tauri::command]
-pub async fn save_file_dialog(window: Window, default_name: Option<String>) -> Result<Option<String>, String> {
-    if !super::is_authorized_window(&window) {
+pub async fn save_file_dialog(window: Window, default_name: Option<String>, session_token: Option<String>) -> Result<Option<String>, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     use tauri_plugin_dialog::DialogExt;
@@ -303,8 +303,8 @@ pub fn get_file_modified_time(window: Window, path: String) -> Result<u64, Strin
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
-pub async fn open_folder_dialog(window: Window) -> Result<Option<String>, String> {
-    if !super::is_authorized_window(&window) {
+pub async fn open_folder_dialog(window: Window, session_token: Option<String>) -> Result<Option<String>, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     use rfd::FileDialog;
@@ -317,8 +317,8 @@ pub async fn open_folder_dialog(window: Window) -> Result<Option<String>, String
 
 #[cfg(any(target_os = "android", target_os = "ios"))]
 #[tauri::command]
-pub async fn open_folder_dialog(window: Window) -> Result<Option<String>, String> {
-    if !super::is_authorized_window(&window) {
+pub async fn open_folder_dialog(window: Window, session_token: Option<String>) -> Result<Option<String>, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     use tauri::Manager;
@@ -423,8 +423,8 @@ pub fn read_directory(window: Window, path: String) -> Result<Vec<FileNode>, Str
 }
 
 #[tauri::command]
-pub async fn rename_file(window: Window, old_path: String, new_path: String) -> Result<(), String> {
-    if !super::is_authorized_window(&window) {
+pub async fn rename_file(window: Window, old_path: String, new_path: String, session_token: Option<String>) -> Result<(), String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
     let safe_old = validate_path(&old_path)?;
