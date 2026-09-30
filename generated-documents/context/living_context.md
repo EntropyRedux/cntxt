@@ -30,8 +30,8 @@ Notes:
 - Task 1.5: Inverted Demo Welcome Control (M-04 Complete): explicit setDemoWelcomeDisabled and isDemoWelcomeDisabled programmatic controls in tabStore.ts; test coverage in tabStore.test.ts (10/10 passing).
 - Task 1.6: Actionable Diagnostics (L-03 Complete): formatJSON dispatches warning toasts on parse exceptions instead of silent returns.
 - Verification Gate Snapshot (2026-09-30): npm run lint (0 errors, 122 files clean, 100% contract sync); cargo test (5/5 security tests); npm test (364/364 unit tests, 37 suites); npm run test:e2e (24/24 Playwright tests, 6 suites); npm run build (clean production build).
-Last Audit Reconciliation: 2026-09-28 — FAIL (Reconciled by Prod Agent via Refactor Plan v6, all findings now remediated)
-Last Git Checkpoint: 2026-09-30 — e012943 fix(sandbox,store): invert demo welcome control and verify true worker realm isolation
+Last Audit Reconciliation: 2026-09-30 — FAIL (Reconciled findings P-01..P-20 from raw_findings_full_codebase_verification_2026-09-30.md; 3 Critical [P-01, P-02, P-03] and 6 High open valid defects requiring Tier 1 remediation before release)
+Last Git Checkpoint: 2026-09-30 — 956ab23 docs(context): update living context document to v1.39
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1
