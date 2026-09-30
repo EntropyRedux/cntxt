@@ -42,15 +42,21 @@ interface TabState {
   initializeTabs: (storage?: IStorageBridge, disableDemoWelcome?: boolean) => Promise<void>;
 }
 
-declare global {
-  interface Window {
-    __CONTEXTPAD_DEMO__?: boolean;
-  }
+let demoWelcomeDisabled = false;
+
+/**
+ * Configure whether the default welcome document is suppressed on cold-start.
+ * Inverts the ambient global dependency (M-04) by providing explicit program control.
+ */
+export function setDemoWelcomeDisabled(disabled: boolean): void {
+  demoWelcomeDisabled = disabled;
 }
 
-export function isDemoModeExplicitlyDisabled(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.__CONTEXTPAD_DEMO__ === false;
+export function isDemoWelcomeDisabled(): boolean {
+  if (typeof window !== 'undefined' && (window as any).__CONTEXTPAD_DEMO__ === false) {
+    return true;
+  }
+  return demoWelcomeDisabled;
 }
 
 export const useTabStore = create<TabState>((set, get) => ({
@@ -89,7 +95,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       set({ tabs: cached.tabs, activeTabId: cachedActiveId, isHydrating: false });
       // Continue IPC load silently to refresh stale content
     }
-    const isExplicitlyNoDemo = disableDemoWelcome ?? isDemoModeExplicitlyDisabled();
+    const isExplicitlyNoDemo = disableDemoWelcome ?? isDemoWelcomeDisabled();
 
     if (!activeStorage) {
       if (!cached) {

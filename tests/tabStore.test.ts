@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useTabStore, flushPendingSaves } from '../src/store/tabStore';
+import { useTabStore, flushPendingSaves, setDemoWelcomeDisabled, isDemoWelcomeDisabled } from '../src/store/tabStore';
 
 describe('TabStore', () => {
   beforeEach(() => {
@@ -119,5 +119,21 @@ describe('TabStore', () => {
     expect(() => {
       flushPendingSaves();
     }).not.toThrow();
+  });
+
+  it('supports explicit demo welcome suppression without ambient window flags', async () => {
+    setDemoWelcomeDisabled(true);
+    expect(isDemoWelcomeDisabled()).toBe(true);
+
+    useTabStore.setState({ tabs: [], activeTabId: '', isHydrating: true });
+    await useTabStore.getState().initializeTabs(undefined, true);
+
+    const state = useTabStore.getState();
+    expect(state.tabs.length).toBe(0);
+    expect(state.activeTabId).toBe('');
+
+    // Restore default
+    setDemoWelcomeDisabled(false);
+    expect(isDemoWelcomeDisabled()).toBe(false);
   });
 });

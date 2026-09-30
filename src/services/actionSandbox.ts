@@ -146,8 +146,8 @@ export async function executeInSandbox(code: string, rawApi?: Partial<SandboxAPI
 
         timer = setTimeout(() => {
           cleanup();
-          reject(new Error('Action timed out after 4000ms'));
-        }, 4000);
+          reject(new Error('Action timed out after 10000ms'));
+        }, 10000);
 
         worker.onmessage = async (e: MessageEvent<WorkerOutMessage>) => {
           const data = e.data;

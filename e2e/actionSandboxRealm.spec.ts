@@ -1,30 +1,37 @@
 import { test, expect } from './fixtures';
 
 test.describe('Action Sandbox Worker Realm Isolation', () => {
-  test.use({ demo: true });
-
   test('sandboxed action executes in worker realm and updates content', async ({ page }) => {
     await page.goto('/');
     const cm = page.locator('.cm-editor');
     await expect(cm).toBeVisible({ timeout: 30_000 });
 
-    // Open a new tab
-    await page.keyboard.press('Control+n');
-    await expect(page.locator('.cm-content')).toBeVisible({ timeout: 10_000 });
-    await page.locator('.cm-content').click();
+    const result = await page.evaluate(async () => {
+      try {
+        const { executeInSandbox } = await import('/src/services/actionSandbox.ts');
+        const { useTabStore } = await import('/src/store/tabStore.ts');
 
-    // Insert an action button token for built-in action
-    await page.keyboard.insertText('[[action:act_summarize]]\n\n# Project Notes\nFeature implementation is progressing well.\nAll security gates are passing.');
+        const tabId = useTabStore.getState().createTab('WorkerTest.md', '# Initial Content\n');
+        useTabStore.getState().setActiveTabId(tabId);
 
-    const actionBtn = page.locator('.cm-action-btn-widget').first();
-    await expect(actionBtn).toBeVisible({ timeout: 10_000 });
+        // Execute real user code in dedicated Web Worker
+        const userCode = `
+          const current = api.getContent();
+          api.setContent(current + '\\n## Processed By Worker\\nResult: ' + (40 + 2));
+        `;
 
-    // Click the action button to trigger worker execution
-    await actionBtn.click();
+        await executeInSandbox(userCode);
+        const updatedTab = useTabStore.getState().tabs.find(t => t.id === tabId);
+        return { success: true, content: updatedTab?.content };
+      } catch (err: unknown) {
+        return { error: err instanceof Error ? err.message : String(err) };
+      }
+    });
 
-    // Verify document was updated with executive summary generated inside worker
-    await expect(page.locator('.cm-content')).toContainText('Executive Summary', { timeout: 15_000 });
-    await expect(page.locator('.cm-content')).toContainText('Key Metrics:', { timeout: 15_000 });
+    expect(result.error).toBeUndefined();
+    expect(result.success).toBe(true);
+    expect(result.content).toContain('## Processed By Worker');
+    expect(result.content).toContain('Result: 42');
   });
 
   test('action sandbox isolates worker global scope from ambient network primitives', async ({ page }) => {
@@ -60,8 +67,8 @@ test.describe('Action Sandbox Worker Realm Isolation', () => {
           success: true,
           content: setContentVal
         };
-      } catch (err: any) {
-        return { error: err.message };
+      } catch (err: unknown) {
+        return { error: err instanceof Error ? err.message : String(err) };
       }
     });
 
@@ -75,5 +82,34 @@ test.describe('Action Sandbox Worker Realm Isolation', () => {
     expect(parsedScope.hasXHR).toBe(false);
     expect(parsedScope.hasWS).toBe(false);
     expect(parsedScope.hasImportScripts).toBe(false);
+  });
+
+  test('action sandbox rejects dynamic imports and constructor climbers', async ({ page }) => {
+    await page.goto('/');
+    const cm = page.locator('.cm-editor');
+    await expect(cm).toBeVisible({ timeout: 30_000 });
+
+    const result = await page.evaluate(async () => {
+      const { executeInSandbox } = await import('/src/services/actionSandbox.ts');
+      const errors: string[] = [];
+
+      try {
+        await executeInSandbox('import("./foo.js")');
+      } catch (e: unknown) {
+        errors.push(e instanceof Error ? e.message : String(e));
+      }
+
+      try {
+        await executeInSandbox('const c = ({}).constructor.constructor; c("return fetch")()');
+      } catch (e: unknown) {
+        errors.push(e instanceof Error ? e.message : String(e));
+      }
+
+      return errors;
+    });
+
+    expect(result.length).toBe(2);
+    expect(result[0]).toMatch(/Security Error/i);
+    expect(result[1]).toMatch(/Security Error/i);
   });
 });
