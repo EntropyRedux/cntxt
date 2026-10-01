@@ -143,93 +143,91 @@ pub async fn write_file(window: Window, path: String, content: String, session_t
         .map_err(|e| format!("Failed to write file: {}", e))
 }
 
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn open_file_dialog(window: Window, session_token: Option<String>) -> Result<Option<String>, String> {
     if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
-    use rfd::FileDialog;
 
-    let file_path = FileDialog::new()
-        .add_filter("All Files", &["*"])
-        .add_filter("Markdown", &["md"])
-        .add_filter("Text", &["txt"])
-        .add_filter("JSON", &["json"])
-        .add_filter("YAML", &["yaml", "yml"])
-        .add_filter("CSV", &["csv"])
-        .add_filter("JavaScript", &["js", "jsx"])
-        .add_filter("TypeScript", &["ts", "tsx"])
-        .add_filter("Python", &["py"])
-        .add_filter("Rust", &["rs"])
-        .add_filter("HTML", &["html", "htm"])
-        .add_filter("CSS", &["css", "scss", "sass"])
-        .pick_file();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        use rfd::FileDialog;
 
-    Ok(file_path.map(|p| p.to_string_lossy().to_string()))
-}
+        let file_path = FileDialog::new()
+            .add_filter("All Files", &["*"])
+            .add_filter("Markdown", &["md"])
+            .add_filter("Text", &["txt"])
+            .add_filter("JSON", &["json"])
+            .add_filter("YAML", &["yaml", "yml"])
+            .add_filter("CSV", &["csv"])
+            .add_filter("JavaScript", &["js", "jsx"])
+            .add_filter("TypeScript", &["ts", "tsx"])
+            .add_filter("Python", &["py"])
+            .add_filter("Rust", &["rs"])
+            .add_filter("HTML", &["html", "htm"])
+            .add_filter("CSS", &["css", "scss", "sass"])
+            .pick_file();
 
-#[cfg(any(target_os = "android", target_os = "ios"))]
-#[tauri::command]
-pub async fn open_file_dialog(window: Window, session_token: Option<String>) -> Result<Option<String>, String> {
-    if !super::is_authorized_request(&window, session_token.as_deref()) {
-        return Err("Unauthorized window origin".into());
-    }
-    use tauri_plugin_dialog::DialogExt;
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    window.dialog().file().pick_file(move |file_path| {
-        let _ = tx.send(file_path.map(|p| p.to_string()));
-    });
-    rx.await.map_err(|e| e.to_string())
-}
-
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-#[tauri::command]
-pub async fn save_file_dialog(window: Window, default_name: Option<String>, session_token: Option<String>) -> Result<Option<String>, String> {
-    if !super::is_authorized_request(&window, session_token.as_deref()) {
-        return Err("Unauthorized window origin".into());
-    }
-    use rfd::FileDialog;
-
-    let mut dialog = FileDialog::new()
-        .add_filter("All Files", &["*"])
-        .add_filter("Markdown", &["md"])
-        .add_filter("Text", &["txt"])
-        .add_filter("JSON", &["json"])
-        .add_filter("YAML", &["yaml", "yml"])
-        .add_filter("CSV", &["csv"])
-        .add_filter("JavaScript", &["js", "jsx"])
-        .add_filter("TypeScript", &["ts", "tsx"])
-        .add_filter("Python", &["py"])
-        .add_filter("Rust", &["rs"])
-        .add_filter("HTML", &["html", "htm"])
-        .add_filter("CSS", &["css", "scss", "sass"]);
-
-    if let Some(name) = default_name {
-        dialog = dialog.set_file_name(&name);
+        Ok(file_path.map(|p| p.to_string_lossy().to_string()))
     }
 
-    let file_path = dialog.save_file();
-
-    Ok(file_path.map(|p| p.to_string_lossy().to_string()))
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        use tauri_plugin_dialog::DialogExt;
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        window.dialog().file().pick_file(move |file_path| {
+            let _ = tx.send(file_path.map(|p| p.to_string()));
+        });
+        rx.await.map_err(|e| e.to_string())
+    }
 }
 
-#[cfg(any(target_os = "android", target_os = "ios"))]
 #[tauri::command]
 pub async fn save_file_dialog(window: Window, default_name: Option<String>, session_token: Option<String>) -> Result<Option<String>, String> {
     if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
-    use tauri_plugin_dialog::DialogExt;
-    let mut builder = window.dialog().file();
-    if let Some(name) = default_name {
-        builder = builder.set_file_name(&name);
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        use rfd::FileDialog;
+
+        let mut dialog = FileDialog::new()
+            .add_filter("All Files", &["*"])
+            .add_filter("Markdown", &["md"])
+            .add_filter("Text", &["txt"])
+            .add_filter("JSON", &["json"])
+            .add_filter("YAML", &["yaml", "yml"])
+            .add_filter("CSV", &["csv"])
+            .add_filter("JavaScript", &["js", "jsx"])
+            .add_filter("TypeScript", &["ts", "tsx"])
+            .add_filter("Python", &["py"])
+            .add_filter("Rust", &["rs"])
+            .add_filter("HTML", &["html", "htm"])
+            .add_filter("CSS", &["css", "scss", "sass"]);
+
+        if let Some(name) = default_name {
+            dialog = dialog.set_file_name(&name);
+        }
+
+        let file_path = dialog.save_file();
+
+        Ok(file_path.map(|p| p.to_string_lossy().to_string()))
     }
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    builder.save_file(move |file_path| {
-        let _ = tx.send(file_path.map(|p| p.to_string()));
-    });
-    rx.await.map_err(|e| e.to_string())
+
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        use tauri_plugin_dialog::DialogExt;
+        let mut builder = window.dialog().file();
+        if let Some(name) = default_name {
+            builder = builder.set_file_name(&name);
+        }
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        builder.save_file(move |file_path| {
+            let _ = tx.send(file_path.map(|p| p.to_string()));
+        });
+        rx.await.map_err(|e| e.to_string())
+    }
 }
 
 #[tauri::command]
@@ -305,31 +303,30 @@ pub fn get_file_modified_time(window: Window, path: String, session_token: Optio
     Ok(duration.as_secs())
 }
 
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn open_folder_dialog(window: Window, session_token: Option<String>) -> Result<Option<String>, String> {
     if !super::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin".into());
     }
-    use rfd::FileDialog;
 
-    let folder_path = FileDialog::new()
-        .pick_folder();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        use rfd::FileDialog;
 
-    Ok(folder_path.map(|p| p.to_string_lossy().to_string()))
-}
+        let folder_path = FileDialog::new()
+            .pick_folder();
 
-#[cfg(any(target_os = "android", target_os = "ios"))]
-#[tauri::command]
-pub async fn open_folder_dialog(window: Window, session_token: Option<String>) -> Result<Option<String>, String> {
-    if !super::is_authorized_request(&window, session_token.as_deref()) {
-        return Err("Unauthorized window origin".into());
+        Ok(folder_path.map(|p| p.to_string_lossy().to_string()))
     }
-    use tauri::Manager;
-    let app = window.app_handle();
-    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("workspace");
-    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create workspace directory: {}", e))?;
-    Ok(Some(dir.to_string_lossy().to_string()))
+
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        use tauri::Manager;
+        let app = window.app_handle();
+        let dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("workspace");
+        fs::create_dir_all(&dir).map_err(|e| format!("Failed to create workspace directory: {}", e))?;
+        Ok(Some(dir.to_string_lossy().to_string()))
+    }
 }
 
 #[derive(serde::Serialize, Debug)]

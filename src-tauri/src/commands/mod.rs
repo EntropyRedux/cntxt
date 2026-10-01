@@ -14,7 +14,7 @@ pub fn init_session_token(token: String) {
     }
 }
 
-#[allow(dead_code)]
+#[cfg(test)]
 pub fn clear_session_token() {
     if let Ok(mut lock) = SESSION_TOKEN.write() {
         *lock = None;
