@@ -32,13 +32,20 @@ export const ClassicShell: React.FC<ShellLayoutProps> = ({
   return (
     <div className="flex flex-col h-full w-full overflow-hidden select-none bg-[var(--app-bg)] font-sans">
       {isWeb ? (
-        <ErrorBoundary fallbackTitle="Web Header Error">
-          <WebHeader
-            events={events}
-            isAutoHidden={isHeaderHidden}
-            onOpenOnboarding={onOpenOnboarding}
-          />
-        </ErrorBoundary>
+        <>
+          <ErrorBoundary fallbackTitle="Web Header Error">
+            <WebHeader
+              events={events}
+              isAutoHidden={isHeaderHidden}
+              onOpenOnboarding={onOpenOnboarding}
+            />
+          </ErrorBoundary>
+          {settings.showRibbon !== false && (
+            <ErrorBoundary fallbackTitle="Ribbon Error">
+              <ModularRibbon events={events} />
+            </ErrorBoundary>
+          )}
+        </>
       ) : (
         <>
           {/* 1. Desktop Title Bar */}

@@ -337,8 +337,8 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
             className="flex items-center gap-1.5 font-bold text-xs text-[var(--text-primary)] px-1 tracking-wider select-none cursor-default"
             onMouseDown={handleWindowDrag}
           >
-            <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shrink-0" />
-            <span>CNTXT</span>
+            <img src="/logo.png" alt="CNTXT" className="w-4 h-4 rounded-xs object-contain" />
+            <span>.CNTXT</span>
           </div>
         </div>
 

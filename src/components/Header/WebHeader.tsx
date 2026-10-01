@@ -5,11 +5,9 @@ import {
   Cloud, 
   CloudOff, 
   RefreshCw, 
-  Bold, 
-  Italic, 
-  Heading2, 
-  Code, 
-  Zap, 
+  PanelTop, 
+  Eye, 
+  Code2, 
   Columns, 
   Maximize2, 
   Minimize2, 
@@ -22,13 +20,13 @@ import {
   Save,
   Download,
   Sidebar as SidebarIcon,
-  HelpCircle
+  HelpCircle,
+  Command
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useAuthStore } from '../../store/authStore';
 import { AppUiEvents } from '../../ui-contract/actionContract';
-import { editorRegistry } from '../../services/editor/editorRegistry';
 
 export interface WebHeaderProps {
   events: AppUiEvents;
@@ -43,8 +41,8 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
   className = '',
   isAutoHidden = false,
 }) => {
-  const { tabs, activeTabId, updateTabMetadata, insertTextAtCursor, createTab } = useTabStore();
-  const { settings, updateSettings, toggleSidebar } = useSettingsStore();
+  const { tabs, activeTabId, updateTabMetadata, createTab } = useTabStore();
+  const { settings, updateSettings, toggleSidebar, toggleRibbon, toggleEditorMode } = useSettingsStore();
   const { user, isGuestMode, syncStatus, signOut, triggerSync } = useAuthStore();
 
   const activeTab = tabs.find(t => t.id === activeTabId);
@@ -62,6 +60,7 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
 
   // Zen Mode (hides sidebars and status bar)
   const isZenMode = !settings.showSidebar && !settings.showStatusBar && !settings.showActivityBar;
+  const isRendered = (settings.editorMode || 'rendered') === 'rendered';
 
   const toggleZenMode = () => {
     if (isZenMode) {
@@ -111,74 +110,34 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
     setIsEditingTitle(false);
   };
 
-  // Formatting helpers
-  const handleWrapFormat = (prefix: string, suffix: string, placeholder: string) => {
-    if (!activeTabId) return;
-    const view = editorRegistry.getView(activeTabId);
-    if (view) {
-      const { state } = view;
-      const selection = state.selection.main;
-      const selectedText = state.sliceDoc(selection.from, selection.to);
-      const replacement = selectedText ? `${prefix}${selectedText}${suffix}` : `${prefix}${placeholder}${suffix}`;
-      view.dispatch({
-        changes: { from: selection.from, to: selection.to, insert: replacement },
-        selection: {
-          anchor: selectedText ? selection.from + replacement.length : selection.from + prefix.length,
-          head: selectedText ? selection.from + replacement.length : selection.from + prefix.length + placeholder.length,
-        },
-        scrollIntoView: true,
-      });
-      view.focus();
-    } else {
-      insertTextAtCursor(activeTabId, `${prefix}${placeholder}${suffix}`);
-    }
-  };
-
-  const handleLinePrefix = (prefix: string) => {
-    if (!activeTabId) return;
-    const view = editorRegistry.getView(activeTabId);
-    if (view) {
-      const { state } = view;
-      const selection = state.selection.main;
-      const line = state.doc.lineAt(selection.from);
-      view.dispatch({
-        changes: { from: line.from, to: line.from, insert: prefix },
-        scrollIntoView: true,
-      });
-      view.focus();
-    } else {
-      insertTextAtCursor(activeTabId, prefix);
-    }
-  };
-
   return (
     <header
-      className={`h-12 w-full bg-[var(--titlebar-bg,#12141a)] border-b border-[var(--border-subtle,#24283b)] flex items-center justify-between px-3 shrink-0 z-30 select-none transition-transform duration-300 ease-in-out font-sans ${
+      className={`h-11 w-full bg-[var(--titlebar-bg)] border-b border-[var(--border-subtle)] flex items-center justify-between px-2.5 sm:px-3 shrink-0 z-30 select-none transition-transform duration-300 ease-in-out font-sans ${
         isAutoHidden ? '-translate-y-full' : 'translate-y-0'
       } ${className}`}
     >
       {/* ── Left: App Brand & Inline Title & Sync Status ── */}
-      <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex items-center gap-2 min-w-0">
         {/* Menu Dropdown Button */}
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="w-7 h-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-md hover:bg-[var(--card-hover-bg)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
             title="Document & Workspace Menu"
           >
             <Menu className="w-4 h-4" />
           </button>
 
           {isMenuOpen && (
-            <div className="absolute left-0 top-9 w-52 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl py-1.5 z-50 text-xs text-zinc-200 backdrop-blur-xl">
+            <div className="absolute left-0 top-8.5 w-56 bg-[var(--card-bg)] border border-[var(--border-primary)] rounded-lg shadow-xl py-1 z-50 text-xs text-[var(--text-primary)] backdrop-blur-md">
               <button
                 onClick={() => {
                   createTab('Untitled.md', '# Untitled Document\n\n', 'markdown');
                   setIsMenuOpen(false);
                 }}
-                className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer"
+                className="w-full px-3 py-1.5 text-left hover:bg-[var(--card-hover-bg)] flex items-center gap-2.5 cursor-pointer"
               >
-                <FileText className="w-3.5 h-3.5 text-zinc-400" />
+                <FileText className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                 <span>New Document</span>
               </button>
               <button
@@ -186,9 +145,9 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
                   events.onOpenFile();
                   setIsMenuOpen(false);
                 }}
-                className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer"
+                className="w-full px-3 py-1.5 text-left hover:bg-[var(--card-hover-bg)] flex items-center gap-2.5 cursor-pointer"
               >
-                <FolderOpen className="w-3.5 h-3.5 text-zinc-400" />
+                <FolderOpen className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                 <span>Open File...</span>
               </button>
               <button
@@ -196,9 +155,9 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
                   events.onSaveFile();
                   setIsMenuOpen(false);
                 }}
-                className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer"
+                className="w-full px-3 py-1.5 text-left hover:bg-[var(--card-hover-bg)] flex items-center gap-2.5 cursor-pointer"
               >
-                <Save className="w-3.5 h-3.5 text-zinc-400" />
+                <Save className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                 <span>Save to Local File</span>
               </button>
               <button
@@ -206,20 +165,20 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
                   events.onExportWorkspace();
                   setIsMenuOpen(false);
                 }}
-                className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer"
+                className="w-full px-3 py-1.5 text-left hover:bg-[var(--card-hover-bg)] flex items-center gap-2.5 cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-zinc-400" />
+                <Download className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                 <span>Export Workspace JSON</span>
               </button>
-              <div className="my-1 border-t border-zinc-800" />
+              <div className="my-1 border-t border-[var(--border-subtle)]" />
               <button
                 onClick={() => {
                   toggleSidebar();
                   setIsMenuOpen(false);
                 }}
-                className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer"
+                className="w-full px-3 py-1.5 text-left hover:bg-[var(--card-hover-bg)] flex items-center gap-2.5 cursor-pointer"
               >
-                <SidebarIcon className="w-3.5 h-3.5 text-zinc-400" />
+                <SidebarIcon className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                 <span>Toggle Drawer ({settings.showSidebar ? 'Hide' : 'Show'})</span>
               </button>
               {onOpenOnboarding && (
@@ -228,7 +187,7 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
                     onOpenOnboarding();
                     setIsMenuOpen(false);
                   }}
-                  className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer text-indigo-400"
+                  className="w-full px-3 py-1.5 text-left hover:bg-[var(--card-hover-bg)] flex items-center gap-2.5 cursor-pointer text-[var(--accent-primary)] font-medium"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Onboarding & Superpowers</span>
@@ -236,8 +195,8 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
               )}
 
               {tabs.length > 1 && (
-                <div className="mt-1 pt-1 border-t border-zinc-800">
-                  <div className="px-3 py-1 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+                <div className="mt-1 pt-1 border-t border-[var(--border-subtle)]">
+                  <div className="px-3 py-1 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
                     Switch Document ({tabs.length})
                   </div>
                   <div className="max-h-48 overflow-y-auto">
@@ -250,13 +209,13 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
                         }}
                         className={`w-full px-3 py-1.5 text-left flex items-center justify-between text-xs cursor-pointer ${
                           tab.id === activeTabId
-                            ? 'bg-indigo-600/20 text-indigo-300 font-medium'
-                            : 'hover:bg-white/10 text-zinc-300'
+                            ? 'bg-[var(--accent-container)]/50 text-[var(--accent-primary)] font-medium'
+                            : 'hover:bg-[var(--card-hover-bg)] text-[var(--text-primary)]'
                         }`}
                       >
                         <span className="truncate pr-2">{tab.title}</span>
                         {tab.id === activeTabId && (
-                          <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                          <Check className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
                         )}
                       </button>
                     ))}
@@ -267,13 +226,23 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
           )}
         </div>
 
-        {/* Brand Icon */}
-        <div className="w-5 h-5 rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
-          <span className="font-bold text-white text-[10px]">C</span>
+        {/* Brand Icon & Name */}
+        <div className="flex items-center gap-1.5 shrink-0 pr-1">
+          <img 
+            src="/logo.png" 
+            alt="CNTXT" 
+            className="w-5 h-5 rounded-xs object-contain shrink-0 shadow-2xs" 
+          />
+          <span className="font-bold text-xs tracking-wider text-[var(--text-primary)] hidden sm:inline">
+            .CNTXT
+          </span>
         </div>
 
+        {/* Vertical Divider */}
+        <div className="w-[1px] h-4 bg-[var(--border-subtle)] mx-0.5 shrink-0" />
+
         {/* Editable Title */}
-        <div className="flex items-center min-w-0 max-w-[200px] sm:max-w-xs md:max-w-md">
+        <div className="flex items-center min-w-0 max-w-[140px] sm:max-w-[200px] md:max-w-xs">
           {isEditingTitle ? (
             <input
               ref={titleInputRef}
@@ -285,133 +254,116 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
                 if (e.key === 'Enter') commitTitleEdit();
                 if (e.key === 'Escape') setIsEditingTitle(false);
               }}
-              className="bg-zinc-800 text-white text-xs px-2 py-0.5 rounded outline-none border border-indigo-500 w-full"
+              className="bg-[var(--editor-bg)] text-[var(--text-primary)] text-xs px-2 py-0.5 rounded outline-none border border-[var(--accent-primary)] w-full"
             />
           ) : (
             <button
               onClick={startEditingTitle}
-              className="text-xs font-medium text-zinc-200 hover:text-white truncate px-1.5 py-0.5 rounded hover:bg-white/5 transition-colors cursor-pointer text-left"
+              className="text-xs font-medium text-[var(--text-primary)] hover:text-[var(--accent-primary)] truncate px-1.5 py-0.5 rounded hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer text-left"
               title="Click to rename document"
             >
-              {activeTab ? activeTab.title : 'No Document Open'}
+              {activeTab ? activeTab.title : 'Untitled.md'}
             </button>
           )}
         </div>
 
         {/* Cloud Sync Status Indicator */}
-        <div className="hidden lg:flex items-center">
+        <div className="hidden lg:flex items-center ml-1">
           {user ? (
             <button
               onClick={triggerSync}
-              className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-zinc-200 px-2 py-0.5 rounded-full bg-zinc-800/60 border border-zinc-700/50 transition-colors"
+              className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] px-2 py-0.5 rounded-full bg-[var(--card-secondary-bg)] border border-[var(--border-subtle)] transition-colors"
               title="Click to trigger manual cloud sync"
             >
               {syncStatus === 'syncing' ? (
                 <>
-                  <RefreshCw className="w-3 h-3 text-indigo-400 animate-spin" />
+                  <RefreshCw className="w-3 h-3 text-[var(--accent-primary)] animate-spin" />
                   <span>Syncing...</span>
                 </>
               ) : (
                 <>
                   <Cloud className="w-3 h-3 text-emerald-400" />
-                  <span className="text-zinc-300">Saved</span>
+                  <span className="text-[var(--text-secondary)]">Saved</span>
                 </>
               )}
             </button>
           ) : isGuestMode ? (
             <div 
-              className="flex items-center gap-1 text-[10px] font-medium text-amber-400/90 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20"
+              className="flex items-center gap-1 text-[10.5px] font-medium text-[var(--status-warning,#eab308)] px-2 py-0.5 rounded-full bg-[var(--card-secondary-bg)] border border-[var(--border-subtle)]"
               title="Guest Mode: Auto-saved to browser IndexedDB"
             >
-              <CloudOff className="w-3 h-3 text-amber-400" />
+              <CloudOff className="w-3 h-3 opacity-80" />
               <span>Offline Guest</span>
             </div>
           ) : null}
         </div>
       </div>
 
-      {/* ── Center: Formatting Pills Toolbar ── */}
-      <div className="hidden sm:flex items-center gap-1 bg-zinc-900/60 border border-zinc-800/80 rounded-xl px-1.5 py-0.5">
+      {/* ── Center: Workspace Controls (Ribbon, Render Mode, Preview) ── */}
+      <div className="flex items-center gap-1 shrink-0">
+        {/* Modular Ribbon Toggle */}
         <button
-          onClick={() => handleWrapFormat('**', '**', 'bold text')}
-          className="w-6 h-6 rounded hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer"
-          title="Bold (Ctrl+B)"
+          onClick={toggleRibbon}
+          className={`h-6.5 px-2 rounded-md flex items-center gap-1.5 text-[11px] font-medium transition-colors cursor-pointer border ${
+            settings.showRibbon !== false
+              ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] border-[var(--accent-primary)]/40 shadow-2xs'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--card-bg)] border-[var(--border-subtle)] hover:bg-[var(--card-hover-bg)]'
+          }`}
+          title="Toggle Modular Ribbon Toolbox (Ctrl+Shift+R)"
         >
-          <Bold className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => handleWrapFormat('*', '*', 'italic text')}
-          className="w-6 h-6 rounded hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer"
-          title="Italic (Ctrl+I)"
-        >
-          <Italic className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => handleLinePrefix('## ')}
-          className="w-6 h-6 rounded hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer"
-          title="Heading"
-        >
-          <Heading2 className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => handleWrapFormat('```\n', '\n```', 'code')}
-          className="w-6 h-6 rounded hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer"
-          title="Code Block"
-        >
-          <Code className="w-3.5 h-3.5" />
-        </button>
-        
-        <div className="w-[1px] h-3.5 bg-zinc-800 mx-0.5" />
-
-        {/* Action Button Insert */}
-        <button
-          onClick={() => handleWrapFormat('[[action:', ']]', 'id')}
-          className="px-1.5 h-6 rounded hover:bg-white/10 flex items-center gap-1 text-[11px] font-medium text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
-          title="Insert Executable Action Button"
-        >
-          <Zap className="w-3 h-3" />
-          <span>Action</span>
+          <PanelTop className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">Ribbon</span>
         </button>
 
-        <div className="w-[1px] h-3.5 bg-zinc-800 mx-0.5" />
+        {/* Rendered vs Raw Mode Switcher */}
+        <button
+          onClick={toggleEditorMode}
+          className={`h-6.5 px-2 rounded-md flex items-center gap-1.5 text-[11px] font-medium transition-colors cursor-pointer border ${
+            isRendered
+              ? 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:bg-[var(--card-hover-bg)]'
+              : 'bg-[var(--card-secondary-bg)] text-[var(--status-warning,#eab308)] border-[var(--status-warning,#eab308)]/40'
+          }`}
+          title="Toggle Rendered Markdown vs Raw Source (Ctrl+M)"
+        >
+          {isRendered ? <Eye className="w-3.5 h-3.5 text-[var(--accent-primary)]" /> : <Code2 className="w-3.5 h-3.5" />}
+          <span className="hidden md:inline">{isRendered ? 'Rendered' : 'Raw'}</span>
+        </button>
 
-        {/* Live Preview Toggle Pill */}
+        {/* Live Preview Toggle */}
         <button
           onClick={() => updateSettings({ showLivePreview: !settings.showLivePreview })}
-          className={`px-2 h-6 rounded flex items-center gap-1.5 text-[11px] font-medium transition-colors cursor-pointer ${
+          className={`h-6.5 px-2 rounded-md flex items-center gap-1.5 text-[11px] font-medium transition-colors cursor-pointer border ${
             settings.showLivePreview
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/10'
+              ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--card-bg)] border-[var(--border-subtle)] hover:bg-[var(--card-hover-bg)]'
           }`}
-          title="Toggle Split Preview"
+          title="Toggle Split Live Preview"
         >
-          <Columns className="w-3 h-3" />
-          <span>Preview</span>
+          <Columns className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Preview</span>
         </button>
       </div>
 
       {/* ── Right: Command Palette, Zen Mode, & User Avatar ── */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 shrink-0">
         {/* Command Palette Trigger */}
         <button
           onClick={events.onOpenCommandPalette}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-800/70 hover:bg-zinc-700/80 border border-zinc-700/50 text-zinc-300 hover:text-white text-xs transition-all cursor-pointer shadow-xs"
+          className="h-6.5 px-2 flex items-center gap-1.5 rounded-md bg-[var(--card-bg)] hover:bg-[var(--card-hover-bg)] border border-[var(--border-subtle)] hover:border-[var(--border-primary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xs transition-all cursor-pointer shadow-xs"
           title="Command Palette (Ctrl+K or ⌘K)"
         >
-          <Search className="w-3 h-3 text-zinc-400" />
+          <Search className="w-3 h-3" />
           <span className="hidden md:inline text-[11px]">Search</span>
-          <kbd className="text-[10px] font-mono bg-zinc-900/80 text-zinc-400 px-1 rounded border border-zinc-700/60">
-            ⌘K
-          </kbd>
+          <Command className="w-3 h-3 opacity-60 ml-0.5 hidden sm:inline" />
         </button>
 
         {/* Zen Mode Button */}
         <button
           onClick={toggleZenMode}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+          className={`w-6.5 h-6.5 rounded-md flex items-center justify-center transition-colors cursor-pointer border ${
             isZenMode
-              ? 'bg-indigo-600 text-white'
-              : 'text-zinc-400 hover:text-white hover:bg-white/10'
+              ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)]'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--card-bg)] border-[var(--border-subtle)] hover:bg-[var(--card-hover-bg)]'
           }`}
           title={isZenMode ? 'Exit Zen Mode' : 'Zen Focus Mode (Distraction-Free)'}
         >
@@ -423,17 +375,17 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
           {user ? (
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-1.5 p-0.5 rounded-full hover:ring-2 hover:ring-indigo-500/50 transition-all cursor-pointer"
+              className="flex items-center p-0.5 rounded-full hover:ring-2 hover:ring-[var(--accent-primary)]/50 transition-all cursor-pointer"
               title={user.name || user.email}
             >
               {user.avatarUrl ? (
                 <img
                   src={user.avatarUrl}
                   alt={user.name}
-                  className="w-7 h-7 rounded-full object-cover border border-zinc-700"
+                  className="w-6.5 h-6.5 rounded-full object-cover border border-[var(--border-primary)]"
                 />
               ) : (
-                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white text-xs font-semibold flex items-center justify-center">
+                <div className="w-6.5 h-6.5 rounded-full bg-[var(--accent-primary)] text-white text-[11px] font-semibold flex items-center justify-center">
                   {(user.name || user.email || 'U').charAt(0).toUpperCase()}
                 </div>
               )}
@@ -441,7 +393,7 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
           ) : (
             <button
               onClick={() => signOut()}
-              className="text-xs font-medium px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition-colors cursor-pointer"
+              className="text-xs font-medium px-2.5 py-1 rounded-md bg-[var(--accent-primary)] hover:opacity-90 text-white shadow-xs transition-opacity cursor-pointer"
             >
               Sign In
             </button>
@@ -449,19 +401,19 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
 
           {/* User Menu Dropdown */}
           {isUserMenuOpen && user && (
-            <div className="absolute right-0 top-9 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl py-2 z-50 text-xs text-zinc-200 backdrop-blur-xl">
-              <div className="px-3 py-2 border-b border-zinc-800">
-                <p className="font-semibold text-white truncate">{user.name}</p>
-                <p className="text-[11px] text-zinc-400 truncate">{user.email}</p>
+            <div className="absolute right-0 top-8.5 w-56 bg-[var(--card-bg)] border border-[var(--border-primary)] rounded-lg shadow-xl py-1.5 z-50 text-xs text-[var(--text-primary)] backdrop-blur-md">
+              <div className="px-3 py-2 border-b border-[var(--border-subtle)]">
+                <p className="font-semibold truncate">{user.name}</p>
+                <p className="text-[11px] text-[var(--text-muted)] truncate">{user.email}</p>
               </div>
               <button
                 onClick={() => {
                   triggerSync();
                   setIsUserMenuOpen(false);
                 }}
-                className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                className="w-full px-3 py-1.5 text-left hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-zinc-400" />
+                <RefreshCw className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                 <span>Sync Library Now</span>
               </button>
               {onOpenOnboarding && (
@@ -470,19 +422,19 @@ export const WebHeader: React.FC<WebHeaderProps> = ({
                     onOpenOnboarding();
                     setIsUserMenuOpen(false);
                   }}
-                  className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                  className="w-full px-3 py-1.5 text-left hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
                 >
-                  <HelpCircle className="w-3.5 h-3.5 text-zinc-400" />
+                  <HelpCircle className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                   <span>Product Tour</span>
                 </button>
               )}
-              <div className="my-1 border-t border-zinc-800" />
+              <div className="my-1 border-t border-[var(--border-subtle)]" />
               <button
                 onClick={() => {
                   signOut();
                   setIsUserMenuOpen(false);
                 }}
-                className="w-full px-3 py-2 text-left hover:bg-red-500/10 text-red-400 flex items-center gap-2 cursor-pointer"
+                className="w-full px-3 py-1.5 text-left hover:bg-[var(--card-hover-bg)] text-[var(--status-error,#ef4444)] flex items-center gap-2 cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Sign Out</span>

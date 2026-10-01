@@ -98,19 +98,21 @@ All endpoints require strict Zod schema validation before processing.
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-150 select-none font-sans">
-      <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col relative text-zinc-100">
+      <div className="w-full max-w-xl bg-[var(--card-bg)] border border-[var(--border-primary)] rounded-2xl shadow-2xl overflow-hidden flex flex-col relative text-[var(--text-primary)]">
         {/* Ambient Top Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-24 bg-indigo-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-24 bg-[var(--accent-primary)]/15 blur-3xl pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="p-6 pb-4 flex items-center justify-between border-b border-zinc-800/80 relative z-10">
+        <div className="p-5 pb-3.5 flex items-center justify-between border-b border-[var(--border-subtle)] relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-              <Sparkles className="w-4 h-4" />
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="CNTXT" 
+              className="w-9 h-9 rounded-xl object-contain shadow-md border border-[var(--border-subtle)]" 
+            />
             <div>
-              <h2 className="text-base font-semibold text-white tracking-tight">Welcome to ContextPad</h2>
-              <p className="text-xs text-zinc-400">Step {step} of 3 • Workspace Personalization</p>
+              <h2 className="text-base font-bold text-[var(--text-primary)] tracking-tight">Welcome to .CNTXT</h2>
+              <p className="text-xs text-[var(--text-muted)]">Step {step} of 3 • Workspace Setup</p>
             </div>
           </div>
           {onClose && (
@@ -119,7 +121,7 @@ All endpoints require strict Zod schema validation before processing.
                 completeOnboarding();
                 onClose();
               }}
-              className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+              className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1.5 rounded-lg hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -127,9 +129,9 @@ All endpoints require strict Zod schema validation before processing.
         </div>
 
         {/* Step Progress Bar */}
-        <div className="w-full bg-zinc-800 h-1">
+        <div className="w-full bg-[var(--border-subtle)]/40 h-1">
           <div
-            className="bg-gradient-to-r from-indigo-500 to-purple-500 h-1 transition-all duration-300"
+            className="bg-[var(--accent-primary)] h-1 transition-all duration-300"
             style={{ width: `${(step / 3) * 100}%` }}
           />
         </div>
@@ -138,8 +140,8 @@ All endpoints require strict Zod schema validation before processing.
         <div className="p-6 relative z-10">
           {step === 1 && (
             <div>
-              <h3 className="text-sm font-semibold text-zinc-200 mb-1">Select your primary craft</h3>
-              <p className="text-xs text-zinc-400 mb-4">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Select your primary craft</h3>
+              <p className="text-xs text-[var(--text-muted)] mb-4">
                 We'll tune the quick formatting bar and action shortcuts for your workflow.
               </p>
 
@@ -148,19 +150,19 @@ All endpoints require strict Zod schema validation before processing.
                   onClick={() => setSelectedArchetype('prompt_engineer')}
                   className={`p-3.5 rounded-xl border text-left flex items-start gap-3.5 transition-all cursor-pointer ${
                     selectedArchetype === 'prompt_engineer'
-                      ? 'bg-indigo-600/15 border-indigo-500 text-white shadow-xs'
-                      : 'bg-zinc-800/50 border-zinc-700/60 hover:border-zinc-600 text-zinc-300'
+                      ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)] text-[var(--text-primary)] shadow-xs'
+                      : 'bg-[var(--card-secondary-bg)] border-[var(--border-subtle)] hover:border-[var(--border-primary)] text-[var(--text-secondary)]'
                   }`}
                 >
-                  <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400 shrink-0 mt-0.5">
+                  <div className="p-2 rounded-lg bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] shrink-0 mt-0.5">
                     <Bot className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+                    <h4 className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
                       Prompt Architect & AI Engineer
-                      {selectedArchetype === 'prompt_engineer' && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                      {selectedArchetype === 'prompt_engineer' && <Check className="w-3.5 h-3.5 text-[var(--accent-primary)]" />}
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">
                       Craft system prompts, variable interpolation templates (`{"{{var}}"}`), and token estimators.
                     </p>
                   </div>
@@ -170,19 +172,19 @@ All endpoints require strict Zod schema validation before processing.
                   onClick={() => setSelectedArchetype('developer')}
                   className={`p-3.5 rounded-xl border text-left flex items-start gap-3.5 transition-all cursor-pointer ${
                     selectedArchetype === 'developer'
-                      ? 'bg-indigo-600/15 border-indigo-500 text-white shadow-xs'
-                      : 'bg-zinc-800/50 border-zinc-700/60 hover:border-zinc-600 text-zinc-300'
+                      ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)] text-[var(--text-primary)] shadow-xs'
+                      : 'bg-[var(--card-secondary-bg)] border-[var(--border-subtle)] hover:border-[var(--border-primary)] text-[var(--text-secondary)]'
                   }`}
                 >
                   <div className="p-2 rounded-lg bg-purple-500/20 text-purple-400 shrink-0 mt-0.5">
                     <Terminal className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+                    <h4 className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
                       Software Developer & System Architect
-                      {selectedArchetype === 'developer' && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                      {selectedArchetype === 'developer' && <Check className="w-3.5 h-3.5 text-[var(--accent-primary)]" />}
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">
                       Architecture design docs, live Mermaid flowcharts, code syntax highlighting, and specs.
                     </p>
                   </div>
@@ -192,19 +194,19 @@ All endpoints require strict Zod schema validation before processing.
                   onClick={() => setSelectedArchetype('writer')}
                   className={`p-3.5 rounded-xl border text-left flex items-start gap-3.5 transition-all cursor-pointer ${
                     selectedArchetype === 'writer'
-                      ? 'bg-indigo-600/15 border-indigo-500 text-white shadow-xs'
-                      : 'bg-zinc-800/50 border-zinc-700/60 hover:border-zinc-600 text-zinc-300'
+                      ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)] text-[var(--text-primary)] shadow-xs'
+                      : 'bg-[var(--card-secondary-bg)] border-[var(--border-subtle)] hover:border-[var(--border-primary)] text-[var(--text-secondary)]'
                   }`}
                 >
                   <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
                     <BookOpen className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+                    <h4 className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
                       Technical Writer & Researcher
-                      {selectedArchetype === 'writer' && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                      {selectedArchetype === 'writer' && <Check className="w-3.5 h-3.5 text-[var(--accent-primary)]" />}
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">
                       Zen distraction-free writing, rich KaTeX math formatting, and instant markdown preview.
                     </p>
                   </div>
@@ -215,8 +217,8 @@ All endpoints require strict Zod schema validation before processing.
 
           {step === 2 && (
             <div>
-              <h3 className="text-sm font-semibold text-zinc-200 mb-1">Pick a starter document</h3>
-              <p className="text-xs text-zinc-400 mb-4">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Pick a starter document</h3>
+              <p className="text-xs text-[var(--text-muted)] mb-4">
                 Start with a pre-configured template or a pristine blank slate.
               </p>
 
@@ -225,19 +227,19 @@ All endpoints require strict Zod schema validation before processing.
                   onClick={() => setSelectedStarter('prompt_studio')}
                   className={`p-3.5 rounded-xl border text-left flex items-start gap-3.5 transition-all cursor-pointer ${
                     selectedStarter === 'prompt_studio'
-                      ? 'bg-indigo-600/15 border-indigo-500 text-white shadow-xs'
-                      : 'bg-zinc-800/50 border-zinc-700/60 hover:border-zinc-600 text-zinc-300'
+                      ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)] text-[var(--text-primary)] shadow-xs'
+                      : 'bg-[var(--card-secondary-bg)] border-[var(--border-subtle)] hover:border-[var(--border-primary)] text-[var(--text-secondary)]'
                   }`}
                 >
-                  <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400 shrink-0 mt-0.5">
+                  <div className="p-2 rounded-lg bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] shrink-0 mt-0.5">
                     <Zap className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+                    <h4 className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
                       Prompt Architecture Kit
-                      {selectedStarter === 'prompt_studio' && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                      {selectedStarter === 'prompt_studio' && <Check className="w-3.5 h-3.5 text-[var(--accent-primary)]" />}
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">
                       Demonstrates variable extraction modal, executable action buttons, and token counting.
                     </p>
                   </div>
@@ -247,19 +249,19 @@ All endpoints require strict Zod schema validation before processing.
                   onClick={() => setSelectedStarter('tech_spec')}
                   className={`p-3.5 rounded-xl border text-left flex items-start gap-3.5 transition-all cursor-pointer ${
                     selectedStarter === 'tech_spec'
-                      ? 'bg-indigo-600/15 border-indigo-500 text-white shadow-xs'
-                      : 'bg-zinc-800/50 border-zinc-700/60 hover:border-zinc-600 text-zinc-300'
+                      ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)] text-[var(--text-primary)] shadow-xs'
+                      : 'bg-[var(--card-secondary-bg)] border-[var(--border-subtle)] hover:border-[var(--border-primary)] text-[var(--text-secondary)]'
                   }`}
                 >
                   <div className="p-2 rounded-lg bg-purple-500/20 text-purple-400 shrink-0 mt-0.5">
                     <Layers className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+                    <h4 className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
                       Technical Spec & Diagram Kit
-                      {selectedStarter === 'tech_spec' && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                      {selectedStarter === 'tech_spec' && <Check className="w-3.5 h-3.5 text-[var(--accent-primary)]" />}
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">
                       Includes live Mermaid architectural diagrams, KaTeX latency formulas, and code blocks.
                     </p>
                   </div>
@@ -269,20 +271,20 @@ All endpoints require strict Zod schema validation before processing.
                   onClick={() => setSelectedStarter('blank')}
                   className={`p-3.5 rounded-xl border text-left flex items-start gap-3.5 transition-all cursor-pointer ${
                     selectedStarter === 'blank'
-                      ? 'bg-indigo-600/15 border-indigo-500 text-white shadow-xs'
-                      : 'bg-zinc-800/50 border-zinc-700/60 hover:border-zinc-600 text-zinc-300'
+                      ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)] text-[var(--text-primary)] shadow-xs'
+                      : 'bg-[var(--card-secondary-bg)] border-[var(--border-subtle)] hover:border-[var(--border-primary)] text-[var(--text-secondary)]'
                   }`}
                 >
-                  <div className="p-2 rounded-lg bg-zinc-700/40 text-zinc-300 shrink-0 mt-0.5">
+                  <div className="p-2 rounded-lg bg-[var(--card-hover-bg)] text-[var(--text-muted)] shrink-0 mt-0.5">
                     <FileCode className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+                    <h4 className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
                       Clean Slate (Blank Markdown)
-                      {selectedStarter === 'blank' && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                      {selectedStarter === 'blank' && <Check className="w-3.5 h-3.5 text-[var(--accent-primary)]" />}
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">
-                      A clean empty document for immediate focused writing.
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                      A clean empty document workspace for immediate focused writing.
                     </p>
                   </div>
                 </button>
@@ -292,50 +294,50 @@ All endpoints require strict Zod schema validation before processing.
 
           {step === 3 && (
             <div>
-              <h3 className="text-sm font-semibold text-zinc-200 mb-1">Three Superpowers to Know</h3>
-              <p className="text-xs text-zinc-400 mb-4">
-                Here are the unique features that make ContextPad unlike any typical editor:
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Three Superpowers to Know</h3>
+              <p className="text-xs text-[var(--text-muted)] mb-4">
+                Here are the unique features that make .CNTXT unlike any typical editor:
               </p>
 
               <div className="grid grid-cols-1 gap-2.5">
-                <div className="p-3 rounded-xl bg-zinc-800/40 border border-zinc-700/50 flex items-start gap-3">
+                <div className="p-3 rounded-xl bg-[var(--card-secondary-bg)] border border-[var(--border-subtle)] flex items-start gap-3">
                   <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
                     <Zap className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-zinc-100">
+                    <h4 className="text-xs font-semibold text-[var(--text-primary)]">
                       Executable Action Buttons (`[[action:id]]`)
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                       Type `[[action:my_action]]` anywhere in your text to embed a clickable button that runs sandboxed JavaScript macros directly on your active text.
                     </p>
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-zinc-800/40 border border-zinc-700/50 flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400 shrink-0 mt-0.5">
+                <div className="p-3 rounded-xl bg-[var(--card-secondary-bg)] border border-[var(--border-subtle)] flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] shrink-0 mt-0.5">
                     <Cpu className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-zinc-100">
+                    <h4 className="text-xs font-semibold text-[var(--text-primary)]">
                       Multi-Model Token Estimators
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                       Live token metrics in the bottom status bar calculate exact context window consumption for GPT-4o, Claude 3.5, and Gemini 1.5.
                     </p>
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-zinc-800/40 border border-zinc-700/50 flex items-start gap-3">
+                <div className="p-3 rounded-xl bg-[var(--card-secondary-bg)] border border-[var(--border-subtle)] flex items-start gap-3">
                   <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
                     <Layers className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-zinc-100">
-                      Unified 48px Header & Command Palette
+                    <h4 className="text-xs font-semibold text-[var(--text-primary)]">
+                      Unified 44px Header & Command Palette
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Press <kbd className="px-1 py-0.5 rounded bg-zinc-800 text-[10px] font-mono border border-zinc-700">⌘K</kbd> to search commands or switch documents. The top header slides away when you scroll down.
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                      Press <kbd className="px-1.5 py-0.5 rounded bg-[var(--card-hover-bg)] text-[10px] font-mono border border-[var(--border-subtle)]">⌘K</kbd> to search commands or switch documents. The top header slides away when you scroll down.
                     </p>
                   </div>
                 </div>
@@ -345,11 +347,11 @@ All endpoints require strict Zod schema validation before processing.
         </div>
 
         {/* Modal Footer Controls */}
-        <div className="p-4 px-6 border-t border-zinc-800 bg-zinc-900/80 flex items-center justify-between relative z-10">
+        <div className="p-4 px-6 border-t border-[var(--border-subtle)] bg-[var(--card-bg)] flex items-center justify-between relative z-10">
           {step > 1 ? (
             <button
               onClick={() => setStep((step - 1) as 1 | 2)}
-              className="text-xs font-medium text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+              className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] px-3 py-1.5 rounded-lg hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer"
             >
               Back
             </button>
@@ -360,7 +362,7 @@ All endpoints require strict Zod schema validation before processing.
           {step < 3 ? (
             <button
               onClick={() => setStep((step + 1) as 2 | 3)}
-              className="text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="text-xs font-medium bg-[var(--accent-primary)] hover:opacity-90 text-white px-4 py-2 rounded-xl shadow-xs transition-opacity flex items-center gap-1.5 cursor-pointer"
             >
               <span>Continue</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -368,7 +370,7 @@ All endpoints require strict Zod schema validation before processing.
           ) : (
             <button
               onClick={handleFinish}
-              className="text-xs font-semibold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:via-purple-500 hover:to-indigo-500 text-white px-5 py-2 rounded-xl shadow-lg shadow-indigo-600/25 transition-all flex items-center gap-2 cursor-pointer"
+              className="text-xs font-semibold bg-[var(--accent-primary)] hover:opacity-90 text-white px-5 py-2 rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
             >
               <span>Enter Workspace</span>
               <Sparkles className="w-3.5 h-3.5" />
