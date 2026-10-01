@@ -1,0 +1,10 @@
+# Vercel Deployment Ignore Rules
+# Ignore native desktop and mobile build directories & Rust shell
+src-tauri
+dist-android
+dist-installer
+dist-portable
+contextpad_replica_ai-studio
+playwright-report
+test-results
+scratch
