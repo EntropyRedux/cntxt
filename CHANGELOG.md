@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] — 2026-10-01
 
+### Web SaaS UX Redesign, Auth Gateway & Onboarding (FG-11)
+- **Web SaaS Auth Gateway (`src/components/Auth/WebAuthGateway.tsx`)**:
+  - Unauthenticated visitors on the Web target are presented with a branded landing gateway with Google & GitHub 1-click OAuth (via Supabase) and a "Try Demo Workspace" guest entry button backed by browser IndexedDB.
+  - Native Desktop and Android builds automatically bypass the gateway and remain 100% offline out-of-the-box.
+- **Unified 48px Web Header (`src/components/Header/WebHeader.tsx`)**:
+  - Replaces separate TitleBar (36px), MenuBar (30px), and ModularRibbon (44px) on Web with a single, sleek 48px top bar like Google Docs / Linear.
+  - Features inline editable document title, live cloud sync status indicator, quick-action formatting pill toolbar (Bold, Italic, Heading, Code, Action widget, Split Preview toggle), `⌘K` command palette trigger, Zen mode toggle, and user avatar session dropdown with Open Tabs switcher.
+- **Auto-Hide on Scroll (Phase 4)**:
+  - Header smoothly tucks away on scroll-down (>60px) to maximize writing canvas space and reveals on scroll-up or top hover (<35px).
+- **Option A Document Drawer (`src/shell/ShellEditorContainer.tsx`)**:
+  - Horizontal tab bar is cleanly hidden on Web, freeing up ~36px of vertical canvas; document switching flows via the Sidebar drawer, `⌘K` quick switcher, and WebHeader dropdown.
+- **3-Step First-Run Onboarding Modal (`src/components/Modals/OnboardingModal.tsx`)**:
+  - Interactive onboarding for new users: workflow archetype selection (Prompt Architect, Developer, Writer), starter document generation (Prompt Architecture Kit, Technical Spec & Diagram Kit, Clean Slate), and 3-superpower walkthrough (Executable Action Buttons, Multi-Model Token Estimators, Split Live Preview).
+- **Session & Auth Management Store (`src/store/authStore.ts`, `src/adapters/authStorageAdapter.ts`)**:
+  - Pure Zustand store managing Supabase OAuth transitions, IndexedDB guest mode, onboarding completion flags, and cloud profile synchronization with zero platform leaks.
+
 ### Full Codebase Security Remediation & Declarative Engine Overhaul (P-01 .. P-20)
 - **Elimination of `new Function` / `eval` and Strict CSP (P-01, P-08)**:
   - Replaced dynamic string code evaluation with a real recursive-descent AST Tokenizer, Parser, and sandboxed AST Interpreter (`ActionTokenizer`, `ActionParser`, `ActionASTInterpreter` in `src/services/actionEngine.ts`) over an allowlist of grammar nodes.

@@ -5,17 +5,25 @@ import { ShellEditorContainer } from './ShellEditorContainer';
 import { ShellStatusBar } from './ShellStatusBar';
 import { ModularRibbon } from '../components/Ribbon/ModularRibbon';
 import { ActivityBar } from '../components/ActivityBar/ActivityBar';
+import { WebHeader } from '../components/Header/WebHeader';
 import { ErrorBoundary } from '../components/Common/ErrorBoundary';
+import { useRuntimeBridge } from '../adapters';
 import { useSettingsStore } from '../store/settingsStore';
 import { AppUiEvents } from '../ui-contract/actionContract';
 
 export interface ShellLayoutProps {
   events: AppUiEvents;
+  isHeaderHidden?: boolean;
+  onOpenOnboarding?: () => void;
 }
 
 export const ClassicShell: React.FC<ShellLayoutProps> = ({
   events,
+  isHeaderHidden = false,
+  onOpenOnboarding,
 }) => {
+  const bridge = useRuntimeBridge();
+  const isWeb = !bridge.window.isNative;
   const { settings } = useSettingsStore();
 
   const isTouch = settings.touchOptimized;
@@ -23,15 +31,25 @@ export const ClassicShell: React.FC<ShellLayoutProps> = ({
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden select-none bg-[var(--app-bg)] font-sans">
-      {/* 1. Desktop Title Bar */}
-      <ShellTitleBar 
-        events={events}
-      />
+      {isWeb ? (
+        <ErrorBoundary fallbackTitle="Web Header Error">
+          <WebHeader
+            events={events}
+            isAutoHidden={isHeaderHidden}
+            onOpenOnboarding={onOpenOnboarding}
+          />
+        </ErrorBoundary>
+      ) : (
+        <>
+          {/* 1. Desktop Title Bar */}
+          <ShellTitleBar events={events} />
 
-      {/* 2. Modular Ribbon Toolbox */}
-      <ErrorBoundary fallbackTitle="Ribbon Error">
-        <ModularRibbon events={events} />
-      </ErrorBoundary>
+          {/* 2. Modular Ribbon Toolbox */}
+          <ErrorBoundary fallbackTitle="Ribbon Error">
+            <ModularRibbon events={events} />
+          </ErrorBoundary>
+        </>
+      )}
 
       {/* 3. Workspace Row: Left Rail aligns directly with TabBar row */}
       <div className="flex-1 flex overflow-hidden relative">

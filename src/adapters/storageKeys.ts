@@ -23,6 +23,9 @@ export const STORAGE_KEYS = {
   ACCESSORY_BAR_EXPANDED: 'contextpad_accessory_bar_expanded',
   PINNED_ITEMS: 'contextpad_pinned_items',
   OPENED_FILE_HISTORY: 'contextpad_opened_file_history',
+  AUTH_USER: 'contextpad_auth_user',
+  GUEST_MODE: 'contextpad_guest_mode',
+  ONBOARDING_COMPLETED: 'contextpad_onboarding_completed',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string;

@@ -4,6 +4,8 @@ export * from './tauriRuntimeAdapter';
 export * from './runtimeBridge';
 export * from './eventDispatcher';
 export * from './domHelper';
+export * from './supabaseClient';
+export * from './authStorageAdapter';
 
 /**
  * Clean mount node retriever to prevent document. reference in main.tsx

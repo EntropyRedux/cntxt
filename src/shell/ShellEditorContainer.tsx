@@ -6,6 +6,7 @@ import { VariableFloatingNavigator } from '../components/Editor/VariableFloating
 import { EditorSkeleton } from '../components/Editor/EditorSkeleton';
 import { useTabStore } from '../store/tabStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { useRuntimeBridge } from '../adapters';
 import { FileText, Plus } from 'lucide-react';
 import { Button } from '../primitives/Button';
 
@@ -28,6 +29,8 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
   className = '',
   showAccessoryBar
 }) => {
+  const bridge = useRuntimeBridge();
+  const isWeb = !bridge.window.isNative;
   const { tabs, activeTabId, createTab, isHydrating } = useTabStore();
   const { settings } = useSettingsStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
@@ -62,8 +65,8 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
 
   return (
     <main className={`flex-1 flex flex-col min-w-0 bg-[var(--editor-bg)] overflow-hidden relative z-0 ${className}`}>
-      {/* Document Tab Bar */}
-      <TabBar />
+      {/* Document Tab Bar (Option A: hidden on Web, active on Desktop/Android) */}
+      {!isWeb && <TabBar />}
 
       {/* Editor Surface or Empty State */}
       <div className="flex-1 flex overflow-hidden relative min-h-0">

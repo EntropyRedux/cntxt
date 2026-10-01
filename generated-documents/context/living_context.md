@@ -1,26 +1,27 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.00
+Version: v2.10
 Last Updated: 2026-10-01
 Last Updated By: Independent Auditor & Architect (Tri-Platform Hybrid Alignment & Web SaaS Readiness)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
-Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase━━━ CURRENT DEVELOPMENT STATE ━━━
+Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
+━━━ CURRENT DEVELOPMENT STATE ━━━
 Active Stage:
   [ ] Planning
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-10 Complete & Verified; Tri-Platform Suite Live)
+  [x] Feature Implementation (FG-01..FG-11 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Remediation Backlog: Tier 1 Security & Tier 2 Code Quality Resolved & Verified)
-    [x] Testing (Vitest 384/384 Live across 38 suites, Playwright E2E 24/24 Live, Rust Security Test Suite 8/8 Live, Web Readiness 10/10 Live)
+    [x] Testing (Vitest 399/399 Live across 40 suites, Playwright E2E 24/24 Live, Rust Security Test Suite 8/8 Live, Web Readiness 10/10 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [ ] Packaging & Release (Ready for Pass 1 Re-Audit Verification)
 
-Current Feature Group: FG-10: Tri-Platform Cloud Sync, Community Library & Free-Tier Web SaaS Engine
+Current Feature Group: FG-11: Web SaaS UX Redesign, Auth Gateway & Onboarding
 Status: completed / verified (all gates 100% green; Web SaaS Live on Vercel + Supabase, Desktop Live on Tauri v2, Android Live on Tauri Mobile)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
-Unit Tests: written [x] passing [x] (10/10 webReadiness test suite passing, 384/384 CNTXT unit tests clean, 8 Rust security tests clean, 24/24 Playwright E2E clean)
-Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-10-01.md (Tier 1 & Tier 2 Complete; FG-10 Web Readiness Verified)
+Unit Tests: written [x] passing [x] (399/399 unit tests passing across 40 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean)
+Active Plan: /generated-documents/plans/feature_group_FG11_web_ux_auth_gateway_2026-10-01.md (FG-11 Complete & Verified)
 Notes:
 - Task 1: Cargo Profile & Feature Lockdown (P-05): default = [] (devtools strictly opt-in); production profile with codegen-units = 1, lto = "thin", incremental = false, opt-level = 3, strip = true.
 - Task 2: Path Security & .env Redaction (P-04): validate_path enforced across get_file_name, detect_language_from_path, get_file_modified_time, open_file_explorer, get_dir_name; .env redacted in read_directory; TOCTOU race window closed in delete_file via immediate pre-deletion re-canonicalization; FileNode #[serde(deny_unknown_fields)].

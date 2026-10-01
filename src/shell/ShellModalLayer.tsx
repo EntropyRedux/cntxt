@@ -8,6 +8,7 @@ import { RibbonCustomizerModal } from '../components/Modals/RibbonCustomizerModa
 import { FormattingCustomizerModal } from '../components/Modals/FormattingCustomizerModal';
 import { InsertImageModal } from '../components/Modals/InsertImageModal';
 import { FontSelectorModal } from '../components/Modals/FontSelectorModal';
+import { OnboardingModal } from '../components/Modals/OnboardingModal';
 import { ConfirmationModal } from '../components/Common/ConfirmationModal';
 
 export interface ShellModalLayerProps {
@@ -15,6 +16,8 @@ export interface ShellModalLayerProps {
   onCloseCommandPalette: () => void;
   isShortcutsOpen: boolean;
   onCloseShortcuts: () => void;
+  isOnboardingOpen?: boolean;
+  onCloseOnboarding?: () => void;
 }
 
 export const ShellModalLayer: React.FC<ShellModalLayerProps> = ({
@@ -22,6 +25,8 @@ export const ShellModalLayer: React.FC<ShellModalLayerProps> = ({
   onCloseCommandPalette,
   isShortcutsOpen,
   onCloseShortcuts,
+  isOnboardingOpen = false,
+  onCloseOnboarding,
 }) => {
   return (
     <>
@@ -41,6 +46,11 @@ export const ShellModalLayer: React.FC<ShellModalLayerProps> = ({
       <ShortcutsModal 
         isOpen={isShortcutsOpen}
         onClose={onCloseShortcuts}
+      />
+
+      <OnboardingModal
+        isOpen={isOnboardingOpen}
+        onClose={onCloseOnboarding}
       />
 
       <ConfirmationModal />

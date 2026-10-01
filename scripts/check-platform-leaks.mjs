@@ -27,6 +27,8 @@ const ALLOWED_PLATFORM_ADAPTERS = new Set([
   path.resolve('src/adapters/domHelper.ts'),
   path.resolve('src/adapters/runtimeBridge.tsx'),
   path.resolve('src/adapters/eventDispatcher.ts'),
+  path.resolve('src/adapters/supabaseClient.ts'),
+  path.resolve('src/adapters/authStorageAdapter.ts'),
   path.resolve('src/adapters/index.ts'),
 ]);
 

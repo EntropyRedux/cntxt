@@ -142,12 +142,12 @@ export const signOutUser = async (): Promise<{ error: Error | null }> => {
 /**
  * Sync user profile to Supabase 'profiles' table if it exists
  */
-export const syncUserProfileToDatabase = async (profile: UserProfile): Promise<void> => {
+export const syncUserProfileToDatabase = async (profile: UserProfile): Promise<{ error: Error | null }> => {
   const supabase = getSupabase();
-  if (!supabase) return;
+  if (!supabase) return { error: null };
 
   try {
-    await supabase.from('profiles').upsert({
+    const { error } = await supabase.from('profiles').upsert({
       id: profile.id,
       name: profile.name,
       email: profile.email,
@@ -155,9 +155,11 @@ export const syncUserProfileToDatabase = async (profile: UserProfile): Promise<v
       provider: profile.provider,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' });
-  } catch (err) {
+    return { error: error ? new Error(error.message) : null };
+  } catch (err: any) {
     // Non-blocking: table might not be initialized yet
     console.debug('[Supabase] Profile sync skipped or table absent:', err);
+    return { error: err instanceof Error ? err : new Error(String(err)) };
   }
 };
 

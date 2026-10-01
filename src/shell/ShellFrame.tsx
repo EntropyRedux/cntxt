@@ -16,6 +16,8 @@ import { useFormattingStore } from '../store/formattingStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useFileHistoryStore } from '../store/fileHistoryStore';
 import { useImageModalStore } from '../store/imageModalStore';
+import { useAuthStore } from '../store/authStore';
+import { WebAuthGateway } from '../components/Auth/WebAuthGateway';
 import { compressAndConvertToDataUrl, generateImageAlt } from '../services/imageService';
 import { openDocumentWithLargeDocCheck } from '../services/largeDocHelper';
 import { SupportedLanguage } from '../types';
@@ -29,9 +31,12 @@ declare global {
 export const ShellFrame: React.FC = () => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
 
   const bridge = useRuntimeBridge();
   const { settings } = useSettingsStore();
+  const { user, isGuestMode, isInitialized, hasCompletedOnboarding } = useAuthStore();
 
   const {
     tabs,
@@ -65,6 +70,42 @@ export const ShellFrame: React.FC = () => {
       initializeFileHistory(bridge.storage),
     ]).catch((e) => console.error('Store init batch failed', e));
   }, [bridge, initializeSettings, initializeTabs, initializeTemplates, initializeActions, initializeRibbon, initializeFormattingStore, initializeFileHistory]);
+
+  // Initialize auth session on mount
+  useEffect(() => {
+    useAuthStore.getState().initAuth();
+  }, []);
+
+  // Web Header Auto-Hide on Scroll Down / Reveal on Scroll Up or Top Hover
+  useEffect(() => {
+    if (bridge.window.isNative) return;
+
+    let lastScrollTop = 0;
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (!target || typeof target.scrollTop !== 'number') return;
+      const currentScrollTop = target.scrollTop;
+      if (currentScrollTop > lastScrollTop + 15 && currentScrollTop > 60) {
+        setIsHeaderHidden(true);
+      } else if (currentScrollTop < lastScrollTop - 15 || currentScrollTop < 20) {
+        setIsHeaderHidden(false);
+      }
+      lastScrollTop = currentScrollTop;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (e.clientY < 35) {
+        setIsHeaderHidden(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll, { capture: true });
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [bridge.window.isNative]);
 
   // Sync theme via bridge
   useEffect(() => {
@@ -432,6 +473,13 @@ export const ShellFrame: React.FC = () => {
     }
   };
 
+  const isWeb = !bridge.window.isNative;
+
+  // Web SaaS Gateway: Unauthenticated visitors must sign in or enter guest workspace
+  if (isWeb && isInitialized && !user && !isGuestMode) {
+    return <WebAuthGateway />;
+  }
+
   return (
     <div
       data-theme={settings.theme || 'contextpad-dark'}
@@ -442,7 +490,11 @@ export const ShellFrame: React.FC = () => {
       onDrop={handleDrop}
     >
       {/* Primary Workspace Shell */}
-      <ClassicShell events={events} />
+      <ClassicShell 
+        events={events} 
+        isHeaderHidden={isHeaderHidden}
+        onOpenOnboarding={() => setIsOnboardingModalOpen(true)}
+      />
 
       {/* Client-Side Window Resize Handles (for frameless windows) */}
       <WindowResizeHandles />
@@ -453,6 +505,8 @@ export const ShellFrame: React.FC = () => {
         onCloseCommandPalette={() => setIsCommandPaletteOpen(false)}
         isShortcutsOpen={isShortcutsOpen}
         onCloseShortcuts={() => setIsShortcutsOpen(false)}
+        isOnboardingOpen={(!hasCompletedOnboarding && isInitialized && (Boolean(user) || isGuestMode)) || isOnboardingModalOpen}
+        onCloseOnboarding={() => setIsOnboardingModalOpen(false)}
       />
 
       {/* Global Notification Toast Layer */}
