@@ -401,7 +401,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     toggleDevTools: async (): Promise<void> => {
       await this.invokeTauri('toggle_devtools');
     },
-    getPlatform: (): 'web' | 'macos' | 'windows' | 'linux' => {
+    getPlatform: (): 'web' | 'macos' | 'windows' | 'linux' | 'android' => {
       const p = navigator.platform.toLowerCase();
       if (p.includes('mac')) return 'macos';
       if (p.includes('win')) return 'windows';

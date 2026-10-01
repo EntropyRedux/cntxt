@@ -400,8 +400,10 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     close: async (): Promise<void> => {},
     openDevTools: async (): Promise<void> => {},
     toggleDevTools: async (): Promise<void> => {},
-    getPlatform: (): 'web' | 'macos' | 'windows' | 'linux' => {
-      const p = navigator.platform.toLowerCase();
+    getPlatform: (): 'web' | 'macos' | 'windows' | 'linux' | 'android' => {
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+      if (/android/.test(ua)) return 'android';
+      const p = typeof navigator !== 'undefined' ? (navigator.platform || '').toLowerCase() : '';
       if (p.includes('mac')) return 'macos';
       if (p.includes('win')) return 'windows';
       if (p.includes('linux')) return 'linux';

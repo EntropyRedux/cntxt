@@ -71,7 +71,8 @@ export interface IWindowBridge {
   openDevTools?: () => Promise<void>;
   toggleDevTools?: () => Promise<void>;
   isNative: boolean;
-  getPlatform: () => 'web' | 'macos' | 'windows' | 'linux';
+  getPlatform: () => 'web' | 'macos' | 'windows' | 'linux' | 'android';
+  onHardwareBack?: (handler: () => boolean) => () => void;
 }
 
 /**

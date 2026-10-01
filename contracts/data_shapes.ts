@@ -518,3 +518,104 @@ export interface DeviceProfile {
   showMobileAccessoryBar: boolean;
 }
 
+// ==========================================
+// 10. User Profile & Cloud Auth Domain Shapes
+// ==========================================
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string;
+  provider: 'google' | 'github' | 'offline';
+  lastSynced: string;
+  libraryItemsCount: number;
+  syncedDevicesCount: number;
+  role?: string;
+}
+
+export type PrototypeAuthState = 'guest' | 'popover' | 'signedIn';
+
+// ==========================================
+// 11. Community & User Skill Library Domain Shapes
+// ==========================================
+
+export interface LibraryField {
+  id: string;
+  label: string;
+  placeholder: string;
+  defaultValue?: string;
+  multiline?: boolean;
+}
+
+export type ItemSource = 'user-authored' | 'community-fork' | 'local-template' | 'local-action';
+
+export interface UserLibraryItem {
+  id: string;
+  name: string;
+  type: 'prompt' | 'skill';
+  category: 'Architecture' | 'Prompt Engineering' | 'Code Review' | 'Technical Specs' | 'Testing' | 'Custom' | (string & {});
+  description: string;
+  author: string;
+  originalAuthor?: string;
+  authorBadge?: string;
+  source: ItemSource;
+  sourceTitle?: string;
+  targetAIs: string[];
+  fields: LibraryField[];
+  template: string;
+  isFavorite?: boolean;
+  isForked?: boolean;
+  forkedFrom?: string;
+  isPublishedToCommunity?: boolean;
+  communityId?: string;
+  collectionId?: string;
+  collectionName?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CommunityLibraryItem {
+  id: string;
+  name: string;
+  type: 'prompt' | 'skill';
+  category: 'Architecture' | 'Prompt Engineering' | 'Code Review' | 'Technical Specs' | 'Testing' | 'Reasoning' | (string & {});
+  description: string;
+  author: string;
+  authorBadge: 'Staff Pick' | 'Verified Architect' | 'Top Promptsmith' | 'Community Contributor' | (string & {});
+  downloads: number;
+  rating: number;
+  targetAIs: string[];
+  fields: LibraryField[];
+  template: string;
+  tags: string[];
+  isUserContributed?: boolean;
+  collectionId?: string;
+  collectionName?: string;
+}
+
+export interface LibraryCollection {
+  id: string;
+  name: string;
+  description: string;
+  category: 'Architecture' | 'Prompt Engineering' | 'Code Review' | 'Technical Specs' | 'Testing' | 'Reasoning' | 'Custom' | (string & {});
+  author: string;
+  originalAuthor?: string;
+  authorBadge?: string;
+  source: ItemSource;
+  sourceTitle?: string;
+  tags: string[];
+  itemIds: string[];
+  downloads?: number;
+  rating?: number;
+  isFavorite?: boolean;
+  isPublishedToCommunity?: boolean;
+  communityId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type LibraryViewTab = 'my-library' | 'community';
+export type MyLibraryFilter = 'all' | 'mine' | 'community' | 'imported';
+
+

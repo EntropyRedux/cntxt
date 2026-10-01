@@ -169,5 +169,9 @@ export class AndroidRuntimeAdapter extends TauriRuntimeAdapter {
         }
       }
     };
+    this.window = {
+      ...this.window,
+      getPlatform: () => 'android'
+    };
   }
 }

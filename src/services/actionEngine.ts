@@ -1244,6 +1244,7 @@ export class ActionASTInterpreter {
 
   private setupRootScope(): void {
     this.rootScope.declare('api', this.api);
+    this.rootScope.declare('editor', this.api);
     this.rootScope.declare('JSON', this.safeJson);
     this.rootScope.declare('Math', this.safeMath);
   }
