@@ -10,7 +10,7 @@ export const liveThemeFacet = Facet.define<string, string>({
   combine: (values) => values[values.length - 1] || 'contextpad-dark'
 });
 
-export { setLiveMarkdownBridge } from './liveMarkdown/bridgeState';
+export { setLiveMarkdownBridge } from './liveMarkdown/index';
 export * from './liveMarkdown/widgets';
 import {
   findCodeBlocks,
@@ -18,9 +18,7 @@ import {
   findTables,
   CodeBlockLineEntry,
   MathBlockInfo,
-  TableBlockInfo
-} from './liveMarkdown/scanners';
-import {
+  TableBlockInfo,
   MermaidBlockWidget,
   DisplayMathWidget,
   InlineMathWidget,
@@ -32,9 +30,9 @@ import {
   HrWidget,
   LinkWidget,
   ActionButtonWidget,
-  ImageWidget
-} from './liveMarkdown/widgets';
-import { setLiveMarkdownBridge } from './liveMarkdown/bridgeState';
+  ImageWidget,
+  setLiveMarkdownBridge
+} from './liveMarkdown/index';
 
 interface RangeDecoItem {
   from: number;

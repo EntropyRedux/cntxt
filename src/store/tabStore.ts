@@ -11,6 +11,7 @@ import { useNotificationStore } from './notificationStore';
 import { safePersist, safeRemove } from '../services/storageHelper';
 import { writeTabCache, readTabCache, clearTabCache } from '../adapters/tabSessionCache';
 import { editorStateCache } from '../services/editor/editorStateCache';
+import { validateTab } from '../contracts/boundarySchemas';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -119,7 +120,10 @@ export const useTabStore = create<TabState>((set, get) => ({
       // ─────────────────────────────────────────────────────────────────
 
       if (storedMeta) {
-        const metaList: Tab[] = JSON.parse(storedMeta);
+        const rawList: unknown = JSON.parse(storedMeta);
+        const metaList: Tab[] = Array.isArray(rawList)
+          ? rawList.filter((item): item is Tab => validateTab(item).success)
+          : [];
         if (metaList.length > 0) {
           // Load content from storage bridge for each tab (parallel)
           const fullTabs: Tab[] = await Promise.all(

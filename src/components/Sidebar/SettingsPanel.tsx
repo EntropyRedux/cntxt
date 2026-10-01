@@ -26,6 +26,7 @@ import { useConfirmStore } from '../../store/confirmStore';
 import { useRuntimeBridge } from '../../adapters';
 import { ThemeName } from '../../types';
 import { CURATED_FONTS, getCuratedFontByFamily, THEME_DEFAULT_FONTS } from '../../constants/fonts';
+import { validateWorkspaceBackup } from '../../contracts/boundarySchemas';
 
 export const SettingsPanel: React.FC = () => {
   const bridge = useRuntimeBridge();
@@ -129,6 +130,11 @@ export const SettingsPanel: React.FC = () => {
       const file = await bridge.fs.openFile();
       if (!file) return;
       const json = JSON.parse(file.content);
+      const validation = validateWorkspaceBackup(json);
+      if (!validation.success) {
+        addNotification('Import Error', 'Invalid backup format: missing settings or data object', 'error');
+        return;
+      }
       if (json.data && json.data.contextpad_settings) {
         updateSettings(json.data.contextpad_settings);
       } else if (json.settings) {

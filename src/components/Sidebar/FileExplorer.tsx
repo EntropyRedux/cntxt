@@ -26,6 +26,7 @@ import { safePersist } from '../../services/storageHelper';
 import { openDocumentWithLargeDocCheck } from '../../services/largeDocHelper';
 import { BridgeDirectoryEntry } from '../../ui-contract/bridgeContract';
 import { VirtualFile, SupportedLanguage } from '../../../contracts/data_shapes';
+import { validateVirtualFile } from '../../contracts/boundarySchemas';
 
 
 const formatRelativeTime = (timestamp: number): string => {
@@ -143,7 +144,13 @@ export const FileExplorer: React.FC = () => {
         }
         if (saved) {
           try {
-            setFiles(JSON.parse(saved));
+            const rawParsed = JSON.parse(saved);
+            if (Array.isArray(rawParsed)) {
+              const validated = rawParsed.filter(f => validateVirtualFile(f).success) as VirtualFile[];
+              setFiles(validated);
+            } else {
+              setFiles([]);
+            }
           } catch {
             setFiles([]);
           }

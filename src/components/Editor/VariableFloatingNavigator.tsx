@@ -22,7 +22,7 @@ export const VariableFloatingNavigator: React.FC = () => {
 
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const lastTapRef = useRef<number>(0);
-  const clickTimeoutRef = useRef<any>(null);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dragRef = useRef({
     isDown: false,

@@ -106,7 +106,10 @@ export const VirtualFileSchema: z.ZodType<VirtualFileInput> = z.lazy(() =>
 export const WorkspaceBackupSchema = z.object({
   version: z.string().optional(),
   exportedAt: z.string().optional(),
-  data: z.record(z.string(), z.unknown())
+  data: z.record(z.string(), z.unknown()).optional(),
+  settings: z.unknown().optional()
+}).refine(val => (val.data !== undefined && Object.keys(val.data).length > 0) || val.settings !== undefined, {
+  message: 'Workspace backup must contain data or settings dictionary'
 });
 
 export function validateTab(data: unknown) {
