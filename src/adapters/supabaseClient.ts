@@ -11,7 +11,8 @@ import { UserProfile, UserLibraryItem, LibraryCollection } from '../../contracts
 
 // Scope marker: SPEC REFERENCE: ADAPT FOR NATIVE STACK
 const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
-const supabaseUrl = (metaEnv.VITE_SUPABASE_URL || '').trim();
+const rawSupabaseUrl = (metaEnv.VITE_SUPABASE_URL || '').trim();
+const supabaseUrl = rawSupabaseUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const supabaseAnonKey = (metaEnv.VITE_SUPABASE_ANON_KEY || '').trim();
 
 let clientInstance: SupabaseClient | null = null;
