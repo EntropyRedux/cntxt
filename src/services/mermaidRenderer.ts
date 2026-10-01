@@ -3,12 +3,13 @@ import { getMermaidThemeConfig } from '../theme/index';
 import { ThemeName } from '../contracts/data_shapes';
 
 let lastInitializedTheme: string | null = null;
-let mermaidModule: any = null;
+type MermaidInstance = { initialize: (config: unknown) => void; render: (id: string, text: string) => Promise<{ svg: string }> };
+let mermaidModule: MermaidInstance | null = null;
 
 async function getMermaidInstance() {
   if (!mermaidModule) {
     const mod = await import('mermaid');
-    mermaidModule = mod.default || mod;
+    mermaidModule = (mod.default || mod) as unknown as MermaidInstance;
   }
   return mermaidModule;
 }
@@ -130,7 +131,7 @@ export async function renderMermaidDiagram(
     const result = { svg, isError: false };
     diagramCache.set(cacheKey, result);
     return result;
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Clean up error elements that mermaid might inject into DOM
     const errorEl = getElementById(id);
     if (errorEl) {
@@ -141,7 +142,7 @@ export async function renderMermaidDiagram(
       dErrorEl.remove();
     }
 
-    const message = err?.str || err?.message || 'Syntax error in Mermaid diagram';
+    const message = (err as { str?: string; message?: string })?.str || (err as Error)?.message || 'Syntax error in Mermaid diagram';
     const result = {
       svg: '',
       isError: true,

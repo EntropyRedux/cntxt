@@ -119,8 +119,8 @@ export const SettingsPanel: React.FC = () => {
     try {
       await bridge.fs.exportWorkspace();
       addNotification('Backup Exported', 'Full workspace JSON downloaded', 'success');
-    } catch (e: any) {
-      addNotification('Export Failed', e.message, 'error');
+    } catch (e: unknown) {
+      addNotification('Export Failed', (e as Error)?.message || 'Export error', 'error');
     }
   };
 
@@ -136,8 +136,8 @@ export const SettingsPanel: React.FC = () => {
       }
       await bridge.fs.importWorkspace(file.content);
       addNotification('Settings Restored', 'Configuration restored from backup', 'success');
-    } catch (err: any) {
-      addNotification('Import Error', 'Invalid backup format', 'error');
+    } catch (err: unknown) {
+      addNotification('Import Error', (err as Error)?.message || 'Invalid backup format', 'error');
     }
   };
 
@@ -387,7 +387,7 @@ export const SettingsPanel: React.FC = () => {
             </div>
             <select
               value={settings.editorMode || 'rendered'}
-              onChange={(e: any) => updateSettings({ editorMode: e.target.value })}
+              onChange={(e) => updateSettings({ editorMode: e.target.value as 'rendered' | 'raw' })}
               className="theme-input font-medium rounded px-2 py-1 text-xs text-[var(--accent-primary)] font-semibold"
             >
               <option value="rendered">Live Rendered Markdown</option>
@@ -448,7 +448,7 @@ export const SettingsPanel: React.FC = () => {
             </div>
             <select
               value={settings.typingDirection || 'top-to-bottom'}
-              onChange={(e: any) => updateSettings({ typingDirection: e.target.value })}
+              onChange={(e) => updateSettings({ typingDirection: e.target.value as 'top-to-bottom' | 'bottom-to-up' })}
               className="theme-input rounded px-2 py-0.5 text-xs text-[var(--text-primary)]"
             >
               <option value="top-to-bottom">Top to Bottom (Standard)</option>
@@ -460,7 +460,7 @@ export const SettingsPanel: React.FC = () => {
             <span className="text-[var(--text-primary)]">Editor Max Width</span>
             <select
               value={settings.editorMaxWidth}
-              onChange={(e: any) => updateSettings({ editorMaxWidth: e.target.value })}
+              onChange={(e) => updateSettings({ editorMaxWidth: e.target.value as 'narrow' | 'standard' | 'wide' | 'full' })}
               className="theme-input rounded px-2 py-0.5 text-xs text-[var(--text-primary)]"
             >
               <option value="narrow">Narrow (680px)</option>
@@ -474,7 +474,7 @@ export const SettingsPanel: React.FC = () => {
             <span className="text-[var(--text-primary)]">Editor Padding</span>
             <select
               value={settings.editorPadding}
-              onChange={(e: any) => updateSettings({ editorPadding: e.target.value })}
+              onChange={(e) => updateSettings({ editorPadding: e.target.value as 'compact' | 'normal' | 'spacious' })}
               className="theme-input rounded px-2 py-0.5 text-xs text-[var(--text-primary)]"
             >
               <option value="compact">Compact (12px)</option>

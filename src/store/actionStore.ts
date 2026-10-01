@@ -5,6 +5,8 @@ import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
 import { executeActionById } from '../services/actionExecutor';
 import { executeInSandbox } from '../services/actionSandbox';
+import { SandboxAPI } from '../services/sandboxApiFactory';
+import { EditorView } from '@codemirror/view';
 import { useNotificationStore } from './notificationStore';
 import { useSettingsStore } from './settingsStore';
 
@@ -49,10 +51,10 @@ interface ActionState {
   duplicateAction: (id: string) => void;
   toggleActionEnabled: (id: string) => void;
   toggleActionsEnabledBulk: (ids: string[], enabled: boolean) => void;
-  executeAction: (id: string, context?: any) => Promise<void>;
+  executeAction: (id: string, context?: { view?: unknown } & Record<string, unknown>) => Promise<void>;
   deleteAction: (id: string) => void;
   deleteActionsBulk: (ids: string[]) => void;
-  runAction: (action: Action, sandboxApi: any) => Promise<void>;
+  runAction: (action: Action, sandboxApi?: Partial<SandboxAPI> & { view?: unknown; notify?: (msg: string, type?: string) => void; toast?: (msg: string, type?: string) => void }) => Promise<void>;
   
   toggleActionPin: (id: string) => void;
   isActionPinned: (id: string) => boolean;
@@ -253,10 +255,10 @@ export const useActionStore = create<ActionState>((set, get) => ({
     saveActions(updated);
   },
 
-  executeAction: async (id: string, context?: any) => {
+  executeAction: async (id: string, context?: { view?: unknown } & Record<string, unknown>) => {
     const action = get().actions.find(a => a.id === id);
     if (!action) return;
-    await executeActionById(id, context?.view);
+    await executeActionById(id, context?.view as EditorView | undefined);
   },
 
   deleteAction: (id) => {
@@ -278,13 +280,13 @@ export const useActionStore = create<ActionState>((set, get) => ({
     set({ isRunningAction: true });
     try {
       if (action.code && action.code.startsWith('FORMULA:')) {
-        await executeActionById(action.id, sandboxApi?.view);
+        await executeActionById(action.id, sandboxApi?.view as EditorView | undefined);
       } else {
-        await executeInSandbox(action.code, sandboxApi);
+        await executeInSandbox(action.code, sandboxApi as Partial<SandboxAPI>);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Action execution failed', e);
-      const errorMsg = e?.message || 'Error executing action';
+      const errorMsg = (e as Error)?.message || 'Error executing action';
       if (sandboxApi && typeof sandboxApi.notify === 'function') {
         sandboxApi.notify(errorMsg, 'error');
       } else if (sandboxApi && typeof sandboxApi.toast === 'function') {

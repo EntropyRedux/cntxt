@@ -1,4 +1,4 @@
-import { Extension } from '@codemirror/state';
+import { Extension, Range } from '@codemirror/state';
 import { EditorView, ViewPlugin, ViewUpdate, Decoration, DecorationSet } from '@codemirror/view';
 import { foldService } from '@codemirror/language';
 
@@ -47,7 +47,7 @@ const base64LineDecorator = ViewPlugin.fromClass(
     }
 
     private buildDecorations(view: EditorView): DecorationSet {
-      const builder: any[] = [];
+      const builder: Range<Decoration>[] = [];
       for (const { from, to } of view.visibleRanges) {
         for (let pos = from; pos <= to; ) {
           const line = view.state.doc.lineAt(pos);

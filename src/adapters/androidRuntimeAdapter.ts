@@ -116,7 +116,7 @@ export class AndroidRuntimeAdapter extends TauriRuntimeAdapter {
 
           try {
             const rawEntries = JSON.parse(jsonArrayStr);
-            return rawEntries.map((node: any) => ({
+            return rawEntries.map((node: { id?: string; path: string; name: string; type: string }) => ({
               id: node.id || node.path,
               name: node.name,
               type: node.type as 'file' | 'folder',
@@ -128,7 +128,7 @@ export class AndroidRuntimeAdapter extends TauriRuntimeAdapter {
             return null;
           }
         }
-        return this.invokeTauri<any[]>('read_directory', { path });
+        return this.invokeTauri<BridgeDirectoryEntry[]>('read_directory', { path });
       },
 
       readFile: async (path: string): Promise<string | null> => {

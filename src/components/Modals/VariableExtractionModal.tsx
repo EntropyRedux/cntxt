@@ -152,8 +152,8 @@ export const VariableExtractionModal: React.FC = () => {
         addNotification('Blueprint Exported', `Saved as ${blueprintFileName}`, 'success');
         closeExtractionModal();
       }
-    } catch (err: any) {
-      addNotification('Export Failed', err.message || 'Could not export blueprint', 'error');
+    } catch (err: unknown) {
+      addNotification('Export Failed', (err as Error)?.message || 'Could not export blueprint', 'error');
     }
   };
 

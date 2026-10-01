@@ -4,7 +4,7 @@ import { useActionStore } from '../store/actionStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useFileHistoryStore } from '../store/fileHistoryStore';
-import { IRuntimeBridge } from '../ui-contract/bridgeContract';
+import { IRuntimeBridge, BridgeDirectoryEntry, SupportedLanguage } from '../ui-contract/bridgeContract';
 import { AppUiEvents } from '../ui-contract/actionContract';
 import { editorRegistry } from '../services/editor/editorRegistry';
 import { copyText, execUndo, execRedo, getSelectionText } from './domHelper';
@@ -56,13 +56,22 @@ export function createUiEventDispatcher(
         const dirResult = await bridge.fs.openDirectory();
         if (dirResult) {
           const folderId = `folder_${Date.now()}_${dirResult.name.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-          const mapEntries = (entries: any[]): any[] => {
+          interface EventEntry {
+            id?: string;
+            name: string;
+            type?: string;
+            content?: string;
+            language?: string;
+            path?: string;
+            children?: EventEntry[];
+          }
+          const mapEntries = (entries: EventEntry[]): BridgeDirectoryEntry[] => {
             return entries.map(entry => ({
               id: entry.id || entry.path || `item_${Math.random().toString(36).substr(2, 7)}`,
               name: entry.name,
-              type: entry.type || 'file',
+              type: (entry.type as 'file' | 'folder') || 'file',
               content: entry.content,
-              language: entry.language,
+              language: (entry.language as SupportedLanguage) || 'markdown',
               path: entry.path,
               children: entry.children ? mapEntries(entry.children) : undefined
             }));
@@ -77,7 +86,7 @@ export function createUiEventDispatcher(
           };
 
           const saved = await bridge.storage.getItem('contextpad_virtual_files');
-          let current: any[] = [];
+          let current: Array<{ name?: string }> = [];
           if (saved) {
             try {
               current = JSON.parse(saved);
@@ -85,7 +94,7 @@ export function createUiEventDispatcher(
               console.warn('[eventDispatcher] Failed to parse saved virtual files:', e);
             }
           }
-          const updated = [newFolder, ...current.filter(f => f.name !== dirResult.name)];
+          const updated = [newFolder, ...current.filter(f => f && f.name !== dirResult.name)];
           await bridge.storage.setItem('contextpad_virtual_files', JSON.stringify(updated));
 
           window.dispatchEvent(new CustomEvent('contextpad_files_updated'));

@@ -121,7 +121,7 @@ export function querySelector(selector: string): HTMLElement | null {
   return document.querySelector(selector) as HTMLElement | null;
 }
 
-export function addDocumentListener(type: string, listener: (e: any) => void): () => void {
+export function addDocumentListener(type: string, listener: (e: Event) => void): () => void {
   if (typeof document === 'undefined') return () => { };
   document.addEventListener(type, listener);
   return () => {
@@ -131,17 +131,17 @@ export function addDocumentListener(type: string, listener: (e: any) => void): (
 
 export function addWindowListener(
   type: string,
-  listener: (e: any) => void,
+  listener: (e: Event) => void,
   options?: boolean | AddEventListenerOptions
 ): () => void {
   if (typeof window === 'undefined') return () => { };
   window.addEventListener(type, listener, options);
   return () => {
-    window.removeEventListener(type, listener, options as any);
+    window.removeEventListener(type, listener, options);
   };
 }
 
-export function removeDocumentListener(type: string, listener: (e: any) => void): void {
+export function removeDocumentListener(type: string, listener: (e: Event) => void): void {
   if (typeof document !== 'undefined') {
     document.removeEventListener(type, listener);
   }
@@ -163,12 +163,12 @@ export function triggerFileInput(accept: string, callback: (content: string, nam
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = accept;
-  input.onchange = (e: any) => {
-    const file = e.target.files?.[0];
+  input.onchange = (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event: any) => {
-      callback(event.target.result as string, file.name);
+    reader.onload = (event: ProgressEvent<FileReader>) => {
+      callback((event.target?.result as string) || '', file.name);
     };
     reader.readAsText(file);
   };

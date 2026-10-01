@@ -507,16 +507,16 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   },
 
   previewImportTemplates: (jsonOrArray) => {
-    let rawItems: any[] = [];
+    let rawItems: Array<Record<string, unknown>> = [];
     if (typeof jsonOrArray === 'string') {
       try {
         const parsed = JSON.parse(jsonOrArray);
-        rawItems = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.templates) ? parsed.templates : []);
+        rawItems = (Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.templates) ? parsed.templates : [])) as Array<Record<string, unknown>>;
       } catch {
         return { addedCount: 0, skippedCount: 0, duplicates: [], newTemplates: [] };
       }
     } else if (Array.isArray(jsonOrArray)) {
-      rawItems = jsonOrArray;
+      rawItems = jsonOrArray as Array<Record<string, unknown>>;
     }
 
     const currentTemplates = get().templates;
@@ -536,15 +536,15 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
       }
 
       newTemplates.push({
-        id: t.id || `tmpl_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        name: t.name,
-        description: t.description || '',
-        category: (t.category || 'GENERAL').toUpperCase(),
-        content: t.content,
-        variables: Array.isArray(t.variables) ? t.variables : extractTemplateVariables(t.content),
+        id: t.id ? String(t.id) : `tmpl_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        name: String(t.name),
+        description: t.description ? String(t.description) : '',
+        category: (t.category ? String(t.category) : 'GENERAL').toUpperCase(),
+        content: String(t.content),
+        variables: Array.isArray(t.variables) ? (t.variables as string[]) : extractTemplateVariables(String(t.content)),
         isHidden: Boolean(t.isHidden),
         isPinned: Boolean(t.isPinned),
-        createdAt: t.createdAt || Date.now(),
+        createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(),
         updatedAt: Date.now()
       });
     });

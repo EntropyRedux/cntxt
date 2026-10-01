@@ -13,7 +13,7 @@ export interface RuntimeBridgeProviderProps {
 
 const isTauriRuntime = (): boolean => {
   return typeof window !== 'undefined' && Boolean(
-    (window as any).isTauri || (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__
+    window.isTauri || window.__TAURI_INTERNALS__ || window.__TAURI__
   );
 };
 
@@ -44,7 +44,7 @@ let globalBridgeInstance: IRuntimeBridge | null = null;
 
 export const getRuntimeBridge = (): IRuntimeBridge => {
   if (!globalBridgeInstance) {
-    if (typeof window !== 'undefined' && Boolean((window as any).AndroidBridge)) {
+    if (typeof window !== 'undefined' && Boolean(window.AndroidBridge)) {
       globalBridgeInstance = new AndroidRuntimeAdapter();
     } else if (isTauriRuntime()) {
       globalBridgeInstance = new TauriRuntimeAdapter();

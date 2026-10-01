@@ -125,14 +125,15 @@ registerActionTransform('formatJSON', (snapshot, api) => {
   try {
     const parsed = JSON.parse(text);
 
-    function sortObjectKeys(obj: any): any {
+    function sortObjectKeys(obj: unknown): unknown {
       if (Array.isArray(obj)) {
         return obj.map(sortObjectKeys);
       } else if (obj !== null && typeof obj === 'object') {
         return Object.keys(obj)
           .sort()
-          .reduce((result: Record<string, any>, key) => {
-            result[key] = sortObjectKeys(obj[key]);
+          .reduce((result: Record<string, unknown>, key) => {
+            const record = obj as Record<string, unknown>;
+            result[key] = sortObjectKeys(record[key]);
             return result;
           }, {});
       }
@@ -148,8 +149,8 @@ registerActionTransform('formatJSON', (snapshot, api) => {
       api.setText(formatted);
     }
     api.toast('JSON formatted and keys sorted successfully!', 'success');
-  } catch (e: any) {
-    api.toast('Failed to parse JSON: ' + (e?.message || String(e)), 'error');
+  } catch (e: unknown) {
+    api.toast('Failed to parse JSON: ' + ((e as Error)?.message || String(e)), 'error');
   }
 });
 
@@ -1220,13 +1221,13 @@ function addValues(a: unknown, b: unknown): unknown {
 
 export class ActionASTInterpreter {
   private rootScope: Scope;
-  private safeJson: { stringify: (val: unknown, replacer?: any, space?: any) => string; parse: (str: string) => unknown };
+  private safeJson: { stringify: (val: unknown, replacer?: ((this: unknown, key: string, value: unknown) => unknown) | null, space?: string | number) => string; parse: (str: string) => unknown };
   private safeMath: Record<string, unknown>;
 
   constructor(private api: SandboxAPI) {
     this.rootScope = new Scope();
     this.safeJson = {
-      stringify: (val, replacer, space) => JSON.stringify(val, replacer, space),
+      stringify: (val, replacer, space) => JSON.stringify(val, replacer as ((key: string, value: unknown) => unknown) | undefined, space),
       parse: (str) => JSON.parse(str)
     };
     this.safeMath = {

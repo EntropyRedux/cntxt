@@ -16,12 +16,20 @@ import {
   isValidActionMutation
 } from './sandboxApiFactory';
 
+type LegacySandboxAPI = Partial<SandboxAPI> & {
+  insertText?: (text: string) => void;
+  createTab?: (title?: string, content?: string, language?: string) => void;
+  copy?: (text: string) => void | Promise<void>;
+};
+
 function commitMutations(
   mutations: ActionMutation[],
   rawApi?: Partial<SandboxAPI>,
-  getActiveTab?: () => any
+  getActiveTab?: () => { id: string; content?: string } | undefined
 ) {
   const activeTab = getActiveTab ? getActiveTab() : undefined;
+  const legacyApi = rawApi as LegacySandboxAPI | undefined;
+
   for (const m of mutations) {
     if (!isValidActionMutation(m)) {
       console.warn('[CNTXT Sandbox] Rejected malformed action mutation:', m);
@@ -52,7 +60,7 @@ function commitMutations(
         break;
       case 'insertAtCursor':
         if (typeof rawApi?.insertAtCursor === 'function') rawApi.insertAtCursor(m.text);
-        else if (typeof (rawApi as any)?.insertText === 'function') (rawApi as any).insertText(m.text);
+        else if (typeof legacyApi?.insertText === 'function') legacyApi.insertText(m.text);
         else if (activeTab) useTabStore.getState().insertTextAtCursor(activeTab.id, m.text, false);
         break;
       case 'toast':
@@ -62,7 +70,7 @@ function commitMutations(
         break;
       case 'openTab':
         if (typeof rawApi?.openTab === 'function') rawApi.openTab(m.title, m.content, m.language);
-        else if (typeof (rawApi as any)?.createTab === 'function') (rawApi as any).createTab(m.title, m.content, m.language);
+        else if (typeof legacyApi?.createTab === 'function') legacyApi.createTab(m.title, m.content, m.language);
         else useTabStore.getState().createTab(m.title, m.content, (m.language as SupportedLanguage) || 'markdown');
         break;
       case 'openVariableModal':
@@ -71,7 +79,7 @@ function commitMutations(
         break;
       case 'copyToClipboard':
         if (typeof rawApi?.copyToClipboard === 'function') rawApi.copyToClipboard(m.text);
-        else if (typeof (rawApi as any)?.copy === 'function') (rawApi as any).copy(m.text);
+        else if (typeof legacyApi?.copy === 'function') legacyApi.copy(m.text);
         else copyText(m.text);
         break;
     }

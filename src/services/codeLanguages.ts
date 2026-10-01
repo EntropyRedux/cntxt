@@ -119,7 +119,7 @@ export function highlightCodeSnippet(code: string, language: string): string {
   const clean = (language || '').toLowerCase().trim();
   const langOrDesc = resolveCodeLanguage(clean);
 
-  let langParser: any = null;
+  let langParser: { parse: (input: string) => ReturnType<Language['parser']['parse']> } | null = null;
   if (langOrDesc instanceof Language) {
     langParser = langOrDesc.parser;
   } else if (langOrDesc && 'support' in langOrDesc && langOrDesc.support) {

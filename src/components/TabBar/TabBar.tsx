@@ -139,7 +139,7 @@ export const TabBar: React.FC = () => {
 
   // Close dropdown on outside click or touch
   useEffect(() => {
-    const handleOutsideClick = (e: any) => {
+    const handleOutsideClick = (e: Event) => {
       const target = e.target as Node;
       if (
         dropdownRef.current && 
@@ -172,7 +172,7 @@ export const TabBar: React.FC = () => {
   useEffect(() => {
     if (!isTouch) return;
 
-    let timer: any = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     const triggerActivity = () => {
       // Don't auto-hide when the tabs dropdown popover is currently open

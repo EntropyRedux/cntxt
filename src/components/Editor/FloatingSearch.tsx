@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { EditorView } from '@codemirror/view';
-import { EditorSelection } from '@codemirror/state';
+import { EditorSelection, Text } from '@codemirror/state';
 import {
   SearchQuery,
   setSearchQuery,
@@ -40,7 +40,7 @@ interface MatchRange {
  * Collect all match ranges directly using CodeMirror's search cursor.
  * Guarantees 100% parity with CodeMirror's search matching engine.
  */
-function collectMatches(query: SearchQuery, doc: any): MatchRange[] {
+function collectMatches(query: SearchQuery, doc: Text): MatchRange[] {
   if (!query.valid || !query.search) return [];
   const results: MatchRange[] = [];
   try {

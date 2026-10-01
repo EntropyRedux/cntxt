@@ -220,8 +220,8 @@ export function completionSource(context: CompletionContext): CompletionResult |
 
           await executeActionById(action.id, view);
         }
-      } catch (err: any) {
-        useNotificationStore.getState().addNotification('Action Failed', err?.message || 'Error executing action', 'error');
+      } catch (err: unknown) {
+        useNotificationStore.getState().addNotification('Action Failed', (err as Error)?.message || 'Error executing action', 'error');
       }
     };
 

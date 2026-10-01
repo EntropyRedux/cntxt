@@ -15,7 +15,7 @@ export async function safePersist(
   try {
     await storage.setItem(key, value);
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(`[Storage Persistence Error] Failed to persist ${contextName}:`, err);
     useNotificationStore.getState().addNotification(
       'Storage Error',
@@ -38,7 +38,7 @@ export async function safeRemove(
   try {
     await storage.removeItem(key);
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(`[Storage Removal Error] Failed to remove ${contextName}:`, err);
     useNotificationStore.getState().addNotification(
       'Storage Error',

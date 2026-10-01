@@ -1,8 +1,8 @@
 import { EditorContext, FormulaResult } from '../types';
 
 export class FormulaEngine {
-  private static globalFunctions = new Map<string, (args: any[], context: EditorContext) => any>();
-  private instanceFunctions = new Map<string, (args: any[], context: EditorContext) => any>();
+  private static globalFunctions = new Map<string, (args: unknown[], context: EditorContext) => unknown>();
+  private instanceFunctions = new Map<string, (args: unknown[], context: EditorContext) => unknown>();
   private context: EditorContext;
 
   constructor(context?: Partial<EditorContext>) {
@@ -23,7 +23,7 @@ export class FormulaEngine {
    */
   public static registerFunction(
     name: string,
-    fn: (args: any[], context: EditorContext) => any,
+    fn: (args: unknown[], context: EditorContext) => unknown,
     info?: Partial<FormulaFunctionInfo>
   ): void {
     const upper = name.toUpperCase();
@@ -58,7 +58,7 @@ export class FormulaEngine {
   /**
    * Register a custom formula function specifically for this FormulaEngine instance.
    */
-  public registerFunction(name: string, fn: (args: any[], context: EditorContext) => any): void {
+  public registerFunction(name: string, fn: (args: unknown[], context: EditorContext) => unknown): void {
     this.instanceFunctions.set(name.toUpperCase(), fn);
   }
 
@@ -91,9 +91,9 @@ export class FormulaEngine {
 
       const ast = this.parse(expr);
       const val = this.evaluateAST(ast);
-      return { success: true, value: val };
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Formula syntax error' };
+      return { success: true, value: typeof val === 'number' ? val : String(val ?? '') };
+    } catch (err: unknown) {
+      return { success: false, error: (err as Error)?.message || 'Formula syntax error' };
     }
   }
 
@@ -285,7 +285,7 @@ export class FormulaEngine {
 
   // --- AST Evaluator ---
 
-  private evaluateAST(node: ASTNode): any {
+  private evaluateAST(node: ASTNode): unknown {
     if (!node) return '';
 
     if (node.type === 'Literal') {
@@ -317,7 +317,7 @@ export class FormulaEngine {
     return '';
   }
 
-  private executeFunction(name: string, args: any[]): any {
+  private executeFunction(name: string, args: unknown[]): unknown {
     const upper = name.toUpperCase();
 
     // Check custom registered instance & global functions first
@@ -563,15 +563,15 @@ export class FormulaEngine {
 
       // --- DateTime Helpers ---
       case 'YEAR': {
-        const d = args[0] ? new Date(args[0]) : new Date();
+        const d = args[0] ? new Date(args[0] as string | number) : new Date();
         return isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
       }
       case 'MONTH': {
-        const d = args[0] ? new Date(args[0]) : new Date();
+        const d = args[0] ? new Date(args[0] as string | number) : new Date();
         return isNaN(d.getTime()) ? new Date().getMonth() + 1 : d.getMonth() + 1;
       }
       case 'DAY': {
-        const d = args[0] ? new Date(args[0]) : new Date();
+        const d = args[0] ? new Date(args[0] as string | number) : new Date();
         return isNaN(d.getTime()) ? new Date().getDate() : d.getDate();
       }
 
@@ -703,7 +703,7 @@ interface Token {
 }
 
 type ASTNode =
-  | { type: 'Literal'; value: any }
+  | { type: 'Literal'; value: unknown }
   | { type: 'BinaryOp'; op: string; left: ASTNode; right: ASTNode }
   | { type: 'Call'; name: string; args: ASTNode[] };
 

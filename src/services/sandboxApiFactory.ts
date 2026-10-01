@@ -76,6 +76,7 @@ export interface SandboxUtils {
   slugify: (str: string) => string;
   countWords: (str: string) => number;
   countChars: (str: string) => number;
+  now: () => string;
 }
 
 export interface SandboxAPI {
@@ -195,7 +196,8 @@ export function createSandboxAPI(options: CreateSandboxAPIOptions): SandboxAPI {
     formatJSON,
     slugify,
     countWords,
-    countChars
+    countChars,
+    now: () => new Date().toISOString()
   });
 
   const api: SandboxAPI = {

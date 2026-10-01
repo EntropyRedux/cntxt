@@ -25,7 +25,7 @@ import { useRuntimeBridge } from '../../adapters';
 import { safePersist } from '../../services/storageHelper';
 import { openDocumentWithLargeDocCheck } from '../../services/largeDocHelper';
 import { BridgeDirectoryEntry } from '../../ui-contract/bridgeContract';
-import { VirtualFile } from '../../../contracts/data_shapes';
+import { VirtualFile, SupportedLanguage } from '../../../contracts/data_shapes';
 
 
 const formatRelativeTime = (timestamp: number): string => {
@@ -285,7 +285,7 @@ export const FileExplorer: React.FC = () => {
         openDocumentWithLargeDocCheck({
           title: file.name,
           content: fileContent,
-          language: (file.language as any) || 'markdown',
+          language: (file.language as SupportedLanguage) || 'markdown',
           filePath: file.path,
           existingTabId: existing.id
         });
@@ -295,7 +295,7 @@ export const FileExplorer: React.FC = () => {
       openDocumentWithLargeDocCheck({
         title: file.name,
         content: fileContent || '',
-        language: (file.language as any) || 'markdown',
+        language: (file.language as SupportedLanguage) || 'markdown',
         filePath: file.path
       });
     }
@@ -466,14 +466,15 @@ export const FileExplorer: React.FC = () => {
         handleOpenFile({
           name: file.name,
           content: file.content,
-          language: (file.language as any) || 'markdown',
+          language: (file.language as SupportedLanguage) || 'markdown',
           path: file.path
         });
         addNotification('File Opened', file.name, 'success');
       }
-    } catch (e: any) {
-      if (e?.name !== 'AbortError') {
-        addNotification('Could not open file', e?.message || 'Unknown error', 'error');
+    } catch (e: unknown) {
+      const err = e as { name?: string; message?: string } | undefined;
+      if (err?.name !== 'AbortError') {
+        addNotification('Could not open file', err?.message || 'Unknown error', 'error');
       }
     }
   };
@@ -537,9 +538,10 @@ export const FileExplorer: React.FC = () => {
       });
 
       addNotification('Workspace Opened', `"${dirResult.name}" set as active workspace`, 'success');
-    } catch (e: any) {
-      if (e?.name !== 'AbortError') {
-        addNotification('Could not open folder', e?.message || 'Unknown error', 'error');
+    } catch (e: unknown) {
+      const err = e as { name?: string; message?: string } | undefined;
+      if (err?.name !== 'AbortError') {
+        addNotification('Could not open folder', err?.message || 'Unknown error', 'error');
       }
     }
   };

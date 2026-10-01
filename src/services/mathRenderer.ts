@@ -7,10 +7,11 @@ export interface MathRenderResult {
   isPending?: boolean;
 }
 
-let katexInstance: any = null;
-let katexLoadingPromise: Promise<any> | null = null;
+type KatexInstance = { renderToString: (tex: string, opts?: Record<string, unknown>) => string };
+let katexInstance: KatexInstance | null = null;
+let katexLoadingPromise: Promise<KatexInstance> | null = null;
 
-export async function getKatex(): Promise<any> {
+export async function getKatex(): Promise<KatexInstance> {
   if (katexInstance) return katexInstance;
   if (!katexLoadingPromise) {
     katexLoadingPromise = import('katex').then((mod) => {
@@ -51,11 +52,12 @@ export function renderLatex(latex: string, displayMode: boolean = false): MathRe
       trust: false
     });
     return { html, isError: false };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const msg = (err as Error)?.message || 'Invalid formula';
     return {
-      html: `<span class="text-red-400 font-mono text-xs">[LaTeX Error: ${err?.message || 'Invalid formula'}]</span>`,
+      html: `<span class="text-red-400 font-mono text-xs">[LaTeX Error: ${msg}]</span>`,
       isError: true,
-      error: err?.message
+      error: msg
     };
   }
 }

@@ -32,12 +32,12 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   constructor() {
     this.detectLanguage = this.detectLanguage.bind(this);
-    if (typeof window !== 'undefined' && (window as any).__CNTXT_SESSION_TOKEN__) {
-      this.sessionToken = (window as any).__CNTXT_SESSION_TOKEN__;
+    if (typeof window !== 'undefined' && window.__CNTXT_SESSION_TOKEN__) {
+      this.sessionToken = window.__CNTXT_SESSION_TOKEN__;
       try {
-        delete (window as any).__CNTXT_SESSION_TOKEN__;
+        delete window.__CNTXT_SESSION_TOKEN__;
       } catch {
-        (window as any).__CNTXT_SESSION_TOKEN__ = undefined;
+        window.__CNTXT_SESSION_TOKEN__ = undefined;
       }
     }
   }
@@ -70,52 +70,57 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     }
   }
 
-  protected async invokeTauri<T>(cmd: string, args: Record<string, any> = {}): Promise<T | null> {
+  protected async invokeTauri<T>(cmd: string, args: Record<string, unknown> = {}): Promise<T | null> {
     try {
-      if (!this.sessionToken && typeof window !== 'undefined' && (window as any).__CNTXT_SESSION_TOKEN__) {
-        this.sessionToken = (window as any).__CNTXT_SESSION_TOKEN__;
+      if (!this.sessionToken && typeof window !== 'undefined' && window.__CNTXT_SESSION_TOKEN__) {
+        this.sessionToken = window.__CNTXT_SESSION_TOKEN__;
       }
       const mergedArgs = {
         sessionToken: this.sessionToken,
         ...args
       };
-      const tauri = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__?.core || (window as any).__TAURI__;
-      if (tauri && typeof tauri.invoke === 'function') {
-        return await tauri.invoke(cmd, mergedArgs);
+      if (window.__TAURI_INTERNALS__?.invoke) {
+        return (await window.__TAURI_INTERNALS__.invoke(cmd, mergedArgs)) as T;
+      }
+      if (window.__TAURI__?.core?.invoke) {
+        return (await window.__TAURI__.core.invoke(cmd, mergedArgs)) as T;
       }
       const { invoke } = await import('@tauri-apps/api/core');
       return await invoke<T>(cmd, mergedArgs);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.warn(`[TauriRuntimeAdapter] invoke(${cmd}) failed:`, e);
       if (CRITICAL_IPC_COMMANDS.includes(cmd)) {
-        const errorMsg = typeof e === 'string' ? e : e?.message || `Operation ${cmd} failed`;
+        const errorMsg = typeof e === 'string' ? e : (e as Error)?.message || `Operation ${cmd} failed`;
         useNotificationStore.getState().addNotification('System Error', errorMsg, 'error');
       }
     }
     return null;
   }
 
-  protected async invokeTauriVoid(cmd: string, args: Record<string, any> = {}): Promise<boolean> {
+  protected async invokeTauriVoid(cmd: string, args: Record<string, unknown> = {}): Promise<boolean> {
     try {
-      if (!this.sessionToken && typeof window !== 'undefined' && (window as any).__CNTXT_SESSION_TOKEN__) {
-        this.sessionToken = (window as any).__CNTXT_SESSION_TOKEN__;
+      if (!this.sessionToken && typeof window !== 'undefined' && window.__CNTXT_SESSION_TOKEN__) {
+        this.sessionToken = window.__CNTXT_SESSION_TOKEN__;
       }
       const mergedArgs = {
         sessionToken: this.sessionToken,
         ...args
       };
-      const tauri = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__?.core || (window as any).__TAURI__;
-      if (tauri && typeof tauri.invoke === 'function') {
-        await tauri.invoke(cmd, mergedArgs);
+      if (window.__TAURI_INTERNALS__?.invoke) {
+        await window.__TAURI_INTERNALS__.invoke(cmd, mergedArgs);
+        return true;
+      }
+      if (window.__TAURI__?.core?.invoke) {
+        await window.__TAURI__.core.invoke(cmd, mergedArgs);
         return true;
       }
       const { invoke } = await import('@tauri-apps/api/core');
       await invoke(cmd, mergedArgs);
       return true;
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.warn(`[TauriRuntimeAdapter] invokeVoid(${cmd}) failed:`, e);
       if (CRITICAL_IPC_COMMANDS.includes(cmd)) {
-        const errorMsg = typeof e === 'string' ? e : e?.message || `Operation ${cmd} failed`;
+        const errorMsg = typeof e === 'string' ? e : (e as Error)?.message || `Operation ${cmd} failed`;
         useNotificationStore.getState().addNotification('System Error', errorMsg, 'error');
       }
     }
@@ -162,7 +167,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         if (!selectedPath) return null;
 
         const rawEntries = await this.invokeTauri<any[]>('read_directory', { path: selectedPath }) || [];
-        const mapFileNodes = (nodes: any[]): BridgeDirectoryEntry[] => {
+        interface TauriNode { name: string; path: string; is_dir?: boolean; children?: TauriNode[] }
+        const mapFileNodes = (nodes: TauriNode[]): BridgeDirectoryEntry[] => {
           return nodes.map(node => ({
             id: node.path || `node_${Math.random().toString(36).substr(2, 7)}`,
             name: node.name,
@@ -193,7 +199,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         const rawEntries = await this.invokeTauri<any[]>('read_directory', { path });
         if (!rawEntries) return null;
 
-        const mapFileNodes = (nodes: any[]): BridgeDirectoryEntry[] => {
+        interface TauriNode { name: string; path: string; is_dir?: boolean; children?: TauriNode[] }
+        const mapFileNodes = (nodes: TauriNode[]): BridgeDirectoryEntry[] => {
           return nodes.map(node => ({
             id: node.path || `node_${Math.random().toString(36).substr(2, 7)}`,
             name: node.name,
@@ -374,7 +381,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     },
     startResizeDragging: async (direction: WindowResizeDirection): Promise<void> => {
       try {
-        await getCurrentWindow().startResizeDragging(direction as any);
+        await (getCurrentWindow().startResizeDragging as (dir: string) => Promise<void>)(direction);
       } catch (err) {
         console.warn('[TauriRuntimeAdapter] startResizeDragging error:', err);
       }

@@ -59,7 +59,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
       // Modern Web File System Access API
       if ('showOpenFilePicker' in window) {
         try {
-          const [fileHandle] = await (window as any).showOpenFilePicker({
+          const [fileHandle] = await (window.showOpenFilePicker as NonNullable<typeof window.showOpenFilePicker>)({
             types: [
               {
                 description: 'Documents & Code',
@@ -80,8 +80,8 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
             content,
             language: this.detectLanguage(file.name)
           };
-        } catch (err: any) {
-          if (err?.name === 'AbortError') return null;
+        } catch (err: unknown) {
+          if ((err as { name?: string })?.name === 'AbortError') return null;
           console.warn('showOpenFilePicker failed, falling back to hidden file input', err);
         }
       }
@@ -119,16 +119,16 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
       // Modern Web File System Access API
       if ('showDirectoryPicker' in window) {
         try {
-          const dirHandle = await (window as any).showDirectoryPicker();
+          const dirHandle = await (window.showDirectoryPicker as NonNullable<typeof window.showDirectoryPicker>)();
           if (!dirHandle) return null;
 
-          const readDirectoryHandle = async (handle: any, parentPath: string = ''): Promise<BridgeDirectoryEntry[]> => {
+          const readDirectoryHandle = async (handle: FileSystemDirectoryHandle, parentPath: string = ''): Promise<BridgeDirectoryEntry[]> => {
             const list: BridgeDirectoryEntry[] = [];
             for await (const entry of handle.values()) {
               const currentPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
               if (entry.kind === 'file') {
                 try {
-                  const file = await entry.getFile();
+                  const file = await (entry as FileSystemFileHandle).getFile();
                   let content = '';
                   if (file.size < 2 * 1024 * 1024) {
                     content = await file.text();
@@ -145,7 +145,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
                   console.warn(`[BrowserRuntimeAdapter] Failed to read file ${entry.name}:`, err);
                 }
               } else if (entry.kind === 'directory') {
-                const children = await readDirectoryHandle(entry, currentPath);
+                const children = await readDirectoryHandle(entry as FileSystemDirectoryHandle, currentPath);
                 list.push({
                   id: `dir_${Math.random().toString(36).substr(2, 6)}_${entry.name}`,
                   name: entry.name,
@@ -164,8 +164,8 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
             path: dirHandle.name,
             entries
           };
-        } catch (err: any) {
-          if (err?.name === 'AbortError') return null;
+        } catch (err: unknown) {
+          if ((err as { name?: string })?.name === 'AbortError') return null;
           console.warn('showDirectoryPicker failed, falling back to input webkitdirectory', err);
         }
       }
@@ -188,7 +188,9 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
           const firstPath = fileList[0].webkitRelativePath || fileList[0].name;
           const rootName = firstPath.split('/')[0] || 'Workspace';
 
-          const rootMap = new Map<string, any>();
+          type TempDirEntry = { id: string; name: string; type: 'folder'; childrenMap: Map<string, TempEntry> };
+          type TempEntry = TempDirEntry | BridgeDirectoryEntry;
+          const rootMap = new Map<string, TempEntry>();
 
           for (let i = 0; i < fileList.length; i++) {
             const file = fileList[i];
@@ -209,7 +211,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
                   childrenMap: new Map()
                 });
               }
-              currentMap = currentMap.get(dirName).childrenMap;
+              currentMap = (currentMap.get(dirName) as TempDirEntry).childrenMap;
             }
 
             const fileName = subParts[subParts.length - 1];
@@ -236,7 +238,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
             }
           }
 
-          const convertMapToEntries = (map: Map<string, any>): BridgeDirectoryEntry[] => {
+          const convertMapToEntries = (map: Map<string, TempEntry>): BridgeDirectoryEntry[] => {
             const result: BridgeDirectoryEntry[] = [];
             for (const [, item] of map.entries()) {
               if (item.type === 'folder') {
@@ -244,7 +246,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
                   id: item.id,
                   name: item.name,
                   type: 'folder',
-                  children: convertMapToEntries(item.childrenMap)
+                  children: convertMapToEntries((item as TempDirEntry).childrenMap)
                 });
               } else {
                 result.push(item);
@@ -280,7 +282,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     saveFileAs: async (suggestedName: string, content: string): Promise<string | null> => {
       if ('showSaveFilePicker' in window) {
         try {
-          const handle = await (window as any).showSaveFilePicker({
+          const handle = await (window.showSaveFilePicker as NonNullable<typeof window.showSaveFilePicker>)({
             suggestedName,
             types: [{
               description: 'Plain Text / Markdown',
@@ -291,8 +293,8 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
           await writable.write(content);
           await writable.close();
           return handle.name || suggestedName;
-        } catch (err: any) {
-          if (err?.name === 'AbortError') return null;
+        } catch (err: unknown) {
+          if ((err as { name?: string })?.name === 'AbortError') return null;
           console.warn('showSaveFilePicker failed, falling back to anchor download', err);
         }
       }
@@ -311,7 +313,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
 
     exportWorkspace: async (): Promise<string> => {
       const keys = Object.values(STORAGE_KEYS);
-      const backup: Record<string, any> = {
+      const backup: { version: string; exportedAt: string; data: Record<string, unknown> } = {
         version: '1.10.0',
         exportedAt: new Date().toISOString(),
         data: {}

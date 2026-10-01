@@ -53,7 +53,7 @@ export function setDemoWelcomeDisabled(disabled: boolean): void {
 }
 
 export function isDemoWelcomeDisabled(): boolean {
-  if (typeof window !== 'undefined' && (window as any).__CONTEXTPAD_DEMO__ === false) {
+  if (typeof window !== 'undefined' && window.__CONTEXTPAD_DEMO__ === false) {
     return true;
   }
   return demoWelcomeDisabled;
