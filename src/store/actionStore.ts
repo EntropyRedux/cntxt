@@ -117,9 +117,12 @@ export const useActionStore = create<ActionState>((set, get) => ({
           });
         } catch (e) {
           console.error('Failed to parse persisted action UI state', e);
+          useNotificationStore.getState().addNotification('Actions Warning', 'Failed to restore action UI state', 'warning');
         }
       }
-    } catch {
+    } catch (e) {
+      console.error('Failed to initialize actions store', e);
+      useNotificationStore.getState().addNotification('Actions Warning', 'Failed to load actions from storage', 'warning');
       set({ actions: [] });
     }
   },

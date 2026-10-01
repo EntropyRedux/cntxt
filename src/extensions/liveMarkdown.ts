@@ -17,6 +17,7 @@ import {
 import { createElement, createTextNode, appendToBody, removeFromBody, isDarkTheme, copyText, getDocumentTheme, getRuntimeBridge } from '../adapters';
 import { IRuntimeBridge } from '../ui-contract/bridgeContract';
 import { useActionStore } from '../store/actionStore';
+import { useNotificationStore } from '../store/notificationStore';
 import { executeActionById } from '../services/actionExecutor';
 
 let activeBridge: IRuntimeBridge | null = null;
@@ -449,6 +450,7 @@ class CodeBlockHeaderWidget extends WidgetType {
         }, 2000);
       } catch (err) {
         console.error('Failed to copy code snippet', err);
+        useNotificationStore.getState().addNotification('Clipboard Error', 'Failed to copy code snippet to clipboard', 'error');
       }
     });
 

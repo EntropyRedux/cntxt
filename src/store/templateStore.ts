@@ -3,6 +3,7 @@ import { Template, PersistedTemplateUIState } from '../../contracts/data_shapes'
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
+import { useNotificationStore } from './notificationStore';
 import { extractTemplateVariables } from '../services/editor/templateVariableService';
 import { validateTemplate } from '../contracts/boundarySchemas';
 
@@ -140,6 +141,7 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
       });
     } catch (e) {
       console.error('Error initializing templates:', e);
+      useNotificationStore.getState().addNotification('Template Error', 'Failed to load templates from storage', 'warning');
       set({ templates: [] });
     }
   },

@@ -18,6 +18,7 @@ import {
 } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from './storageKeys';
 import { browserDB } from './browserIndexedDB';
+import { useNotificationStore } from '../store/notificationStore';
 import { applyThemeTokensToElement } from '../../theme/index';
 import { ThemeName } from '../../contracts/data_shapes';
 
@@ -374,6 +375,7 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
         return true;
       } catch (err) {
         console.error('[BrowserRuntimeAdapter] import error:', err);
+        useNotificationStore.getState().addNotification('Import Error', `Failed to import workspace: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return false;
       }
     },

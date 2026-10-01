@@ -168,6 +168,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       }
     } catch (e) {
       console.error('Error initializing tabs:', e);
+      useNotificationStore.getState().addNotification('Initialization Warning', 'Failed to restore tabs from storage', 'warning');
       if (!cached) {
         set({ tabs: [], activeTabId: '', isHydrating: false });
       } else {

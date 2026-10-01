@@ -12,6 +12,7 @@ import {
   IPlatformBridge
 } from '../ui-contract/bridgeContract';
 import { getAndroidBridge } from './androidBridgeHelper';
+import { useNotificationStore } from '../store/notificationStore';
 
 export class AndroidRuntimeAdapter extends TauriRuntimeAdapter {
   public override platform: IPlatformBridge = {
@@ -144,6 +145,7 @@ export class AndroidRuntimeAdapter extends TauriRuntimeAdapter {
           return await this.invokeTauri<string>('read_file', { path });
         } catch (err) {
           console.error('[AndroidRuntimeAdapter] readFile error:', err);
+          useNotificationStore.getState().addNotification('File Error', `Failed to read file ${path}`, 'error');
           return null;
         }
       },
@@ -162,6 +164,7 @@ export class AndroidRuntimeAdapter extends TauriRuntimeAdapter {
           return await this.invokeTauriVoid('write_file', { path, content });
         } catch (err) {
           console.error('[AndroidRuntimeAdapter] saveFile error:', err);
+          useNotificationStore.getState().addNotification('Save Error', `Failed to save file ${path}`, 'error');
           return false;
         }
       }

@@ -132,6 +132,7 @@ export function imageDropPasteExtension(): Extension {
         })
         .catch((err) => {
           console.error('Failed to process dropped image', err);
+          useNotificationStore.getState().addNotification('Image Drop Failed', 'Could not process dropped image', 'warning');
         });
 
       return true;

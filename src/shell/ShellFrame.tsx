@@ -145,6 +145,7 @@ export const ShellFrame: React.FC = () => {
           }
         } catch (err) {
           console.error('[ShellFrame] Failed to open external file:', filePath, err);
+          addNotification('Open File Error', `Failed to open ${filePath}: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         }
       }
     };

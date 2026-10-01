@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useNotificationStore } from './notificationStore';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
@@ -61,6 +62,7 @@ export const useFileHistoryStore = create<FileHistoryState>((set, get) => ({
       }
     } catch (e) {
       console.error('Failed to initialize file history store', e);
+      useNotificationStore.getState().addNotification('History Warning', 'Failed to initialize file history', 'warning');
     }
   },
 

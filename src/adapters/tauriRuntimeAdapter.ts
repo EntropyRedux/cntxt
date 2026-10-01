@@ -155,6 +155,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         };
       } catch (err) {
         console.error('[TauriRuntimeAdapter] openFile error:', err);
+        useNotificationStore.getState().addNotification('File Error', `Failed to open file: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return null;
       }
     },
@@ -188,6 +189,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         };
       } catch (err) {
         console.error('[TauriRuntimeAdapter] openDirectory error:', err);
+        useNotificationStore.getState().addNotification('Directory Error', `Failed to open directory: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return null;
       }
     },
@@ -223,6 +225,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         return await this.invokeTauri<string>('read_file', { path });
       } catch (err) {
         console.error('[TauriRuntimeAdapter] readFile error:', err);
+        useNotificationStore.getState().addNotification('File Error', `Failed to read file ${path}: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return null;
       }
     },
@@ -232,6 +235,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         return await this.invokeTauriVoid('write_file', { path, content });
       } catch (err) {
         console.error('[TauriRuntimeAdapter] saveFile error:', err);
+        useNotificationStore.getState().addNotification('Save Error', `Failed to save file ${path}: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return false;
       }
     },
@@ -245,13 +249,14 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         return writeSuccess ? savePath : null;
       } catch (err) {
         console.error('[TauriRuntimeAdapter] saveFileAs error:', err);
+        useNotificationStore.getState().addNotification('Save Error', `Failed to save file: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return null;
       }
     },
 
     exportWorkspace: async (): Promise<string> => {
       const keys = Object.values(STORAGE_KEYS);
-      const backup: Record<string, any> = {
+      const backup: { version: string; exportedAt: string; data: Record<string, unknown> } = {
         version: '1.10.0',
         exportedAt: new Date().toISOString(),
         data: {}
@@ -282,6 +287,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         return true;
       } catch (err) {
         console.error('[TauriRuntimeAdapter] importWorkspace error:', err);
+        useNotificationStore.getState().addNotification('Import Error', `Failed to import workspace: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return false;
       }
     },
