@@ -1211,6 +1211,13 @@ class Scope {
   }
 }
 
+function addValues(a: unknown, b: unknown): unknown {
+  if (typeof a === 'string' || typeof b === 'string') {
+    return String(a) + String(b);
+  }
+  return Number(a) + Number(b);
+}
+
 export class ActionASTInterpreter {
   private rootScope: Scope;
   private safeJson: { stringify: (val: unknown, replacer?: any, space?: any) => string; parse: (str: string) => unknown };
@@ -1271,8 +1278,8 @@ export class ActionASTInterpreter {
           if (stmt.operator === '=') {
             scope.set(stmt.left.name, val);
           } else if (stmt.operator === '+=') {
-            const current = scope.get(stmt.left.name) as any;
-            scope.set(stmt.left.name, current + val);
+            const current = scope.get(stmt.left.name);
+            scope.set(stmt.left.name, addValues(current, val));
           }
         } else if (stmt.left.type === 'MemberExpression') {
           const obj = this.evaluateExpression(stmt.left.object, scope) as Record<string, unknown>;
@@ -1280,10 +1287,11 @@ export class ActionASTInterpreter {
             ? this.evaluateExpression(stmt.left.property as ExpressionNode, scope)
             : stmt.left.property;
           this.assertPropertySafe(prop);
+          const key = String(prop);
           if (stmt.operator === '=') {
-            obj[String(prop)] = val;
+            obj[key] = val;
           } else if (stmt.operator === '+=') {
-            obj[String(prop)] = (obj[String(prop)] as any) + val;
+            obj[key] = addValues(obj[key], val);
           }
         } else {
           throw new Error('Action Engine Error: Invalid assignment target');
@@ -1299,7 +1307,8 @@ export class ActionASTInterpreter {
         throw new ReturnSignal(val);
       }
       default:
-        throw new Error(`Action Engine Error: Unsupported statement type "${(stmt as any).type}"`);
+        const unhandledStmt: never = stmt as never;
+        throw new Error(`Action Engine Error: Unsupported statement type "${(unhandledStmt as StatementNode).type}"`);
     }
   }
 
@@ -1320,30 +1329,30 @@ export class ActionASTInterpreter {
           const val = this.evaluateExpression(expr.argument, scope);
           return typeof val;
         }
-        const val = this.evaluateExpression(expr.argument, scope) as any;
+        const val = this.evaluateExpression(expr.argument, scope);
         if (expr.operator === '!') return !val;
-        if (expr.operator === '-') return -val;
-        if (expr.operator === '+') return +val;
+        if (expr.operator === '-') return -Number(val);
+        if (expr.operator === '+') return +Number(val);
         throw new Error(`Action Engine Error: Unsupported unary operator "${expr.operator}"`);
       }
 
       case 'BinaryExpression': {
-        const left = this.evaluateExpression(expr.left, scope) as any;
-        const right = this.evaluateExpression(expr.right, scope) as any;
+        const left = this.evaluateExpression(expr.left, scope);
+        const right = this.evaluateExpression(expr.right, scope);
         switch (expr.operator) {
-          case '+': return left + right;
-          case '-': return left - right;
-          case '*': return left * right;
-          case '/': return right !== 0 ? left / right : 0;
-          case '%': return left % right;
+          case '+': return addValues(left, right);
+          case '-': return Number(left) - Number(right);
+          case '*': return Number(left) * Number(right);
+          case '/': return Number(right) !== 0 ? Number(left) / Number(right) : 0;
+          case '%': return Number(left) % Number(right);
           case '===': return left === right;
           case '!==': return left !== right;
           case '==': return left == right;
           case '!=': return left != right;
-          case '<': return left < right;
-          case '<=': return left <= right;
-          case '>': return left > right;
-          case '>=': return left >= right;
+          case '<': return Number(left) < Number(right);
+          case '<=': return Number(left) <= Number(right);
+          case '>': return Number(left) > Number(right);
+          case '>=': return Number(left) >= Number(right);
           default:
             throw new Error(`Action Engine Error: Unsupported binary operator "${expr.operator}"`);
         }
@@ -1380,7 +1389,7 @@ export class ActionASTInterpreter {
       }
 
       case 'MemberExpression': {
-        const obj = this.evaluateExpression(expr.object, scope) as any;
+        const obj = this.evaluateExpression(expr.object, scope);
         const prop = expr.computed
           ? this.evaluateExpression(expr.property as ExpressionNode, scope)
           : expr.property;
@@ -1388,12 +1397,12 @@ export class ActionASTInterpreter {
         if (obj === null || obj === undefined) {
           throw new TypeError(`Action Engine Error: Cannot read properties of ${obj} (reading '${prop}')`);
         }
-        return obj[String(prop)];
+        return (obj as Record<string, unknown>)[String(prop)];
       }
 
       case 'CallExpression': {
-        let calleeObj: any = null;
-        let fn: any;
+        let calleeObj: unknown = null;
+        let fn: unknown;
         let methodName = '';
 
         if (expr.callee.type === 'MemberExpression') {
@@ -1407,23 +1416,25 @@ export class ActionASTInterpreter {
           if (calleeObj === null || calleeObj === undefined) {
             throw new TypeError(`Action Engine Error: Cannot read property '${prop}' of ${calleeObj}`);
           }
-          fn = (calleeObj as any)[prop as any];
+          fn = (calleeObj as Record<string, unknown>)[methodName];
         } else {
           fn = this.evaluateExpression(expr.callee, scope);
         }
 
         if (typeof fn !== 'function') {
-          throw new TypeError(`Action Engine Error: "${(expr.callee as any).name || methodName}" is not a function`);
+          const calleeName = expr.callee.type === 'Identifier' ? expr.callee.name : methodName;
+          throw new TypeError(`Action Engine Error: "${calleeName}" is not a function`);
         }
 
         this.assertMethodCallSafe(calleeObj, methodName);
 
         const args = expr.arguments.map(arg => this.evaluateExpression(arg, scope));
-        return fn.apply(calleeObj, args);
+        return (fn as Function).apply(calleeObj, args);
       }
 
       default:
-        throw new Error(`Action Engine Error: Unsupported expression type "${(expr as any).type}"`);
+        const unhandledExpr: never = expr as never;
+        throw new Error(`Action Engine Error: Unsupported expression type "${(unhandledExpr as ExpressionNode).type}"`);
     }
   }
 
@@ -1434,7 +1445,7 @@ export class ActionASTInterpreter {
   }
 
   private assertMethodCallSafe(calleeObj: unknown, methodName: string): void {
-    if (calleeObj === this.api || calleeObj === (this.api as any)?.utils || calleeObj === (this.api as any)?.dialog) {
+    if (calleeObj === this.api || calleeObj === this.api.utils || calleeObj === this.api.dialog) {
       return;
     }
     if (calleeObj === JSON || calleeObj === this.safeJson || calleeObj === Math || calleeObj === this.safeMath) {
