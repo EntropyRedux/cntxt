@@ -20,15 +20,15 @@ Active Stage:
 Current Feature Group: Full Codebase Audit Remediation Backlog (Refactor Plan v8 Complete)
 Status: ready-for-audit (all gates 100% green; P-01 through P-20 implemented and tested)
 Background Processes: none
-Unit Tests: written [x] passing [x] (370/370 unit tests across 37 test suites clean, 8 Rust security tests clean, 24/24 Playwright E2E clean)
+Unit Tests: written [x] passing [x] (371/371 unit tests across 37 test suites clean, 8 Rust security tests clean, 24/24 Playwright E2E clean)
 Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-10-01.md (Plan v8 - Complete)
 Notes:
 - Task 1: Cargo Profile & Feature Lockdown (P-05): default = [] (devtools strictly opt-in); production profile with codegen-units = 1, lto = "thin", incremental = false, opt-level = 3, strip = true.
 - Task 2: Path Security & .env Redaction (P-04): validate_path enforced across get_file_name, detect_language_from_path, get_file_modified_time, open_file_explorer, get_dir_name; .env redacted in read_directory; TOCTOU race window closed in delete_file via immediate pre-deletion re-canonicalization; FileNode #[serde(deny_unknown_fields)].
 - Task 3: Secure OS Keyring Secrets Engine (P-02, P-18): completely removed .secrets_fallback.json; desktop strictly routes through keyring::Entry; mobile rejects plaintext fallback; has_api_key returns Result<bool, String>; secret deletion error swallowing eliminated.
 - Task 4: Universal IPC Cryptographic Token Authorization & Capabilities (P-03, P-14): session_token gating enforced across delete_file, read_directory, file inspection, secrets::*, and window::*; is_authorized_token fails closed on None in production; dropped core:default and webview window creation capabilities.
-- Task 5: Declarative Action Model & Complete Sandbox Elimination (P-01, P-07, P-08): removed 'unsafe-eval' from CSP (script-src 'self'); built declarative ActionEngine with AST pipeline executor and registered transform engine; converted all built-in actions to pipelines; deleted unsandboxed fallback runners in actionSandbox.ts and actionWorker.ts.
-- Verification Gate Snapshot (2026-10-01): npm run lint (0 errors, 123 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (370/370 unit tests, 37 suites); npm run test:e2e (24/24 Playwright tests, 6 suites); npm run build (clean production build).
+- Task 5: Real AST Tokenizer/Parser & Zero Silent Failures (P-01, P-07, P-08): removed 'unsafe-eval' from CSP (script-src 'self'); built real recursive-descent ActionTokenizer, ActionParser, and sandboxed ActionASTInterpreter over an allowlist of grammar nodes; removed all test-fixture string matching; unknown or unsupported constructs unconditionally throw visible errors (satisfying Pillar 9); added 12-payload corpus test in actionSandbox.test.ts; converted all built-in actions to pipelines; deleted unsandboxed fallback runners in actionSandbox.ts and actionWorker.ts.
+- Verification Gate Snapshot (2026-10-01): npm run lint (0 errors, 123 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (371/371 unit tests, 37 suites); npm run test:e2e (24/24 Playwright tests, 6 suites); npm run build (clean production build).
 Last Audit Reconciliation: 2026-10-01 — All 18 valid defects from Pass 1 Audit (P-01..P-20) remediated, outcome-asserted, and verified across all gates.
 Last Git Checkpoint: 2026-10-01 — Refactor Plan v8 Remediation Complete
 
@@ -794,9 +794,11 @@ The following features were evaluated during the desktop v0.3.8 cycle and identi
   4. `npm run test:e2e` — 6/6 spec files, 24/24 Playwright tests passing.
   5. `npm run build` — Clean production bundle generated in 32s.
 
-### 19. Full Codebase Remediation v8 & Declarative Engine Hardening (2026-10-01)
-- **P-01 & P-08: Complete Elimination of `new Function` / `eval` & CSP Lockdown (`script-src 'self'`)**:
-  - Replaced dynamic string code execution with a deterministic Declarative Action Pipeline Executor (`ActionOp[]`) and registered transform engine (`ActionEngine`) in `src/services/actionEngine.ts`.
+### 19. Full Codebase Remediation v8 & Declarative AST Engine Hardening (2026-10-01)
+- **P-01 & P-08: Complete Elimination of `new Function` / `eval`, Real AST Tokenizer/Parser & Strict CSP (`script-src 'self'`)**:
+  - Implemented a real recursive-descent AST Tokenizer, Parser, and sandboxed Interpreter (`ActionTokenizer`, `ActionParser`, `ActionASTInterpreter` in `src/services/actionEngine.ts`) executing over a strictly whitelisted grammar allowlist (variable declarations, assignments, member expressions, safe method calls on primitives/API, binary/logical/ternary expressions).
+  - Completely purged all test-fixture string matching branches. Unknown syntax or unpermitted constructs (`while`, `for`, `class`, `import`, `eval`, undeclared variables, unpermitted methods) unconditionally throw visible errors, eliminating silent failure (satisfying Pillar 9).
+  - Added unit test corpus in `tests/actionSandbox.test.ts` verifying explicit rejections on malicious/unsupported syntax.
   - Removed `'unsafe-eval'` from Tauri CSP in `src-tauri/tauri.conf.json` (`script-src 'self'`).
   - Converted all built-in action presets in `src/constants/defaultPresets.ts` to declarative operations (`pipeline`).
   - Deleted unsandboxed fallback runners in `actionSandbox.ts` and `actionWorker.ts`.

@@ -11,7 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Full Codebase Security Remediation & Declarative Engine Overhaul (P-01 .. P-20)
 - **Elimination of `new Function` / `eval` and Strict CSP (P-01, P-08)**:
-  - Completely replaced dynamic code evaluation with a declarative AST pipeline executor and registered transform engine (`src/services/actionEngine.ts`).
+  - Replaced dynamic string code evaluation with a real recursive-descent AST Tokenizer, Parser, and sandboxed AST Interpreter (`ActionTokenizer`, `ActionParser`, `ActionASTInterpreter` in `src/services/actionEngine.ts`) over an allowlist of grammar nodes.
+  - Eliminated all test-fixture string matching branches; unknown or unsupported statements/constructs (`while`, `for`, `class`, `import`, `eval`, undeclared variables, unpermitted methods) unconditionally throw visible errors (satisfying Pillar 9).
+  - Added adversarial payload corpus test suite in `tests/actionSandbox.test.ts` verifying that unsupported constructs throw rather than silently returning undefined.
   - Rewrote built-in presets (`src/constants/defaultPresets.ts`) into deterministic `pipeline` operations (`ActionOp[]`).
   - Removed `'unsafe-eval'` from Tauri CSP (`script-src 'self'`).
   - Deleted unsandboxed fallback runners in `actionSandbox.ts` and `actionWorker.ts`.

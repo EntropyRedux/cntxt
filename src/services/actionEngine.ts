@@ -551,228 +551,912 @@ export class ActionEngine {
       if (handler) {
         await handler(currentSnapshot, safeApi);
       } else {
-        safeApi.toast(`Transform "${transformName}" not registered`, 'warning');
+        throw new Error(`Action Engine Error: Transform "${transformName}" is not registered`);
       }
       return { result: undefined, journal };
     }
 
-    // 3. Known preset script matching
-    if (trimmed.includes('Extract Answered Variables') || trimmed.includes("varMap.has(key)")) {
-      const handler = getActionTransform('extractAnsweredVariables');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Extract Rows With Variables') || trimmed.includes("matching = lines.filter(l => /\\{\\{[^}]+\\}\\}/.test(l))")) {
-      const handler = getActionTransform('extractRowsWithVars');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Extract Rows Without Variables') || trimmed.includes("staticLines = lines.filter(l => !/\\{\\{[^}]+\\}\\}/.test(l))")) {
-      const handler = getActionTransform('extractRowsWithoutVars');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Selection: Extract Variables') || trimmed.includes("Variable Checklist")) {
-      const handler = getActionTransform('selectionExtractVars');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Executive Summary Generator')) {
-      const handler = getActionTransform('summarize');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Normalized markdown tables') || (trimmed.includes("line.includes('|')") && trimmed.includes("cells.join(' | ')"))) {
-      const handler = getActionTransform('formatTable');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Generate URL Slug') || trimmed.includes("Generated slug:")) {
-      const handler = getActionTransform('slugify');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Consolidated Task Checklist') || trimmed.includes("Extract All Tasks")) {
-      const handler = getActionTransform('extractTasks');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Format JSON and Sort Keys') || trimmed.includes("sortObjectKeys")) {
-      const handler = getActionTransform('formatJSON');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Extract and Fill Template Variables')) {
-      const handler = getActionTransform('extractAndFillVariables');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Markdown Table to CSV')) {
-      const handler = getActionTransform('tableToCsv');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Deduplicate and Sort Lines')) {
-      const handler = getActionTransform('deduplicateLines');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Evaluate and Bake All Formulas')) {
-      const handler = getActionTransform('bakeFormulas');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-    if (trimmed.includes('Wrap with LLM Prompt Tags')) {
-      const handler = getActionTransform('wrapPromptContext');
-      if (handler) await handler(currentSnapshot, safeApi);
-      return { result: undefined, journal };
-    }
-
-    // 4. Safe AST-free Expression & Statement Evaluator
-    return SafeEvaluator.evaluate(code, currentSnapshot, safeApi, journal);
+    // 3. Real AST Tokenize, Parse & Interpret
+    const tokens = new ActionTokenizer(code).tokenize();
+    const ast = new ActionParser(tokens).parseProgram();
+    const interpreter = new ActionASTInterpreter(safeApi);
+    const result = interpreter.execute(ast);
+    return { result, journal };
   }
 }
 
-/**
- * Pure deterministic AST evaluator for simple arithmetic, string methods, and API calls.
- * ZERO eval(), ZERO Function(). Operates strictly on whitelisted constructs.
- */
-class SafeEvaluator {
-  public static evaluate(
-    code: string,
-    snapshot: ActionSnapshot,
-    api: SandboxAPI,
-    journal: ActionMutation[]
-  ): { result?: unknown; journal: ActionMutation[] } {
-    const clean = code.trim();
+// ============================================================================
+// Real AST Engine: Tokenizer, Parser & Sandboxed Interpreter
+// ============================================================================
 
-    // Check for typeof host checks
-    if (clean === 'return typeof window;' || clean === 'return typeof fetch;' || clean === 'return typeof process;' || clean === 'return typeof document;') {
-      return { result: 'undefined', journal };
+export enum ActionTokenType {
+  IDENT = 'IDENT',
+  NUMBER = 'NUMBER',
+  STRING = 'STRING',
+  KEYWORD = 'KEYWORD',
+  PUNCT = 'PUNCT',
+  OPERATOR = 'OPERATOR',
+  EOF = 'EOF'
+}
+
+export interface ActionToken {
+  type: ActionTokenType;
+  value: string | number | boolean | null | undefined;
+  pos: number;
+}
+
+const KEYWORDS = new Set([
+  'const', 'let', 'var', 'return', 'typeof', 'true', 'false', 'null', 'undefined'
+]);
+
+const UNSUPPORTED_KEYWORDS = new Set([
+  'while', 'for', 'do', 'switch', 'case', 'break', 'continue',
+  'function', 'class', 'import', 'export', 'new', 'this', 'throw',
+  'try', 'catch', 'finally', 'yield', 'await', 'async', 'void',
+  'delete', 'debugger', 'with'
+]);
+
+const FORBIDDEN_PROPERTIES = new Set([
+  '__proto__',
+  'constructor',
+  'prototype',
+  'eval',
+  'Function',
+  'AsyncFunction',
+  'GeneratorFunction',
+  'importScripts',
+  'document',
+  'window',
+  'globalThis',
+  'self',
+  'top',
+  'parent'
+]);
+
+export class ActionTokenizer {
+  private pos = 0;
+  private len: number;
+
+  constructor(private input: string) {
+    this.len = input.length;
+  }
+
+  public tokenize(): ActionToken[] {
+    const tokens: ActionToken[] = [];
+    while (this.pos < this.len) {
+      this.skipWhitespaceAndComments();
+      if (this.pos >= this.len) break;
+
+      const ch = this.input[this.pos];
+
+      // Strings
+      if (ch === '"' || ch === "'" || ch === '`') {
+        tokens.push(this.readString(ch));
+        continue;
+      }
+
+      // Numbers
+      if (this.isDigit(ch)) {
+        tokens.push(this.readNumber());
+        continue;
+      }
+
+      // Identifiers & Keywords
+      if (this.isIdentStart(ch)) {
+        tokens.push(this.readIdent());
+        continue;
+      }
+
+      // Multi-character operators
+      const two = this.input.slice(this.pos, this.pos + 2);
+      const three = this.input.slice(this.pos, this.pos + 3);
+
+      if (three === '===' || three === '!==') {
+        tokens.push({ type: ActionTokenType.OPERATOR, value: three, pos: this.pos });
+        this.pos += 3;
+        continue;
+      }
+
+      if (['==', '!=', '<=', '>=', '&&', '||', '+=', '-='].includes(two)) {
+        tokens.push({ type: ActionTokenType.OPERATOR, value: two, pos: this.pos });
+        this.pos += 2;
+        continue;
+      }
+
+      // Single-character operators & punctuation
+      if (['+', '-', '*', '/', '%', '<', '>', '!', '='].includes(ch)) {
+        tokens.push({ type: ActionTokenType.OPERATOR, value: ch, pos: this.pos });
+        this.pos++;
+        continue;
+      }
+
+      if (['(', ')', '{', '}', '[', ']', ';', ',', '.', ':', '?'].includes(ch)) {
+        tokens.push({ type: ActionTokenType.PUNCT, value: ch, pos: this.pos });
+        this.pos++;
+        continue;
+      }
+
+      throw new Error(`Action Engine Syntax Error: Unexpected token "${ch}" at index ${this.pos}`);
     }
 
-    // Ambient capability probe in e2e test
-    if (clean.includes('hasFetch') && clean.includes('hasXHR') && clean.includes('api.setContent')) {
-      const parsedScope = {
-        hasFetch: false,
-        hasXHR: false,
-        hasWS: false,
-        hasImportScripts: false
-      };
-      api.setContent(JSON.stringify(parsedScope));
-      return { result: undefined, journal };
-    }
+    tokens.push({ type: ActionTokenType.EOF, value: '', pos: this.pos });
+    return tokens;
+  }
 
-    // Worker test evaluation in e2e
-    if (clean.includes('Processed By Worker') && clean.includes('setContent')) {
-      const current = api.getContent();
-      api.setContent(current + '\n## Processed By Worker\nResult: 42');
-      return { result: undefined, journal };
-    }
-
-    // Statement: api.setText(...) or api.setContent(...)
-    const setTextMatch = clean.match(/^api\.(?:setText|setContent)\s*\(\s*([\s\S]+)\s*\);?$/);
-    if (setTextMatch) {
-      const arg = setTextMatch[1].trim();
-      if (arg.startsWith('api.getText()') || arg.startsWith('api.getContent()')) {
-        const base = api.getText() || api.getContent();
-        const plusIdx = arg.indexOf('+');
-        if (plusIdx !== -1) {
-          const appendStr = arg.slice(plusIdx + 1).trim();
-          let parsedAppend = appendStr;
-          try {
-            parsedAppend = JSON.parse(appendStr);
-          } catch {
-            if ((parsedAppend.startsWith('"') && parsedAppend.endsWith('"')) || (parsedAppend.startsWith("'") && parsedAppend.endsWith("'"))) {
-              parsedAppend = parsedAppend.slice(1, -1).replace(/\\n/g, '\n').replace(/\\t/g, '\t');
-            }
+  private skipWhitespaceAndComments(): void {
+    while (this.pos < this.len) {
+      const ch = this.input[this.pos];
+      if (ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n') {
+        this.pos++;
+        continue;
+      }
+      if (ch === '/' && this.pos + 1 < this.len) {
+        const next = this.input[this.pos + 1];
+        if (next === '/') {
+          this.pos += 2;
+          while (this.pos < this.len && this.input[this.pos] !== '\n') {
+            this.pos++;
           }
-          api.setText(base + parsedAppend);
-        } else {
-          api.setText(base);
+          continue;
         }
+        if (next === '*') {
+          this.pos += 2;
+          while (this.pos + 1 < this.len && !(this.input[this.pos] === '*' && this.input[this.pos + 1] === '/')) {
+            this.pos++;
+          }
+          this.pos += 2;
+          continue;
+        }
+      }
+      break;
+    }
+  }
+
+  private isDigit(ch: string): boolean {
+    return ch >= '0' && ch <= '9';
+  }
+
+  private isIdentStart(ch: string): boolean {
+    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_' || ch === '$';
+  }
+
+  private isIdentPart(ch: string): boolean {
+    return this.isIdentStart(ch) || this.isDigit(ch);
+  }
+
+  private readString(quote: string): ActionToken {
+    const start = this.pos;
+    this.pos++;
+    let str = '';
+    while (this.pos < this.len) {
+      const ch = this.input[this.pos];
+      if (ch === quote) {
+        this.pos++;
+        return { type: ActionTokenType.STRING, value: str, pos: start };
+      }
+      if (ch === '\\' && this.pos + 1 < this.len) {
+        this.pos++;
+        const esc = this.input[this.pos];
+        if (esc === 'n') str += '\n';
+        else if (esc === 't') str += '\t';
+        else if (esc === 'r') str += '\r';
+        else if (esc === '\\') str += '\\';
+        else if (esc === quote) str += quote;
+        else str += esc;
+        this.pos++;
+        continue;
+      }
+      str += ch;
+      this.pos++;
+    }
+    throw new Error(`Action Engine Syntax Error: Unterminated string literal starting at index ${start}`);
+  }
+
+  private readNumber(): ActionToken {
+    const start = this.pos;
+    while (this.pos < this.len && this.isDigit(this.input[this.pos])) {
+      this.pos++;
+    }
+    if (this.pos < this.len && this.input[this.pos] === '.' && this.pos + 1 < this.len && this.isDigit(this.input[this.pos + 1])) {
+      this.pos++;
+      while (this.pos < this.len && this.isDigit(this.input[this.pos])) {
+        this.pos++;
+      }
+    }
+    const val = Number(this.input.slice(start, this.pos));
+    return { type: ActionTokenType.NUMBER, value: val, pos: start };
+  }
+
+  private readIdent(): ActionToken {
+    const start = this.pos;
+    while (this.pos < this.len && this.isIdentPart(this.input[this.pos])) {
+      this.pos++;
+    }
+    const word = this.input.slice(start, this.pos);
+    if (UNSUPPORTED_KEYWORDS.has(word)) {
+      throw new Error(`Action Engine Syntax Error: "${word}" statement/expression is not supported in sandboxed actions`);
+    }
+    if (KEYWORDS.has(word)) {
+      return { type: ActionTokenType.KEYWORD, value: word, pos: start };
+    }
+    return { type: ActionTokenType.IDENT, value: word, pos: start };
+  }
+}
+
+// AST Nodes
+export interface ProgramNode {
+  type: 'Program';
+  body: StatementNode[];
+}
+
+export type StatementNode =
+  | VariableDeclarationNode
+  | AssignmentStatementNode
+  | ExpressionStatementNode
+  | ReturnStatementNode;
+
+export interface VariableDeclarationNode {
+  type: 'VariableDeclaration';
+  name: string;
+  init: ExpressionNode;
+  kind: 'const' | 'let' | 'var';
+}
+
+export interface AssignmentStatementNode {
+  type: 'AssignmentStatement';
+  left: IdentifierNode | MemberExpressionNode;
+  operator: '=' | '+=';
+  right: ExpressionNode;
+}
+
+export interface ExpressionStatementNode {
+  type: 'ExpressionStatement';
+  expression: ExpressionNode;
+}
+
+export interface ReturnStatementNode {
+  type: 'ReturnStatement';
+  argument: ExpressionNode | null;
+}
+
+export type ExpressionNode =
+  | LiteralNode
+  | IdentifierNode
+  | UnaryExpressionNode
+  | BinaryExpressionNode
+  | LogicalExpressionNode
+  | ConditionalExpressionNode
+  | MemberExpressionNode
+  | CallExpressionNode
+  | ArrayExpressionNode
+  | ObjectExpressionNode;
+
+export interface LiteralNode {
+  type: 'Literal';
+  value: unknown;
+}
+
+export interface IdentifierNode {
+  type: 'Identifier';
+  name: string;
+}
+
+export interface UnaryExpressionNode {
+  type: 'UnaryExpression';
+  operator: 'typeof' | '!' | '-' | '+';
+  argument: ExpressionNode;
+}
+
+export interface BinaryExpressionNode {
+  type: 'BinaryExpression';
+  operator: string;
+  left: ExpressionNode;
+  right: ExpressionNode;
+}
+
+export interface LogicalExpressionNode {
+  type: 'LogicalExpression';
+  operator: '&&' | '||';
+  left: ExpressionNode;
+  right: ExpressionNode;
+}
+
+export interface ConditionalExpressionNode {
+  type: 'ConditionalExpression';
+  test: ExpressionNode;
+  consequent: ExpressionNode;
+  alternate: ExpressionNode;
+}
+
+export interface MemberExpressionNode {
+  type: 'MemberExpression';
+  object: ExpressionNode;
+  property: string | ExpressionNode;
+  computed: boolean;
+}
+
+export interface CallExpressionNode {
+  type: 'CallExpression';
+  callee: ExpressionNode;
+  arguments: ExpressionNode[];
+}
+
+export interface ArrayExpressionNode {
+  type: 'ArrayExpression';
+  elements: ExpressionNode[];
+}
+
+export interface ObjectExpressionNode {
+  type: 'ObjectExpression';
+  properties: { key: string; value: ExpressionNode }[];
+}
+
+export class ActionParser {
+  private idx = 0;
+
+  constructor(private tokens: ActionToken[]) {}
+
+  private peek(): ActionToken {
+    return this.tokens[this.idx] || { type: ActionTokenType.EOF, value: '', pos: 0 };
+  }
+
+  private next(): ActionToken {
+    const tok = this.peek();
+    this.idx++;
+    return tok;
+  }
+
+  private match(type: ActionTokenType, value?: string): ActionToken | null {
+    const tok = this.peek();
+    if (tok.type === type && (value === undefined || tok.value === value)) {
+      return this.next();
+    }
+    return null;
+  }
+
+  private expect(type: ActionTokenType, value?: string): ActionToken {
+    const tok = this.match(type, value);
+    if (!tok) {
+      const cur = this.peek();
+      throw new Error(`Action Engine Syntax Error: Expected "${value || type}" but found "${cur.value || cur.type}" at index ${cur.pos}`);
+    }
+    return tok;
+  }
+
+  public parseProgram(): ProgramNode {
+    const stmts: StatementNode[] = [];
+    while (this.peek().type !== ActionTokenType.EOF) {
+      stmts.push(this.parseStatement());
+    }
+    return { type: 'Program', body: stmts };
+  }
+
+  private parseStatement(): StatementNode {
+    const tok = this.peek();
+
+    if (tok.type === ActionTokenType.KEYWORD && (tok.value === 'const' || tok.value === 'let' || tok.value === 'var')) {
+      return this.parseVarDecl();
+    }
+
+    if (tok.type === ActionTokenType.KEYWORD && tok.value === 'return') {
+      return this.parseReturn();
+    }
+
+    const expr = this.parseExpression();
+
+    if (this.match(ActionTokenType.OPERATOR, '=')) {
+      const value = this.parseExpression();
+      this.match(ActionTokenType.PUNCT, ';');
+      return { type: 'AssignmentStatement', left: expr as IdentifierNode | MemberExpressionNode, operator: '=', right: value };
+    }
+    if (this.match(ActionTokenType.OPERATOR, '+=')) {
+      const value = this.parseExpression();
+      this.match(ActionTokenType.PUNCT, ';');
+      return { type: 'AssignmentStatement', left: expr as IdentifierNode | MemberExpressionNode, operator: '+=', right: value };
+    }
+
+    this.match(ActionTokenType.PUNCT, ';');
+    return { type: 'ExpressionStatement', expression: expr };
+  }
+
+  private parseVarDecl(): VariableDeclarationNode {
+    const kind = this.next().value as 'const' | 'let' | 'var';
+    const idTok = this.expect(ActionTokenType.IDENT);
+    this.expect(ActionTokenType.OPERATOR, '=');
+    const init = this.parseExpression();
+    this.match(ActionTokenType.PUNCT, ';');
+    return { type: 'VariableDeclaration', name: String(idTok.value), init, kind };
+  }
+
+  private parseReturn(): ReturnStatementNode {
+    this.next();
+    let expr: ExpressionNode | null = null;
+    if (this.peek().type !== ActionTokenType.EOF && !(this.peek().type === ActionTokenType.PUNCT && this.peek().value === ';')) {
+      expr = this.parseExpression();
+    }
+    this.match(ActionTokenType.PUNCT, ';');
+    return { type: 'ReturnStatement', argument: expr };
+  }
+
+  private parseExpression(): ExpressionNode {
+    return this.parseTernary();
+  }
+
+  private parseTernary(): ExpressionNode {
+    let expr = this.parseLogicalOr();
+    if (this.match(ActionTokenType.PUNCT, '?')) {
+      const consequent = this.parseExpression();
+      this.expect(ActionTokenType.PUNCT, ':');
+      const alternate = this.parseExpression();
+      expr = { type: 'ConditionalExpression', test: expr, consequent, alternate };
+    }
+    return expr;
+  }
+
+  private parseLogicalOr(): ExpressionNode {
+    let left = this.parseLogicalAnd();
+    while (this.match(ActionTokenType.OPERATOR, '||')) {
+      const right = this.parseLogicalAnd();
+      left = { type: 'LogicalExpression', operator: '||', left, right };
+    }
+    return left;
+  }
+
+  private parseLogicalAnd(): ExpressionNode {
+    let left = this.parseEquality();
+    while (this.match(ActionTokenType.OPERATOR, '&&')) {
+      const right = this.parseEquality();
+      left = { type: 'LogicalExpression', operator: '&&', left, right };
+    }
+    return left;
+  }
+
+  private parseEquality(): ExpressionNode {
+    let left = this.parseRelational();
+    let op: ActionToken | null;
+    while ((op = this.match(ActionTokenType.OPERATOR, '===') || this.match(ActionTokenType.OPERATOR, '!==') || this.match(ActionTokenType.OPERATOR, '==') || this.match(ActionTokenType.OPERATOR, '!='))) {
+      const right = this.parseRelational();
+      left = { type: 'BinaryExpression', operator: String(op.value), left, right };
+    }
+    return left;
+  }
+
+  private parseRelational(): ExpressionNode {
+    let left = this.parseAdditive();
+    let op: ActionToken | null;
+    while ((op = this.match(ActionTokenType.OPERATOR, '<') || this.match(ActionTokenType.OPERATOR, '<=') || this.match(ActionTokenType.OPERATOR, '>') || this.match(ActionTokenType.OPERATOR, '>='))) {
+      const right = this.parseAdditive();
+      left = { type: 'BinaryExpression', operator: String(op.value), left, right };
+    }
+    return left;
+  }
+
+  private parseAdditive(): ExpressionNode {
+    let left = this.parseMultiplicative();
+    let op: ActionToken | null;
+    while ((op = this.match(ActionTokenType.OPERATOR, '+') || this.match(ActionTokenType.OPERATOR, '-'))) {
+      const right = this.parseMultiplicative();
+      left = { type: 'BinaryExpression', operator: String(op.value), left, right };
+    }
+    return left;
+  }
+
+  private parseMultiplicative(): ExpressionNode {
+    let left = this.parseUnary();
+    let op: ActionToken | null;
+    while ((op = this.match(ActionTokenType.OPERATOR, '*') || this.match(ActionTokenType.OPERATOR, '/') || this.match(ActionTokenType.OPERATOR, '%'))) {
+      const right = this.parseUnary();
+      left = { type: 'BinaryExpression', operator: String(op.value), left, right };
+    }
+    return left;
+  }
+
+  private parseUnary(): ExpressionNode {
+    const tok = this.peek();
+    if (tok.type === ActionTokenType.KEYWORD && tok.value === 'typeof') {
+      this.next();
+      const argument = this.parseUnary();
+      return { type: 'UnaryExpression', operator: 'typeof', argument };
+    }
+    if (tok.type === ActionTokenType.OPERATOR && (tok.value === '!' || tok.value === '-' || tok.value === '+')) {
+      this.next();
+      const argument = this.parseUnary();
+      return { type: 'UnaryExpression', operator: tok.value as '!' | '-' | '+', argument };
+    }
+    return this.parseMemberOrCall();
+  }
+
+  private parseMemberOrCall(): ExpressionNode {
+    let expr = this.parsePrimary();
+
+    while (true) {
+      if (this.match(ActionTokenType.PUNCT, '.')) {
+        const propTok = this.expect(ActionTokenType.IDENT);
+        expr = { type: 'MemberExpression', object: expr, property: String(propTok.value), computed: false };
+      } else if (this.match(ActionTokenType.PUNCT, '[')) {
+        const propExpr = this.parseExpression();
+        this.expect(ActionTokenType.PUNCT, ']');
+        expr = { type: 'MemberExpression', object: expr, property: propExpr, computed: true };
+      } else if (this.match(ActionTokenType.PUNCT, '(')) {
+        const args: ExpressionNode[] = [];
+        if (!this.match(ActionTokenType.PUNCT, ')')) {
+          do {
+            args.push(this.parseExpression());
+          } while (this.match(ActionTokenType.PUNCT, ','));
+          this.expect(ActionTokenType.PUNCT, ')');
+        }
+        expr = { type: 'CallExpression', callee: expr, arguments: args };
       } else {
-        let val = arg;
-        try {
-          val = JSON.parse(arg);
-        } catch {
-          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-            val = val.slice(1, -1).replace(/\\n/g, '\n');
+        break;
+      }
+    }
+
+    return expr;
+  }
+
+  private parsePrimary(): ExpressionNode {
+    const tok = this.peek();
+
+    if (tok.type === ActionTokenType.NUMBER || tok.type === ActionTokenType.STRING) {
+      this.next();
+      return { type: 'Literal', value: tok.value };
+    }
+
+    if (tok.type === ActionTokenType.KEYWORD) {
+      if (tok.value === 'true') {
+        this.next();
+        return { type: 'Literal', value: true };
+      }
+      if (tok.value === 'false') {
+        this.next();
+        return { type: 'Literal', value: false };
+      }
+      if (tok.value === 'null') {
+        this.next();
+        return { type: 'Literal', value: null };
+      }
+      if (tok.value === 'undefined') {
+        this.next();
+        return { type: 'Literal', value: undefined };
+      }
+    }
+
+    if (tok.type === ActionTokenType.IDENT) {
+      this.next();
+      return { type: 'Identifier', name: String(tok.value) };
+    }
+
+    if (this.match(ActionTokenType.PUNCT, '(')) {
+      const expr = this.parseExpression();
+      this.expect(ActionTokenType.PUNCT, ')');
+      return expr;
+    }
+
+    if (this.match(ActionTokenType.PUNCT, '[')) {
+      const elements: ExpressionNode[] = [];
+      if (!this.match(ActionTokenType.PUNCT, ']')) {
+        do {
+          elements.push(this.parseExpression());
+        } while (this.match(ActionTokenType.PUNCT, ','));
+        this.expect(ActionTokenType.PUNCT, ']');
+      }
+      return { type: 'ArrayExpression', elements };
+    }
+
+    if (this.match(ActionTokenType.PUNCT, '{')) {
+      const properties: { key: string; value: ExpressionNode }[] = [];
+      if (!this.match(ActionTokenType.PUNCT, '}')) {
+        do {
+          const keyTok = this.peek();
+          let key: string;
+          if (keyTok.type === ActionTokenType.IDENT || keyTok.type === ActionTokenType.STRING) {
+            this.next();
+            key = String(keyTok.value);
+          } else {
+            throw new Error(`Action Engine Syntax Error: Invalid property key in object literal at index ${keyTok.pos}`);
           }
-        }
-        api.setText(val);
+
+          let value: ExpressionNode;
+          if (this.match(ActionTokenType.PUNCT, ':')) {
+            value = this.parseExpression();
+          } else {
+            value = { type: 'Identifier', name: key };
+          }
+          properties.push({ key, value });
+        } while (this.match(ActionTokenType.PUNCT, ','));
+        this.expect(ActionTokenType.PUNCT, '}');
       }
-      return { result: undefined, journal };
+      return { type: 'ObjectExpression', properties };
     }
 
-    // Simple return expressions: "return 2 + 2;"
-    const returnMatch = clean.match(/^return\s+([\s\S]+)$/);
-    if (returnMatch) {
-      let expr = returnMatch[1].trim().replace(/;+$/, '').trim();
+    throw new Error(`Action Engine Syntax Error: Unexpected token "${tok.value || tok.type}" at index ${tok.pos}`);
+  }
+}
 
-      // Return api.getText().toUpperCase()
-      if (expr === 'api.getText().toUpperCase()' || expr === 'api.getContent().toUpperCase()' || expr === 'api.getText().toUpperCase();') {
-        return { result: api.getText().toUpperCase(), journal };
-      }
+class ReturnSignal {
+  constructor(public readonly value: unknown) {}
+}
 
-      // Return api.evaluateFormula("...")
-      const formulaMatch = expr.match(/^api\.evaluateFormula\(\s*["']([^"']+)["']\s*\)$/);
-      if (formulaMatch) {
-        return { result: api.evaluateFormula(formulaMatch[1]), journal };
-      }
+class Scope {
+  private bindings = new Map<string, unknown>();
+  constructor(public readonly parent: Scope | null = null) {}
 
-      // Return api.utils.slugify(...)
-      const slugMatch = expr.match(/^api\.utils\.slugify\(\s*["']([^"']+)["']\s*\)$/);
-      if (slugMatch) {
-        return { result: api.utils.slugify(slugMatch[1]), journal };
-      }
+  public declare(name: string, value: unknown): void {
+    this.bindings.set(name, value);
+  }
 
-      // Return api.utils.formatJSON(...)
-      const jsonMatch = expr.match(/^api\.utils\.formatJSON\(\s*(.+)\s*\)$/);
-      if (jsonMatch) {
-        const rawJsonArg = jsonMatch[1].trim();
-        // Remove surrounding quotes or backticks if present
-        let cleanArg = rawJsonArg;
-        if ((cleanArg.startsWith('"') && cleanArg.endsWith('"')) || (cleanArg.startsWith("'") && cleanArg.endsWith("'"))) {
-          cleanArg = cleanArg.slice(1, -1).replace(/\\'/g, "'").replace(/\\"/g, '"');
-        }
-        return { result: api.utils.formatJSON(cleanArg), journal };
-      }
-
-      // Return api.utils.base64Encode(...)
-      const b64EncodeMatch = expr.match(/^api\.utils\.base64Encode\(\s*["']([^"']+)["']\s*\)$/);
-      if (b64EncodeMatch) {
-        return { result: api.utils.base64Encode(b64EncodeMatch[1]), journal };
-      }
-
-      // Return api.utils.base64Decode(...)
-      const b64DecodeMatch = expr.match(/^api\.utils\.base64Decode\(\s*[`"']([^`"']+)`?["']?\s*\)$/);
-      if (b64DecodeMatch) {
-        return { result: api.utils.base64Decode(b64DecodeMatch[1]), journal };
-      }
-
-      // Return api.utils.countWords(...)
-      const wordsMatch = expr.match(/^api\.utils\.countWords\(\s*["']([^"']+)["']\s*\)$/);
-      if (wordsMatch) {
-        return { result: api.utils.countWords(wordsMatch[1]), journal };
-      }
-
-      // Simple arithmetic: 2 + 2, 10 + 20
-      const arithMatch = expr.match(/^(\d+)\s*([\+\-\*\/])\s*(\d+)$/);
-      if (arithMatch) {
-        const a = Number(arithMatch[1]);
-        const op = arithMatch[2];
-        const b = Number(arithMatch[3]);
-        let val = 0;
-        if (op === '+') val = a + b;
-        else if (op === '-') val = a - b;
-        else if (op === '*') val = a * b;
-        else if (op === '/') val = b !== 0 ? a / b : 0;
-        return { result: val, journal };
-      }
+  public get(name: string, isTypeof = false): unknown {
+    if (this.bindings.has(name)) {
+      return this.bindings.get(name);
     }
+    if (this.parent) {
+      return this.parent.get(name, isTypeof);
+    }
+    if (isTypeof) {
+      return undefined;
+    }
+    throw new ReferenceError(`Action Engine Error: "${name}" is not defined`);
+  }
 
-    // Default empty return
-    return { result: undefined, journal };
+  public set(name: string, value: unknown): void {
+    if (this.bindings.has(name)) {
+      this.bindings.set(name, value);
+      return;
+    }
+    if (this.parent) {
+      this.parent.set(name, value);
+      return;
+    }
+    throw new ReferenceError(`Action Engine Error: Cannot assign to undeclared variable "${name}"`);
+  }
+}
+
+export class ActionASTInterpreter {
+  private rootScope: Scope;
+  private safeJson: { stringify: (val: unknown, replacer?: any, space?: any) => string; parse: (str: string) => unknown };
+  private safeMath: Record<string, unknown>;
+
+  constructor(private api: SandboxAPI) {
+    this.rootScope = new Scope();
+    this.safeJson = {
+      stringify: (val, replacer, space) => JSON.stringify(val, replacer, space),
+      parse: (str) => JSON.parse(str)
+    };
+    this.safeMath = {
+      min: Math.min,
+      max: Math.max,
+      floor: Math.floor,
+      ceil: Math.ceil,
+      round: Math.round,
+      abs: Math.abs,
+      random: Math.random
+    };
+    this.setupRootScope();
+  }
+
+  private setupRootScope(): void {
+    this.rootScope.declare('api', this.api);
+    this.rootScope.declare('JSON', this.safeJson);
+    this.rootScope.declare('Math', this.safeMath);
+  }
+
+  public execute(ast: ProgramNode): unknown {
+    try {
+      this.executeProgram(ast, this.rootScope);
+      return undefined;
+    } catch (e) {
+      if (e instanceof ReturnSignal) {
+        return e.value;
+      }
+      throw e;
+    }
+  }
+
+  private executeProgram(program: ProgramNode, scope: Scope): void {
+    for (const stmt of program.body) {
+      this.executeStatement(stmt, scope);
+    }
+  }
+
+  private executeStatement(stmt: StatementNode, scope: Scope): void {
+    switch (stmt.type) {
+      case 'VariableDeclaration': {
+        const val = this.evaluateExpression(stmt.init, scope);
+        scope.declare(stmt.name, val);
+        break;
+      }
+      case 'AssignmentStatement': {
+        const val = this.evaluateExpression(stmt.right, scope);
+        if (stmt.left.type === 'Identifier') {
+          if (stmt.operator === '=') {
+            scope.set(stmt.left.name, val);
+          } else if (stmt.operator === '+=') {
+            const current = scope.get(stmt.left.name) as any;
+            scope.set(stmt.left.name, current + val);
+          }
+        } else if (stmt.left.type === 'MemberExpression') {
+          const obj = this.evaluateExpression(stmt.left.object, scope) as Record<string, unknown>;
+          const prop = stmt.left.computed
+            ? this.evaluateExpression(stmt.left.property as ExpressionNode, scope)
+            : stmt.left.property;
+          this.assertPropertySafe(prop);
+          if (stmt.operator === '=') {
+            obj[String(prop)] = val;
+          } else if (stmt.operator === '+=') {
+            obj[String(prop)] = (obj[String(prop)] as any) + val;
+          }
+        } else {
+          throw new Error('Action Engine Error: Invalid assignment target');
+        }
+        break;
+      }
+      case 'ExpressionStatement': {
+        this.evaluateExpression(stmt.expression, scope);
+        break;
+      }
+      case 'ReturnStatement': {
+        const val = stmt.argument ? this.evaluateExpression(stmt.argument, scope) : undefined;
+        throw new ReturnSignal(val);
+      }
+      default:
+        throw new Error(`Action Engine Error: Unsupported statement type "${(stmt as any).type}"`);
+    }
+  }
+
+  private evaluateExpression(expr: ExpressionNode, scope: Scope): unknown {
+    switch (expr.type) {
+      case 'Literal':
+        return expr.value;
+
+      case 'Identifier':
+        return scope.get(expr.name);
+
+      case 'UnaryExpression': {
+        if (expr.operator === 'typeof') {
+          if (expr.argument.type === 'Identifier') {
+            const val = scope.get(expr.argument.name, true);
+            return typeof val;
+          }
+          const val = this.evaluateExpression(expr.argument, scope);
+          return typeof val;
+        }
+        const val = this.evaluateExpression(expr.argument, scope) as any;
+        if (expr.operator === '!') return !val;
+        if (expr.operator === '-') return -val;
+        if (expr.operator === '+') return +val;
+        throw new Error(`Action Engine Error: Unsupported unary operator "${expr.operator}"`);
+      }
+
+      case 'BinaryExpression': {
+        const left = this.evaluateExpression(expr.left, scope) as any;
+        const right = this.evaluateExpression(expr.right, scope) as any;
+        switch (expr.operator) {
+          case '+': return left + right;
+          case '-': return left - right;
+          case '*': return left * right;
+          case '/': return right !== 0 ? left / right : 0;
+          case '%': return left % right;
+          case '===': return left === right;
+          case '!==': return left !== right;
+          case '==': return left == right;
+          case '!=': return left != right;
+          case '<': return left < right;
+          case '<=': return left <= right;
+          case '>': return left > right;
+          case '>=': return left >= right;
+          default:
+            throw new Error(`Action Engine Error: Unsupported binary operator "${expr.operator}"`);
+        }
+      }
+
+      case 'LogicalExpression': {
+        const left = this.evaluateExpression(expr.left, scope);
+        if (expr.operator === '&&') {
+          return left ? this.evaluateExpression(expr.right, scope) : left;
+        }
+        if (expr.operator === '||') {
+          return left ? left : this.evaluateExpression(expr.right, scope);
+        }
+        throw new Error(`Action Engine Error: Unsupported logical operator "${expr.operator}"`);
+      }
+
+      case 'ConditionalExpression': {
+        const test = this.evaluateExpression(expr.test, scope);
+        return test
+          ? this.evaluateExpression(expr.consequent, scope)
+          : this.evaluateExpression(expr.alternate, scope);
+      }
+
+      case 'ArrayExpression':
+        return expr.elements.map(el => this.evaluateExpression(el, scope));
+
+      case 'ObjectExpression': {
+        const obj: Record<string, unknown> = {};
+        for (const prop of expr.properties) {
+          this.assertPropertySafe(prop.key);
+          obj[prop.key] = this.evaluateExpression(prop.value, scope);
+        }
+        return obj;
+      }
+
+      case 'MemberExpression': {
+        const obj = this.evaluateExpression(expr.object, scope) as any;
+        const prop = expr.computed
+          ? this.evaluateExpression(expr.property as ExpressionNode, scope)
+          : expr.property;
+        this.assertPropertySafe(prop);
+        if (obj === null || obj === undefined) {
+          throw new TypeError(`Action Engine Error: Cannot read properties of ${obj} (reading '${prop}')`);
+        }
+        return obj[String(prop)];
+      }
+
+      case 'CallExpression': {
+        let calleeObj: any = null;
+        let fn: any;
+        let methodName = '';
+
+        if (expr.callee.type === 'MemberExpression') {
+          calleeObj = this.evaluateExpression(expr.callee.object, scope);
+          const prop = expr.callee.computed
+            ? this.evaluateExpression(expr.callee.property as ExpressionNode, scope)
+            : expr.callee.property;
+          this.assertPropertySafe(prop);
+          methodName = String(prop);
+
+          if (calleeObj === null || calleeObj === undefined) {
+            throw new TypeError(`Action Engine Error: Cannot read property '${prop}' of ${calleeObj}`);
+          }
+          fn = (calleeObj as any)[prop as any];
+        } else {
+          fn = this.evaluateExpression(expr.callee, scope);
+        }
+
+        if (typeof fn !== 'function') {
+          throw new TypeError(`Action Engine Error: "${(expr.callee as any).name || methodName}" is not a function`);
+        }
+
+        this.assertMethodCallSafe(calleeObj, methodName);
+
+        const args = expr.arguments.map(arg => this.evaluateExpression(arg, scope));
+        return fn.apply(calleeObj, args);
+      }
+
+      default:
+        throw new Error(`Action Engine Error: Unsupported expression type "${(expr as any).type}"`);
+    }
+  }
+
+  private assertPropertySafe(prop: unknown): void {
+    if (FORBIDDEN_PROPERTIES.has(String(prop))) {
+      throw new Error(`Security Error: Access to forbidden property "${prop}" is blocked`);
+    }
+  }
+
+  private assertMethodCallSafe(calleeObj: unknown, methodName: string): void {
+    if (calleeObj === this.api || calleeObj === (this.api as any)?.utils || calleeObj === (this.api as any)?.dialog) {
+      return;
+    }
+    if (calleeObj === JSON || calleeObj === this.safeJson || calleeObj === Math || calleeObj === this.safeMath) {
+      return;
+    }
+    const SAFE_STRING_METHODS = new Set([
+      'toUpperCase', 'toLowerCase', 'trim', 'trimStart', 'trimEnd',
+      'slice', 'substring', 'split', 'replace', 'replaceAll',
+      'includes', 'startsWith', 'endsWith', 'indexOf', 'lastIndexOf',
+      'charAt', 'charCodeAt', 'concat', 'repeat', 'padStart', 'padEnd'
+    ]);
+    const SAFE_ARRAY_METHODS = new Set([
+      'join', 'map', 'filter', 'slice', 'includes', 'indexOf',
+      'forEach', 'find', 'findIndex', 'reduce', 'some', 'every',
+      'reverse', 'flat'
+    ]);
+    const SAFE_NUMBER_METHODS = new Set(['toFixed', 'toString']);
+
+    if (typeof calleeObj === 'string' && SAFE_STRING_METHODS.has(methodName)) return;
+    if (Array.isArray(calleeObj) && SAFE_ARRAY_METHODS.has(methodName)) return;
+    if (typeof calleeObj === 'number' && SAFE_NUMBER_METHODS.has(methodName)) return;
+
+    throw new Error(`Action Engine Error: Method call "${methodName}" on object is not permitted`);
   }
 }

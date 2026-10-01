@@ -111,4 +111,29 @@ describe('executeInSandbox Security Hardening', () => {
     expect(notifiedMsg).toContain('JSON format error');
     expect(notifiedType).toBe('warning');
   });
+
+  it('rejects unknown syntax and unsupported constructs with a visible error instead of a silent no-op (Pillar 9)', async () => {
+    const maliciousOrUnsupportedPayloads = [
+      'while (true) {}',
+      'for (let i = 0; i < 10; i++) {}',
+      'class MaliciousClass {}',
+      'function doEvil() { return 1; }',
+      'try { nonExistent(); } catch (e) {}',
+      'new Date();',
+      'unknownFunction();',
+      'someUndeclaredVar = 123;',
+      'const x = window.location;',
+      'const p = process.env;',
+      '({}).toString.constructor("return 1")();',
+      'const a = [1, 2]; a.sort();' // unpermitted array method
+    ];
+
+    for (const payload of maliciousOrUnsupportedPayloads) {
+      await expect(
+        executeInSandbox(payload, mockApi),
+        `Payload "${payload}" should have thrown an explicit error`
+      ).rejects.toThrow();
+    }
+  });
 });
+
