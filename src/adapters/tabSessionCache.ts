@@ -15,6 +15,7 @@
  */
 
 import { Tab } from '../../contracts/data_shapes';
+import { TabCacheEntrySchema } from '../contracts/boundarySchemas';
 
 const CACHE_KEY = 'cntxt_tab_cache_v2';
 /** Max content size (bytes) stored per tab. Larger tabs use IPC on restore. */
@@ -83,15 +84,14 @@ export function readTabCache(): { tabs: Tab[]; activeTabId: string } | null {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
 
-    const entry: TabCacheEntry = JSON.parse(raw);
-    if (
-      !Array.isArray(entry?.tabs) ||
-      typeof entry?.activeTabId !== 'string' ||
-      typeof entry?.checksum !== 'string'
-    ) {
+    const parsed = JSON.parse(raw);
+    const validation = TabCacheEntrySchema.safeParse(parsed);
+    if (!validation.success) {
+      console.warn('[TabCache] boundary schema validation failed — discarding invalid cache');
       clearTabCache();
       return null;
     }
+    const entry = validation.data;
 
     const expected = computeChecksum(entry.tabs, entry.activeTabId);
     if (expected !== entry.checksum) {

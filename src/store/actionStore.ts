@@ -7,6 +7,7 @@ import { executeActionById } from '../services/actionExecutor';
 import { executeInSandbox } from '../services/actionSandbox';
 import { SandboxAPI } from '../services/sandboxApiFactory';
 import { EditorView } from '@codemirror/view';
+import { validateAction } from '../contracts/boundarySchemas';
 import { useNotificationStore } from './notificationStore';
 import { useSettingsStore } from './settingsStore';
 
@@ -507,7 +508,7 @@ export const useActionStore = create<ActionState>((set, get) => ({
       return 0;
     }
 
-    const valid = imported.filter(item => item && item.name && item.code);
+    const valid = imported.filter((item): item is Action => validateAction(item).success);
     const combined = [...valid, ...current];
     const unique = Array.from(new Map(combined.map(item => [item.id || item.name, item])).values());
     

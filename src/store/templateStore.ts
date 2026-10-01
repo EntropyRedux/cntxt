@@ -4,6 +4,7 @@ import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
 import { extractTemplateVariables } from '../services/editor/templateVariableService';
+import { validateTemplate } from '../contracts/boundarySchemas';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -523,12 +524,12 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
     const duplicates: string[] = [];
     const newTemplates: Template[] = [];
 
-    rawItems.forEach(t => {
-      if (!t || typeof t !== 'object') return;
-      if (typeof t.name !== 'string' || !t.name.trim()) return;
-      if (typeof t.content !== 'string') return;
+    rawItems.forEach(item => {
+      const result = validateTemplate(item);
+      if (!result.success) return;
+      const t = result.data;
       const isDuplicate = currentTemplates.some(
-        curr => curr.name.trim().toLowerCase() === String(t.name).trim().toLowerCase()
+        curr => curr.name.trim().toLowerCase() === t.name.trim().toLowerCase()
       );
 
       if (isDuplicate) {
@@ -536,12 +537,12 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
       }
 
       newTemplates.push({
-        id: t.id ? String(t.id) : `tmpl_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        name: String(t.name),
-        description: t.description ? String(t.description) : '',
-        category: (t.category ? String(t.category) : 'GENERAL').toUpperCase(),
-        content: String(t.content),
-        variables: Array.isArray(t.variables) ? (t.variables as string[]) : extractTemplateVariables(String(t.content)),
+        id: t.id || `tmpl_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        name: t.name,
+        description: t.description || '',
+        category: (t.category || 'GENERAL').toUpperCase(),
+        content: t.content,
+        variables: Array.isArray(t.variables) ? t.variables : extractTemplateVariables(t.content),
         isHidden: Boolean(t.isHidden),
         isPinned: Boolean(t.isPinned),
         createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(),
