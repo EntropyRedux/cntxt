@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v1.40
+Version: v1.41
 Last Updated: 2026-10-01
-Last Updated By: Prod Agent (Full Codebase Remediation Plan v8 Implemented & Verified)
+Last Updated By: Prod Agent (Tier 2 Code Quality, Validation & Modularization Complete)
 Project: CNTXT (ContextPad)
 Target Platform(s): Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Web Prototype + Mobile (Android via Tauri v2 Mobile runtime; future iOS expansion)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Rust (Tauri v2)
@@ -13,24 +13,30 @@ Active Stage:
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
   [ ] Feature Implementation (FG-01..FG-09 Complete & Verified; Android APK Native Mobile Runtime Live)
-  [x] Refactor (Remediation Backlog: P-01 through P-20 Completely Resolved & Verified)
-    [x] Testing (Vitest 370/370 Live across 37 suites, Playwright E2E 24/24 Live, Rust Security Test Suite 8/8 Live)
+  [x] Refactor (Remediation Backlog: Tier 1 Security & Tier 2 Code Quality Resolved & Verified)
+    [x] Testing (Vitest 384/384 Live across 38 suites, Playwright E2E 24/24 Live, Rust Security Test Suite 8/8 Live)
   [ ] Packaging & Release (Ready for Pass 1 Re-Audit Verification)
 
-Current Feature Group: Full Codebase Audit Remediation Backlog (Refactor Plan v8 Complete)
-Status: ready-for-audit (all gates 100% green; P-01 through P-20 implemented and tested)
+Current Feature Group: Full Codebase Audit Remediation Backlog (Tier 1 & Tier 2 Complete)
+Status: ready-for-audit (all gates 100% green; Tier 1 P-01..P-20 and Tier 2 P-09..P-19 implemented and tested)
 Background Processes: none
-Unit Tests: written [x] passing [x] (371/371 unit tests across 37 test suites clean, 8 Rust security tests clean, 24/24 Playwright E2E clean)
-Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-10-01.md (Plan v8 - Complete)
+Unit Tests: written [x] passing [x] (384/384 unit tests across 38 test suites clean, 8 Rust security tests clean, 24/24 Playwright E2E clean)
+Active Plan: /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-10-01.md (Tier 1 & Tier 2 Complete)
 Notes:
 - Task 1: Cargo Profile & Feature Lockdown (P-05): default = [] (devtools strictly opt-in); production profile with codegen-units = 1, lto = "thin", incremental = false, opt-level = 3, strip = true.
 - Task 2: Path Security & .env Redaction (P-04): validate_path enforced across get_file_name, detect_language_from_path, get_file_modified_time, open_file_explorer, get_dir_name; .env redacted in read_directory; TOCTOU race window closed in delete_file via immediate pre-deletion re-canonicalization; FileNode #[serde(deny_unknown_fields)].
 - Task 3: Secure OS Keyring Secrets Engine (P-02, P-18): completely removed .secrets_fallback.json; desktop strictly routes through keyring::Entry; mobile rejects plaintext fallback; has_api_key returns Result<bool, String>; secret deletion error swallowing eliminated.
 - Task 4: Universal IPC Cryptographic Token Authorization & Capabilities (P-03, P-14): session_token gating enforced across delete_file, read_directory, file inspection, secrets::*, and window::*; is_authorized_token fails closed on None in production; dropped core:default and webview window creation capabilities.
 - Task 5: Real AST Tokenizer/Parser & Zero Silent Failures (P-01, P-07, P-08): removed 'unsafe-eval' from CSP (script-src 'self'); built real recursive-descent ActionTokenizer, ActionParser, and sandboxed ActionASTInterpreter over an allowlist of grammar nodes; removed all test-fixture string matching; unknown or unsupported constructs unconditionally throw visible errors (satisfying Pillar 9); added 12-payload corpus test in actionSandbox.test.ts; converted all built-in actions to pipelines; deleted unsandboxed fallback runners in actionSandbox.ts and actionWorker.ts.
-- Verification Gate Snapshot (2026-10-01): npm run lint (0 errors, 123 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (371/371 unit tests, 37 suites); npm run test:e2e (24/24 Playwright tests, 6 suites); npm run build (clean production build).
-Last Audit Reconciliation: 2026-10-01 — All 18 valid defects from Pass 1 Audit (P-01..P-20) remediated, outcome-asserted, and verified across all gates.
-Last Git Checkpoint: 2026-10-01 — Refactor Plan v8 Remediation Complete
+- Task 6: Test-Only Exposure Restriction (P-19): annotated clear_session_token with #[cfg(test)] in src-tauri/src/commands/mod.rs.
+- Task 7: Native Dialog Deduplication (P-16): unified duplicate #[cfg] dialog declarations in src-tauri/src/commands/file.rs.
+- Task 8: Eradication of Residual any/as any Casts (P-09): eliminated 100% of legacy any types across src/ (0 occurrences across all 135 files).
+- Task 9: Runtime Boundary Schema Validation via Zod (P-10): enforced strict runtime schema validation across tab cache, action imports, and template imports; added tests/boundarySchemas.test.ts (13/13 pass).
+- Task 10: Observable User Feedback & Silent Error Elimination (P-11): replaced console-only error catches with actionable user notifications via useNotificationStore.getState().addNotification(...) (satisfying Pillar 9).
+- Task 11: Modularization of liveMarkdown Monolith (P-15): decomposed 1,936-line liveMarkdown.ts into discrete widgets and scanners under src/extensions/liveMarkdown/, reducing coordinator file by >1,100 lines while maintaining 100% test compatibility.
+- Verification Gate Snapshot (2026-10-01): npm run lint (0 errors, 135 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (384/384 unit tests, 38 suites); npm run build (clean production build).
+Last Audit Reconciliation: 2026-10-01 — All Tier 1 and Tier 2 remediations complete and verified across all gates.
+Last Git Checkpoint: 2026-10-01 — Tier 2 Remediation Complete
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v1.1

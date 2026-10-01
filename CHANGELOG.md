@@ -34,12 +34,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cargo Profile & Dependency Lockdown (P-05)**:
   - Set `default = []` in `src-tauri/Cargo.toml` so devtools are strictly opt-in.
   - Configured production release profile with `codegen-units = 1`, `lto = "thin"`, `incremental = false`, `opt-level = 3`, and `strip = true`.
+- **Tier 2 Code Quality, Validation & Architecture Remediation (P-09, P-10, P-11, P-15, P-16, P-19)**:
+  - **Test-Only Command Scoping (P-19)**: Annotated `clear_session_token` with `#[cfg(test)]` in `src-tauri/src/commands/mod.rs` to eliminate runtime exposure in production builds.
+  - **Native Dialog Deduplication (P-16)**: Unified duplicate `#[cfg]` dialog declarations (`open_file_dialog`, `save_file_dialog`, `open_folder_dialog`) in `src-tauri/src/commands/file.rs` with internal platform cfg branches.
+  - **Zero Any Typing Debt (P-09)**: Eliminated 100% of legacy `: any` and `as any` casts across `src/` (25 source files refactored, achieving 0 occurrences across the entire frontend).
+  - **Boundary Schema Validation (P-10)**: Implemented runtime schema validation via Zod in `src/contracts/boundarySchemas.ts` for localStorage tab cache (`tabSessionCache.ts`), action imports (`actionStore.ts`), and template imports (`templateStore.ts`). Added test suite in `tests/boundarySchemas.test.ts` (13/13 passing).
+  - **Observable User Feedback & Zero Silent Swallowing (P-11)**: Replaced console-only error catches across stores, adapters, and UI components with actionable user notifications via `useNotificationStore.getState().addNotification(...)` (satisfying Pillar 9).
+  - **LiveMarkdown Monolith Modularization (P-15)**: Modularized `src/extensions/liveMarkdown.ts` (1,936 lines) into discrete, focused modules under `src/extensions/liveMarkdown/` (`bridgeState.ts`, `languageMeta.ts`, `scanners.ts`, and 7 discrete widget modules under `widgets/`), reducing the coordinator file by over 1,100 lines while preserving 100% test compatibility.
 - **Verification Gates**:
-  - `npm run lint`: 0 errors across 123 files, 100% canonical contract sync.
-  - `cargo test`: 8/8 security tests passing (including IPC token gating reflection, keyring isolation, path validation, and .env redaction).
-  - `npm test`: 37/37 suites passing (370/370 unit tests).
-  - `npx playwright test`: 24/24 E2E tests passing across 6 suites (including worker realm isolation).
-  - `npm run build`: Clean production bundle with zero CSP violations.
+  - `npm run lint`: 0 errors across 135 files, zero platform leaks, 100% canonical contract sync.
+  - `cargo test`: 8/8 security tests passing.
+  - `npm test`: 38/38 test suites passing (384/384 unit tests).
+  - `npm run build`: Clean production bundle (zero type or asset errors).
 
 ## [0.4.0] — 2026-09-28
 
