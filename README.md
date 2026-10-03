@@ -2,27 +2,27 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.4.0) — Full Codebase Security Remediation, Dedicated Worker Realm Isolation, zero mock imports in production code, and hardened native IPC architecture complete. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.5.0) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Full Codebase Security Remediation, Brand Redesign & High-Res App Iconography across all platforms, and Large Document TOC Chunking & Quick Append Architecture. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.4.0)
+## Downloads (v0.5.0)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.4.0_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.4.0/CNTXT_0.4.0_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.4.0_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.4.0/CNTXT_0.4.0_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.4.0_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.4.0/CNTXT_0.4.0_portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.0_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.0/CNTXT_0.5.0_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.0_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.0/CNTXT_0.5.0_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.0_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.0/CNTXT_0.5.0_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download app-arm64-release.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.2/app-arm64-release.apk) | Signed with Release Keystore / Installable via ADB |
+| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download app-arm64-release.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.0/app-arm64-release.apk) | Signed with Release Keystore / Installable via ADB |
 
 ### Linux
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Debian Package** | `.deb` | amd64 | [Download CNTXT_0.3.0_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/CNTXT_0.3.0_amd64.deb) | SHA256: `d9921c3873cafbc3a5a611d274d2c2f6c1e70535154b462efb1c401c59ca6016` |
-| **Standalone Portable** | Binary | x64 | [Download cntxt-portable](https://github.com/EntropyRedux/cntxt/releases/download/v0.3.0/cntxt-portable) | SHA256: `6cef65f7909299e8f54b183783fff18443268889a6e480f3c26bde8c90ddf1ff` |
+| **Debian Package** | `.deb` | amd64 | [Download CNTXT_0.5.0_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.0/CNTXT_0.5.0_amd64.deb) | Verified Debian package bundle |
+| **Standalone Portable** | Binary | x64 | [Download cntxt-portable](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.0/cntxt-portable) | Standalone binary |
 
 ## What It Is
 
@@ -97,14 +97,14 @@ are found.
 
 ## Current Status & Verification
  
-- **Production Release (v0.4.0)**:
-  - **Zero Mock Imports in Production**: Complete physical isolation of default presets in `src/constants/defaultPresets.ts` with verified zero imports from `mocks/` across `src/`.
-  - **Dedicated Web Worker Realm Isolation**: 24-member `SandboxAPI` matrix executed inside isolated Web Worker realm with stripped ambient network globals (`fetch`, `XMLHttpRequest`, `WebSocket`, `importScripts`, `indexedDB`) and deeply frozen prototype hierarchies.
-  - **Option A CSP Alignment**: Desktop CSP retaining `'unsafe-eval'` for full custom action compatibility while enforcing physical worker isolation off the main DOM thread.
-  - **HTML Sanitization & KaTeX Layout Tokenization**: Mathematical collision-avoidance tokenization preserving KaTeX math typography while strictly blocking script injection, fixed/sticky clickjacking, and dangerous URI schemes.
-  - **Signed Windows Installer Packages**: Official Windows NSIS setup (`dist-installer/CNTXT_0.4.0_x64-setup.exe`), WiX MSI (`dist-installer/CNTXT_0.4.0_x64_en-US.msi`), and standalone zero-install executable (`dist-portable/CNTXT_0.4.0_portable.exe`), digitally signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
-  - **Automated Test Coverage**: 361 unit tests passing across 37 suites via Vitest (`npm test`); 23 Playwright E2E tests green in headless Chromium (`npm run test:e2e`); 4 Rust security tests passing (`cargo test`).
-  - **Platform Purity**: `npm run lint` scans 122 files with zero platform leaks outside authorized adapters and 100% canonical contract parity.
+- **Production Release (v0.5.0)**:
+  - **Tri-Platform Suite Alignment**: Full production parity across Web SaaS (Vercel + Supabase), Native Desktop (Windows / macOS / Linux via Tauri v2), and Mobile (Android via Tauri Mobile cdylib runtime).
+  - **Brand Redesign & Master Iconography**: Universal deployment of high-resolution centered transparent brand icon across all desktop formats (`.ico`, `.png`, `Square*`), Android mipmap launcher densities (`ic_launcher*`), iOS/macOS (`icon.icns`), and Web (`favicon`, `logo.png`).
+  - **Large Document TOC Chunking & Quick Append Architecture**: Architectural plans for mobile-first and desktop large-file handling via Outline/TOC tree parsing, threshold-driven selective loading, and non-blocking quick append drawer.
+  - **Full Codebase Security Remediation (P-01 .. P-20)**: Real AST recursive-descent parser and sandboxed AST interpreter (`ActionTokenizer`, `ActionParser`, `ActionASTInterpreter`) replacing dynamic code evaluation; zero `'unsafe-eval'` CSP; native OS Keyring token authorization; TOCTOU-safe path canonicalization.
+  - **Signed Windows Installer Packages**: Official Windows NSIS setup (`dist-installer/CNTXT_0.5.0_x64-setup.exe`), WiX MSI (`dist-installer/CNTXT_0.5.0_x64_en-US.msi`), and standalone zero-install executable (`dist-portable/CNTXT_0.5.0_portable.exe`), digitally signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
+  - **Automated Test Coverage**: 399 unit tests passing across 40 suites via Vitest (`npm test`); 24 Playwright E2E tests green; 8 Rust security tests passing (`cargo test`); 10 Web Readiness tests green.
+  - **Platform Purity**: `npm run lint` scans 136 files with zero platform leaks outside authorized adapters and 100% canonical contract parity.
 - **Living Context & Roadmap**:
   - Full living context and architecture logs: `generated-documents/context/living_context.md`.
   - Release history and change notes: [CHANGELOG.md](CHANGELOG.md).

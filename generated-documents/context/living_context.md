@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.10
-Last Updated: 2026-10-01
-Last Updated By: Independent Auditor & Architect (Tri-Platform Hybrid Alignment & Web SaaS Readiness)
+Version: v2.11
+Last Updated: 2026-10-03
+Last Updated By: Prod Agent & Architect (v0.5.0 Production Packaging, Iconography & Architecture Alignment)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -15,13 +15,13 @@ Active Stage:
   [x] Refactor (Remediation Backlog: Tier 1 Security & Tier 2 Code Quality Resolved & Verified)
     [x] Testing (Vitest 399/399 Live across 40 suites, Playwright E2E 24/24 Live, Rust Security Test Suite 8/8 Live, Web Readiness 10/10 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [ ] Packaging & Release (Ready for Pass 1 Re-Audit Verification)
+  [x] Packaging & Release (v0.5.0 Installable Packages Generated & Authenticode Code-Signed)
 
-Current Feature Group: FG-11: Web SaaS UX Redesign, Auth Gateway & Onboarding
+Current Feature Group: FG-11: Web SaaS UX Redesign, Auth Gateway & Onboarding (plus v0.5.0 Master Iconography & Architecture Specs)
 Status: completed / verified (all gates 100% green; Web SaaS Live on Vercel + Supabase, Desktop Live on Tauri v2, Android Live on Tauri Mobile)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
 Unit Tests: written [x] passing [x] (399/399 unit tests passing across 40 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean)
-Active Plan: /generated-documents/plans/feature_group_FG11_web_ux_auth_gateway_2026-10-01.md (FG-11 Complete & Verified)
+Active Plan: /generated-documents/plans/large_document_toc_chunking_plan_2026-10-03.md & /generated-documents/plans/android_toc_quick_append_plan_2026-10-03.md
 Notes:
 - Task 1: Cargo Profile & Feature Lockdown (P-05): default = [] (devtools strictly opt-in); production profile with codegen-units = 1, lto = "thin", incremental = false, opt-level = 3, strip = true.
 - Task 2: Path Security & .env Redaction (P-04): validate_path enforced across get_file_name, detect_language_from_path, get_file_modified_time, open_file_explorer, get_dir_name; .env redacted in read_directory; TOCTOU race window closed in delete_file via immediate pre-deletion re-canonicalization; FileNode #[serde(deny_unknown_fields)].
@@ -35,9 +35,12 @@ Notes:
 - Task 10: Observable User Feedback & Augmented Error Resilience (P-11): augmented error handling across stores, adapters, and UI components with actionable user notifications via useNotificationStore.getState().addNotification(...) (174 notification refs), ensuring visible user-facing toasts on operation failures (satisfying Pillar 9).
 - Task 11: Modularization of liveMarkdown Monolith (P-15): decomposed liveMarkdown.ts into discrete widgets, scanners, and barrel export under src/extensions/liveMarkdown/, reducing coordinator file from 1,732 to 770 lines (-962 lines) while maintaining 100% test compatibility.
 - Task 12: FG-10 Free-Tier Web SaaS Engine (Web Readiness): GitHub Raw CDN community library catalog (`communityLibraryService.ts`) with jsDelivr fallback, 1-hour IndexedDB cache, variable extraction (`{{var}}`), and issue contribution URL; Supabase PostgreSQL two-way sync (`supabaseClient.ts`) for `user_library_items` and `library_collections` with resilient notifications; AST sandbox in dedicated worker (P-01/P-08); dynamic chunk splitting for Mermaid (`mermaidRenderer.ts`) reducing initial bundle by 3.44 MB.
-- Verification Gate Snapshot (2026-10-01): npm run lint (0 errors, 151 files clean in cntxt-web, 136 files clean in CNTXT, 100% contract sync); cargo test (8/8 security tests); npm test (384/384 unit tests in CNTXT, 10/10 webReadiness in cntxt-web); npm run build (clean production build).
+- Task 13: Universal Master Iconography & Brand Refresh: Centered high-resolution badge with transparent alpha masking generated and deployed across all desktop window and bundle assets (`.ico`, `.png`, `Square*`, `.icns`), Android launcher mipmap densities (`ic_launcher*`), and web assets (`favicon`, `logo.png`). Verified 0 lint errors, 100% contract sync.
+- Task 14: Mobile Architecture Planning: Completed architectural specifications for Large Document Truncation & TOC-Driven Chunk Loading (`large_document_toc_chunking_plan_2026-10-03.md`) and Android Quick Append Message Box in TOC Panel (`android_toc_quick_append_plan_2026-10-03.md`). Modernized fill-up form touch layout and added dynamic typing direction engine.
+- Task 15: v0.5.0 Production Packaging & Authenticode Signing: Generated standalone portable executable (`dist-portable/CNTXT_0.5.0_portable.exe`), NSIS setup installer (`dist-installer/CNTXT_0.5.0_x64-setup.exe`), and WiX MSI installer (`dist-installer/CNTXT_0.5.0_x64_en-US.msi`), signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
+- Verification Gate Snapshot (2026-10-03): npm run lint (0 errors, 136 files clean in CNTXT, 151 files clean in cntxt-web, 100% contract sync); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (24/24 green).
 Last Audit Reconciliation: 2026-10-01 — All Tier 1 and Tier 2 remediations complete; FG-10 Web SaaS Readiness verified.
-Last Git Checkpoint: 2026-10-01 — commit a505a7b (feat/web-free-tier-readiness)
+Last Git Checkpoint: 2026-10-03 — Release v0.5.0 preparation and packaging
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v2.0

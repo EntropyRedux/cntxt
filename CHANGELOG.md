@@ -7,7 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.5.0] — 2026-10-01
+## [0.5.0] — 2026-10-03
+
+### Brand Redesign & Universal Master Iconography
+- **Centered High-Resolution Brand Icon**:
+  - Replaced legacy application iconography across all platforms with the modern high-resolution circular badge design featuring centered alignment and transparent alpha masking.
+  - **Desktop (Windows / macOS / Linux)**: Replaced `icon.ico`, `icon.png`, `icon.icns`, and Windows Live Tile / App manifest assets (`Square30x30Logo.png` through `Square310x310Logo.png`, `StoreLogo.png`).
+  - **Android (Tauri v2 Mobile)**: Deployed adaptive launcher icons (`ic_launcher.png`, `ic_launcher_round.png`, and `ic_launcher_foreground.png` with vector `ic_launcher_background.xml`) across all five standard mipmap densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`).
+  - **Web Target (`cntxt-web`)**: Deployed `favicon.ico`, `favicon-32x32.png`, `icon.png`, and navbar header logo `logo.png` with dark-mode compatibility.
+  - **Automated Processing Pipeline (`scripts/replace-all-icons.py`)**: Script using Pillow to feather alpha borders, normalize canvas padding, and batch-export to all target formats.
+
+### Architecture & Specification Plans
+- **Large Document Truncation & TOC-Driven Chunk Loading (`generated-documents/plans/large_document_toc_chunking_plan_2026-10-03.md`)**:
+  - Full architectural design for selective document chunking. Configurable file-size thresholds (>100KB on mobile, >1MB on desktop) trigger an interactive Outline modal, allowing users to load only target chapters or sections to maintain smooth 60fps CodeMirror editing and conserve memory.
+- **Android Quick Append Message Box in TOC Panel (`generated-documents/plans/android_toc_quick_append_plan_2026-10-03.md`)**:
+  - Mobile-tailored specification for a non-blocking Quick Append drawer in the Table of Contents outline panel. Enables instant micro-note capture and voice-to-text dictation into designated heading sections without full editor view switching.
+- **Fill-Up Form Modal Touch Modernization**:
+  - Modernized flexible UI/UX layout for action and template variable entry modals, supporting both keyboard-first desktop use and touch-screen mobile devices.
+- **Typing Direction Engine (LTR / RTL)**:
+  - Added support for dynamic text direction switching in the CodeMirror editor and live preview pane.
 
 ### Web SaaS UX Redesign, Auth Gateway & Onboarding (FG-11)
 - **Web SaaS Auth Gateway (`src/components/Auth/WebAuthGateway.tsx`)**:
