@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.11
+Version: v2.12
 Last Updated: 2026-10-03
-Last Updated By: Prod Agent & Architect (v0.5.0 Production Packaging, Iconography & Architecture Alignment)
+Last Updated By: Prod Agent & Architect (Brand Iconography Refresh & Multi-Platform Packaging)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -17,7 +17,7 @@ Active Stage:
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.5.0 Installable Packages Generated & Authenticode Code-Signed)
 
-Current Feature Group: FG-11: Web SaaS UX Redesign, Auth Gateway & Onboarding (plus v0.5.0 Master Iconography & Architecture Specs)
+Current Feature Group: FG-11: Web SaaS UX Redesign, Auth Gateway & Onboarding (plus v0.5.0 Master Iconography Refresh & Tri-Platform Builds)
 Status: completed / verified (all gates 100% green; Web SaaS Live on Vercel + Supabase, Desktop Live on Tauri v2, Android Live on Tauri Mobile)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
 Unit Tests: written [x] passing [x] (399/399 unit tests passing across 40 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean)
@@ -38,9 +38,10 @@ Notes:
 - Task 13: Universal Master Iconography & Brand Refresh: Centered high-resolution badge with transparent alpha masking generated and deployed across all desktop window and bundle assets (`.ico`, `.png`, `Square*`, `.icns`), Android launcher mipmap densities (`ic_launcher*`), and web assets (`favicon`, `logo.png`). Verified 0 lint errors, 100% contract sync.
 - Task 14: Mobile Architecture Planning: Completed architectural specifications for Large Document Truncation & TOC-Driven Chunk Loading (`large_document_toc_chunking_plan_2026-10-03.md`) and Android Quick Append Message Box in TOC Panel (`android_toc_quick_append_plan_2026-10-03.md`). Modernized fill-up form touch layout and added dynamic typing direction engine.
 - Task 15: v0.5.0 Production Packaging & Authenticode Signing: Generated standalone portable executable (`dist-portable/CNTXT_0.5.0_portable.exe`), NSIS setup installer (`dist-installer/CNTXT_0.5.0_x64-setup.exe`), and WiX MSI installer (`dist-installer/CNTXT_0.5.0_x64_en-US.msi`), signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
-- Verification Gate Snapshot (2026-10-03): npm run lint (0 errors, 136 files clean in CNTXT, 151 files clean in cntxt-web, 100% contract sync); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (24/24 green).
+- Task 16: Universal Master Iconography Refresh & Tri-Platform Rebuild: Integrated new modern brand mark across all target builds. Generated safe-zone padded 1024x1024 master canvas, multi-resolution `favicon.ico`, `favicon-32x32.png`, `logo.png`, `icon.png`, desktop `icon.ico` & `icon.icns`, Android mipmaps (`mdpi`..`xxxhdpi`), and rebuilt Web (`cntxt-web`), Desktop portable/installers (`CNTXT`), and Android APK (`dist-android/CNTXT-v0.5.0-arm64.apk`).
+- Verification Gate Snapshot (2026-10-03): npm run lint (0 errors, 141 files clean in CNTXT, 151 files clean in cntxt-web, 100% contract sync); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (24/24 green).
 Last Audit Reconciliation: 2026-10-01 — All Tier 1 and Tier 2 remediations complete; FG-10 Web SaaS Readiness verified.
-Last Git Checkpoint: 2026-10-03 — Release v0.5.0 preparation and packaging
+Last Git Checkpoint: 2026-10-03 — Master Iconography Refresh & Release v0.5.0 Rebuild
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v2.0
