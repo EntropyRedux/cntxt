@@ -639,9 +639,15 @@ export const FileExplorer: React.FC = () => {
       onConfirm: async () => {
         if (item.path && bridge.deleteFile) {
           try {
-            await bridge.deleteFile(item.path);
+            const success = await bridge.deleteFile(item.path);
+            if (!success) {
+              addNotification('Delete Failed', `Could not delete "${item.name}" from disk.`, 'error');
+              return;
+            }
           } catch (e) {
             console.warn('Native delete error:', e);
+            addNotification('Delete Error', `Failed to delete "${item.name}": ${e instanceof Error ? e.message : String(e)}`, 'error');
+            return;
           }
         }
         const removeRecursively = (list: VirtualFile[]): VirtualFile[] => {

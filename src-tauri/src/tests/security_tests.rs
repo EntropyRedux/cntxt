@@ -52,6 +52,9 @@ fn test_url_forbidden_characters() {
     let http_url = "http://localhost:5173/preview";
     assert!(validate_external_url(http_url).is_ok());
 
+    let multi_param_url = "https://example.com/docs?query=test&lang=en&page=2";
+    assert!(validate_external_url(multi_param_url).is_ok());
+
     // Prohibited schemes
     assert!(validate_external_url("file:///etc/passwd").is_err());
     assert!(validate_external_url("javascript:alert(1)").is_err());

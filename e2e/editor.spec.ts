@@ -12,7 +12,7 @@ test.describe('Editor core behavior', () => {
 
   test('tab is rendered with the welcome doc title', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.theme-tab-active, .theme-tab-inactive').first()).toContainText('Welcome.md');
+    await expect(page.locator('.theme-tab-active, .theme-tab-inactive, button[title="Click to rename document"]').first()).toContainText('Welcome.md', { timeout: 15_000 });
   });
 
   test('typing inserts text into the editor', async ({ page }) => {

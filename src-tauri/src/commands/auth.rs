@@ -27,6 +27,15 @@ fn url_decode(s: &str) -> String {
     String::from_utf8_lossy(&bytes).to_string()
 }
 
+fn html_escape(input: &str) -> String {
+    input
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#x27;")
+}
+
 fn parse_query_params(query: &str) -> serde_json::Map<String, serde_json::Value> {
     let mut map = serde_json::Map::new();
     for param in query.split('&') {
@@ -164,7 +173,7 @@ pub async fn open_oauth_url(window: Window, url: String) -> Result<(), String> {
         return Err("Unauthorized window origin".into());
     }
 
-    let trimmed = url.trim();
+    let trimmed = crate::validate_external_url(&url)?;
     if !trimmed.starts_with("https://") {
         return Err("OAuth URL must use secure https:// protocol".into());
     }
@@ -184,7 +193,7 @@ pub async fn start_oauth_listener(window: Window) -> Result<String, String> {
         Ok(l) => l,
         Err(_) => {
             // Fallback attempts
-            let fallbacks = [14251, 5173];
+            let fallbacks = [14251];
             let mut opt = None;
             for p in fallbacks {
                 if let Ok(l) = TcpListener::bind(format!("127.0.0.1:{}", p)).await {
@@ -239,7 +248,7 @@ pub async fn start_oauth_listener(window: Window) -> Result<String, String> {
                             .unwrap_or("Unknown OAuth Error");
                         let err_html = format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body style=\"background:#090d16;color:#f87171;font-family:sans-serif;padding:40px;text-align:center;\"><h2>Authentication Failed</h2><p>{}</p></body></html>",
-                            err_msg
+                            html_escape(err_msg)
                         );
                         let _ = socket.write_all(err_html.as_bytes()).await;
                         let _ = socket.flush().await;

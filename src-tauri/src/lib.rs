@@ -46,7 +46,7 @@ pub fn validate_external_url(url: &str) -> Result<&str, String> {
         return Err("Only https:// and http:// URLs are permitted".into());
     }
 
-    let forbidden_chars = ['\0', '\n', '\r', '"', '\'', '`', '$', '<', '>', '|', '&', ';'];
+    let forbidden_chars = ['\0', '\n', '\r', '\t', ' ', '"', '\'', '`', '$', '<', '>', '|', ';'];
     if trimmed.chars().any(|c| forbidden_chars.contains(&c)) {
         return Err("URL contains illegal characters".into());
     }

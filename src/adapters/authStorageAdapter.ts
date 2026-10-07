@@ -87,3 +87,25 @@ export const setSafeStorageItem = (key: string, value: string): void => {
     // Ignore errors
   }
 };
+
+export const getSessionStorageItem = (key: string): string | null => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      return window.sessionStorage.getItem(key);
+    }
+  } catch {
+    // Ignore errors
+  }
+  return null;
+};
+
+export const setSessionStorageItem = (key: string, value: string): void => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.setItem(key, value);
+    }
+  } catch {
+    // Ignore errors
+  }
+};
+

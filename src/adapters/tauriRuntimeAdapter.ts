@@ -183,13 +183,11 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     openDirectory: async () => {
       try {
-        
-
         const selectedPath = await this.invokeTauri<string | null>('open_folder_dialog');
         if (!selectedPath) return null;
 
-        const rawEntries = await this.invokeTauri<any[]>('read_directory', { path: selectedPath }) || [];
         interface TauriNode { name: string; path: string; is_dir?: boolean; children?: TauriNode[] }
+        const rawEntries = await this.invokeTauri<TauriNode[]>('read_directory', { path: selectedPath }) || [];
         const mapFileNodes = (nodes: TauriNode[]): BridgeDirectoryEntry[] => {
           return nodes.map(node => ({
             id: node.path || `node_${Math.random().toString(36).substr(2, 7)}`,
@@ -217,9 +215,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
     readDirectory: async (path: string): Promise<BridgeDirectoryEntry[] | null> => {
       try {
-        
-
-        const rawEntries = await this.invokeTauri<any[]>('read_directory', { path });
+        interface TauriNode { name: string; path: string; is_dir?: boolean; children?: TauriNode[] }
+        const rawEntries = await this.invokeTauri<TauriNode[]>('read_directory', { path });
         if (!rawEntries) return null;
 
         interface TauriNode { name: string; path: string; is_dir?: boolean; children?: TauriNode[] }
@@ -428,6 +425,11 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       if (p.includes('win')) return 'windows';
       if (p.includes('linux')) return 'linux';
       return 'linux';
+    },
+    reload: (): void => {
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
     }
   };
 

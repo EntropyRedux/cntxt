@@ -408,6 +408,11 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
       if (p.includes('win')) return 'windows';
       if (p.includes('linux')) return 'linux';
       return 'web';
+    },
+    reload: (): void => {
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
     }
   };
 

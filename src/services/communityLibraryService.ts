@@ -210,15 +210,13 @@ class CommunityLibraryService {
         id: `col-comm-${cat.toLowerCase().replace(/\s+/g, '-')}`,
         name: `${cat} Catalog`,
         description: `Verified community blueprints, prompts, and skills for ${cat}.`,
-        category: cat as any,
+        category: cat,
         author: 'EntropyRedux/cntxt-library',
         authorBadge: 'Verified Architect',
         source: 'community-fork',
         sourceTitle: 'GitHub cntxt-library',
         tags: [cat, 'Community', 'Public'],
         itemIds,
-        downloads: itemIds.length * 15,
-        rating: 5.0,
         createdAt: 1726000000000,
         updatedAt: Date.now()
       });

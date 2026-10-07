@@ -25,11 +25,11 @@
         "theme": "Dark",
         "backgroundColor": "#141417",
         "shadow": true,
-        "devtools": true
+        "devtools": false
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: asset: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ipc: http://ipc.localhost http://localhost:* ws://localhost:* https://*.supabase.co wss://*.supabase.co https://api.github.com https://raw.githubusercontent.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: asset: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ipc: http://ipc.localhost http://localhost:* ws://localhost:* https://*.supabase.co wss://*.supabase.co https://api.github.com https://raw.githubusercontent.com https://cdn.jsdelivr.net; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
       "dangerousDisableAssetCspModification": true
     }
 

@@ -19,7 +19,7 @@ import { personalGitHubLibraryService, GitHubRepoSummary } from '../../services/
 import { getSessionProviderToken } from '../../adapters/supabaseClient';
 import { useNotificationStore } from '../../store/notificationStore';
 import { PersonalGitHubLibraryConfig } from '../../contracts/data_shapes';
-import { STORAGE_KEYS, getSafeStorageItem, setSafeStorageItem } from '../../adapters';
+import { STORAGE_KEYS, getSafeStorageItem, setSafeStorageItem, getSessionStorageItem, setSessionStorageItem } from '../../adapters';
 
 interface PersonalGitHubLibraryModalProps {
   isOpen: boolean;
@@ -63,8 +63,13 @@ export const PersonalGitHubLibraryModal: React.FC<PersonalGitHubLibraryModalProp
 
     // Try resolving token from Supabase session if authenticated via GitHub
     getSessionProviderToken().then(providerToken => {
+      const sessionCustomToken = getSessionStorageItem('cntxt_github_custom_token');
+
       if (providerToken) {
         setToken(providerToken);
+        setHasResolvedToken(true);
+      } else if (sessionCustomToken) {
+        setToken(sessionCustomToken);
         setHasResolvedToken(true);
       } else if (gitHubLibraryConfig?.customToken) {
         setToken(gitHubLibraryConfig.customToken);
@@ -86,6 +91,10 @@ export const PersonalGitHubLibraryModal: React.FC<PersonalGitHubLibraryModalProp
             setSelectedRepoFullName(fetchedRepos[0].fullName);
           }
         })
+        .catch(err => {
+          console.warn('Failed to load GitHub repositories:', err);
+          addNotification('Repositories Unavailable', 'Could not fetch your GitHub repository list.', 'warning');
+        })
         .finally(() => setIsLoadingRepos(false));
     }
   }, [isOpen, activeTab, token]);
@@ -93,7 +102,12 @@ export const PersonalGitHubLibraryModal: React.FC<PersonalGitHubLibraryModalProp
   if (!isOpen) return null;
 
   const saveConfig = (cfg: PersonalGitHubLibraryConfig | null) => {
-    setSafeStorageItem(STORAGE_KEYS.GITHUB_LIBRARY_CONFIG, cfg ? JSON.stringify(cfg) : '');
+    if (cfg?.customToken) {
+      setSessionStorageItem('cntxt_github_custom_token', cfg.customToken);
+    }
+    // Redact customToken from unencrypted persistent storage
+    const safeCfg = cfg ? { ...cfg, customToken: undefined } : null;
+    setSafeStorageItem(STORAGE_KEYS.GITHUB_LIBRARY_CONFIG, safeCfg ? JSON.stringify(safeCfg) : '');
     setGitHubLibraryConfig(cfg);
   };
 

@@ -11,6 +11,12 @@ export const test = base.extend<{ app: void } & E2EOptions>({
       await page.addInitScript(
         ([flag]) => {
           (window as any).__CONTEXTPAD_DEMO__ = flag;
+          try {
+            window.localStorage.setItem('contextpad_guest_mode', 'true');
+            window.localStorage.setItem('contextpad_onboarding_completed', 'true');
+          } catch {
+            // ignore
+          }
         },
         [demo]
       );

@@ -952,7 +952,7 @@ export const SettingsPanel: React.FC = () => {
                   } catch {
                     // Ignore storage errors
                   }
-                  window.location.reload();
+                  bridge.window.reload?.();
                 }
               });
             }}

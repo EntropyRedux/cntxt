@@ -78,24 +78,7 @@ export function resolveCodeLanguage(info: string): Language | LanguageDescriptio
   return null;
 }
 
-/**
- * Background preloading for common languages to minimize async parsing delay.
- */
-let preloaded = false;
-export function preloadCommonLanguages(): void {
-  if (preloaded) return;
-  preloaded = true;
-
-  const names = ['rust', 'go', 'cpp', 'c', 'java', 'php', 'yaml', 'shell', 'ruby'];
-  for (const name of names) {
-    const desc = LanguageDescription.matchLanguageName(languages, name, true);
-    if (desc && !desc.support) {
-      desc.load().catch((err) => {
-        console.warn(`[Language Loader] Background preload for language '${name}' failed:`, err);
-      });
-    }
-  }
-}
+// Preload utility removed (dynamic on-demand loading used by resolveCodeLanguage)
 
 /**
  * Utility to escape HTML strings safely

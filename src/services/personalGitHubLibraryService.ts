@@ -112,9 +112,17 @@ class PersonalGitHubLibraryService {
       }
 
       const data = await res.json();
-      if (!Array.isArray(data)) return [];
+      interface RawGitHubRepo {
+        id: number;
+        name: string;
+        full_name: string;
+        private?: boolean;
+        default_branch?: string;
+        description?: string | null;
+        html_url: string;
+      }
 
-      return data.map((r: any) => ({
+      return (data as RawGitHubRepo[]).map((r) => ({
         id: r.id,
         name: r.name,
         fullName: r.full_name,

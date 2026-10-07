@@ -73,6 +73,7 @@ export interface IWindowBridge {
   isNative: boolean;
   getPlatform: () => 'web' | 'macos' | 'windows' | 'linux' | 'android';
   onHardwareBack?: (handler: () => boolean) => () => void;
+  reload?: () => void;
 }
 
 /**

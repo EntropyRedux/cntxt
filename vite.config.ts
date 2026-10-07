@@ -80,6 +80,8 @@ export default defineConfig(() => {
           manualChunks(id) {
             if (id.includes('node_modules')) {
               if (id.includes('katex')) return 'vendor-katex';
+              if (id.includes('mermaid')) return 'vendor-mermaid';
+              if (id.includes('@supabase')) return 'vendor-supabase';
               if (id.includes('@codemirror') || id.includes('@lezer')) return 'vendor-codemirror';
               if (id.includes('lucide-react')) return 'vendor-lucide';
               if (id.includes('react') || id.includes('zustand')) return 'vendor-react';

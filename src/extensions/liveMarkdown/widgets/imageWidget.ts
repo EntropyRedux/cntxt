@@ -48,16 +48,26 @@ export class ImageWidget extends WidgetType {
 
     // Error fallback
     img.onerror = () => {
-      card.innerHTML = '';
+      card.replaceChildren();
       card.className =
         'inline-flex items-center gap-2 px-3 py-2 text-xs rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 font-sans my-1 max-w-full';
-      card.innerHTML = `
-        <span class="text-sm">⚠️</span>
-        <span class="truncate max-w-xs font-mono text-[11px]">${this.alt || 'Image failed to load'}</span>
-        <span class="text-[10px] text-red-300 opacity-70 truncate max-w-[120px]">${
-          this.src.startsWith('data:') ? '[Embedded Image Data]' : this.src
-        }</span>
-      `;
+
+      const iconSpan = createElement('span', { className: 'text-sm' });
+      iconSpan.textContent = '⚠️';
+
+      const altSpan = createElement('span', {
+        className: 'truncate max-w-xs font-mono text-[11px]'
+      });
+      altSpan.textContent = this.alt || 'Image failed to load';
+
+      const srcSpan = createElement('span', {
+        className: 'text-[10px] text-red-300 opacity-70 truncate max-w-[120px]'
+      });
+      srcSpan.textContent = this.src.startsWith('data:') ? '[Embedded Image Data]' : this.src;
+
+      card.appendChild(iconSpan);
+      card.appendChild(altSpan);
+      card.appendChild(srcSpan);
       view.requestMeasure();
     };
 

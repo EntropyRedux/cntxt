@@ -70,7 +70,21 @@ export class MermaidBlockWidget extends WidgetType {
 
     renderMermaidDiagram(this.code, this.themeName).then((res) => {
       if (res.isError) {
-        canvas.innerHTML = `<div class="p-3 text-xs text-red-400 bg-red-950/20 rounded border border-red-800/40 w-full font-mono"><div class="font-bold mb-1">Mermaid Syntax Warning:</div><div class="text-[11px] opacity-80">${res.error || 'Check diagram syntax'}</div></div>`;
+        canvas.replaceChildren();
+        const errDiv = createElement('div', {
+          className: 'p-3 text-xs text-red-400 bg-red-950/20 rounded border border-red-800/40 w-full font-mono'
+        });
+        const titleDiv = createElement('div', {
+          className: 'font-bold mb-1',
+          textContent: 'Mermaid Syntax Warning:'
+        });
+        const textDiv = createElement('div', {
+          className: 'text-[11px] opacity-80',
+          textContent: res.error || 'Check diagram syntax'
+        });
+        errDiv.appendChild(titleDiv);
+        errDiv.appendChild(textDiv);
+        canvas.appendChild(errDiv);
       } else {
         canvas.innerHTML = res.svg;
       }

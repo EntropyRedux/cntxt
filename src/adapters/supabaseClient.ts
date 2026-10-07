@@ -10,7 +10,7 @@ import { UserProfile, UserLibraryItem, LibraryCollection } from '../../contracts
  */
 
 // Scope marker: SPEC REFERENCE: ADAPT FOR NATIVE STACK
-const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
+const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string | undefined> }).env) || {};
 const rawSupabaseUrl = (metaEnv.VITE_SUPABASE_URL || '').trim();
 const supabaseUrl = rawSupabaseUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const supabaseAnonKey = (metaEnv.VITE_SUPABASE_ANON_KEY || metaEnv.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
@@ -145,17 +145,23 @@ export const signInWithOAuthProvider = async (
   }
 
   try {
-    const isTauri = typeof window !== 'undefined' && Boolean(
-      (window as any).isTauri || (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__
+    interface TauriWindow extends Window {
+      isTauri?: boolean;
+      __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown> };
+      __TAURI__?: { core?: { invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown> } };
+    }
+    const tauriWin = typeof window !== 'undefined' ? (window as unknown as TauriWindow) : undefined;
+    const isTauri = Boolean(
+      tauriWin?.isTauri || tauriWin?.__TAURI_INTERNALS__ || tauriWin?.__TAURI__
     );
 
     if (isTauri) {
       // 1. Resolve Tauri invoke function
-      let invokeFn: (cmd: string, args?: Record<string, unknown>) => Promise<any>;
-      if ((window as any).__TAURI_INTERNALS__?.invoke) {
-        invokeFn = (window as any).__TAURI_INTERNALS__.invoke;
-      } else if ((window as any).__TAURI__?.core?.invoke) {
-        invokeFn = (window as any).__TAURI__.core.invoke;
+      let invokeFn: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
+      if (tauriWin?.__TAURI_INTERNALS__?.invoke) {
+        invokeFn = tauriWin.__TAURI_INTERNALS__.invoke;
+      } else if (tauriWin?.__TAURI__?.core?.invoke) {
+        invokeFn = tauriWin.__TAURI__.core.invoke;
       } else {
         const { invoke } = await import('@tauri-apps/api/core');
         invokeFn = invoke;
@@ -264,6 +270,40 @@ export const signOutUser = async (): Promise<{ error: Error | null }> => {
   }
 };
 
+interface UserLibraryItemRow {
+  id: string;
+  name: string;
+  type: UserLibraryItem['type'];
+  category: UserLibraryItem['category'];
+  description?: string | null;
+  author?: string | null;
+  source?: UserLibraryItem['source'];
+  target_ais?: string[] | null;
+  fields?: unknown[] | null;
+  template?: string | null;
+  is_favorite?: boolean | null;
+  is_forked?: boolean | null;
+  forked_from?: string | null;
+  collection_id?: string | null;
+  collection_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+interface LibraryCollectionRow {
+  id: string;
+  name: string;
+  description?: string | null;
+  category: LibraryCollection['category'];
+  author?: string | null;
+  source?: LibraryCollection['source'];
+  tags?: string[] | null;
+  item_ids?: string[] | null;
+  is_favorite?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 /**
  * Sync user profile to Supabase 'profiles' table if it exists
  */
@@ -282,7 +322,7 @@ export const syncUserProfileToDatabase = async (profile: UserProfile): Promise<{
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' });
     return { error: error ? new Error(error.message) : null };
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Non-blocking: table might not be initialized yet
     console.debug('[Supabase] Profile sync skipped or table absent:', err);
     return { error: err instanceof Error ? err : new Error(String(err)) };
@@ -330,7 +370,7 @@ export const syncUserLibraryItemsToDatabase = async (
       return { error: new Error(error.message) };
     }
     return { error: null };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.warn('[Supabase] syncUserLibraryItems exception:', err);
     return { error: err instanceof Error ? err : new Error(String(err)) };
   }
@@ -358,7 +398,7 @@ export const fetchUserLibraryItemsFromDatabase = async (
 
     if (!data) return { data: [], error: null };
 
-    const items: UserLibraryItem[] = data.map((row: any) => ({
+    const items: UserLibraryItem[] = (data as unknown as UserLibraryItemRow[]).map(row => ({
       id: row.id,
       name: row.name,
       type: row.type,
@@ -367,7 +407,7 @@ export const fetchUserLibraryItemsFromDatabase = async (
       author: row.author || 'User',
       source: row.source || 'user-authored',
       targetAIs: row.target_ais || [],
-      fields: Array.isArray(row.fields) ? row.fields : [],
+      fields: Array.isArray(row.fields) ? (row.fields as UserLibraryItem['fields']) : [],
       template: row.template || '',
       isFavorite: Boolean(row.is_favorite),
       isForked: Boolean(row.is_forked),
@@ -379,7 +419,7 @@ export const fetchUserLibraryItemsFromDatabase = async (
     }));
 
     return { data: items, error: null };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.warn('[Supabase] fetchUserLibraryItems exception:', err);
     return { data: null, error: err instanceof Error ? err : new Error(String(err)) };
   }
@@ -420,7 +460,7 @@ export const syncLibraryCollectionsToDatabase = async (
       return { error: new Error(error.message) };
     }
     return { error: null };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.warn('[Supabase] syncLibraryCollections exception:', err);
     return { error: err instanceof Error ? err : new Error(String(err)) };
   }
@@ -448,7 +488,7 @@ export const fetchLibraryCollectionsFromDatabase = async (
 
     if (!data) return { data: [], error: null };
 
-    const collections: LibraryCollection[] = data.map((row: any) => ({
+    const collections: LibraryCollection[] = (data as unknown as LibraryCollectionRow[]).map(row => ({
       id: row.id,
       name: row.name,
       description: row.description || '',
@@ -463,7 +503,7 @@ export const fetchLibraryCollectionsFromDatabase = async (
     }));
 
     return { data: collections, error: null };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.warn('[Supabase] fetchLibraryCollections exception:', err);
     return { data: null, error: err instanceof Error ? err : new Error(String(err)) };
   }
