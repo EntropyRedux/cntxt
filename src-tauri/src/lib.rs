@@ -224,6 +224,8 @@ pub fn run() {
             get_system_info,
             open_external,
             new_window,
+            commands::auth::open_oauth_url,
+            commands::auth::start_oauth_listener,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

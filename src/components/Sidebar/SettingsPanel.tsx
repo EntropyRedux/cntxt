@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Check, 
   Download, 
@@ -17,22 +17,42 @@ import {
   Cpu,
   Clock,
   FlaskConical,
-  Trash2
+  Trash2,
+  FolderGit2,
+  CloudCheck,
+  RefreshCw,
+  LogOut,
+  User
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
+import { useAuthStore } from '../../store/authStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useFormattingStore } from '../../store/formattingStore';
 import { useConfirmStore } from '../../store/confirmStore';
-import { useRuntimeBridge } from '../../adapters';
+import { useRuntimeBridge, STORAGE_KEYS, getSafeStorageItem } from '../../adapters';
 import { ThemeName } from '../../types';
 import { CURATED_FONTS, getCuratedFontByFamily, THEME_DEFAULT_FONTS } from '../../constants/fonts';
 import { validateWorkspaceBackup } from '../../contracts/boundarySchemas';
+import { PersonalGitHubLibraryConfig } from '../../contracts/data_shapes';
+import { GoogleIcon, GitHubIcon } from '../Auth/BrandIcons';
+import { PersonalGitHubLibraryModal } from './PersonalGitHubLibraryModal';
 
 export const SettingsPanel: React.FC = () => {
   const bridge = useRuntimeBridge();
   const { settings, updateSettings, resetSettings } = useSettingsStore();
   const { addNotification } = useNotificationStore();
   const { showConfirm } = useConfirmStore();
+  const { user, loginWithGoogle, loginWithGitHub, signOut, syncStatus, lastSyncTime, triggerSync } = useAuthStore();
+  const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
+
+  const gitHubConfig: PersonalGitHubLibraryConfig | null = (() => {
+    try {
+      const stored = getSafeStorageItem(STORAGE_KEYS.GITHUB_LIBRARY_CONFIG);
+      return stored ? JSON.parse(stored) : (user?.githubLibrary || null);
+    } catch {
+      return user?.githubLibrary || null;
+    }
+  })();
   const { 
     isMultiRowExpanded, 
     setIsMultiRowExpanded, 
@@ -153,6 +173,142 @@ export const SettingsPanel: React.FC = () => {
       <div className="flex items-center justify-between pb-2 border-b border-[var(--border-primary)]">
         <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[var(--text-secondary)] text-[11px]">
           <span>Preferences & Themes</span>
+        </div>
+      </div>
+
+      {/* Account, Cloud Sync & Personal GitHub Library */}
+      <div className="p-3 theme-card rounded-lg space-y-3 shadow-xs border border-[var(--border-subtle)]">
+        <div className="flex items-center justify-between">
+          <div className="font-bold text-[var(--text-primary)] text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+            <span>Account & Cloud Sync</span>
+          </div>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+            user ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25' : 'bg-[var(--card-secondary-bg)] text-[var(--text-muted)]'
+          }`}>
+            {user ? `${user.provider} Synced` : 'Guest / Offline'}
+          </span>
+        </div>
+
+        {user ? (
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between p-2 rounded-md bg-[var(--card-secondary-bg)] border border-[var(--border-subtle)]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <img
+                  src={user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full object-cover ring-1 ring-[var(--border-primary)] shrink-0"
+                />
+                <div className="min-w-0">
+                  <div className="font-semibold text-xs text-[var(--text-primary)] truncate">
+                    {user.name}
+                  </div>
+                  <div className="text-[10px] text-[var(--text-muted)] truncate">
+                    {user.email}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => signOut()}
+                title="Sign out of your account"
+                className="px-2 py-1 text-[10.5px] rounded hover:bg-red-500/15 text-[var(--text-muted)] hover:text-red-400 border border-[var(--border-subtle)] hover:border-red-500/30 transition-colors cursor-pointer shrink-0"
+              >
+                Sign Out
+              </button>
+            </div>
+
+            {/* Sync Status Row */}
+            <div className="flex items-center justify-between text-[11px] px-1">
+              <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                <CloudCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>Cloud Sync: {syncStatus === 'syncing' ? 'Syncing...' : (lastSyncTime || 'Active')}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => triggerSync()}
+                disabled={syncStatus === 'syncing'}
+                className="text-[10.5px] text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+                <span>Sync Now</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+              Sign in with Google or GitHub to sync your templates, actions, and custom library across your devices.
+            </p>
+            <div className="grid grid-cols-2 gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={() => loginWithGoogle()}
+                className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md bg-white text-gray-800 hover:bg-gray-100 border border-gray-200 text-xs font-medium shadow-xs transition-all cursor-pointer"
+              >
+                <GoogleIcon className="w-3.5 h-3.5" />
+                <span>Google</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => loginWithGitHub()}
+                className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md bg-[#24292F] text-white hover:bg-[#1B1F23] border border-[#30363d] text-xs font-medium shadow-xs transition-all cursor-pointer"
+              >
+                <GitHubIcon className="w-3.5 h-3.5" />
+                <span>GitHub</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Personal GitHub Cloud Library Section */}
+        <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold text-xs text-[var(--text-primary)] flex items-center gap-1.5">
+              <FolderGit2 className="w-3.5 h-3.5 text-purple-400" />
+              <span>Personal GitHub Library</span>
+            </div>
+            {gitHubConfig && (
+              <span className="text-[9.5px] px-1 py-0.2 rounded bg-purple-500/15 text-purple-300 font-mono">
+                {gitHubConfig.isPrivate ? 'private' : 'public'}
+              </span>
+            )}
+          </div>
+
+          <p className="text-[10.5px] text-[var(--text-muted)] leading-relaxed">
+            Store templates, actions, and blueprints in your own private GitHub repository. 100% private with zero database limits.
+          </p>
+
+          {gitHubConfig ? (
+            <div className="p-2.5 rounded-lg bg-purple-500/5 border border-purple-500/20 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-mono font-semibold text-purple-300 truncate">
+                    {gitHubConfig.repoOwner}/{gitHubConfig.repoName}
+                  </div>
+                  <div className="text-[10px] text-[var(--text-muted)] truncate">
+                    Branch: {gitHubConfig.branch || 'main'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsGitHubModalOpen(true)}
+                  className="px-2 py-1 text-[10.5px] font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-md shrink-0 transition-colors shadow-xs cursor-pointer"
+                >
+                  Manage
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsGitHubModalOpen(true)}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs shadow-xs transition-colors cursor-pointer"
+            >
+              <FolderGit2 className="w-3.5 h-3.5" />
+              <span>Connect Personal GitHub Repo</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -808,6 +964,12 @@ export const SettingsPanel: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Personal GitHub Library Modal */}
+      <PersonalGitHubLibraryModal
+        isOpen={isGitHubModalOpen}
+        onClose={() => setIsGitHubModalOpen(false)}
+      />
     </div>
   );
 };

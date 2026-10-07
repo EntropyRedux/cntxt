@@ -18,12 +18,14 @@ import {
   Settings,
   Sparkles,
   Upload,
-  Download
+  Download,
+  FolderGit2
 } from 'lucide-react';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { triggerFileDownload, triggerFileInput } from '../../adapters';
+import { PersonalGitHubLibraryModal } from './PersonalGitHubLibraryModal';
 
 const STORAGE_KEY = 'contextpad_sidepanel_width';
 const DEFAULT_DESKTOP_WIDTH = 340;
@@ -38,6 +40,7 @@ export const Sidebar: React.FC = () => {
   const { exportTemplates, previewImportTemplates, commitImportTemplates } = useTemplateStore();
   const { exportActions, importActions } = useActionStore();
   const { addNotification } = useNotificationStore();
+  const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
 
   const handleExportActions = () => {
     const json = exportActions();
@@ -336,6 +339,15 @@ export const Sidebar: React.FC = () => {
             <div className="flex items-center gap-0.5">
               <button
                 type="button"
+                onClick={() => setIsGitHubModalOpen(true)}
+                title="Personal GitHub Library (Free Cloud Sync)"
+                aria-label="Personal GitHub Library"
+                className="p-1 rounded-md text-[var(--text-muted)] hover:text-purple-400 hover:bg-[var(--card-hover-bg)] transition-colors active:scale-95 cursor-pointer"
+              >
+                <FolderGit2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
                 onClick={handleImportTemplates}
                 title="Import Templates JSON"
                 aria-label="Import Templates JSON"
@@ -358,6 +370,15 @@ export const Sidebar: React.FC = () => {
 
           {settings.activeSidebarTab === 'actions' && (
             <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => setIsGitHubModalOpen(true)}
+                title="Personal GitHub Library (Free Cloud Sync)"
+                aria-label="Personal GitHub Library"
+                className="p-1 rounded-md text-[var(--text-muted)] hover:text-purple-400 hover:bg-[var(--card-hover-bg)] transition-colors active:scale-95 cursor-pointer"
+              >
+                <FolderGit2 className="w-3.5 h-3.5" />
+              </button>
               <button
                 type="button"
                 onClick={handleImportActions}
@@ -397,6 +418,12 @@ export const Sidebar: React.FC = () => {
       <div className="flex-1 h-full overflow-hidden">
         {renderContent()}
       </div>
+
+      {/* Personal GitHub Library Modal */}
+      <PersonalGitHubLibraryModal
+        isOpen={isGitHubModalOpen}
+        onClose={() => setIsGitHubModalOpen(false)}
+      />
     </aside>
   );
 };

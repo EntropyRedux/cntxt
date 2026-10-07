@@ -94,6 +94,14 @@ if (fs.existsSync(releaseBinary)) {
   const targetPath = path.join(portableDir, targetName);
 
   fs.copyFileSync(releaseBinary, targetPath);
+  if (isWindows) {
+    const unversionedPath = path.join(portableDir, 'CNTXT-portable.exe');
+    try {
+      fs.copyFileSync(releaseBinary, unversionedPath);
+    } catch (e) {
+      console.warn(`Could not update CNTXT-portable.exe: ${e.message}`);
+    }
+  }
   if (!isWindows) {
     fs.chmodSync(targetPath, 0o755);
   }

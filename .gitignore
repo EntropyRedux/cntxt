@@ -15,8 +15,9 @@ coverage/
 *.sqlite
 *.db
 *.bak
-.DS_Store
 .env*
+*secret*
+6cret.md
 
 # Tauri / Rust build artifacts
 src-tauri/target/

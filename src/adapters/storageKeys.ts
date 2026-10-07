@@ -26,6 +26,7 @@ export const STORAGE_KEYS = {
   AUTH_USER: 'contextpad_auth_user',
   GUEST_MODE: 'contextpad_guest_mode',
   ONBOARDING_COMPLETED: 'contextpad_onboarding_completed',
+  GITHUB_LIBRARY_CONFIG: 'contextpad_github_library_config',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string;

@@ -13,7 +13,7 @@ import { UserProfile, UserLibraryItem, LibraryCollection } from '../../contracts
 const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
 const rawSupabaseUrl = (metaEnv.VITE_SUPABASE_URL || '').trim();
 const supabaseUrl = rawSupabaseUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
-const supabaseAnonKey = (metaEnv.VITE_SUPABASE_ANON_KEY || '').trim();
+const supabaseAnonKey = (metaEnv.VITE_SUPABASE_ANON_KEY || metaEnv.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
 
 let clientInstance: SupabaseClient | null = null;
 
@@ -86,6 +86,16 @@ export const mapSupabaseUserToProfile = (
     metadata.picture || 
     `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(user.id)}`;
 
+  // Extract linked personal GitHub library configuration
+  let githubLibrary = undefined;
+  if (metadata.github_library) {
+    try {
+      githubLibrary = typeof metadata.github_library === 'string'
+        ? JSON.parse(metadata.github_library)
+        : metadata.github_library;
+    } catch {}
+  }
+
   return {
     id: user.id,
     name,
@@ -96,26 +106,141 @@ export const mapSupabaseUserToProfile = (
     libraryItemsCount,
     syncedDevicesCount,
     role: metadata.role || 'Member',
+    githubLibrary,
   };
 };
 
 /**
- * Trigger OAuth login flow
+ * Get active provider access token (e.g. GitHub OAuth token for repository access)
  */
-export const signInWithOAuthProvider = async (provider: 'google' | 'github'): Promise<{ error: Error | null }> => {
+export const getSessionProviderToken = async (): Promise<string | null> => {
+  const supabase = getSupabase();
+  try {
+    if (supabase) {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.provider_token) return data.session.provider_token;
+    }
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const stored = window.localStorage.getItem('cntxt_provider_token');
+      if (stored) return stored;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Trigger OAuth login flow with repository access for GitHub
+ */
+export const signInWithOAuthProvider = async (
+  provider: 'google' | 'github'
+): Promise<{ error: Error | null; user?: User | null }> => {
   const supabase = getSupabase();
   if (!supabase) {
     return { 
-      error: new Error('Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.') 
+      error: new Error('Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.'),
+      user: null
     };
   }
 
   try {
+    const isTauri = typeof window !== 'undefined' && Boolean(
+      (window as any).isTauri || (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__
+    );
+
+    if (isTauri) {
+      // 1. Resolve Tauri invoke function
+      let invokeFn: (cmd: string, args?: Record<string, unknown>) => Promise<any>;
+      if ((window as any).__TAURI_INTERNALS__?.invoke) {
+        invokeFn = (window as any).__TAURI_INTERNALS__.invoke;
+      } else if ((window as any).__TAURI__?.core?.invoke) {
+        invokeFn = (window as any).__TAURI__.core.invoke;
+      } else {
+        const { invoke } = await import('@tauri-apps/api/core');
+        invokeFn = invoke;
+      }
+
+      // 2. Start local OAuth callback listener on localhost:1420
+      const listenerPromise = invokeFn('start_oauth_listener') as Promise<string>;
+
+      // 3. Obtain OAuth authorization URL with skipBrowserRedirect: true
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: 'http://localhost:1420/auth/callback',
+          skipBrowserRedirect: true,
+          scopes: provider === 'github' ? 'repo read:user' : undefined,
+        },
+      });
+
+      if (error) {
+        return { error: new Error(error.message), user: null };
+      }
+      if (!data?.url) {
+        return { error: new Error('Failed to obtain OAuth authorization URL from Supabase'), user: null };
+      }
+
+      // 4. Launch default system browser (Chrome/Edge/etc.) with authorization URL
+      await invokeFn('open_oauth_url', { url: data.url });
+
+      // 5. Await captured authorization code from the local listener
+      const captured = await listenerPromise;
+      if (!captured) {
+        return { error: new Error('Sign-in cancelled or no code received'), user: null };
+      }
+
+      let payload: Record<string, string> = {};
+      try {
+        payload = JSON.parse(captured);
+      } catch {
+        payload = { code: captured };
+      }
+
+      if (payload.provider_token && typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem('cntxt_provider_token', payload.provider_token);
+        } catch {}
+      }
+
+      let resolvedUser: User | null = null;
+
+      if (payload.access_token) {
+        const refreshToken = payload.refresh_token || payload.access_token;
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: payload.access_token,
+          refresh_token: refreshToken,
+        });
+        if (sessionError) {
+          console.warn('[Supabase] setSession error:', sessionError);
+          return { error: new Error(sessionError.message), user: null };
+        }
+        resolvedUser = sessionData?.user || null;
+      } else if (payload.code) {
+        const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(payload.code);
+        if (exchangeError) {
+          return { error: new Error(exchangeError.message), user: null };
+        }
+        resolvedUser = sessionData?.user || null;
+      } else {
+        return { error: new Error('Missing authorization code or tokens from login provider'), user: null };
+      }
+
+      if (!resolvedUser) {
+        const { data: userData } = await supabase.auth.getUser();
+        resolvedUser = userData?.user || null;
+      }
+
+      return { error: null, user: resolvedUser };
+    }
+
+    // Standard web browser redirect flow
     const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: redirectUrl,
+        scopes: provider === 'github' ? 'repo read:user' : undefined,
       },
     });
     return { error: error ? new Error(error.message) : null };
@@ -153,6 +278,7 @@ export const syncUserProfileToDatabase = async (profile: UserProfile): Promise<{
       email: profile.email,
       avatar_url: profile.avatarUrl,
       provider: profile.provider,
+      github_library: profile.githubLibrary ? JSON.stringify(profile.githubLibrary) : null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' });
     return { error: error ? new Error(error.message) : null };

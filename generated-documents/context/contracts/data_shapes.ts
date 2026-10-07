@@ -522,6 +522,17 @@ export interface DeviceProfile {
 // 10. User Profile & Cloud Auth Domain Shapes
 // ==========================================
 
+export interface PersonalGitHubLibraryConfig {
+  connected: boolean;
+  repoOwner: string;
+  repoName: string;
+  branch: string;
+  isPrivate: boolean;
+  lastSyncCommitSha?: string;
+  lastSyncTimestamp?: number;
+  customToken?: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -532,6 +543,7 @@ export interface UserProfile {
   libraryItemsCount: number;
   syncedDevicesCount: number;
   role?: string;
+  githubLibrary?: PersonalGitHubLibraryConfig;
 }
 
 export type PrototypeAuthState = 'guest' | 'popover' | 'signedIn';

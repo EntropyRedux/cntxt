@@ -66,3 +66,24 @@ export const clearStoredAuthSession = (): void => {
     // Ignore errors
   }
 };
+
+export const getSafeStorageItem = (key: string): string | null => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage.getItem(key);
+    }
+  } catch {
+    // Ignore errors
+  }
+  return null;
+};
+
+export const setSafeStorageItem = (key: string, value: string): void => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, value);
+    }
+  } catch {
+    // Ignore errors
+  }
+};

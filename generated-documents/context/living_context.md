@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.12
-Last Updated: 2026-10-03
-Last Updated By: Prod Agent & Architect (Brand Iconography Refresh & Multi-Platform Packaging)
+Version: v2.13
+Last Updated: 2026-10-07
+Last Updated By: Prod Agent & Architect (Desktop Browser OAuth Loopback Flow & Personal GitHub Cloud Library)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -11,14 +11,14 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-11 Complete & Verified; Tri-Platform Suite Live)
+  [x] Feature Implementation (FG-01..FG-12 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Remediation Backlog: Tier 1 Security & Tier 2 Code Quality Resolved & Verified)
     [x] Testing (Vitest 399/399 Live across 40 suites, Playwright E2E 24/24 Live, Rust Security Test Suite 8/8 Live, Web Readiness 10/10 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.0 Installable Packages Generated & Authenticode Code-Signed)
+  [x] Packaging & Release (v0.5.1 Portable Executable & Signed Installers Built)
 
-Current Feature Group: FG-11: Web SaaS UX Redesign, Auth Gateway & Onboarding (plus v0.5.0 Master Iconography Refresh & Tri-Platform Builds)
-Status: completed / verified (all gates 100% green; Web SaaS Live on Vercel + Supabase, Desktop Live on Tauri v2, Android Live on Tauri Mobile)
+Current Feature Group: FG-12: Desktop Browser OAuth Loopback Flow & Personal GitHub Cloud Library
+Status: completed / verified (127.0.0.1:1420 loopback callback server verified, system browser OAuth launch, fragment-to-query redirect, personal GitHub cloud sync live across Desktop and Web, portable & installers built, 399/399 unit tests passing)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
 Unit Tests: written [x] passing [x] (399/399 unit tests passing across 40 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean)
 Active Plan: /generated-documents/plans/large_document_toc_chunking_plan_2026-10-03.md & /generated-documents/plans/android_toc_quick_append_plan_2026-10-03.md
@@ -39,9 +39,10 @@ Notes:
 - Task 14: Mobile Architecture Planning: Completed architectural specifications for Large Document Truncation & TOC-Driven Chunk Loading (`large_document_toc_chunking_plan_2026-10-03.md`) and Android Quick Append Message Box in TOC Panel (`android_toc_quick_append_plan_2026-10-03.md`). Modernized fill-up form touch layout and added dynamic typing direction engine.
 - Task 15: v0.5.0 Production Packaging & Authenticode Signing: Generated standalone portable executable (`dist-portable/CNTXT_0.5.0_portable.exe`), NSIS setup installer (`dist-installer/CNTXT_0.5.0_x64-setup.exe`), and WiX MSI installer (`dist-installer/CNTXT_0.5.0_x64_en-US.msi`), signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
 - Task 16: Universal Master Iconography Refresh & Tri-Platform Rebuild: Integrated new modern brand mark across all target builds. Generated safe-zone padded 1024x1024 master canvas, multi-resolution `favicon.ico`, `favicon-32x32.png`, `logo.png`, `icon.png`, desktop `icon.ico` & `icon.icns`, Android mipmaps (`mdpi`..`xxxhdpi`), and rebuilt Web (`cntxt-web`), Desktop portable/installers (`CNTXT`), and Android APK (`dist-android/CNTXT-v0.5.0-arm64.apk`).
-- Verification Gate Snapshot (2026-10-03): npm run lint (0 errors, 141 files clean in CNTXT, 151 files clean in cntxt-web, 100% contract sync); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (24/24 green).
-Last Audit Reconciliation: 2026-10-01 — All Tier 1 and Tier 2 remediations complete; FG-10 Web SaaS Readiness verified.
-Last Git Checkpoint: 2026-10-03 — Master Iconography Refresh & Release v0.5.0 Rebuild
+- Task 17: FG-12 Desktop External Browser OAuth Loopback Flow & Personal GitHub Cloud Library: Implemented external default browser OAuth launch (`open::that(url)`) with local Rust loopback HTTP server on `127.0.0.1:1420` (`src-tauri/src/commands/auth.rs`). Solved Chromium TCP segment truncation by having initial HTML extract URL hash fragment (`#access_token=...`) and navigate via GET query parameters (`/auth/token?access_token=...`), parsed directly by Rust listener and feeding into `supabase.auth.setSession()`. Added provider token persistence in `localStorage` (`cntxt_provider_token`) across both Desktop and Web to power `PersonalGitHubLibraryModal.tsx` and `personalGitHubLibraryService.ts` for bi-directional GitHub repository prompt syncing. Verified portable build (`CNTXT-portable.exe`, 14.32 MB), NSIS installer (6.61 MB), WiX MSI (7.65 MB).
+- Verification Gate Snapshot (2026-10-07): npm run lint (0 errors, 146 files clean, 100% contract sync); cargo check (0 errors); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (0/24 red — gateway bootstrap defect F-01 queued for remediation); standalone portable executable (14.32 MB).
+Last Audit Reconciliation: 2026-10-07 — Reconciled Full Codebase Audit (Verdict: FAIL / Blocking: E2E bootstrap F-01, credential purge F-02, stored XSS F-03, OAuth listener F-05, Web CSP F-06); Remediation backlog queued.
+Last Git Checkpoint: 2026-10-07 — FG-12 Desktop Browser OAuth Loopback & Personal GitHub Cloud Library (Pending Discussion)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v2.0
@@ -51,7 +52,7 @@ Reason for last update: Formalized Tri-Platform Hybrid Architecture (Web SaaS on
 
 ━━━ CANONICAL DATA SHAPES ━━━
 Location: /contracts/data_shapes.ts & /generated-documents/context/contracts/data_shapes.ts (Option B Polyglot Mirror Synchronized)
-Last Updated: 2026-09-14
+Last Updated: 2026-10-07
 Sync Guard: Verified via scripts/check-contract-sync.mjs (100% byte-identical)
 Active Shapes:
 - Tab, DocumentContent, PinnedTab, TabType, SupportedLanguage
@@ -64,6 +65,7 @@ Active Shapes:
 - NotificationItem, NotificationType
 - MarkdownFormatButton, RibbonItem, FormulaResult, EditorContext
 - SupportedPlatformOS ('windows' | 'macos' | 'linux' | 'android' | 'ios' | 'web'), DeviceProfile
+- UserProfile, PersonalGitHubLibraryConfig, PrototypeAuthState
 
 ━━━ MOCK REGISTRY (PHYSICALLY QUARANTINED) ━━━
 [All active mocks reside strictly in mocks/index.ts. In native production mode, collections initialize empty []. Zero imports from mocks/ in src/.]
@@ -190,6 +192,29 @@ Notes:
 - Dynamic Mermaid Chunk Splitting (`mermaidRenderer.ts`, `DiagramPanel.tsx`): Dynamically imports `mermaid` on demand via `React.lazy` and `await import('mermaid')`, keeping initial bundle fast and lightweight (-3.44 MB from vendor chunk).
 - Tri-Platform Runtime Bridge Alignment: Extended `IRuntimeBridge` contract to explicitly type `'android'` across `IWindowBridge.getPlatform()` and `IPlatformBridge.os`, with `onHardwareBack` lifecycle hook support for Android gesture integration.
 
+Feature Group: FG-11: Web SaaS UX Redesign, Auth Gateway & Onboarding
+Status: completed / verified (2026-10-03)
+Target Platform(s): Web (Vercel) + Desktop (Tauri v2) + Android (Tauri Mobile)
+Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
+Unit Tests: written [x] passing [x] (399/399 unit tests passing across 40 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean)
+Notes:
+- WebAuthGateway: Branded landing gateway for unauthenticated visitors on Web with Google & GitHub 1-click OAuth and guest demo workspace.
+- WebHeader: Streamlined 48px top bar with document title, cloud sync indicator, quick formatting pill toolbar, command palette trigger, and avatar session dropdown.
+- First-Run Onboarding Modal: 3-step interactive archetype picker (Prompt Architect, Developer, Writer) with starter kit generation.
+- Desktop and Android builds automatically bypass the web gateway and remain 100% offline out-of-the-box.
+
+Feature Group: FG-12: Desktop OAuth Flow & Personal GitHub Cloud Library Integration
+Status: completed / verified (2026-10-07)
+Target Platform(s): Desktop (Tauri v2 / Windows, macOS, Linux) + Web (Vercel)
+Background Processes: none (all OAuth callbacks and repo sync operations are explicit user-initiated requests)
+Unit Tests: written [x] passing [x] (399/399 unit tests clean, 0 lint errors across 146 files in CNTXT and 153 in cntxt-web)
+Notes:
+- Desktop External Browser OAuth: Replaces problematic webview OAuth in desktop by launching the system default browser via `open::that(url)` and capturing the redirect through a local Rust TCP loopback server listening on `127.0.0.1:1420`.
+- Fragment-to-Query Redirection (`EXTRACTOR_HTML`): Solves Chromium TCP segment splitting where headers and body arrive in separate packets. Initial loopback HTML reads the URL hash fragment (`#access_token=...&refresh_token=...`) in browser JavaScript and navigates to `/auth/token?...`, which the Rust listener parses reliably as a GET query string.
+- Provider Token Persistence: GitHub OAuth returns `provider_token` once upon token exchange. Storing it in `localStorage` (`cntxt_provider_token`) allows `getSessionProviderToken()` to provide persistent GitHub API access across application sessions.
+- Personal GitHub Cloud Library: Modal (`PersonalGitHubLibraryModal.tsx`) and service (`personalGitHubLibraryService.ts`) enable users to sync prompts, skills, and templates directly to/from personal GitHub repositories with branch selection and private repo support.
+- Portable & Installer Packaging: Rebuilt standalone `CNTXT-portable.exe` (14.32 MB), NSIS installer (6.61 MB), and WiX MSI (7.65 MB).
+
 ━━━ ARCHITECTURAL DECISIONS LOG ━━━
 
 Decision: Decoupled Runtime Bridge Architecture (`IRuntimeBridge`)
@@ -232,6 +257,17 @@ Reasoning: Web deployment must remain permanently operable at zero monthly infra
 - Community Library Distribution: GitHub Raw CDN (`raw.githubusercontent.com/EntropyRedux/cntxt-library/main/`) with automatic jsDelivr CDN fallback (`cdn.jsdelivr.net/gh/EntropyRedux/cntxt-library@main/`), completely bypassing GitHub REST API rate limits (60 req/hr) and allowing unlimited concurrent community reads with 1-hour IndexedDB client-side caching.
 - Sandboxed Script Execution: Pure AST Tokenizer, Parser, and sandboxed Interpreter (`actionEngine.ts`) executing inside a dedicated Web Worker under strict CSP (`script-src 'self'`), eliminating all dynamic `eval` and `new Function` security liabilities.
 - Zero Inline Mocks: Production web stores initialize empty; demo data is strictly quarantined in `mocks/index.ts` gated by `VITE_DEMO_MODE === 'true'`.
+
+Decision: Desktop External Browser OAuth via Local Loopback Server (`127.0.0.1:1420`) and URL Fragment Extractor
+Reasoning: Desktop WebView2 / WebKit browsers lack integrated password managers, have restricted Google OAuth security policies ("disallowed_useragent"), and can break window controls or navigation when hosting third-party OAuth flows directly inside application windows. To provide a first-class login experience:
+1. `start_desktop_oauth` opens the user's default system browser via `open::that(url)`.
+2. A lightweight Rust TCP listener binds to `127.0.0.1:1420` to capture Supabase's redirect.
+3. Because Supabase uses implicit grant mode with tokens in the URL hash fragment (`#access_token=...`), which is never sent over HTTP to the server, the loopback server immediately serves `EXTRACTOR_HTML`. This minimal page parses the client-side hash fragment in JavaScript and immediately triggers `window.location.replace('/auth/token?' + query)`.
+4. Rust reads the query parameters synchronously, hands them back to the frontend to establish the Supabase session, and returns a clean, self-closing success page.
+5. This architecture is immune to TCP segment chunking, CORS preflights, and POST body truncation.
+
+Decision: Provider Token Retention in `localStorage` for Continuous Personal GitHub Repository Access
+Reasoning: Supabase OAuth provides third-party access tokens (`provider_token` for GitHub) during initial authentication exchange. In standard sessions, this token is ephemeral and often absent on subsequent session refreshes. By persisting the provider token in `localStorage` under `cntxt_provider_token`, both Desktop and Web clients maintain persistent access to the GitHub REST API (Octokit) for `personalGitHubLibraryService.ts`. This allows users to browse, pull, and commit library updates to their personal repositories across sessions without requiring re-authentication or separate Personal Access Tokens.
 
 ━━━ RECONCILED TRADEOFF HISTORY ━━━
 

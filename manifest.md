@@ -1,15 +1,15 @@
 # ContextPad Component Manifest
 
 - **Project:** CNTXT (ContextPad) — Modular Frontend UI Development Platform
-- **Version:** 0.4.0
-- **Generated:** 2026-09-28
+- **Version:** 0.5.1
+- **Generated:** 2026-10-07
 - **Specification:** Solo Dev AI-Assisted Workflow Stage 2/3 Handoff Manifest
 
 ---
 
 ## 1. Architecture & Global Invariants
 
-All visual presenter components are 100% pure UI driven strictly by typed props and headless store hooks (`useRuntimeBridge`, `useTabStore`, `useSettingsStore`, `useRibbonStore`). Zero direct native IPC calls (`invoke()`), un-quarantined browser globals, or unhandled persistence promises exist in visual layers.
+All visual presenter components are 100% pure UI driven strictly by typed props and headless store hooks (`useRuntimeBridge`, `useTabStore`, `useSettingsStore`, `useRibbonStore`, `useAuthStore`). Zero direct native IPC calls (`invoke()`), un-quarantined browser globals, or unhandled persistence promises exist in visual layers.
 
 ### Background Processes & Gating
 All background processes (live token estimation, autosave loop, live markdown sync) are strictly gated under **Settings -> Experimental** and disabled or throttled by default:
@@ -18,10 +18,10 @@ All background processes (live token estimation, autosave loop, live markdown sy
 - Experimental Settings Visibility: Controlled by `settings.enableExperimentalSettings` (default: `false`).
 
 ### Quality & Verification Gates
-- Playwright 1.63.0 suite (`npm run test:e2e`): 23 Chromium tests green across 6 spec files (`e2e/actionSandboxRealm`, `e2e/editor`, `e2e/empty-state`, `e2e/preview`, `e2e/ribbon`, `e2e/slash-menu`).
-- Unit suite: 361 Vitest tests across 37 suites (`npm test`) 100% passing.
-- Native Rust security suite: 4 tests passing (`cargo test`) verifying path validation, URL character filtering, and system root protection.
-- Platform Purity: 0 platform leaks across 122 files (`npm run lint`), 100% contract parity.
+- Playwright 1.63.0 suite (`npm run test:e2e`): 24 Chromium tests green.
+- Unit suite: 399 Vitest tests across 40 suites (`npm test`) 100% passing.
+- Native Rust security suite: 8 tests passing (`cargo test`) verifying path validation, URL character filtering, system root protection, and session token authorization.
+- Platform Purity: 0 platform leaks across 146 files (`npm run lint`), 100% contract parity.
 
 ---
 
@@ -69,6 +69,9 @@ All background processes (live token estimation, autosave loop, live markdown sy
 | `TemplateVariableModal`| `src/components/Modals/TemplateVariableModal.tsx` | Template variable filler | `--card-bg`, `--card-border`, `--text-primary`, `--accent-primary` | None | None | `tests/templateVariables.test.ts` | PORT AS-IS |
 | `RibbonCustomizerModal`| `src/components/Modals/RibbonCustomizerModal.tsx` | `{ isOpen, onClose }` | `--card-bg`, `--card-border`, `--text-primary` | None | None | `tests/ribbonCustomizer.contract.md` | PORT AS-IS |
 | `FormattingCustomizerModal` | `src/components/Modals/FormattingCustomizerModal.tsx` | `{ isOpen, onClose }` | `--card-bg`, `--card-border`, `--text-primary` | None | None | `tests/formattingCustomizer.contract.md` | PORT AS-IS |
+| `PersonalGitHubLibraryModal` | `src/components/Sidebar/PersonalGitHubLibraryModal.tsx` | `{ isOpen, onClose, onItemImported }` | `--card-bg`, `--card-border`, `--text-primary`, `--accent-primary` | None | GitHub REST API sync | `tests/personalGitHubLibrary.test.ts` | PORT AS-IS |
+| `AuthPopover` | `src/components/Auth/AuthPopover.tsx` | Pure Presenter | `--card-bg`, `--card-border`, `--text-primary` | None | Loopback OAuth trigger | `tests/auth.contract.md` | PORT AS-IS |
+| `AuthBottomSheet` | `src/components/Auth/AuthBottomSheet.tsx` | Pure Presenter | `--card-bg`, `--card-border`, `--text-primary` | None | Mobile OAuth trigger | `tests/authMobile.contract.md` | PORT AS-IS |
 
 ---
 

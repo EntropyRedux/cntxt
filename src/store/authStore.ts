@@ -46,19 +46,69 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loginWithGoogle: async () => {
     set({ syncStatus: 'syncing', authError: null });
-    const { error } = await signInWithOAuthProvider('google');
+    const { error, user: authUser } = await signInWithOAuthProvider('google');
     if (error) {
       set({ syncStatus: 'error', authError: error.message });
       useNotificationStore.getState().addNotification('Sign In Failed', error.message, 'error');
+      return;
+    }
+
+    let targetUser = authUser;
+    if (!targetUser) {
+      const supabase = getSupabase();
+      if (supabase) {
+        const { data } = await supabase.auth.getSession();
+        targetUser = data.session?.user || null;
+      }
+    }
+
+    if (targetUser) {
+      const profile = mapSupabaseUserToProfile(targetUser);
+      set({
+        user: profile,
+        isGuestMode: false,
+        syncStatus: 'up-to-date',
+        lastSyncTime: 'Just now',
+        authError: null
+      });
+      useNotificationStore.getState().addNotification('Signed In', `Welcome back, ${profile.name}!`, 'success');
+      syncUserProfileToDatabase(profile).catch(() => {});
+    } else {
+      set({ syncStatus: 'idle' });
     }
   },
 
   loginWithGitHub: async () => {
     set({ syncStatus: 'syncing', authError: null });
-    const { error } = await signInWithOAuthProvider('github');
+    const { error, user: authUser } = await signInWithOAuthProvider('github');
     if (error) {
       set({ syncStatus: 'error', authError: error.message });
       useNotificationStore.getState().addNotification('Sign In Failed', error.message, 'error');
+      return;
+    }
+
+    let targetUser = authUser;
+    if (!targetUser) {
+      const supabase = getSupabase();
+      if (supabase) {
+        const { data } = await supabase.auth.getSession();
+        targetUser = data.session?.user || null;
+      }
+    }
+
+    if (targetUser) {
+      const profile = mapSupabaseUserToProfile(targetUser);
+      set({
+        user: profile,
+        isGuestMode: false,
+        syncStatus: 'up-to-date',
+        lastSyncTime: 'Just now',
+        authError: null
+      });
+      useNotificationStore.getState().addNotification('Signed In', `Welcome back, ${profile.name}!`, 'success');
+      syncUserProfileToDatabase(profile).catch(() => {});
+    } else {
+      set({ syncStatus: 'idle' });
     }
   },
 

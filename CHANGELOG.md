@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.1] — 2026-10-07
+
+### Desktop OAuth Flow & External Browser Authentication (FG-12)
+- **External System Browser OAuth Integration (`src-tauri/src/commands/auth.rs`)**:
+  - Replaced internal webview OAuth handling with native default browser launch via `open::that(url)`, eliminating WebView2 user-agent restrictions and window frame freezing.
+  - Implemented lightweight local Rust TCP loopback server listening on `127.0.0.1:1420` to capture Supabase OAuth redirects.
+  - **Hash Fragment-to-Query Redirection (`EXTRACTOR_HTML`)**: Resolved Chromium TCP segment chunking (where POST headers and bodies split across packets) by serving an immediate client-side script that extracts the URL hash fragment (`#access_token=...&refresh_token=...`) and navigates to `/auth/token?...`, allowing direct query string parsing in Rust.
+  - Added self-closing success page with branded UI (`SUCCESS_HTML`) and automatic window dismissal.
+  - Added cancellation and error fallback handlers for closed tabs or interrupted login attempts.
+
+### Personal GitHub Cloud Library Integration
+- **Direct GitHub Repository Library Sync (`src/services/personalGitHubLibraryService.ts`, `src/components/Sidebar/PersonalGitHubLibraryModal.tsx`)**:
+  - Added modal and background service allowing users to link a personal GitHub repository (public or private) for storing, syncing, and versioning their prompt library and skills.
+  - Implemented automatic repository initialization (`cntxt-library.json` index), branch selection, and bi-directional item push/pull via Octokit / GitHub REST API.
+  - **Provider Token Retention (`cntxt_provider_token`)**: Persisted GitHub OAuth provider access tokens in `localStorage` across app restarts, enabling continuous repository synchronization without re-authenticating every session.
+
+### Security Hardening & Build Packaging
+- **Secret Quarantine**:
+  - Hardened `.gitignore` to strictly exclude `.env*`, `*secret*`, and local credential references (`6cret.md`).
+- **Portable & Installer Packaging**:
+  - Rebuilt and verified standalone single-file executable `dist-portable/CNTXT-portable.exe` (14.32 MB).
+  - Verified NSIS setup installer (6.61 MB) and WiX MSI installer (7.65 MB).
+- **Verification Gates**:
+  - Contract synchronization verified (100% byte-identical Option B mirror).
+  - 399/399 Vitest unit tests passing across 40 test suites; 0 lint errors across 146 files; clean `cargo check`.
+
 ## [0.5.0] — 2026-10-03
 
 ### Brand Redesign & Universal Master Iconography

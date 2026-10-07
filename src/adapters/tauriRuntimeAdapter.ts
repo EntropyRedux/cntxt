@@ -70,10 +70,31 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     }
   }
 
+  private async ensureSessionToken(): Promise<string | null> {
+    if (this.sessionToken) return this.sessionToken;
+    if (typeof window !== 'undefined' && window.__CNTXT_SESSION_TOKEN__) {
+      this.sessionToken = window.__CNTXT_SESSION_TOKEN__;
+      return this.sessionToken;
+    }
+    try {
+      if (window.__TAURI_INTERNALS__?.invoke) {
+        this.sessionToken = (await window.__TAURI_INTERNALS__.invoke('get_session_token')) as string;
+      } else if (window.__TAURI__?.core?.invoke) {
+        this.sessionToken = (await window.__TAURI__.core.invoke('get_session_token')) as string;
+      } else {
+        const { invoke } = await import('@tauri-apps/api/core');
+        this.sessionToken = await invoke<string>('get_session_token');
+      }
+    } catch {
+      // Session token recovery fallback
+    }
+    return this.sessionToken;
+  }
+
   protected async invokeTauri<T>(cmd: string, args: Record<string, unknown> = {}): Promise<T | null> {
     try {
-      if (!this.sessionToken && typeof window !== 'undefined' && window.__CNTXT_SESSION_TOKEN__) {
-        this.sessionToken = window.__CNTXT_SESSION_TOKEN__;
+      if (!this.sessionToken && cmd !== 'get_session_token') {
+        await this.ensureSessionToken();
       }
       const mergedArgs = {
         sessionToken: this.sessionToken,
@@ -99,8 +120,8 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   protected async invokeTauriVoid(cmd: string, args: Record<string, unknown> = {}): Promise<boolean> {
     try {
-      if (!this.sessionToken && typeof window !== 'undefined' && window.__CNTXT_SESSION_TOKEN__) {
-        this.sessionToken = window.__CNTXT_SESSION_TOKEN__;
+      if (!this.sessionToken && cmd !== 'get_session_token') {
+        await this.ensureSessionToken();
       }
       const mergedArgs = {
         sessionToken: this.sessionToken,

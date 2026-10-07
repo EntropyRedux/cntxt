@@ -3,6 +3,7 @@ pub mod file;
 pub mod secrets;
 pub mod storage;
 pub mod clipboard;
+pub mod auth;
 
 use std::sync::RwLock;
 
