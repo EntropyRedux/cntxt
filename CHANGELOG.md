@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TR-021: Opt-In Preset Demo Mode**: Browser runtime seeds sample actions and templates only when `window.__CONTEXTPAD_DEMO__ === true`, preserving empty initial production state while facilitating automated UI validation and onboarding demos.
 - **TR-022: System Browser OAuth Launch**: System default browser launch via `open::that(url)` without modal confirmation dialog is approved for intentional user auth clicks, hardened via token-gated IPC commands, CSRF state binding, and elimination of wildcard CORS headers.
 
+### Truncated Large Document Read-Only Safety Interlock
+- **Accidental Truncation Prevention (`contracts/data_shapes.ts`, `src/adapters/eventDispatcher.ts`)**:
+  - Extended canonical `Tab` contract with `isTruncatedView` and `rawFullContent`.
+  - Added strict save guard to `onSaveFile` in `eventDispatcher.ts`: direct file saving is locked when viewing a truncated preview, preventing accidental overwrite of unselected sections on disk.
+  - Added `restoreFullContent(tabId)` to `tabStore.ts` allowing instant 1-click restoration of the complete un-truncated document.
+  - Added persistent amber notice banner in `Editor.tsx` informing users that the view is in Preview Mode with direct save locked and providing a 1-click "Open Full Document" button.
+  - Expanded test coverage in `tests/largeDocModal.test.ts` (11/11 tests passing, 399/399 unit tests green).
+
 ### Production Release Packaging & Signing
 - **Signed Windows Packages**:
   - Official Windows NSIS setup (`dist-installer/CNTXT_0.5.1_x64-setup.exe`).
@@ -33,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Verification Gates (100% Green)**:
   - `npm run lint`: 0 errors across 145 files clean, 0 platform leaks, 100% contract synchronization.
   - `cargo test --manifest-path src-tauri/Cargo.toml`: 8/8 security tests passed.
-  - `npm test`: 40/40 test suites, 396/396 unit tests passed.
+  - `npm test`: 40/40 test suites, 399/399 unit tests passed.
   - `playwright test`: 24/24 E2E tests green on cold server.
 
 ## [0.5.0] — 2026-10-03

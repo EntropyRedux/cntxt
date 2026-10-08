@@ -100,10 +100,10 @@ are found.
 - **Production Release (v0.5.1)**:
   - **Tri-Platform Suite Alignment**: Full production parity across Web SaaS (Vercel + Supabase), Native Desktop (Windows / macOS / Linux via Tauri v2), and Mobile (Android via Tauri Mobile cdylib runtime).
   - **Brand Redesign & Master Iconography**: Universal deployment of high-resolution centered transparent brand icon across all desktop formats (`.ico`, `.png`, `Square*`), Android mipmap launcher densities (`ic_launcher*`), iOS/macOS (`icon.icns`), and Web (`favicon`, `logo.png`).
-  - **Large Document TOC Chunking & Quick Append Architecture**: Architectural plans for mobile-first and desktop large-file handling via Outline/TOC tree parsing, threshold-driven selective loading, and non-blocking quick append drawer.
+  - **Large Document Truncation & Safety Interlock**: Threshold-driven selective TOC loading with read-only preview mode locking to eliminate accidental disk file overwrite, accompanied by 1-click full document restoration.
   - **Full Codebase Security & Re-Audit Remediation (22/22 Findings Resolved)**: Complete remediation of findings R-01..R-13 and D-01..D-09 across 5 verification gates; dynamic widget sinks routed through `sanitizePreviewHtml`; strict Web CSP; single-use window session tokens; tightened loopback OAuth security without wildcard CORS; observable `useNotificationStore` feedback across storage adapters; zero untyped `any`.
   - **Signed Windows Installer Packages**: Official Windows NSIS setup (`dist-installer/CNTXT_0.5.1_x64-setup.exe`), WiX MSI (`dist-installer/CNTXT_0.5.1_x64_en-US.msi`), and standalone zero-install executable (`dist-portable/CNTXT_0.5.1_portable.exe`), digitally signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
-  - **Automated Test Coverage**: 396 unit tests passing across 40 suites via Vitest (`npm test`); 24 Playwright E2E tests green on cold server; 8 Rust security tests passing (`cargo test`).
+  - **Automated Test Coverage**: 399 unit tests passing across 40 suites via Vitest (`npm test`); 24 Playwright E2E tests green on cold server; 8 Rust security tests passing (`cargo test`).
   - **Platform Purity**: `npm run lint` scans 145 files with zero platform leaks outside authorized adapters and 100% canonical contract parity.
 - **Living Context & Roadmap**:
   - Full living context and architecture logs: `generated-documents/context/living_context.md`.
