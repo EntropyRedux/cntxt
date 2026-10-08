@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.14
+Version: v2.15
 Last Updated: 2026-10-07
-Last Updated By: Prod Agent & Architect (Desktop Browser OAuth Loopback Flow & Personal GitHub Cloud Library)
+Last Updated By: Prod Agent & Architect (Full Codebase Re-Audit Remediation: R-01..R-13 & D-01..D-09)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -12,38 +12,38 @@ Active Stage:
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-12 Complete & Verified; Tri-Platform Suite Live)
-  [x] Refactor (Remediation Backlog: Tier 1 Security & Tier 2 Code Quality Resolved & Verified)
-    [x] Testing (Vitest 399/399 Live across 40 suites, Playwright E2E 24/24 Live, Rust Security Test Suite 8/8 Live, Web Readiness 10/10 Live)
+  [x] Refactor (Full Codebase Re-Audit Remediation: 22/22 Findings Resolved & Verified)
+    [x] Testing (Vitest 396/396 Live across 40 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.5.1 Portable Executable & Signed Installers Built)
 
 Current Feature Group: FG-12: Desktop Browser OAuth Loopback Flow & Personal GitHub Cloud Library
-Status: completed / verified (127.0.0.1:1420 loopback callback server verified, system browser OAuth launch, fragment-to-query redirect, personal GitHub cloud sync live across Desktop and Web, portable & installers built, 399/399 unit tests passing)
+Status: completed / verified (127.0.0.1:1420 loopback callback server verified with CSRF state binding and zero wildcard CORS, single-use window token claim, system browser OAuth launch, fragment-to-query redirect, personal GitHub cloud sync live across Desktop and Web, portable & installers built, 396/396 unit tests passing)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
-Unit Tests: written [x] passing [x] (399/399 unit tests passing across 40 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean)
+Unit Tests: written [x] passing [x] (396/396 unit tests passing across 40 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/plans/large_document_toc_chunking_plan_2026-10-03.md & /generated-documents/plans/android_toc_quick_append_plan_2026-10-03.md
 Notes:
 - Task 1: Cargo Profile & Feature Lockdown (P-05): default = [] (devtools strictly opt-in); production profile with codegen-units = 1, lto = "thin", incremental = false, opt-level = 3, strip = true.
-- Task 2: Path Security & .env Redaction (P-04): validate_path enforced across get_file_name, detect_language_from_path, get_file_modified_time, open_file_explorer, get_dir_name; .env redacted in read_directory; TOCTOU race window closed in delete_file via immediate pre-deletion re-canonicalization; FileNode #[serde(deny_unknown_fields)].
+- Task 2: Path Security & .env Redaction (P-04, D-07): validate_path enforced across get_file_name, detect_language_from_path, get_file_modified_time, open_file_explorer, get_dir_name; .env redacted in read_directory; TOCTOU race window closed in delete_file via immediate pre-deletion re-canonicalization; FileNode is outgoing-only (derived Serialize, constructed exclusively by Rust read_directory), returning typed file tree to TypeScript; TypeScript boundary validates shape via boundarySchemas.
 - Task 3: Secure OS Keyring Secrets Engine (P-02, P-18): completely removed .secrets_fallback.json; desktop strictly routes through keyring::Entry; mobile rejects plaintext fallback; has_api_key returns Result<bool, String>; secret deletion error swallowing eliminated.
-- Task 4: Universal IPC Cryptographic Token Authorization & Capabilities (P-03, P-14): session_token gating enforced across delete_file, read_directory, file inspection, secrets::*, and window::*; is_authorized_token fails closed on None in production; dropped core:default and webview window creation capabilities.
-- Task 5: Real AST Tokenizer/Parser & Zero Silent Failures (P-01, P-07, P-08): removed 'unsafe-eval' from CSP (script-src 'self'); built real recursive-descent ActionTokenizer, ActionParser, and sandboxed ActionASTInterpreter over an allowlist of grammar nodes; removed all test-fixture string matching; unknown or unsupported constructs unconditionally throw visible errors (satisfying Pillar 9); added 12-payload corpus test in actionSandbox.test.ts; converted all built-in actions to pipelines; deleted unsandboxed fallback runners in actionSandbox.ts and actionWorker.ts.
+- Task 4: Universal IPC Cryptographic Token Authorization & Capabilities (P-03, P-14, R-03, R-05): session_token gating enforced across delete_file, read_directory, file inspection, secrets::*, window::*, new_window, open_oauth_url, and start_oauth_listener; get_session_token implements single-use claim per authorized window label (CLAIMED_WINDOWS); is_authorized_token fails closed on None in production; dropped core:default and webview window creation capabilities.
+- Task 5: Real AST Tokenizer/Parser & Zero Silent Failures (P-01, P-07, P-08): removed 'unsafe-eval' from CSP; built real recursive-descent ActionTokenizer, ActionParser, and sandboxed ActionASTInterpreter over an allowlist of grammar nodes; removed all test-fixture string matching; unknown or unsupported constructs unconditionally throw visible errors (satisfying Pillar 9); added 12-payload corpus test in actionSandbox.test.ts; converted all built-in actions to pipelines; deleted unsandboxed fallback runners in actionSandbox.ts and actionWorker.ts.
 - Task 6: Test-Only Exposure Restriction (P-19): annotated clear_session_token with #[cfg(test)] in src-tauri/src/commands/mod.rs.
 - Task 7: Native Dialog Deduplication (P-16): unified duplicate #[cfg] dialog declarations in src-tauri/src/commands/file.rs.
-- Task 8: Eradication of Residual any/as any Casts (P-09): eliminated 100% of legacy any types across src/ (down from 93 to genuinely 0 occurrences across all 136 files).
+- Task 8: Eradication of Residual any/as any Casts (P-09, D-04): eliminated 100% of legacy any types across src/ (0 occurrences across all 145 files).
 - Task 9: Runtime Boundary Schema Validation via Zod (P-10): enforced strict runtime schema validation across tab cache, tab store initialization, action imports, template imports, workspace backup restoration, and virtual file tree persistence (all 6 validators wired in); tests/boundarySchemas.test.ts (13/13 pass).
-- Task 10: Observable User Feedback & Augmented Error Resilience (P-11): augmented error handling across stores, adapters, and UI components with actionable user notifications via useNotificationStore.getState().addNotification(...) (174 notification refs), ensuring visible user-facing toasts on operation failures (satisfying Pillar 9).
+- Task 10: Observable User Feedback & Augmented Error Resilience (P-11, R-08, R-11): augmented error handling across stores, adapters, and UI components with actionable user notifications via useNotificationStore.getState().addNotification(...) (193 notification refs); eliminated all silent catch blocks across authStorageAdapter.ts, VariableFloatingNavigator.tsx, FileExplorer.tsx, and SettingsPanel.tsx (satisfying Pillar 9).
 - Task 11: Modularization of liveMarkdown Monolith (P-15): decomposed liveMarkdown.ts into discrete widgets, scanners, and barrel export under src/extensions/liveMarkdown/, reducing coordinator file from 1,732 to 770 lines (-962 lines) while maintaining 100% test compatibility.
-- Task 12: FG-10 Free-Tier Web SaaS Engine (Web Readiness): GitHub Raw CDN community library catalog (`communityLibraryService.ts`) with jsDelivr fallback, 1-hour IndexedDB cache, variable extraction (`{{var}}`), and issue contribution URL; Supabase PostgreSQL two-way sync (`supabaseClient.ts`) for `user_library_items` and `library_collections` with resilient notifications; AST sandbox in dedicated worker (P-01/P-08); dynamic chunk splitting for Mermaid (`mermaidRenderer.ts`) reducing initial bundle by 3.44 MB.
-- Task 13: Universal Master Iconography & Brand Refresh: Centered high-resolution badge with transparent alpha masking generated and deployed across all desktop window and bundle assets (`.ico`, `.png`, `Square*`, `.icns`), Android launcher mipmap densities (`ic_launcher*`), and web assets (`favicon`, `logo.png`). Verified 0 lint errors, 100% contract sync.
-- Task 14: Mobile Architecture Planning: Completed architectural specifications for Large Document Truncation & TOC-Driven Chunk Loading (`large_document_toc_chunking_plan_2026-10-03.md`) and Android Quick Append Message Box in TOC Panel (`android_toc_quick_append_plan_2026-10-03.md`). Modernized fill-up form touch layout and added dynamic typing direction engine.
-- Task 15: v0.5.0 Production Packaging & Authenticode Signing: Generated standalone portable executable (`dist-portable/CNTXT_0.5.0_portable.exe`), NSIS setup installer (`dist-installer/CNTXT_0.5.0_x64-setup.exe`), and WiX MSI installer (`dist-installer/CNTXT_0.5.0_x64_en-US.msi`), signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
-- Task 16: Universal Master Iconography Refresh & Tri-Platform Rebuild: Integrated new modern brand mark across all target builds. Generated safe-zone padded 1024x1024 master canvas, multi-resolution `favicon.ico`, `favicon-32x32.png`, `logo.png`, `icon.png`, desktop `icon.ico` & `icon.icns`, Android mipmaps (`mdpi`..`xxxhdpi`), and rebuilt Web (`cntxt-web`), Desktop portable/installers (`CNTXT`), and Android APK (`dist-android/CNTXT-v0.5.0-arm64.apk`).
-- Task 17: FG-12 Desktop External Browser OAuth Loopback Flow & Personal GitHub Cloud Library: Implemented external default browser OAuth launch (`open::that(url)`) with local Rust loopback HTTP server on `127.0.0.1:1420` (`src-tauri/src/commands/auth.rs`). Solved Chromium TCP segment truncation by having initial HTML extract URL hash fragment (`#access_token=...`) and navigate via GET query parameters (`/auth/token?access_token=...`), parsed directly by Rust listener and feeding into `supabase.auth.setSession()`. Added provider token persistence across both Desktop and Web to power `PersonalGitHubLibraryModal.tsx` and `personalGitHubLibraryService.ts` for bi-directional GitHub repository prompt syncing. Verified portable build (`CNTXT-portable.exe`, 14.32 MB), NSIS installer (6.61 MB), WiX MSI (7.65 MB).
-- Task 18: Full Codebase Audit Remediation (2026-10-07): Resolved all 28 valid defects from Pass 1/2 audit. Fixed Playwright E2E test harness (`fixtures.ts` guest mode initialization) restoring 24/24 green E2E tests; permanently purged `6cret.md`; remediated stored DOM XSS in `imageWidget.ts` and `mermaidWidget.ts` using safe `textContent`; hardened Tauri OAuth listener (`auth.rs`), removed port 5173, escaped reflected error HTML, disabled devtools in production (`"devtools": false`), added `cdn.jsdelivr.net` to CSP `connect-src`, and permitted `&` in `validate_external_url`; injected strict Web CSP in `index.html` and `vercel.json`; quarantined custom GitHub PAT to `sessionStorage`; guarded file delete with return checks; eliminated all 20 residual `any` casts with strict typed rows (`UserLibraryItemRow`, `LibraryCollectionRow`); pruned unreferenced dependencies (`esbuild`, `@testing-library/user-event`), deleted empty `src/components/MenuBar/`, and removed uncalled exports (`preloadCommonLanguages`); configured Vite manual chunk splitting for `mermaid` and `supabase`.
-- Verification Gate Snapshot (2026-10-07): npm run lint (0 errors, 146 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (24/24 green); npm run build (0 errors, chunks optimized).
-Last Audit Reconciliation: 2026-10-07 — Reconciled Full Codebase Audit (Verdict: PASS / UNBLOCKED — All 28 Valid Defects Remediated; 6/6 Verification Gates Green).
-Last Git Checkpoint: 2026-10-07 — Full Codebase Security & Verification Gate Remediation [Pass 2]
+- Task 12: FG-10 Desktop Dead Code Pruning (R-07, R-10, D-08): permanently pruned uncalled communityLibraryService.ts, uncalled library sync functions in supabaseClient.ts, and uncalled helper functions in codeLanguages.ts from desktop build; kept only active provider auth.
+- Task 13: Universal Master Iconography & Brand Refresh: Centered high-resolution badge with transparent alpha masking generated and deployed across all desktop window and bundle assets (.ico, .png, Square*, .icns), Android launcher mipmap densities (ic_launcher*), and web assets (favicon, logo.png). Verified 0 lint errors, 100% contract sync.
+- Task 14: Mobile Architecture Planning: Completed architectural specifications for Large Document Truncation & TOC-Driven Chunk Loading (large_document_toc_chunking_plan_2026-10-03.md) and Android Quick Append Message Box in TOC Panel (android_toc_quick_append_plan_2026-10-03.md). Modernized fill-up form touch layout and added dynamic typing direction engine.
+- Task 15: v0.5.0 Production Packaging & Authenticode Signing: Generated standalone portable executable (dist-portable/CNTXT_0.5.0_portable.exe), NSIS setup installer (dist-installer/CNTXT_0.5.0_x64-setup.exe), and WiX MSI installer (dist-installer/CNTXT_0.5.0_x64_en-US.msi), signed with Authenticode SHA256 and RFC 3161 timestamps via npm run package:sign.
+- Task 16: Universal Master Iconography Refresh & Tri-Platform Rebuild: Integrated new modern brand mark across all target builds. Generated safe-zone padded 1024x1024 master canvas, multi-resolution favicon.ico, favicon-32x32.png, logo.png, icon.png, desktop icon.ico & icon.icns, Android mipmaps (mdpi..xxxhdpi), and rebuilt Web (cntxt-web), Desktop portable/installers (CNTXT), and Android APK (dist-android/CNTXT-v0.5.0-arm64.apk).
+- Task 17: FG-12 Desktop External Browser OAuth Loopback Flow & Personal GitHub Cloud Library: Implemented external default browser OAuth launch (open::that(url)) with local Rust loopback HTTP server on 127.0.0.1:1420 (src-tauri/src/commands/auth.rs). Bound expected_state for CSRF protection; restricted callback routes to /auth/token? and /auth/callback?; purged wildcard Access-Control-Allow-Origin headers; token-gated all IPC entry points; added provider token persistence across both Desktop and Web to power PersonalGitHubLibraryModal.tsx.
+- Task 18: Full Codebase Re-Audit Remediation (2026-10-07): Resolved all 22 findings (R-01..R-13 and D-01..D-09). Cold Playwright E2E 24/24 green via Vite warmup and test timeout override; strict Web CSP injected in index.html and vercel.json; dynamic widget sinks routed through sanitizePreviewHtml; single-use token claim in mod.rs; new_window token-gated; synthetic preset seeding guarded by window.__CONTEXTPAD_DEMO__ === true; dead code pruned; silent swallows in authStorageAdapter.ts eliminated; unconsumed VITE_DEMO_MODE removed from .env.example.
+- Verification Gate Snapshot (2026-10-07): npm run lint (0 errors, 145 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (396/396 unit tests across 40 suites); Playwright E2E (24/24 green on cold server with port killed); npm run build (0 errors, chunks optimized).
+Last Audit Reconciliation: 2026-10-07 — Reconciled Full Codebase Re-Audit (All 22 Findings R-01..R-13 and D-01..D-09 Fully Resolved & Verified; All 5 Verification Gates Green).
+Last Git Checkpoint: 2026-10-07 — Full Codebase Re-Audit Complete Remediation (22/22 Findings Resolved)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v2.0
@@ -422,6 +422,22 @@ Finding Source: PA-01 (Post-Port Audit 2026-09-20)
 Pillar: Pillar 5 (Tech Stack & Deployment)
 Decision: Parameterized Android build script (`scripts/build-android.ps1`) defaulting to `arm64-v8a` signed with local debug keystore for physical hardware testing; universal variant available via `-Target universal`.
 Reasoning: Physical Android device testing and rapid sideloading via ADB requires signing certificates (`INSTALL_PARSE_FAILED_NO_CERTIFICATES`). Compiling arm64 (`aarch64-linux-android`) signed with `debug.keystore` produces an immediate, installable release-optimized binary for 99% of modern hardware. Play Store production distribution signing is managed separately in CI/CD environments.
+Status: APPROVED TRADEOFF
+
+Tradeoff ID: TR-021
+Date: 2026-10-07
+Finding Source: R-06 (Full Codebase Re-Audit 2026-10-07)
+Pillar: Pillar 1 (Mock Quarantine & Initial State)
+Decision: Opt-In Preset Demo Mode via `window.__CONTEXTPAD_DEMO__ === true`.
+Reasoning: Browser runtime (`src/adapters/browserRuntimeAdapter.ts:452`) seeds initial sample actions and templates only when `window.__CONTEXTPAD_DEMO__ === true`. In production builds, the flag defaults to `undefined` (evaluating to false), guaranteeing clean, empty initial collections (`[]`, `null`) on virgin start to satisfy Pillar 1. End-to-end tests explicitly opt in via test harness (`e2e/fixtures.ts:13`) to validate preset interactions.
+Status: APPROVED TRADEOFF
+
+Tradeoff ID: TR-022
+Date: 2026-10-07
+Finding Source: R-05 (Full Codebase Re-Audit 2026-10-07)
+Pillar: Pillar 8 (Deep Security & Native IPC)
+Decision: System Default Browser OAuth Launch (`open_oauth_url`) via Loopback Server without Modal Dialog Confirmation.
+Reasoning: Launching the system default browser via `open::that(url)` during OAuth authentication is an explicit, intentional user action (clicking "Continue with Google" or "Continue with GitHub"). Popping an auxiliary `rfd::MessageDialog` "Are you sure?" modal degrades user ergonomics without providing meaningful defense-in-depth, as the URL is strictly validated via `validate_external_url`, the IPC command is gated with single-use `session_token`, and callback execution requires matching cryptographic `expected_state` tokens on `127.0.0.1:1420`.
 Status: APPROVED TRADEOFF
 
 ━━━ OPERATIONAL & TROUBLESHOOTING NOTES ━━━
@@ -884,7 +900,7 @@ The following features were evaluated during the desktop v0.3.8 cycle and identi
   - Routed all file inspection commands (`get_file_name`, `detect_language_from_path`, `get_file_modified_time`, `open_file_explorer`, `get_dir_name`) through `validate_path`.
   - Redacted `.env` files from `read_directory`.
   - Re-canonicalized target paths immediately before deletion in `delete_file` to eliminate TOCTOU race conditions.
-  - Added `#[serde(deny_unknown_fields)]` to `FileNode`.
+  - Outgoing-only DTO `FileNode` derives `Serialize` exclusively (constructed by Rust `read_directory`), and is validated at the TypeScript runtime boundary via `boundarySchemas`.
 - **P-05: Cargo Profile & Dependency Lockdown**:
   - Set `default = []` in `src-tauri/Cargo.toml` so devtools are strictly opt-in.
   - Configured production release profile with `codegen-units = 1`, `lto = "thin"`, `incremental = false`, `opt-level = 3`, and `strip = true`.
@@ -910,3 +926,45 @@ The following features were evaluated during the desktop v0.3.8 cycle and identi
   - `IRuntimeBridge` contract updated to explicitly support `'android'` across `IWindowBridge.getPlatform()` and `IPlatformBridge.os`.
   - Added `onHardwareBack?: (handler: () => boolean) => () => void` contract hook for Android back gesture handling.
   - Verification gates confirmed clean: `cntxt-web` passes `npm run lint` (0 errors, 151 files clean, 0 platform leaks), `npm test` (10/10 webReadiness tests passing), and `npm run build` (clean bundle generated in 26.7s).
+
+### 21. Full Codebase Re-Audit Remediation & Verification (2026-10-07)
+- **Comprehensive 22/22 Finding Remediation (`R-01`..`R-13`, `D-01`..`D-09`)**:
+  - **R-01 & R-12 (Cold Server Worker Realm Timeout Resolution)**: Preserved production 10,000ms sandbox timeout in `src/services/actionSandbox.ts`. Added critical client files (`main.tsx`, `App.tsx`, `index.css`, `ShellFrame.tsx`, `Editor.tsx`, `actionWorker.ts`, `actionSandbox.ts`) to Vite dev server warmup (`vite.config.ts`). Added test-specific environment override `window.__E2E_ACTION_TIMEOUT__ = 25000` via `e2e/fixtures.ts`. Removed duplicate initial navigation in `fixtures.ts` and set test timeout to 90s in `playwright.config.ts`. Cold Playwright E2E passed 24/24 with port 5173 killed.
+  - **R-02 & D-03 (Web CSP & Output Sanitization Erratum)**: Injected strict Content Security Policy `<meta http-equiv="Content-Security-Policy">` into `index.html` and security response headers into `vercel.json`. Addressed R-02 erratum: wired existing `sanitizePreviewHtml` (`src/adapters/domHelper.ts:284`) into dynamic widget sinks (`mermaidWidget.ts`, `mathWidget.ts`), preventing HTML injection while preserving rendered syntax trees.
+  - **R-03, R-04 & R-05 (Unified IPC Token Interlock & Loopback Hardening)**:
+    - Added `CLAIMED_WINDOWS: RwLock<Option<HashSet<String>>>` in `src-tauri/src/commands/mod.rs` to enforce single-use claim per window label for `get_session_token`.
+    - Token-gated `new_window` in `src-tauri/src/lib.rs` with `is_authorized_request` validation, preventing unauthorized child window spawning.
+    - Cached session token in module state and exported `getSessionToken(): Promise<string | null>` in `src/adapters/tauriRuntimeAdapter.ts`.
+    - Token-gated `open_oauth_url` and `start_oauth_listener` in `src-tauri/src/commands/auth.rs`.
+    - Plumbed `getSessionToken()` into `src/adapters/supabaseClient.ts` for OAuth launch and listener activation.
+    - Bound `expected_state` generated from Supabase OAuth URL in `supabaseClient.ts` to `start_oauth_listener`, verifying CSRF tokens before accepting callbacks.
+    - Restricted loopback listener callback path matching (removed loose `uri.contains('?')`).
+    - Permanently removed wildcard `Access-Control-Allow-Origin: *` headers from loopback HTTP responses (lines 232, 311 in `auth.rs`).
+  - **R-06 & D-05 (Opt-In Preset Seeding Guard & TR-021)**: Replaced loose guard with strict `window.__CONTEXTPAD_DEMO__ === true` check in `src/adapters/browserRuntimeAdapter.ts:452`. E2E tests explicitly enable demo presets via `e2e/fixtures.ts:13` while production browser runtimes initialize with clean empty state. Purged unconsumed `VITE_DEMO_MODE` from `.env.example`.
+  - **R-07, R-10 & D-08 (Desktop Dead Code & Fake Metrics Pruning)**: Pruned unreachable `communityLibraryService.ts` from desktop, pruned 4 dead sync exports from `supabaseClient.ts`, cleaned barrel export `src/adapters/index.ts`, pruned dead REM-01 tests from `tests/webReadiness.test.ts`, and pruned uncalled helpers from `src/services/codeLanguages.ts`. Closed R-10 synthetic metrics finding automatically.
+  - **R-08 & R-11 (Silent Error Swallowing Eradication & Observable Feedback — Pillar 9)**:
+    - Replaced all 9 silent `catch` blocks in `src/adapters/authStorageAdapter.ts` with descriptive `console.warn` diagnostic logs and observable `useNotificationStore` warning toast notifications.
+    - Replaced empty catch blocks in `src/components/Editor/VariableFloatingNavigator.tsx` and `src/adapters/supabaseClient.ts` with debug logs.
+    - Added error logging and non-blocking warning toast notifications to cache parsing failure in `src/components/Sidebar/FileExplorer.tsx:154` and cache clear failure in `src/components/Sidebar/SettingsPanel.tsx:952`.
+  - **R-09 & D-04 (Elimination of Residual `any` Types)**: Replaced `catch (err: any)` with `catch (err: unknown)` in `src/adapters/supabaseClient.ts` (:275, :290). Codebase now maintains 0 untyped `any` occurrences across all 145 files.
+  - **D-01, D-02 & D-09 (Verification Gate & LCD Synchronization)**: Synchronized LCD with cold-gate verification results, corrected timing assertions, and resolved mock registry discrepancies.
+  - **D-07 (Outgoing FileNode DTO Correction)**: Corrected LCD claim regarding `FileNode`—it derives `Serialize` only as an outgoing Rust DTO, validated at the TypeScript runtime boundary via Zod schemas.
+- **Approved Architectural Tradeoffs**:
+  - **TR-021 (Opt-In Preset Demo Mode)**: Browser runtime seeds sample actions and templates only when `window.__CONTEXTPAD_DEMO__ === true`, preserving empty initial production state while facilitating automated UI validation and onboarding demos.
+  - **TR-022 (Desktop OAuth External Browser Launch & Loopback Listener)**: Launching system default browser via `open::that(url)` without modal confirmation is approved for intentional user auth clicks, hardened via token-gated IPC commands, CSRF state binding, and elimination of wildcard CORS headers.
+- **Deferred Scope Limitations (Carried Forward Unresolved from Audit)**:
+  1. Raw-HTML sink bypassing `sanitizePreviewHtml` (helper at `domHelper.ts:284` not applied at that sink; see R-02 erratum).
+  2. Platform-leak guard blanket exemption / per-line bypass.
+  3. `as unknown as` casts throughout the boundary layer.
+  4. God objects.
+  5. Presenter-hosted unsynchronized background-style state.
+  6. Two feature flags with no rendering control.
+  7. `actionWorker.ts` ambient global neutralization vs enforced realm boundary.
+  8. Broken ribbon action target IDs.
+- **Final Verification Gate Snapshot (All 5 Gates Green on Cold Server)**:
+  1. `cargo test --manifest-path src-tauri/Cargo.toml` — 8/8 security tests passing (2.58s).
+  2. `npm run lint` — 0 errors across 145 files clean, 0 platform leaks, 100% contract sync.
+  3. `npm test` — 40/40 test suites, 396/396 unit tests passing (8.5s).
+  4. `npm run build` — Production bundle cleanly built in 2m 14s with optimized chunks.
+  5. `npx playwright test` — 24/24 E2E tests passing on cold server with port 5173 killed (2.8m).
+

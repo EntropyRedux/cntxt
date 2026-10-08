@@ -26,6 +26,34 @@ import { useNotificationStore } from '../store/notificationStore';
 
 const CRITICAL_IPC_COMMANDS = ['read_file', 'write_file', 'delete_file', 'store_api_key', 'delete_api_key'];
 
+let cachedSessionToken: string | null = null;
+
+export async function getSessionToken(): Promise<string | null> {
+  if (cachedSessionToken) return cachedSessionToken;
+  if (typeof window !== 'undefined' && window.__CNTXT_SESSION_TOKEN__) {
+    cachedSessionToken = window.__CNTXT_SESSION_TOKEN__;
+    try {
+      delete window.__CNTXT_SESSION_TOKEN__;
+    } catch {
+      window.__CNTXT_SESSION_TOKEN__ = undefined;
+    }
+    return cachedSessionToken;
+  }
+  try {
+    if (window.__TAURI_INTERNALS__?.invoke) {
+      cachedSessionToken = (await window.__TAURI_INTERNALS__.invoke('get_session_token')) as string;
+    } else if (window.__TAURI__?.core?.invoke) {
+      cachedSessionToken = (await window.__TAURI__.core.invoke('get_session_token')) as string;
+    } else {
+      const { invoke } = await import('@tauri-apps/api/core');
+      cachedSessionToken = await invoke<string>('get_session_token');
+    }
+  } catch {
+    // Session token recovery fallback
+  }
+  return cachedSessionToken;
+}
+
 export class TauriRuntimeAdapter implements IRuntimeBridge {
   private inMemoryFallback: Map<string, string> = new Map();
   private sessionToken: string | null = null;
@@ -34,6 +62,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     this.detectLanguage = this.detectLanguage.bind(this);
     if (typeof window !== 'undefined' && window.__CNTXT_SESSION_TOKEN__) {
       this.sessionToken = window.__CNTXT_SESSION_TOKEN__;
+      cachedSessionToken = window.__CNTXT_SESSION_TOKEN__;
       try {
         delete window.__CNTXT_SESSION_TOKEN__;
       } catch {
@@ -72,22 +101,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   private async ensureSessionToken(): Promise<string | null> {
     if (this.sessionToken) return this.sessionToken;
-    if (typeof window !== 'undefined' && window.__CNTXT_SESSION_TOKEN__) {
-      this.sessionToken = window.__CNTXT_SESSION_TOKEN__;
-      return this.sessionToken;
-    }
-    try {
-      if (window.__TAURI_INTERNALS__?.invoke) {
-        this.sessionToken = (await window.__TAURI_INTERNALS__.invoke('get_session_token')) as string;
-      } else if (window.__TAURI__?.core?.invoke) {
-        this.sessionToken = (await window.__TAURI__.core.invoke('get_session_token')) as string;
-      } else {
-        const { invoke } = await import('@tauri-apps/api/core');
-        this.sessionToken = await invoke<string>('get_session_token');
-      }
-    } catch {
-      // Session token recovery fallback
-    }
+    this.sessionToken = await getSessionToken();
     return this.sessionToken;
   }
 

@@ -1,5 +1,5 @@
 import { WidgetType, EditorView } from '@codemirror/view';
-import { createElement, copyText } from '../../../adapters';
+import { createElement, copyText, sanitizePreviewHtml } from '../../../adapters';
 import { renderLatex, getKatex } from '../../../services/mathRenderer';
 import { getActiveBridge } from '../bridgeState';
 
@@ -22,7 +22,7 @@ export class DisplayMathWidget extends WidgetType {
     });
 
     const rendered = renderLatex(this.latex, true);
-    container.innerHTML = rendered.html;
+    container.innerHTML = sanitizePreviewHtml(rendered.html);
 
     const copyBtn = createElement('button', {
       type: 'button',
@@ -47,7 +47,7 @@ export class DisplayMathWidget extends WidgetType {
     if (rendered.isPending) {
       getKatex().then(() => {
         const fullRender = renderLatex(this.latex, true);
-        container.innerHTML = fullRender.html;
+        container.innerHTML = sanitizePreviewHtml(fullRender.html);
         container.appendChild(copyBtn);
         view.requestMeasure();
       });
@@ -77,12 +77,12 @@ export class InlineMathWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const span = createElement('span', { className: 'cm-live-math-inline' });
     const rendered = renderLatex(this.latex, false);
-    span.innerHTML = rendered.html;
+    span.innerHTML = sanitizePreviewHtml(rendered.html);
 
     if (rendered.isPending) {
       getKatex().then(() => {
         const fullRender = renderLatex(this.latex, false);
-        span.innerHTML = fullRender.html;
+        span.innerHTML = sanitizePreviewHtml(fullRender.html);
         view.requestMeasure();
       });
     }

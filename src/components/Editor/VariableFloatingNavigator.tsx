@@ -61,10 +61,14 @@ export const VariableFloatingNavigator: React.FC = () => {
               setAnchor({ edge: parsed.edge, y: computedY });
               return;
             }
-          } catch {}
+          } catch (e) {
+            console.debug('[VariableFloatingNavigator] Failed to parse saved fab position:', e);
+          }
         }
       })
-      ?.catch(() => {});
+      ?.catch((e) => {
+        console.debug('[VariableFloatingNavigator] Failed to load fab position from storage:', e);
+      });
   }, [bridge.storage]);
 
   // Keep anchored within container bounds on window/editor resize
@@ -132,7 +136,9 @@ export const VariableFloatingNavigator: React.FC = () => {
       try {
         targetEl.setPointerCapture(pointerId);
         activePointerIdRef.current = pointerId;
-      } catch (_) {}
+      } catch (e) {
+        console.debug('[VariableFloatingNavigator] setPointerCapture failed:', e);
+      }
     }
   };
 
@@ -175,7 +181,9 @@ export const VariableFloatingNavigator: React.FC = () => {
     if (activePointerIdRef.current !== null && releasedElement && typeof releasedElement.releasePointerCapture === 'function') {
       try {
         releasedElement.releasePointerCapture(activePointerIdRef.current);
-      } catch (_) {}
+      } catch (e) {
+        console.debug('[VariableFloatingNavigator] releasePointerCapture failed:', e);
+      }
       activePointerIdRef.current = null;
     }
 
@@ -202,7 +210,9 @@ export const VariableFloatingNavigator: React.FC = () => {
           'contextpad_var_fab_pos',
           JSON.stringify({ edge: targetEdge, yRatio: targetY / Math.max(1, parentH) })
         )
-        ?.catch(() => {});
+        ?.catch((e) => {
+          console.debug('[VariableFloatingNavigator] Failed to save fab position to storage:', e);
+        });
 
       // Suppress tap/click after dragging
       suppressClickRef.current = true;
@@ -390,7 +400,9 @@ export const VariableFloatingNavigator: React.FC = () => {
               behavior: 'smooth'
             });
           }
-        } catch {}
+        } catch (e) {
+          console.debug('[VariableFloatingNavigator] Scroll navigation failed:', e);
+        }
       });
     }
 

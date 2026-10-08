@@ -87,8 +87,8 @@ async fn open_external(
 
 
 #[tauri::command]
-async fn new_window(window: tauri::Window, app_handle: tauri::AppHandle) -> Result<(), String> {
-    if !commands::is_authorized_window(&window) {
+async fn new_window(window: tauri::Window, app_handle: tauri::AppHandle, session_token: Option<String>) -> Result<(), String> {
+    if !commands::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin for window creation".into());
     }
     #[cfg(not(any(target_os = "android", target_os = "ios")))]

@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
-import { UserProfile, UserLibraryItem, LibraryCollection } from '../../contracts/data_shapes';
+import { UserProfile } from '../../contracts/data_shapes';
+import { getSessionToken } from './tauriRuntimeAdapter';
 
 /**
  * SUPABASE RUNTIME ADAPTER (src/adapters/supabaseClient.ts)
@@ -93,7 +94,9 @@ export const mapSupabaseUserToProfile = (
       githubLibrary = typeof metadata.github_library === 'string'
         ? JSON.parse(metadata.github_library)
         : metadata.github_library;
-    } catch {}
+    } catch (e) {
+      console.debug('[Supabase] Failed to parse github_library metadata:', e);
+    }
   }
 
   return {
@@ -125,7 +128,8 @@ export const getSessionProviderToken = async (): Promise<string | null> => {
       if (stored) return stored;
     }
     return null;
-  } catch {
+  } catch (e) {
+    console.debug('[Supabase] Failed to get session provider token:', e);
     return null;
   }
 };
@@ -167,10 +171,7 @@ export const signInWithOAuthProvider = async (
         invokeFn = invoke;
       }
 
-      // 2. Start local OAuth callback listener on localhost:1420
-      const listenerPromise = invokeFn('start_oauth_listener') as Promise<string>;
-
-      // 3. Obtain OAuth authorization URL with skipBrowserRedirect: true
+      // 2. Obtain OAuth authorization URL with skipBrowserRedirect: true
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -187,10 +188,31 @@ export const signInWithOAuthProvider = async (
         return { error: new Error('Failed to obtain OAuth authorization URL from Supabase'), user: null };
       }
 
-      // 4. Launch default system browser (Chrome/Edge/etc.) with authorization URL
-      await invokeFn('open_oauth_url', { url: data.url });
+      // 3. Extract CSRF state from generated URL and fetch session token
+      let expectedState = '';
+      try {
+        const parsedUrl = new URL(data.url);
+        expectedState = parsedUrl.searchParams.get('state') || '';
+      } catch {
+        const match = data.url.match(/[?&]state=([^&]+)/);
+        if (match) expectedState = decodeURIComponent(match[1]);
+      }
 
-      // 5. Await captured authorization code from the local listener
+      const sessionToken = await getSessionToken();
+
+      // 4. Start local OAuth callback listener on localhost:1420 with state and session token
+      const listenerPromise = invokeFn('start_oauth_listener', { 
+        expectedState, 
+        sessionToken 
+      }) as Promise<string>;
+
+      // 5. Launch default system browser (Chrome/Edge/etc.) with authorization URL and session token
+      await invokeFn('open_oauth_url', { 
+        url: data.url, 
+        sessionToken 
+      });
+
+      // 6. Await captured authorization code from the local listener
       const captured = await listenerPromise;
       if (!captured) {
         return { error: new Error('Sign-in cancelled or no code received'), user: null };
@@ -199,14 +221,17 @@ export const signInWithOAuthProvider = async (
       let payload: Record<string, string> = {};
       try {
         payload = JSON.parse(captured);
-      } catch {
+      } catch (e) {
+        console.debug('[Supabase] Non-JSON OAuth payload captured, treating as raw code:', e);
         payload = { code: captured };
       }
 
       if (payload.provider_token && typeof window !== 'undefined' && window.localStorage) {
         try {
           window.localStorage.setItem('cntxt_provider_token', payload.provider_token);
-        } catch {}
+        } catch (e) {
+          console.debug('[Supabase] Failed to persist provider token in localStorage:', e);
+        }
       }
 
       let resolvedUser: User | null = null;
@@ -250,7 +275,7 @@ export const signInWithOAuthProvider = async (
       },
     });
     return { error: error ? new Error(error.message) : null };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return { error: err instanceof Error ? err : new Error(String(err)) };
   }
 };
@@ -265,44 +290,10 @@ export const signOutUser = async (): Promise<{ error: Error | null }> => {
   try {
     const { error } = await supabase.auth.signOut();
     return { error: error ? new Error(error.message) : null };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return { error: err instanceof Error ? err : new Error(String(err)) };
   }
 };
-
-interface UserLibraryItemRow {
-  id: string;
-  name: string;
-  type: UserLibraryItem['type'];
-  category: UserLibraryItem['category'];
-  description?: string | null;
-  author?: string | null;
-  source?: UserLibraryItem['source'];
-  target_ais?: string[] | null;
-  fields?: unknown[] | null;
-  template?: string | null;
-  is_favorite?: boolean | null;
-  is_forked?: boolean | null;
-  forked_from?: string | null;
-  collection_id?: string | null;
-  collection_name?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
-
-interface LibraryCollectionRow {
-  id: string;
-  name: string;
-  description?: string | null;
-  category: LibraryCollection['category'];
-  author?: string | null;
-  source?: LibraryCollection['source'];
-  tags?: string[] | null;
-  item_ids?: string[] | null;
-  is_favorite?: boolean | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
 
 /**
  * Sync user profile to Supabase 'profiles' table if it exists
@@ -329,182 +320,3 @@ export const syncUserProfileToDatabase = async (profile: UserProfile): Promise<{
   }
 };
 
-/**
- * Upsert user library items to Supabase
- */
-export const syncUserLibraryItemsToDatabase = async (
-  userId: string, 
-  items: UserLibraryItem[]
-): Promise<{ error: Error | null }> => {
-  const supabase = getSupabase();
-  if (!supabase || !userId || items.length === 0) return { error: null };
-
-  try {
-    const rows = items.map(item => ({
-      id: item.id,
-      user_id: userId,
-      name: item.name,
-      type: item.type,
-      category: item.category,
-      description: item.description || '',
-      author: item.author || 'User',
-      source: item.source || 'user-authored',
-      target_ais: item.targetAIs || [],
-      fields: item.fields || [],
-      template: item.template || '',
-      is_favorite: Boolean(item.isFavorite),
-      is_forked: Boolean(item.isForked),
-      forked_from: item.forkedFrom || null,
-      collection_id: item.collectionId || null,
-      collection_name: item.collectionName || null,
-      created_at: new Date(item.createdAt || Date.now()).toISOString(),
-      updated_at: new Date(item.updatedAt || Date.now()).toISOString(),
-    }));
-
-    const { error } = await supabase
-      .from('user_library_items')
-      .upsert(rows, { onConflict: 'id' });
-
-    if (error) {
-      console.warn('[Supabase] Failed to sync user library items:', error.message);
-      return { error: new Error(error.message) };
-    }
-    return { error: null };
-  } catch (err: unknown) {
-    console.warn('[Supabase] syncUserLibraryItems exception:', err);
-    return { error: err instanceof Error ? err : new Error(String(err)) };
-  }
-};
-
-/**
- * Fetch all user library items from Supabase for the given user
- */
-export const fetchUserLibraryItemsFromDatabase = async (
-  userId: string
-): Promise<{ data: UserLibraryItem[] | null; error: Error | null }> => {
-  const supabase = getSupabase();
-  if (!supabase || !userId) return { data: null, error: null };
-
-  try {
-    const { data, error } = await supabase
-      .from('user_library_items')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.warn('[Supabase] Failed to fetch user library items:', error.message);
-      return { data: null, error: new Error(error.message) };
-    }
-
-    if (!data) return { data: [], error: null };
-
-    const items: UserLibraryItem[] = (data as unknown as UserLibraryItemRow[]).map(row => ({
-      id: row.id,
-      name: row.name,
-      type: row.type,
-      category: row.category,
-      description: row.description || '',
-      author: row.author || 'User',
-      source: row.source || 'user-authored',
-      targetAIs: row.target_ais || [],
-      fields: Array.isArray(row.fields) ? (row.fields as UserLibraryItem['fields']) : [],
-      template: row.template || '',
-      isFavorite: Boolean(row.is_favorite),
-      isForked: Boolean(row.is_forked),
-      forkedFrom: row.forked_from || undefined,
-      collectionId: row.collection_id || undefined,
-      collectionName: row.collection_name || undefined,
-      createdAt: row.created_at ? Date.parse(row.created_at) : Date.now(),
-      updatedAt: row.updated_at ? Date.parse(row.updated_at) : Date.now(),
-    }));
-
-    return { data: items, error: null };
-  } catch (err: unknown) {
-    console.warn('[Supabase] fetchUserLibraryItems exception:', err);
-    return { data: null, error: err instanceof Error ? err : new Error(String(err)) };
-  }
-};
-
-/**
- * Upsert user library collections to Supabase
- */
-export const syncLibraryCollectionsToDatabase = async (
-  userId: string,
-  collections: LibraryCollection[]
-): Promise<{ error: Error | null }> => {
-  const supabase = getSupabase();
-  if (!supabase || !userId || collections.length === 0) return { error: null };
-
-  try {
-    const rows = collections.map(col => ({
-      id: col.id,
-      user_id: userId,
-      name: col.name,
-      description: col.description || '',
-      category: col.category,
-      author: col.author || 'User',
-      source: col.source || 'user-authored',
-      tags: col.tags || [],
-      item_ids: col.itemIds || [],
-      is_favorite: Boolean(col.isFavorite),
-      created_at: new Date(col.createdAt || Date.now()).toISOString(),
-      updated_at: new Date(col.updatedAt || Date.now()).toISOString(),
-    }));
-
-    const { error } = await supabase
-      .from('library_collections')
-      .upsert(rows, { onConflict: 'id' });
-
-    if (error) {
-      console.warn('[Supabase] Failed to sync collections:', error.message);
-      return { error: new Error(error.message) };
-    }
-    return { error: null };
-  } catch (err: unknown) {
-    console.warn('[Supabase] syncLibraryCollections exception:', err);
-    return { error: err instanceof Error ? err : new Error(String(err)) };
-  }
-};
-
-/**
- * Fetch all library collections from Supabase for the given user
- */
-export const fetchLibraryCollectionsFromDatabase = async (
-  userId: string
-): Promise<{ data: LibraryCollection[] | null; error: Error | null }> => {
-  const supabase = getSupabase();
-  if (!supabase || !userId) return { data: null, error: null };
-
-  try {
-    const { data, error } = await supabase
-      .from('library_collections')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.warn('[Supabase] Failed to fetch collections:', error.message);
-      return { data: null, error: new Error(error.message) };
-    }
-
-    if (!data) return { data: [], error: null };
-
-    const collections: LibraryCollection[] = (data as unknown as LibraryCollectionRow[]).map(row => ({
-      id: row.id,
-      name: row.name,
-      description: row.description || '',
-      category: row.category,
-      author: row.author || 'User',
-      source: row.source || 'user-authored',
-      tags: row.tags || [],
-      itemIds: row.item_ids || [],
-      isFavorite: Boolean(row.is_favorite),
-      createdAt: row.created_at ? Date.parse(row.created_at) : Date.now(),
-      updatedAt: row.updated_at ? Date.parse(row.updated_at) : Date.now(),
-    }));
-
-    return { data: collections, error: null };
-  } catch (err: unknown) {
-    console.warn('[Supabase] fetchLibraryCollections exception:', err);
-    return { data: null, error: err instanceof Error ? err : new Error(String(err)) };
-  }
-};

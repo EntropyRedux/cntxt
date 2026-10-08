@@ -6,18 +6,26 @@ pub mod clipboard;
 pub mod auth;
 
 use std::sync::RwLock;
+use std::collections::HashSet;
 
 static SESSION_TOKEN: RwLock<Option<String>> = RwLock::new(None);
+static CLAIMED_WINDOWS: RwLock<Option<HashSet<String>>> = RwLock::new(None);
 
 pub fn init_session_token(token: String) {
     if let Ok(mut lock) = SESSION_TOKEN.write() {
         *lock = Some(token);
+    }
+    if let Ok(mut lock) = CLAIMED_WINDOWS.write() {
+        *lock = Some(HashSet::new());
     }
 }
 
 #[cfg(test)]
 pub fn clear_session_token() {
     if let Ok(mut lock) = SESSION_TOKEN.write() {
+        *lock = None;
+    }
+    if let Ok(mut lock) = CLAIMED_WINDOWS.write() {
         *lock = None;
     }
 }
@@ -55,5 +63,16 @@ pub async fn get_session_token(window: tauri::Window) -> Result<String, String> 
     if !is_authorized_window(&window) {
         return Err("Unauthorized window origin".into());
     }
+
+    let label = window.label().to_string();
+    if let Ok(mut lock) = CLAIMED_WINDOWS.write() {
+        let set = lock.get_or_insert_with(HashSet::new);
+        if set.contains(&label) {
+            return Err("Session token already claimed for this window".into());
+        }
+        set.insert(label);
+    }
+
     current_session_token().ok_or_else(|| "Session token not initialized".into())
 }
+

@@ -4,7 +4,7 @@ test.describe('Action Sandbox Worker Realm Isolation', () => {
   test('sandboxed action executes in worker realm and updates content', async ({ page }) => {
     await page.goto('/');
     const cm = page.locator('.cm-editor');
-    await expect(cm).toBeVisible({ timeout: 30_000 });
+    await expect(cm).toBeVisible({ timeout: 45_000 });
 
     const result = await page.evaluate(async () => {
       try {

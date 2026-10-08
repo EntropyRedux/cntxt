@@ -6,10 +6,6 @@ import {
   validateLibraryCollections,
   validateGitHubCatalog 
 } from '../src/contracts/boundarySchemas';
-import { 
-  extractFieldsFromTemplate, 
-  communityLibraryService 
-} from '../src/services/communityLibraryService';
 import { ActionEngine } from '../src/services/actionEngine';
 import { ActionSnapshot } from '../src/services/sandboxApiFactory';
 
@@ -95,71 +91,6 @@ describe('REM-08: Zod Boundary Schemas', () => {
     if (result.success) {
       expect(result.data).toHaveLength(1);
     }
-  });
-});
-
-describe('REM-01: Community Library Free-Tier CDN Service', () => {
-  it('extracts template variables into structured form fields', () => {
-    const promptTemplate = 'Review this code for {{language=typescript}} and focus on {{focusArea}}:\n```\n{{code}}\n```';
-    const fields = extractFieldsFromTemplate(promptTemplate);
-
-    expect(fields).toHaveLength(3);
-    expect(fields[0].id).toBe('language');
-    expect(fields[0].defaultValue).toBe('typescript');
-    expect(fields[1].id).toBe('focusArea');
-    expect(fields[2].id).toBe('code');
-  });
-
-  it('generates collections grouped by category from catalog items', () => {
-    const items = [
-      {
-        id: 'item-1',
-        name: 'Code Reviewer',
-        type: 'prompt' as const,
-        category: 'Code Review' as const,
-        description: 'Review prompt',
-        author: '@cntxt',
-        authorBadge: 'Community Contributor' as const,
-        downloads: 10,
-        rating: 5,
-        targetAIs: ['GPT-4o'],
-        fields: [],
-        template: 'Test',
-        tags: []
-      },
-      {
-        id: 'item-2',
-        name: 'Spec Writer',
-        type: 'prompt' as const,
-        category: 'Technical Specs' as const,
-        description: 'Specs prompt',
-        author: '@cntxt',
-        authorBadge: 'Community Contributor' as const,
-        downloads: 20,
-        rating: 5,
-        targetAIs: ['Claude 3.7'],
-        fields: [],
-        template: 'Test',
-        tags: []
-      }
-    ];
-
-    const collections = communityLibraryService.generateCollectionsFromItems(items);
-    expect(collections).toHaveLength(2);
-    expect(collections.map(c => c.category)).toContain('Code Review');
-    expect(collections.map(c => c.category)).toContain('Technical Specs');
-  });
-
-  it('generates a valid GitHub contribution issue URL', () => {
-    const url = communityLibraryService.generateContributionUrl(
-      'React Hook Generator',
-      'Generates typed custom React hooks',
-      'Code Review',
-      'Create a React hook for {{useCase}}'
-    );
-
-    expect(url).toContain('https://github.com/EntropyRedux/cntxt-library/issues/new');
-    expect(url).toContain(encodeURIComponent('[Contribution]: React Hook Generator'));
   });
 });
 

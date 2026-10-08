@@ -1,4 +1,4 @@
-import { Language, LanguageDescription, defaultHighlightStyle } from '@codemirror/language';
+import { Language, LanguageDescription } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
 import { html } from '@codemirror/lang-html';
 import { python } from '@codemirror/lang-python';
@@ -6,7 +6,6 @@ import { sql } from '@codemirror/lang-sql';
 import { javascript } from '@codemirror/lang-javascript';
 import { css } from '@codemirror/lang-css';
 import { json } from '@codemirror/lang-json';
-import { highlightTree } from '@lezer/highlight';
 
 // Pre-instantiated synchronous parsers for instant, zero-latency highlighting
 const syncLanguages: Record<string, Language> = {
@@ -78,60 +77,5 @@ export function resolveCodeLanguage(info: string): Language | LanguageDescriptio
   return null;
 }
 
-// Preload utility removed (dynamic on-demand loading used by resolveCodeLanguage)
+// Preload and snippet highlighters removed (on-demand parser resolution used by resolveCodeLanguage)
 
-/**
- * Utility to escape HTML strings safely
- */
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-/**
- * Highlights a standalone code snippet using CodeMirror's Lezer parser and syntax highlighting.
- * Useful for Live Preview and rendering views.
- */
-export function highlightCodeSnippet(code: string, language: string): string {
-  if (!code) return '';
-
-  const clean = (language || '').toLowerCase().trim();
-  const langOrDesc = resolveCodeLanguage(clean);
-
-  let langParser: { parse: (input: string) => ReturnType<Language['parser']['parse']> } | null = null;
-  if (langOrDesc instanceof Language) {
-    langParser = langOrDesc.parser;
-  } else if (langOrDesc && 'support' in langOrDesc && langOrDesc.support) {
-    langParser = langOrDesc.support.language.parser;
-  }
-
-  if (!langParser) {
-    return escapeHtml(code);
-  }
-
-  try {
-    const tree = langParser.parse(code);
-    let pos = 0;
-    let result = '';
-
-    highlightTree(tree, defaultHighlightStyle, (from, to, classes) => {
-      if (from > pos) {
-        result += escapeHtml(code.slice(pos, from));
-      }
-      result += `<span class="${classes}">${escapeHtml(code.slice(from, to))}</span>`;
-      pos = to;
-    });
-
-    if (pos < code.length) {
-      result += escapeHtml(code.slice(pos));
-    }
-
-    return result;
-  } catch {
-    return escapeHtml(code);
-  }
-}

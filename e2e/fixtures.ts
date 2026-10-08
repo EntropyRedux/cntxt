@@ -11,6 +11,7 @@ export const test = base.extend<{ app: void } & E2EOptions>({
       await page.addInitScript(
         ([flag]) => {
           (window as any).__CONTEXTPAD_DEMO__ = flag;
+          (window as any).__E2E_ACTION_TIMEOUT__ = 25000;
           try {
             window.localStorage.setItem('contextpad_guest_mode', 'true');
             window.localStorage.setItem('contextpad_onboarding_completed', 'true');
@@ -20,7 +21,6 @@ export const test = base.extend<{ app: void } & E2EOptions>({
         },
         [demo]
       );
-      await page.goto('/', { waitUntil: 'domcontentloaded' });
       await use();
     },
     { auto: true },

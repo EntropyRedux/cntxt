@@ -949,10 +949,12 @@ export const SettingsPanel: React.FC = () => {
                     for (const key of keys) {
                       await bridge.storage.removeItem(key);
                     }
-                  } catch {
-                    // Ignore storage errors
+                    useNotificationStore.getState().addNotification('Cache Cleared', 'Application cache has been cleared successfully.', 'info');
+                    bridge.window.reload?.();
+                  } catch (err: unknown) {
+                    console.error('[SettingsPanel] Failed to clear application cache:', err);
+                    useNotificationStore.getState().addNotification('Cache Clear Error', 'Failed to remove some cached items from local storage.', 'error');
                   }
-                  bridge.window.reload?.();
                 }
               });
             }}

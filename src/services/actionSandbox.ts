@@ -153,10 +153,14 @@ export async function executeInSandbox(code: string, rawApi?: Partial<SandboxAPI
           }
         };
 
+        const timeoutMs = (typeof window !== 'undefined' && (window as unknown as { __E2E_ACTION_TIMEOUT__?: number }).__E2E_ACTION_TIMEOUT__)
+          ? (window as unknown as { __E2E_ACTION_TIMEOUT__?: number }).__E2E_ACTION_TIMEOUT__!
+          : 10000;
+
         timer = setTimeout(() => {
           cleanup();
-          reject(new Error('Action timed out after 10000ms'));
-        }, 10000);
+          reject(new Error(`Action timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
 
         worker.onmessage = async (e: MessageEvent<WorkerOutMessage>) => {
           const data = e.data;

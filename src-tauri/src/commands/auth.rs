@@ -168,9 +168,9 @@ const SUCCESS_HTML: &str = r#"<!DOCTYPE html>
 </html>"#;
 
 #[tauri::command]
-pub async fn open_oauth_url(window: Window, url: String) -> Result<(), String> {
-    if !super::is_authorized_window(&window) {
-        return Err("Unauthorized window origin".into());
+pub async fn open_oauth_url(window: Window, url: String, session_token: Option<String>) -> Result<(), String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
+        return Err("Unauthorized window origin or token".into());
     }
 
     let trimmed = crate::validate_external_url(&url)?;
@@ -183,9 +183,9 @@ pub async fn open_oauth_url(window: Window, url: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn start_oauth_listener(window: Window) -> Result<String, String> {
-    if !super::is_authorized_window(&window) {
-        return Err("Unauthorized window origin".into());
+pub async fn start_oauth_listener(window: Window, expected_state: String, session_token: Option<String>) -> Result<String, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
+        return Err("Unauthorized window origin or token".into());
     }
 
     // Bind to port 1420 (registered in Supabase redirect URL list)
@@ -229,14 +229,14 @@ pub async fn start_oauth_listener(window: Window) -> Result<String, String> {
 
             // Handle CORS OPTIONS preflight
             if method == "OPTIONS" {
-                let response = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\nConnection: close\r\nContent-Length: 0\r\n\r\n";
+                let response = "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: 0\r\n\r\n";
                 let _ = socket.write_all(response.as_bytes()).await;
                 let _ = socket.flush().await;
                 continue;
             }
 
             // Path 1: GET with query parameters (from EXTRACTOR_HTML navigation or direct OAuth redirect)
-            if method == "GET" && (uri.starts_with("/auth/token?") || uri.starts_with("/auth/callback?") || uri.contains('?')) {
+            if method == "GET" && (uri.starts_with("/auth/token?") || uri.starts_with("/auth/callback?")) {
                 if let Some(query_start) = uri.find('?') {
                     let query = &uri[query_start + 1..];
                     let map = parse_query_params(query);
@@ -253,6 +253,17 @@ pub async fn start_oauth_listener(window: Window) -> Result<String, String> {
                         let _ = socket.write_all(err_html.as_bytes()).await;
                         let _ = socket.flush().await;
                         return Err(format!("OAuth error: {}", err_msg));
+                    }
+
+                    // CSRF State validation
+                    if !expected_state.is_empty() {
+                        let received_state = map.get("state").and_then(|v| v.as_str()).unwrap_or("");
+                        if received_state != expected_state {
+                            let err_html = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body style=\"background:#090d16;color:#f87171;font-family:sans-serif;padding:40px;text-align:center;\"><h2>Authentication Failed</h2><p>Invalid OAuth state parameter (CSRF protection).</p></body></html>";
+                            let _ = socket.write_all(err_html.as_bytes()).await;
+                            let _ = socket.flush().await;
+                            return Err("OAuth state mismatch: potential CSRF attack detected".into());
+                        }
                     }
 
                     if map.contains_key("access_token") || map.contains_key("code") {
@@ -308,7 +319,7 @@ pub async fn start_oauth_listener(window: Window) -> Result<String, String> {
                     }
                 }
 
-                let response = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: 15\r\n\r\n{\"status\":\"ok\"}";
+                let response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: 15\r\n\r\n{\"status\":\"ok\"}";
                 let _ = socket.write_all(response.as_bytes()).await;
                 let _ = socket.flush().await;
                 if captured_payload.is_some() {
@@ -318,13 +329,19 @@ pub async fn start_oauth_listener(window: Window) -> Result<String, String> {
             }
 
             // Path 3: GET /auth/callback without query params (serves EXTRACTOR_HTML to grab hash fragment)
-            let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{}",
-                EXTRACTOR_HTML.len(),
-                EXTRACTOR_HTML
-            );
-            let _ = socket.write_all(response.as_bytes()).await;
-            let _ = socket.flush().await;
+            if method == "GET" && (uri == "/auth/callback" || uri == "/auth/callback/") {
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{}",
+                    EXTRACTOR_HTML.len(),
+                    EXTRACTOR_HTML
+                );
+                let _ = socket.write_all(response.as_bytes()).await;
+                let _ = socket.flush().await;
+            } else {
+                let response = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                let _ = socket.write_all(response.as_bytes()).await;
+                let _ = socket.flush().await;
+            }
         }
 
         captured_payload.ok_or_else(|| "No authorization tokens captured from redirect".to_string())

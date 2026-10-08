@@ -1,5 +1,5 @@
 import { WidgetType, EditorView } from '@codemirror/view';
-import { createElement, copyText } from '../../../adapters';
+import { createElement, copyText, sanitizePreviewHtml } from '../../../adapters';
 import { renderMermaidDiagram } from '../../../services/mermaidRenderer';
 import { getActiveBridge } from '../bridgeState';
 
@@ -86,7 +86,7 @@ export class MermaidBlockWidget extends WidgetType {
         errDiv.appendChild(textDiv);
         canvas.appendChild(errDiv);
       } else {
-        canvas.innerHTML = res.svg;
+        canvas.innerHTML = sanitizePreviewHtml(res.svg);
       }
       view.requestMeasure();
     });

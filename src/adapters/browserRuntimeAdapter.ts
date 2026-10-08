@@ -449,18 +449,21 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     getItem: async (key: string): Promise<string | null> => {
       const item = await browserDB.getItem(key);
       if (item !== null) return item;
-      // In web demo/test environment, seed initial default presets on first empty read
-      if (key === STORAGE_KEYS.ACTIONS) {
-        const { DEFAULT_ACTIONS } = await import('../constants/defaultPresets');
-        const serialized = JSON.stringify(DEFAULT_ACTIONS);
-        await browserDB.setItem(key, serialized);
-        return serialized;
-      }
-      if (key === STORAGE_KEYS.TEMPLATES) {
-        const { DEFAULT_TEMPLATES } = await import('../constants/defaultPresets');
-        const serialized = JSON.stringify(DEFAULT_TEMPLATES);
-        await browserDB.setItem(key, serialized);
-        return serialized;
+      // In web demo/test environment, seed initial default presets on first empty read ONLY when explicitly requested
+      const isDemoEnvironment = typeof window !== 'undefined' && (window as unknown as { __CONTEXTPAD_DEMO__?: boolean }).__CONTEXTPAD_DEMO__ === true;
+      if (isDemoEnvironment) {
+        if (key === STORAGE_KEYS.ACTIONS) {
+          const { DEFAULT_ACTIONS } = await import('../constants/defaultPresets');
+          const serialized = JSON.stringify(DEFAULT_ACTIONS);
+          await browserDB.setItem(key, serialized);
+          return serialized;
+        }
+        if (key === STORAGE_KEYS.TEMPLATES) {
+          const { DEFAULT_TEMPLATES } = await import('../constants/defaultPresets');
+          const serialized = JSON.stringify(DEFAULT_TEMPLATES);
+          await browserDB.setItem(key, serialized);
+          return serialized;
+        }
       }
       return null;
     },

@@ -151,13 +151,16 @@ export const FileExplorer: React.FC = () => {
             } else {
               setFiles([]);
             }
-          } catch {
+          } catch (err: unknown) {
+            console.error('[FileExplorer] Failed to parse stored virtual files:', err);
+            useNotificationStore.getState().addNotification('File Cache Error', 'Could not parse cached virtual files.', 'warning');
             setFiles([]);
           }
         } else {
           setFiles([]);
         }
-      } catch {
+      } catch (err: unknown) {
+        console.error('[FileExplorer] Failed to load files from storage:', err);
         setFiles([]);
       }
     };
