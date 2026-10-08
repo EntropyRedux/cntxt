@@ -50,6 +50,8 @@ export interface Tab {
   selectionStartLine?: number | null;
   selectionEndLine?: number | null;
   isPinned?: boolean;
+  isTruncatedView?: boolean;
+  rawFullContent?: string;
 }
 
 export interface PinnedTab {

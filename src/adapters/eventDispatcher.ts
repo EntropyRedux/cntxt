@@ -120,6 +120,16 @@ export function createUiEventDispatcher(
       const activeTab = tabs.find(t => t.id === activeTabId);
       if (!activeTab) return;
 
+      // Guard: Never allow direct file save from a truncated preview to prevent data loss
+      if (activeTab.isTruncatedView) {
+        useNotificationStore.getState().addNotification(
+          'Direct Save Locked',
+          'Cannot overwrite original file from a truncated preview. Use "Save As" to export these sections or click "Open Full Document" in the banner to edit.',
+          'warning'
+        );
+        return;
+      }
+
       // If document is untitled, delegate to Save As dialog
       if (!activeTab.filePath) {
         await dispatcher.onSaveAs();

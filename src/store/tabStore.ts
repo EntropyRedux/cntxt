@@ -40,6 +40,7 @@ interface TabState {
   resetWelcomeTab: () => Promise<void>;
   openMarkdownGuideTab: () => string;
   openPowerUserGuideTab: () => string;
+  restoreFullContent: (tabId: string) => void;
   initializeTabs: (storage?: IStorageBridge, disableDemoWelcome?: boolean) => Promise<void>;
 }
 
@@ -531,6 +532,20 @@ export const useTabStore = create<TabState>((set, get) => ({
       selectionTo: newOffset,
       cursorLine: newCursorLine,
       cursorCol: newCursorCol
+    });
+  },
+
+  restoreFullContent: (tabId: string) => {
+    const { tabs } = get();
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab || !tab.rawFullContent) return;
+
+    const fullContent = tab.rawFullContent;
+    get().updateTabContent(tabId, fullContent, true);
+    get().updateTabMetadata(tabId, {
+      isTruncatedView: false,
+      rawFullContent: undefined,
+      isDirty: false
     });
   },
 

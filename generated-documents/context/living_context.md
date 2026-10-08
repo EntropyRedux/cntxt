@@ -18,9 +18,9 @@ Active Stage:
   [x] Packaging & Release (v0.5.1 Portable Executable & Signed Installers Built)
 
 Current Feature Group: FG-12: Desktop Browser OAuth Loopback Flow & Personal GitHub Cloud Library
-Status: completed / verified (127.0.0.1:1420 loopback callback server verified with CSRF state binding and zero wildcard CORS, single-use window token claim, system browser OAuth launch, fragment-to-query redirect, personal GitHub cloud sync live across Desktop and Web, portable & installers built, 396/396 unit tests passing)
+Status: completed / verified (127.0.0.1:1420 loopback callback server verified with CSRF state binding and zero wildcard CORS, single-use window token claim, system browser OAuth launch, fragment-to-query redirect, personal GitHub cloud sync live across Desktop and Web, portable & installers built, 399/399 unit tests passing)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
-Unit Tests: written [x] passing [x] (396/396 unit tests passing across 40 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
+Unit Tests: written [x] passing [x] (399/399 unit tests passing across 40 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/plans/large_document_toc_chunking_plan_2026-10-03.md & /generated-documents/plans/android_toc_quick_append_plan_2026-10-03.md
 Notes:
 - Task 1: Cargo Profile & Feature Lockdown (P-05): default = [] (devtools strictly opt-in); production profile with codegen-units = 1, lto = "thin", incremental = false, opt-level = 3, strip = true.
@@ -42,9 +42,10 @@ Notes:
 - Task 17: FG-12 Desktop External Browser OAuth Loopback Flow & Personal GitHub Cloud Library: Implemented external default browser OAuth launch (open::that(url)) with local Rust loopback HTTP server on 127.0.0.1:1420 (src-tauri/src/commands/auth.rs). Bound expected_state for CSRF protection; restricted callback routes to /auth/token? and /auth/callback?; purged wildcard Access-Control-Allow-Origin headers; token-gated all IPC entry points; added provider token persistence across both Desktop and Web to power PersonalGitHubLibraryModal.tsx.
 - Task 18: Full Codebase Re-Audit Remediation (2026-10-07): Resolved all 22 findings (R-01..R-13 and D-01..D-09). Cold Playwright E2E 24/24 green via Vite warmup and test timeout override; strict Web CSP injected in index.html and vercel.json; dynamic widget sinks routed through sanitizePreviewHtml; single-use token claim in mod.rs; new_window token-gated; synthetic preset seeding guarded by window.__CONTEXTPAD_DEMO__ === true; dead code pruned; silent swallows in authStorageAdapter.ts eliminated; unconsumed VITE_DEMO_MODE removed from .env.example.
 - Task 19: v0.5.1 Production Packaging & Authenticode Signing (2026-10-09): Bumped project version to 0.5.1 across package.json, Cargo.toml, and tauri.conf.json. Generated standalone portable executable (dist-portable/CNTXT_0.5.1_portable.exe and CNTXT-portable.exe), NSIS setup installer (dist-installer/CNTXT_0.5.1_x64-setup.exe), and WiX MSI installer (dist-installer/CNTXT_0.5.1_x64_en-US.msi), signed with Authenticode SHA256 and RFC 3161 timestamps via npm run package:sign.
-- Verification Gate Snapshot (2026-10-07): npm run lint (0 errors, 145 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (396/396 unit tests across 40 suites); Playwright E2E (24/24 green on cold server with port killed); npm run build (0 errors, chunks optimized).
+- Task 20: Truncated Large Document Read-Only Safety Interlock (2026-10-09): Implemented zero-risk data loss prevention guard for large document selective loading. Extended Tab contract with isTruncatedView and rawFullContent; locked onSaveFile in eventDispatcher.ts against overwriting files from truncated views; added restoreFullContent to tabStore; rendered interactive warning banner in Editor.tsx with 1-click 'Open Full Document' restore; added comprehensive unit tests (tests/largeDocModal.test.ts 11/11 pass, 399/399 unit tests green).
+- Verification Gate Snapshot (2026-10-09): npm run lint (0 errors, 145 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (24/24 green on cold server with port killed); npm run build (0 errors, chunks optimized).
 Last Audit Reconciliation: 2026-10-07 — Reconciled Full Codebase Re-Audit (All 22 Findings R-01..R-13 and D-01..D-09 Fully Resolved & Verified; All 5 Verification Gates Green).
-Last Git Checkpoint: 2026-10-09 — v0.5.1 Production Release & Packaging
+Last Git Checkpoint: 2026-10-09 — Truncated View Read-Only Safety Guard & Full Document Restore
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v2.0

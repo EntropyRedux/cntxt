@@ -123,4 +123,84 @@ describe('Large Document Truncation & Interception Engine', () => {
       expect(headings[5]).toEqual({ level: 6, text: 'Sub 6', lineNumber: 8 });
     });
   });
+
+  describe('Truncated View Read-Only Safety Guard', () => {
+    it('restores full content and clears isTruncatedView flag via restoreFullContent', () => {
+      const fullContent = '# Full Chapter 1\nFull body text\n# Chapter 2\nMore full text';
+      const tabId = useTabStore.getState().createTab('BigDoc.md', '# [Truncated View] BigDoc.md');
+      
+      useTabStore.getState().updateTabMetadata(tabId, {
+        isTruncatedView: true,
+        rawFullContent: fullContent
+      });
+
+      let tab = useTabStore.getState().tabs.find(t => t.id === tabId);
+      expect(tab?.isTruncatedView).toBe(true);
+      expect(tab?.rawFullContent).toBe(fullContent);
+
+      useTabStore.getState().restoreFullContent(tabId);
+
+      tab = useTabStore.getState().tabs.find(t => t.id === tabId);
+      expect(tab?.isTruncatedView).toBe(false);
+      expect(tab?.rawFullContent).toBeUndefined();
+      expect(tab?.content).toBe(fullContent);
+    });
+
+    it('blocks onSaveFile from overwriting disk when active tab is in truncated view', async () => {
+      let saveFileCalled = false;
+      const mockBridge = {
+        fs: {
+          saveFile: async () => {
+            saveFileCalled = true;
+            return true;
+          },
+          saveFileAs: async () => null,
+          openFile: async () => null
+        }
+      } as any;
+
+      const { createUiEventDispatcher } = await import('../src/adapters/eventDispatcher');
+      const dispatcher = createUiEventDispatcher(mockBridge);
+
+      const tabId = useTabStore.getState().createTab('SafeFile.md', '# Truncated preview text');
+      useTabStore.getState().updateTabMetadata(tabId, {
+        filePath: 'C:/docs/SafeFile.md',
+        isTruncatedView: true,
+        rawFullContent: '# Full file text with 1000 lines'
+      });
+      useTabStore.getState().setActiveTabId(tabId);
+
+      await dispatcher.onSaveFile();
+
+      expect(saveFileCalled).toBe(false);
+    });
+
+    it('permits onSaveFile when document is not in truncated view', async () => {
+      let saveFileCalled = false;
+      const mockBridge = {
+        fs: {
+          saveFile: async () => {
+            saveFileCalled = true;
+            return true;
+          },
+          saveFileAs: async () => null,
+          openFile: async () => null
+        }
+      } as any;
+
+      const { createUiEventDispatcher } = await import('../src/adapters/eventDispatcher');
+      const dispatcher = createUiEventDispatcher(mockBridge);
+
+      const tabId = useTabStore.getState().createTab('SafeFile.md', '# Normal full document');
+      useTabStore.getState().updateTabMetadata(tabId, {
+        filePath: 'C:/docs/SafeFile.md',
+        isTruncatedView: false
+      });
+      useTabStore.getState().setActiveTabId(tabId);
+
+      await dispatcher.onSaveFile();
+
+      expect(saveFileCalled).toBe(true);
+    });
+  });
 });

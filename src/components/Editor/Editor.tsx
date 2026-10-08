@@ -425,9 +425,10 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
   const [showSearch, setShowSearch] = useState(false);
   const [searchMode, setSearchMode] = useState<'find' | 'replace'>('find');
 
-  const { updateTabContent, updateTabMetadata } = useTabStore();
+  const { updateTabContent, updateTabMetadata, tabs, restoreFullContent } = useTabStore();
   const { settings } = useSettingsStore();
 
+  const currentTab = tabs.find(t => t.id === tabId);
   const currentTabIdRef = useRef<string>(tabId);
   const currentLanguageRef = useRef<SupportedLanguage>(language);
 
@@ -697,6 +698,27 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
 
   return (
     <div className="w-full h-full relative overflow-hidden bg-[var(--editor-bg)] flex flex-col min-h-0">
+      {currentTab?.isTruncatedView && (
+        <div className="w-full bg-amber-500/10 border-b border-amber-500/25 px-3 py-1.5 flex items-center justify-between text-xs text-amber-300 z-10 shrink-0 select-none">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-[10px]">Preview Mode</span>
+            <span>Truncated View — direct save is locked to protect the full file on disk.</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {currentTab.rawFullContent && (
+              <button
+                type="button"
+                onClick={() => {
+                  restoreFullContent(tabId);
+                }}
+                className="px-2.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 cursor-pointer font-medium transition-colors"
+              >
+                Open Full Document
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       {/* Main CodeMirror Canvas */}
       <div 
         ref={containerRef} 

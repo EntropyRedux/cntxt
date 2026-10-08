@@ -16,7 +16,7 @@ export const LargeDocModal: React.FC = () => {
     closeLargeDocModal
   } = useLargeDocModalStore();
 
-  const { updateTabContent, tabs } = useTabStore();
+  const { updateTabContent, updateTabMetadata, tabs } = useTabStore();
   const { settings } = useSettingsStore();
   const { addNotification } = useNotificationStore();
 
@@ -64,16 +64,24 @@ export const LargeDocModal: React.FC = () => {
       extractedParts.push(sectionContent.trim());
     });
 
-    const truncatedResult = `# [Truncated View] ${fileTitle}\n> ℹ️ Viewing ${selectedIndices.length} of ${headings.length} sections (Original size: ${fileSizeKb} KB). [Open Full Document]\n\n` + extractedParts.join('\n\n---\n\n');
+    const truncatedResult = `# [Truncated View - Preview Mode] ${fileTitle}\n> ℹ️ PREVIEW MODE: Viewing ${selectedIndices.length} of ${headings.length} sections (${fileSizeKb} KB). Direct file save is locked to protect the full file on disk. Click "Open Full Document" in the editor banner to edit and save.\n\n` + extractedParts.join('\n\n---\n\n');
 
-    updateTabContent(tabId, truncatedResult);
-    addNotification('Truncated View Loaded', `Loaded ${selectedIndices.length} section(s)`, 'success');
+    updateTabContent(tabId, truncatedResult, true);
+    updateTabMetadata(tabId, {
+      isTruncatedView: true,
+      rawFullContent: rawContent
+    });
+    addNotification('Truncated Preview Loaded', `Loaded ${selectedIndices.length} section(s). Direct save is locked.`, 'info');
     closeLargeDocModal();
   };
 
   const handleOpenFullDocument = () => {
     if (tabId) {
-      updateTabContent(tabId, rawContent);
+      updateTabContent(tabId, rawContent, true);
+      updateTabMetadata(tabId, {
+        isTruncatedView: false,
+        rawFullContent: undefined
+      });
       addNotification('Full Document Loaded', `${fileTitle} (${fileSizeKb} KB)`, 'info');
     }
     closeLargeDocModal();
@@ -85,8 +93,13 @@ export const LargeDocModal: React.FC = () => {
       if (activeTab && (!activeTab.content || activeTab.content.trim() === '')) {
         updateTabContent(
           tabId,
-          `# [Truncated View] ${fileTitle}\n> ℹ️ Large document (${fileSizeKb} KB) — select sections or open full document to view`
+          `# [Truncated View - Preview Mode] ${fileTitle}\n> ℹ️ Large document (${fileSizeKb} KB) — direct file save is locked to protect the full file on disk. Open full document to edit.`,
+          true
         );
+        updateTabMetadata(tabId, {
+          isTruncatedView: true,
+          rawFullContent: rawContent
+        });
       }
     }
     closeLargeDocModal();
