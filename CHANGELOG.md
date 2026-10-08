@@ -7,31 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.5.1] — 2026-10-07
+## [0.5.1] — 2026-10-09
 
-### Desktop OAuth Flow & External Browser Authentication (FG-12)
-- **External System Browser OAuth Integration (`src-tauri/src/commands/auth.rs`)**:
-  - Replaced internal webview OAuth handling with native default browser launch via `open::that(url)`, eliminating WebView2 user-agent restrictions and window frame freezing.
-  - Implemented lightweight local Rust TCP loopback server listening on `127.0.0.1:1420` to capture Supabase OAuth redirects.
-  - **Hash Fragment-to-Query Redirection (`EXTRACTOR_HTML`)**: Resolved Chromium TCP segment chunking (where POST headers and bodies split across packets) by serving an immediate client-side script that extracts the URL hash fragment (`#access_token=...&refresh_token=...`) and navigates to `/auth/token?...`, allowing direct query string parsing in Rust.
-  - Added self-closing success page with branded UI (`SUCCESS_HTML`) and automatic window dismissal.
-  - Added cancellation and error fallback handlers for closed tabs or interrupted login attempts.
+### Full Codebase Re-Audit Remediation & Security Hardening
+- **Complete Re-Audit Remediation (22/22 Findings Resolved)**:
+  - Systematically remediated findings R-01..R-13 and D-01..D-09 against all 9 Audit Pillars.
+  - **Dynamic Preview Sinks & Strict Web CSP (R-02, D-03)**: Injected strict `<meta http-equiv="Content-Security-Policy">` into `index.html` and Vercel response headers in `vercel.json`. Routed dynamic preview renderers (`mermaidWidget.ts`, `mathWidget.ts`) through `sanitizePreviewHtml` (`src/adapters/domHelper.ts:284`), completely eliminating un-sanitized DOM sinks.
+  - **Single-Use Window Token Claims & IPC Authorization (R-03, R-05)**: Added `CLAIMED_WINDOWS` tracking in `src-tauri/src/commands/mod.rs` to enforce single-use session token claims per window label. Token-gated `new_window` in `src-tauri/src/lib.rs` and `open_oauth_url` / `start_oauth_listener` in `auth.rs`. Plumbed cached `getSessionToken()` into frontend callers.
+  - **OAuth Loopback Hardening & Wildcard CORS Removal (R-04)**: Bound `expected_state` generated from Supabase OAuth URL in `supabaseClient.ts` to `start_oauth_listener`, verifying CSRF state parameters before accepting callbacks. Tightened route matching and completely excised wildcard `Access-Control-Allow-Origin: *` headers from loopback HTTP responses.
+  - **Cold E2E Sandbox Timing & Server Warmup (R-01, R-12, D-01, D-02, D-09)**: Preserved production 10s sandbox timeout in `src/services/actionSandbox.ts:156` while adding dev server warmup in `vite.config.ts` for critical client and worker bundles. Injected explicit `__E2E_ACTION_TIMEOUT__ = 25000` via `e2e/fixtures.ts` to ensure 100% green cold-start Playwright test suites (24/24 passed).
+  - **Observable Feedback & Error Swallowing Eradication (R-08, R-11)**: Replaced silent `catch` blocks in `src/adapters/authStorageAdapter.ts` with descriptive `console.warn` diagnostic logs and actionable `useNotificationStore` warning toast notifications across all 9 storage access sites. Added toast and logging fallbacks to `FileExplorer.tsx` and `SettingsPanel.tsx`.
+  - **Elimination of Untyped `any` (R-09, D-04)**: Replaced remaining `catch (err: any)` with `catch (err: unknown)` across boundary layers, establishing 0 untyped `any` occurrences across all 145 files.
+  - **Dead Code Pruning & Metric Integrity (R-07, R-10, D-08)**: Pruned unreachable `communityLibraryService.ts` from desktop, pruned 4 dead sync exports from `supabaseClient.ts`, and eliminated synthetic metrics in production code.
 
-### Personal GitHub Cloud Library Integration
-- **Direct GitHub Repository Library Sync (`src/services/personalGitHubLibraryService.ts`, `src/components/Sidebar/PersonalGitHubLibraryModal.tsx`)**:
-  - Added modal and background service allowing users to link a personal GitHub repository (public or private) for storing, syncing, and versioning their prompt library and skills.
-  - Implemented automatic repository initialization (`cntxt-library.json` index), branch selection, and bi-directional item push/pull via Octokit / GitHub REST API.
-  - **Provider Token Retention (`cntxt_provider_token`)**: Persisted GitHub OAuth provider access tokens in `localStorage` across app restarts, enabling continuous repository synchronization without re-authenticating every session.
+### Approved Architectural Tradeoffs
+- **TR-021: Opt-In Preset Demo Mode**: Browser runtime seeds sample actions and templates only when `window.__CONTEXTPAD_DEMO__ === true`, preserving empty initial production state while facilitating automated UI validation and onboarding demos.
+- **TR-022: System Browser OAuth Launch**: System default browser launch via `open::that(url)` without modal confirmation dialog is approved for intentional user auth clicks, hardened via token-gated IPC commands, CSRF state binding, and elimination of wildcard CORS headers.
 
-### Security Hardening & Build Packaging
-- **Secret Quarantine**:
-  - Hardened `.gitignore` to strictly exclude `.env*`, `*secret*`, and local credential references (`6cret.md`).
-- **Portable & Installer Packaging**:
-  - Rebuilt and verified standalone single-file executable `dist-portable/CNTXT-portable.exe` (14.32 MB).
-  - Verified NSIS setup installer (6.61 MB) and WiX MSI installer (7.65 MB).
-- **Verification Gates**:
-  - Contract synchronization verified (100% byte-identical Option B mirror).
-  - 399/399 Vitest unit tests passing across 40 test suites; 0 lint errors across 146 files; clean `cargo check`.
+### Production Release Packaging & Signing
+- **Signed Windows Packages**:
+  - Official Windows NSIS setup (`dist-installer/CNTXT_0.5.1_x64-setup.exe`).
+  - WiX Enterprise MSI installer (`dist-installer/CNTXT_0.5.1_x64_en-US.msi`).
+  - Standalone zero-install executable (`dist-portable/CNTXT_0.5.1_portable.exe` and `CNTXT-portable.exe`).
+  - Digitally signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
+- **Verification Gates (100% Green)**:
+  - `npm run lint`: 0 errors across 145 files clean, 0 platform leaks, 100% contract synchronization.
+  - `cargo test --manifest-path src-tauri/Cargo.toml`: 8/8 security tests passed.
+  - `npm test`: 40/40 test suites, 396/396 unit tests passed.
+  - `playwright test`: 24/24 E2E tests green on cold server.
 
 ## [0.5.0] — 2026-10-03
 

@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.15
-Last Updated: 2026-10-07
-Last Updated By: Prod Agent & Architect (Full Codebase Re-Audit Remediation: R-01..R-13 & D-01..D-09)
+Version: v2.16
+Last Updated: 2026-10-09
+Last Updated By: Prod Agent & Architect (v0.5.1 Production Release Packaging & Re-Audit Remediation)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -41,9 +41,10 @@ Notes:
 - Task 16: Universal Master Iconography Refresh & Tri-Platform Rebuild: Integrated new modern brand mark across all target builds. Generated safe-zone padded 1024x1024 master canvas, multi-resolution favicon.ico, favicon-32x32.png, logo.png, icon.png, desktop icon.ico & icon.icns, Android mipmaps (mdpi..xxxhdpi), and rebuilt Web (cntxt-web), Desktop portable/installers (CNTXT), and Android APK (dist-android/CNTXT-v0.5.0-arm64.apk).
 - Task 17: FG-12 Desktop External Browser OAuth Loopback Flow & Personal GitHub Cloud Library: Implemented external default browser OAuth launch (open::that(url)) with local Rust loopback HTTP server on 127.0.0.1:1420 (src-tauri/src/commands/auth.rs). Bound expected_state for CSRF protection; restricted callback routes to /auth/token? and /auth/callback?; purged wildcard Access-Control-Allow-Origin headers; token-gated all IPC entry points; added provider token persistence across both Desktop and Web to power PersonalGitHubLibraryModal.tsx.
 - Task 18: Full Codebase Re-Audit Remediation (2026-10-07): Resolved all 22 findings (R-01..R-13 and D-01..D-09). Cold Playwright E2E 24/24 green via Vite warmup and test timeout override; strict Web CSP injected in index.html and vercel.json; dynamic widget sinks routed through sanitizePreviewHtml; single-use token claim in mod.rs; new_window token-gated; synthetic preset seeding guarded by window.__CONTEXTPAD_DEMO__ === true; dead code pruned; silent swallows in authStorageAdapter.ts eliminated; unconsumed VITE_DEMO_MODE removed from .env.example.
+- Task 19: v0.5.1 Production Packaging & Authenticode Signing (2026-10-09): Bumped project version to 0.5.1 across package.json, Cargo.toml, and tauri.conf.json. Generated standalone portable executable (dist-portable/CNTXT_0.5.1_portable.exe and CNTXT-portable.exe), NSIS setup installer (dist-installer/CNTXT_0.5.1_x64-setup.exe), and WiX MSI installer (dist-installer/CNTXT_0.5.1_x64_en-US.msi), signed with Authenticode SHA256 and RFC 3161 timestamps via npm run package:sign.
 - Verification Gate Snapshot (2026-10-07): npm run lint (0 errors, 145 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (396/396 unit tests across 40 suites); Playwright E2E (24/24 green on cold server with port killed); npm run build (0 errors, chunks optimized).
 Last Audit Reconciliation: 2026-10-07 — Reconciled Full Codebase Re-Audit (All 22 Findings R-01..R-13 and D-01..D-09 Fully Resolved & Verified; All 5 Verification Gates Green).
-Last Git Checkpoint: 2026-10-07 — Full Codebase Re-Audit Complete Remediation (22/22 Findings Resolved)
+Last Git Checkpoint: 2026-10-09 — v0.5.1 Production Release & Packaging
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v2.0
