@@ -364,6 +364,33 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
           unlistenFn();
         }
       };
+    },
+
+    deleteFile: async (path: string): Promise<boolean> => {
+      try {
+        return await this.invokeTauriVoid('delete_file', { path });
+      } catch (err) {
+        console.error('[TauriRuntimeAdapter] deleteFile error:', err);
+        return false;
+      }
+    },
+
+    getDefaultAppsDir: async (): Promise<string | null> => {
+      try {
+        return await this.invokeTauri<string>('get_default_panel_apps_dir');
+      } catch (err) {
+        console.error('[TauriRuntimeAdapter] getDefaultAppsDir error:', err);
+        return null;
+      }
+    },
+
+    openFileExplorer: async (path: string): Promise<boolean> => {
+      try {
+        return await this.invokeTauriVoid('open_file_explorer', { path });
+      } catch (err) {
+        console.error('[TauriRuntimeAdapter] openFileExplorer error:', err);
+        return false;
+      }
     }
   };
 

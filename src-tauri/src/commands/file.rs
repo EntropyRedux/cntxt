@@ -553,3 +553,17 @@ pub fn get_dir_name(window: Window, path: String, session_token: Option<String>)
     }
 }
 
+#[tauri::command]
+pub async fn get_default_panel_apps_dir(window: Window, session_token: Option<String>) -> Result<String, String> {
+    if !super::is_authorized_request(&window, session_token.as_deref()) {
+        return Err("Unauthorized window origin".into());
+    }
+    use tauri::Manager;
+    let app = window.app_handle();
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("Panel Apps");
+    if !dir.exists() {
+        let _ = fs::create_dir_all(&dir);
+    }
+    Ok(dir.to_string_lossy().to_string())
+}
+

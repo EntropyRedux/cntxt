@@ -10,6 +10,7 @@ interface PanelAppsState {
   activeId: string | null;
   add: (record: PanelAppRecord, storage?: IStorageBridge) => void;
   remove: (id: string, storage?: IStorageBridge) => void;
+  update: (id: string, updates: Partial<PanelAppRecord>, storage?: IStorageBridge) => void;
   open: (id: string | null) => void;
   hydrate: (apps: PanelAppRecord[]) => void;
   initialize: (storage: IStorageBridge) => Promise<void>;
@@ -33,6 +34,14 @@ export const usePanelAppsStore = create<PanelAppsState>((set, get) => ({
       apps: updated,
       activeId: get().activeId === id ? null : get().activeId,
     });
+    if (storage) {
+      safePersist(storage, STORAGE_KEYS.PANEL_APPS_INDEX, JSON.stringify(updated), 'Panel Apps Registry');
+    }
+  },
+
+  update: (id, updates, storage) => {
+    const updated = get().apps.map((a) => (a.id === id ? { ...a, ...updates } : a));
+    set({ apps: updated });
     if (storage) {
       safePersist(storage, STORAGE_KEYS.PANEL_APPS_INDEX, JSON.stringify(updated), 'Panel Apps Registry');
     }

@@ -1,7 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PanelAppRecord } from '../../contracts/data_shapes';
 import { AppIcon } from '../Common/AppIcon';
-import { Layers, Plus } from 'lucide-react';
+import { 
+  Layers, 
+  RotateCw, 
+  RotateCcw, 
+  FileEdit, 
+  FolderOpen, 
+  Trash2, 
+  Play 
+} from 'lucide-react';
+import { useRuntimeBridge } from '../../adapters';
+import { usePanelAppsStore } from '../../features/panelApps/state/panelAppsStore';
+import { useTabStore } from '../../store/tabStore';
+import { useNotificationStore } from '../../store/notificationStore';
 
 export interface AppRailProps {
   apps: PanelAppRecord[];
@@ -20,6 +32,103 @@ export const AppRail: React.FC<AppRailProps> = ({
   onOpenBuilder,
   orientation = 'vertical',
 }) => {
+  const bridge = useRuntimeBridge();
+  const { remove } = usePanelAppsStore();
+  const { createTab } = useTabStore();
+  const { addNotification } = useNotificationStore();
+
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    app: PanelAppRecord;
+  } | null>(null);
+
+  useEffect(() => {
+    const handleClose = () => setContextMenu(null);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setContextMenu(null);
+    };
+    if (contextMenu) {
+      window.addEventListener('click', handleClose);
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('click', handleClose);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [contextMenu]);
+
+  const handleContextMenu = (e: React.MouseEvent, app: PanelAppRecord) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      x: Math.min(e.clientX, window.innerWidth - 220),
+      y: Math.min(e.clientY, window.innerHeight - 280),
+      app,
+    });
+  };
+
+  const handleClearAppData = async (app: PanelAppRecord) => {
+    if (window.confirm(`Reset all stored data for "${app.name}"? This clears its stored data state.`)) {
+      const key = `cntxt_app_data_${app.id}`;
+      await bridge.storage.removeItem(key);
+      addNotification('Data Reset', `Local storage for "${app.name}" was reset.`, 'info');
+    }
+    setContextMenu(null);
+  };
+
+  const handleOpenInEditor = async (app: PanelAppRecord) => {
+    try {
+      const content = await bridge.fs.readFile?.(app.path);
+      if (content !== null && content !== undefined) {
+        createTab(app.name, content, 'markdown', app.path);
+        addNotification('Opened in Editor', `Now editing ${app.name}`, 'info');
+      } else {
+        throw new Error('File content could not be read');
+      }
+    } catch (e) {
+      addNotification('Open Failed', (e as Error).message, 'error');
+    }
+    setContextMenu(null);
+  };
+
+  const handleRevealInExplorer = async (app: PanelAppRecord) => {
+    try {
+      if (bridge.fs.openFileExplorer) {
+        await bridge.fs.openFileExplorer(app.path);
+      } else {
+        addNotification('File Location', app.path, 'info');
+      }
+    } catch (e) {
+      addNotification('Explorer Error', (e as Error).message, 'error');
+    }
+    setContextMenu(null);
+  };
+
+  const handleRemoveApp = (app: PanelAppRecord) => {
+    if (window.confirm(`Remove "${app.name}" from your panel apps rail? (The .cntxt file on disk will NOT be deleted)`)) {
+      remove(app.id, bridge.storage);
+      addNotification('App Removed', `"${app.name}" removed from rail`, 'info');
+    }
+    setContextMenu(null);
+  };
+
+  const handleDeleteAppAndFile = async (app: PanelAppRecord) => {
+    if (window.confirm(`Permanently delete "${app.name}" and remove its .cntxt file from disk? This cannot be undone.`)) {
+      try {
+        if (bridge.fs.deleteFile) {
+          await bridge.fs.deleteFile(app.path);
+        }
+      } catch (err) {
+        console.warn('[AppRail] Failed to delete file on disk:', err);
+      }
+      await bridge.storage.removeItem(`cntxt_app_data_${app.id}`);
+      remove(app.id, bridge.storage);
+      addNotification('App Deleted', `Deleted "${app.name}" and removed file`, 'info');
+    }
+    setContextMenu(null);
+  };
+
   if (orientation === 'horizontal') {
     return (
       <div className="flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0 px-1">
@@ -47,7 +156,8 @@ export const AppRail: React.FC<AppRailProps> = ({
               key={app.id}
               type="button"
               onClick={() => onOpenApp(app.id)}
-              title={`${app.name} (Panel App)`}
+              onContextMenu={(e) => handleContextMenu(e, app)}
+              title={`${app.name} (Right-click for options)`}
               aria-label={app.name}
               className={`h-9 px-2 rounded-lg flex items-center gap-1.5 transition-all shrink-0 cursor-pointer text-xs ${
                 isActive
@@ -60,6 +170,78 @@ export const AppRail: React.FC<AppRailProps> = ({
             </button>
           );
         })}
+
+        {/* Context Menu Modal */}
+        {contextMenu && (
+          <div
+            style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+            className="theme-dropdown fixed z-50 min-w-[200px] rounded-xl shadow-2xl p-1 text-xs select-none animate-in fade-in zoom-in-95 border border-[var(--border-primary)] bg-[var(--card-secondary-bg)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-2.5 py-1.5 font-semibold text-[11px] text-[var(--text-muted)] border-b border-[var(--border-subtle)] truncate">
+              {contextMenu.app.name}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                onOpenApp(contextMenu.app.id);
+                setContextMenu(null);
+              }}
+              className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)] transition-colors cursor-pointer"
+            >
+              <Play className="w-3.5 h-3.5" />
+              <span>Open in Panel</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleClearAppData(contextMenu.app)}
+              className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)] transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+              <span>Reset Stored Data</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOpenInEditor(contextMenu.app)}
+              className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)] transition-colors cursor-pointer"
+            >
+              <FileEdit className="w-3.5 h-3.5" />
+              <span>Edit .cntxt in Editor</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleRevealInExplorer(contextMenu.app)}
+              className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)] transition-colors cursor-pointer"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              <span>Reveal in File Explorer</span>
+            </button>
+
+            <div className="my-1 border-t border-[var(--border-subtle)]" />
+
+            <button
+              type="button"
+              onClick={() => handleRemoveApp(contextMenu.app)}
+              className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-red-500 hover:text-white flex items-center gap-2 text-red-400 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Remove from Rail</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDeleteAppAndFile(contextMenu.app)}
+              className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-red-600 hover:text-white flex items-center gap-2 text-red-500 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete App & File</span>
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -98,7 +280,8 @@ export const AppRail: React.FC<AppRailProps> = ({
             key={app.id}
             type="button"
             onClick={() => onOpenApp(app.id)}
-            title={`${app.name} (Panel App)`}
+            onContextMenu={(e) => handleContextMenu(e, app)}
+            title={`${app.name} (Right-click for options)`}
             aria-label={app.name}
             className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all relative cursor-pointer ${
               isActive
@@ -113,6 +296,79 @@ export const AppRail: React.FC<AppRailProps> = ({
           </button>
         );
       })}
+
+      {/* Context Menu Modal */}
+      {contextMenu && (
+        <div
+          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+          className="theme-dropdown fixed z-50 min-w-[200px] rounded-xl shadow-2xl p-1 text-xs select-none animate-in fade-in zoom-in-95 border border-[var(--border-primary)] bg-[var(--card-secondary-bg)]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-2.5 py-1.5 font-semibold text-[11px] text-[var(--text-muted)] border-b border-[var(--border-subtle)] truncate">
+            {contextMenu.app.name}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              onOpenApp(contextMenu.app.id);
+              setContextMenu(null);
+            }}
+            className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)] transition-colors cursor-pointer"
+          >
+            <Play className="w-3.5 h-3.5" />
+            <span>Open in Panel</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleClearAppData(contextMenu.app)}
+            className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)] transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+            <span>Reset Stored Data</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOpenInEditor(contextMenu.app)}
+            className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)] transition-colors cursor-pointer"
+          >
+            <FileEdit className="w-3.5 h-3.5" />
+            <span>Edit .cntxt in Editor</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleRevealInExplorer(contextMenu.app)}
+            className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)] transition-colors cursor-pointer"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+            <span>Reveal in File Explorer</span>
+          </button>
+
+          <div className="my-1 border-t border-[var(--border-subtle)]" />
+
+          <button
+            type="button"
+            onClick={() => handleRemoveApp(contextMenu.app)}
+            className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-red-500 hover:text-white flex items-center gap-2 text-red-400 transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Remove from Rail</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleDeleteAppAndFile(contextMenu.app)}
+            className="w-full px-2.5 py-1.5 rounded-md text-left hover:bg-red-600 hover:text-white flex items-center gap-2 text-red-500 transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Delete App & File</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
+

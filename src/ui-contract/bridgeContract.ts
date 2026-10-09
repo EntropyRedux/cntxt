@@ -42,6 +42,9 @@ export interface IFileSystemBridge {
   importWorkspace: (jsonData: string) => Promise<boolean>;
   getPendingFiles?: () => Promise<string[]>;
   onOpenFileRequested?: (callback: (filePaths: string[]) => void) => () => void;
+  deleteFile?: (path: string) => Promise<boolean>;
+  getDefaultAppsDir?: () => Promise<string | null>;
+  openFileExplorer?: (path: string) => Promise<boolean>;
 }
 
 /**

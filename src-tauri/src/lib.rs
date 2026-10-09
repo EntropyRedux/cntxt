@@ -207,6 +207,7 @@ pub fn run() {
             commands::file::delete_file,
             commands::file::open_file_explorer,
             commands::file::get_dir_name,
+            commands::file::get_default_panel_apps_dir,
             commands::secrets::store_api_key,
             commands::secrets::get_api_key,
             commands::secrets::delete_api_key,

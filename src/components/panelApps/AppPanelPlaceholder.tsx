@@ -11,13 +11,15 @@ import { NetworkBadge } from './NetworkBadge';
 import { 
   X, 
   RotateCw, 
+  RotateCcw,
   FileEdit, 
   Trash2, 
   ShieldCheck, 
   Info,
   Loader2,
   Sliders,
-  ExternalLink
+  ExternalLink,
+  FolderOpen
 } from 'lucide-react';
 
 export interface AppPanelPlaceholderProps {
@@ -98,7 +100,60 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
     setError(null);
 
     try {
-      const content = await bridge.fs.readFile?.(activeApp.path);
+      let resolvedPath = activeApp.path;
+      let content: string | null | undefined = null;
+      try {
+        content = await bridge.fs.readFile?.(resolvedPath);
+      } catch {
+        content = null;
+      }
+
+      // If direct read failed, search candidate paths to heal relative or moved files
+      if (content === null || content === undefined) {
+        const normPath = resolvedPath.replace(/\\/g, '/');
+        const fileName = normPath.split('/').pop() || '';
+        const candidates: string[] = [];
+
+        // 1. Current workspace path
+        const currentWorkspace = await bridge.storage.getItem('contextpad_workspace_path');
+        if (currentWorkspace) {
+          const wsClean = currentWorkspace.replace(/[/\\]+$/, '');
+          candidates.push(`${wsClean}/${normPath}`);
+          candidates.push(`${wsClean}/Panel Apps/${fileName}`);
+          candidates.push(`${wsClean}/${fileName}`);
+        }
+
+        // 2. Default app data directory
+        if (bridge.fs.getDefaultAppsDir) {
+          const defaultDir = await bridge.fs.getDefaultAppsDir();
+          if (defaultDir) {
+            const defClean = defaultDir.replace(/[/\\]+$/, '');
+            candidates.push(`${defClean}/${fileName}`);
+            candidates.push(`${defClean}/${normPath}`);
+          }
+        }
+
+        // 3. Dev / working directory fallback
+        candidates.push(`src-tauri/Panel Apps/${fileName}`);
+        candidates.push(`Panel Apps/${fileName}`);
+        candidates.push(fileName);
+
+        for (const candidate of candidates) {
+          try {
+            const candidateContent = await bridge.fs.readFile?.(candidate);
+            if (candidateContent !== null && candidateContent !== undefined) {
+              content = candidateContent;
+              resolvedPath = candidate;
+              // Permanently heal the stored path in the registry!
+              usePanelAppsStore.getState().update(activeApp.id, { path: candidate }, bridge.storage);
+              break;
+            }
+          } catch {
+            // try next candidate
+          }
+        }
+      }
+
       if (content === null || content === undefined) {
         throw new Error(`Could not read .cntxt document at: ${activeApp.path}`);
       }
@@ -213,6 +268,8 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
       if (content !== null && content !== undefined) {
         createTab(activeApp.name, content, 'markdown', activeApp.path);
         addNotification('Opened in Editor', `Now editing ${activeApp.name}`, 'info');
+      } else {
+        throw new Error('File content could not be read');
       }
     } catch (e) {
       addNotification('Open Failed', (e as Error).message, 'error');
@@ -222,6 +279,64 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
   const handleReload = () => {
     setReloadKey((k) => k + 1);
     loadAppDoc();
+    addNotification('App Reloaded', `Reloading ${activeApp.name}`, 'info');
+  };
+
+  const handleClearAppData = async () => {
+    if (!activeApp) return;
+    if (window.confirm(`Reset all stored data for "${activeApp.name}"? This clears its stored data state and reloads the app with fresh defaults.`)) {
+      const key = `cntxt_app_data_${activeApp.id}`;
+      await bridge.storage.removeItem(key);
+      setStorageData({});
+      setReloadKey((k) => k + 1);
+      addNotification('Data Reset', `Local storage data for "${activeApp.name}" was cleared.`, 'info');
+    }
+  };
+
+  const handleRevealInExplorer = async () => {
+    if (!activeApp) return;
+    try {
+      if (bridge.fs.openFileExplorer) {
+        await bridge.fs.openFileExplorer(activeApp.path);
+      } else {
+        addNotification('File Location', activeApp.path, 'info');
+      }
+    } catch (e) {
+      addNotification('Explorer Error', (e as Error).message, 'error');
+    }
+  };
+
+  const handleRelinkFile = async () => {
+    if (!activeApp) return;
+    try {
+      const file = await bridge.fs.openFile();
+      if (!file) return;
+
+      const parsed = parseCntxtApp(file.content);
+      if (!parsed.ok) {
+        const errMsg = 'error' in parsed ? parsed.error : 'Invalid format';
+        addNotification('Invalid File', `Selected file is not a valid .cntxt document: ${errMsg}`, 'error');
+        return;
+      }
+
+      usePanelAppsStore.getState().update(
+        activeApp.id,
+        {
+          path: file.path,
+          name: parsed.manifest.name,
+          icon: parsed.manifest.icon,
+          network: parsed.manifest.network,
+          panelWidth: parsed.manifest.panelWidth,
+        },
+        bridge.storage
+      );
+
+      addNotification('App Re-linked', `Now linked to: ${file.name}`, 'success');
+      setReloadKey((k) => k + 1);
+      loadAppDoc();
+    } catch (e) {
+      addNotification('Relink Failed', (e as Error).message, 'error');
+    }
   };
 
   const handleRemove = () => {
@@ -229,6 +344,23 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
       remove(activeApp.id, bridge.storage);
       if (onClose) onClose();
       addNotification('Panel App Removed', `"${activeApp.name}" removed from rail`, 'info');
+    }
+  };
+
+  const handleDeleteAppAndFile = async () => {
+    if (!activeApp) return;
+    if (window.confirm(`Permanently delete "${activeApp.name}" and remove its .cntxt file from disk? This cannot be undone.`)) {
+      try {
+        if (bridge.fs.deleteFile) {
+          await bridge.fs.deleteFile(activeApp.path);
+        }
+      } catch (err) {
+        console.warn('[AppPanelPlaceholder] Failed to delete file on disk:', err);
+      }
+      await bridge.storage.removeItem(`cntxt_app_data_${activeApp.id}`);
+      remove(activeApp.id, bridge.storage);
+      if (onClose) onClose();
+      addNotification('Panel App Deleted', `Deleted "${activeApp.name}" and file removed`, 'info');
     }
   };
 
@@ -258,6 +390,50 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
             <RotateCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
+          {/* Reset App State (Clear Data) */}
+          <button
+            type="button"
+            onClick={handleClearAppData}
+            title="Reset App State (Clear Stored Data)"
+            aria-label="Reset App State"
+            className="p-1 rounded-md text-[var(--text-muted)] hover:text-amber-400 hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Reveal File in Explorer */}
+          <button
+            type="button"
+            onClick={handleRevealInExplorer}
+            title="Reveal .cntxt File in File Explorer"
+            aria-label="Reveal in Explorer"
+            className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Edit .cntxt File */}
+          <button
+            type="button"
+            onClick={handleOpenInEditor}
+            title="Edit .cntxt Source in Editor"
+            aria-label="Edit Source"
+            className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer"
+          >
+            <FileEdit className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Remove from Rail */}
+          <button
+            type="button"
+            onClick={handleRemove}
+            title="Remove App from Rail"
+            aria-label="Remove from Rail"
+            className="p-1 rounded-md text-[var(--text-muted)] hover:text-red-400 hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+
           {/* Toggle Info / App View */}
           <button
             type="button"
@@ -271,17 +447,6 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
             }`}
           >
             <Info className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Edit .cntxt File */}
-          <button
-            type="button"
-            onClick={handleOpenInEditor}
-            title="Edit .cntxt Source in Editor"
-            aria-label="Edit Source"
-            className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer"
-          >
-            <FileEdit className="w-3.5 h-3.5" />
           </button>
 
           {/* Close Panel Button */}
@@ -305,19 +470,40 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
             <span>Loading {activeApp.name}...</span>
           </div>
         ) : error ? (
-          <div className="p-4 m-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 space-y-2 text-xs">
+          <div className="p-4 m-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 space-y-3 text-xs select-text">
             <div className="font-semibold flex items-center gap-1.5">
               <Info className="w-4 h-4 text-red-400 shrink-0" />
               <span>Failed to load panel app file</span>
             </div>
-            <p className="text-[11px] leading-relaxed font-mono">{error}</p>
-            <button
-              type="button"
-              onClick={handleReload}
-              className="px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-200 text-[11px] font-medium transition-colors cursor-pointer"
-            >
-              Retry
-            </button>
+            <p className="text-[11px] leading-relaxed font-mono break-all">{error}</p>
+            <div className="p-2 rounded bg-black/20 text-[10px] text-[var(--text-muted)] font-mono break-all">
+              Path: {activeApp.path}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleReload}
+                className="px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-200 text-[11px] font-medium transition-colors cursor-pointer"
+              >
+                Retry
+              </button>
+              <button
+                type="button"
+                onClick={handleRelinkFile}
+                className="px-2.5 py-1 rounded bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] text-[var(--text-primary)] border border-[var(--border-primary)] text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <FolderOpen className="w-3 h-3" />
+                <span>Locate .cntxt File...</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleRemove}
+                className="px-2.5 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Remove from Rail</span>
+              </button>
+            </div>
           </div>
         ) : showInfo ? (
           /* Info & Diagnostics Inspector */
@@ -372,8 +558,26 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
               </div>
             </div>
 
-            {/* Remove Action */}
-            <div className="pt-2">
+            {/* Actions Section */}
+            <div className="pt-2 space-y-2">
+              <button
+                type="button"
+                onClick={handleClearAppData}
+                className="w-full h-8 px-3 rounded-lg border border-amber-500/20 text-amber-400 hover:bg-amber-500/10 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset App State (Clear Local Storage)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRevealInExplorer}
+                className="w-full h-8 px-3 rounded-lg border border-[var(--border-primary)] text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                <span>Reveal in File Explorer</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleRemove}
@@ -381,6 +585,15 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Remove App from Rail</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDeleteAppAndFile}
+                className="w-full h-8 px-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 hover:bg-red-500/20 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                <span>Permanently Delete App File</span>
               </button>
             </div>
           </div>

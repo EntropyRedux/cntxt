@@ -72,10 +72,23 @@ export async function createPanelApp(
 
   // 4) Compute destination file path
   const safeBase = sanitizeFileName(manifest.name);
-  const relativeSubpath = `Panel Apps/${safeBase}-${appId.slice(0, 6)}.cntxt`;
-  const targetPath = workspacePath
-    ? `${workspacePath.replace(/[/\\]+$/, '')}/${relativeSubpath}`
-    : relativeSubpath;
+  const fileName = `${safeBase}-${appId.slice(0, 6)}.cntxt`;
+  const relativeSubpath = `Panel Apps/${fileName}`;
+
+  let baseDir = workspacePath || (await bridge.storage.getItem('contextpad_workspace_path'));
+  if (!baseDir && bridge.fs.getDefaultAppsDir) {
+    baseDir = await bridge.fs.getDefaultAppsDir();
+  }
+
+  let targetPath = '';
+  if (baseDir) {
+    const cleanBase = baseDir.replace(/[/\\]+$/, '');
+    targetPath = cleanBase.endsWith('Panel Apps')
+      ? `${cleanBase}/${fileName}`
+      : `${cleanBase}/Panel Apps/${fileName}`;
+  } else {
+    targetPath = relativeSubpath;
+  }
 
   // 5) Write file through filesystem bridge
   let saved = await bridge.fs.saveFile(targetPath, cntxtContent);
