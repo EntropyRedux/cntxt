@@ -139,6 +139,11 @@ pub async fn write_file(window: Window, path: String, content: String, session_t
         return Err("Unauthorized window origin".into());
     }
     let safe_path = validate_path(&path)?;
+    if let Some(parent) = safe_path.parent() {
+        if !parent.as_os_str().is_empty() && !parent.exists() {
+            fs::create_dir_all(parent).map_err(|e| format!("Failed to create parent directory: {}", e))?;
+        }
+    }
     fs::write(&safe_path, content)
         .map_err(|e| format!("Failed to write file: {}", e))
 }

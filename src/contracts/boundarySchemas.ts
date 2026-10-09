@@ -13,7 +13,9 @@ import {
   ItemSource, 
   UserLibraryItem, 
   CommunityLibraryItem, 
-  LibraryCollection 
+  LibraryCollection,
+  PanelAppManifest,
+  PanelAppRecord 
 } from '../../contracts/data_shapes';
 
 export const SupportedLanguageSchema: z.ZodType<SupportedLanguage> = z.enum([
@@ -262,5 +264,38 @@ export function validateLibraryCollections(data: unknown) {
 
 export function validateGitHubCatalog(data: unknown) {
   return GitHubCatalogSchema.safeParse(data);
+}
+
+// ==========================================
+// Panel Apps Boundary Schemas
+// ==========================================
+
+export const PanelAppManifestSchema: z.ZodType<PanelAppManifest> = z.object({
+  schemaVersion: z.literal(1),
+  id: z.string().regex(/^[a-z][a-z0-9]{11,31}$/),
+  name: z.string().trim().min(1).max(40),
+  icon: z.string().min(1).max(64),
+  description: z.string().max(200).default(''),
+  runtime: z.literal('html'),
+  network: z.enum(['offline', 'cdn']).default('offline'),
+  panelWidth: z.number().int().min(280).max(1200).default(480),
+  createdFrom: z.enum(['file', 'tab', 'prompt']),
+});
+
+export const PanelAppRecordSchema: z.ZodType<PanelAppRecord> = z.object({
+  id: z.string().regex(/^[a-z][a-z0-9]{11,31}$/),
+  path: z.string().min(1),
+  name: z.string().min(1),
+  icon: z.string().min(1),
+  network: z.enum(['offline', 'cdn']).optional(),
+  panelWidth: z.number().optional(),
+});
+
+export function validatePanelAppManifest(data: unknown) {
+  return PanelAppManifestSchema.safeParse(data);
+}
+
+export function validatePanelAppRecords(data: unknown) {
+  return z.array(PanelAppRecordSchema).safeParse(data);
 }
 

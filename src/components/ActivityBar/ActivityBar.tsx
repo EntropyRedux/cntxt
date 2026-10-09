@@ -14,6 +14,9 @@ import { ViewSettings } from '../../types';
 import { AuthPopover } from '../Auth/AuthPopover';
 import { AuthBottomSheet } from '../Auth/AuthBottomSheet';
 import { PersonalGitHubLibraryModal } from '../Sidebar/PersonalGitHubLibraryModal';
+import { usePanelAppsStore } from '../../features/panelApps/state/panelAppsStore';
+import { useBuilderStore } from '../../features/panelApps/state/builderStore';
+import { AppRail } from '../panelApps/AppRail';
 
 export interface ActivityBarProps {
   orientation?: 'vertical' | 'bottom';
@@ -43,6 +46,19 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertica
     } else {
       setActiveSidebarTab(tabId);
     }
+  };
+
+  const { apps, activeId, open: openPanelApp } = usePanelAppsStore();
+  const { start: startAppBuilder } = useBuilderStore();
+
+  const handleOpenBuilder = () => {
+    setActiveSidebarTab('app-builder');
+    startAppBuilder();
+  };
+
+  const handleOpenApp = (id: string) => {
+    openPanelApp(id);
+    setActiveSidebarTab('panel-app');
   };
 
   if (orientation === 'bottom') {
@@ -78,6 +94,16 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertica
                 </button>
               );
             })}
+
+            {/* Panel Apps Dynamic Rail (Touch) */}
+            <AppRail
+              apps={apps}
+              activeId={settings.activeSidebarTab === 'panel-app' ? activeId : null}
+              isBuilderActive={settings.showSidebar && settings.activeSidebarTab === 'app-builder'}
+              onOpenApp={handleOpenApp}
+              onOpenBuilder={handleOpenBuilder}
+              orientation="horizontal"
+            />
 
             {/* Separator */}
             <div className="h-5 w-px bg-[var(--border-subtle)] mx-0.5 sm:mx-1 shrink-0" />
@@ -189,6 +215,16 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertica
               </button>
             );
           })}
+
+          {/* Panel Apps Dynamic Rail (Desktop) */}
+          <AppRail
+            apps={apps}
+            activeId={settings.activeSidebarTab === 'panel-app' ? activeId : null}
+            isBuilderActive={settings.showSidebar && settings.activeSidebarTab === 'app-builder'}
+            onOpenApp={handleOpenApp}
+            onOpenBuilder={handleOpenBuilder}
+            orientation="vertical"
+          />
         </div>
 
         {/* Bottom Utility Actions */}

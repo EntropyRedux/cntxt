@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.2] — 2026-10-09
+
+### Panel Apps: App Builder & Host Shell Integration (Flow A)
+- **Domain Contracts & Canonical Data Shapes (`contracts/data_shapes.ts`, `src/contracts/boundarySchemas.ts`)**:
+  - Added `PanelAppManifest`, `PanelAppRecord`, `PanelAppNetworkMode`, and `PanelAppCreatedFrom` types.
+  - Added strict runtime Zod validation schemas (`PanelAppManifestSchema`, `PanelAppRecordSchema`) with validators (`validatePanelAppManifest`, `validatePanelAppRecords`).
+  - Extended `ViewSettings.activeSidebarTab` union with `'app-builder'` and `'panel-app'`.
+  - Maintained 100% synchronization with living context contract.
+- **Dynamic Code Fence Selection & .cntxt App Serialization (`src/features/panelApps/format/`)**:
+  - Implemented dynamic-length fence calculator (`pickFence`) preventing collision with backtick runs in embedded HTML scripts.
+  - Implemented round-trip verified serializer (`buildCntxtApp`) and parser (`parseCntxtApp`) extracting the first fenced HTML block from `.cntxt` frontmatter markdown files.
+- **Static Preflight Scanner & Network Isolation (`src/features/panelApps/preflight/`)**:
+  - Built preflight analyzer (`scanHtml`) detecting external script tags, stylesheets, remote fonts, `@import`, and `fetch()` URLs.
+  - Displays dynamic **🟢 Offline-ready** or **🟡 Needs network** badge with detailed size contributor diagnostics.
+  - Enforces 512 KB soft limit (warning) and 2.0 MB hard limit (creation blocking).
+  - Detects unsafe `window.parent` / `top` accesses.
+- **HTML Source Resolver (`src/features/panelApps/source/resolveHtml.ts`)**:
+  - Automatically resolves raw HTML documents and extracts fenced HTML code blocks from open markdown tabs or disk files.
+- **Zustand Registry & Builder Stores (`src/features/panelApps/state/`)**:
+  - Built persistent `panelAppsStore` maintaining registry index, active app ID, and storage hydration.
+  - Built `builderStore` state machine managing wizard steps (Source → Details → Review), drafts, and preloads.
+- **Side-Effect Service & Native File System Bridge (`src/features/panelApps/services/createPanelApp.ts`, `src-tauri/src/commands/file.rs`)**:
+  - Enhanced Rust `write_file` command with recursive parent directory creation (`fs::create_dir_all`).
+  - Generated origin-safe alphanumeric app IDs (`a` + 16 hex chars).
+  - Preflight guard re-verification and safety round-trip parse check before writing to disk.
+- **Pure UI Presenter Suite (`src/components/panelApps/`)**:
+  - `AppBuilderPanel.tsx`: 3-step wizard with step indicators, validation guards, and navigation controls.
+  - `SourceStep.tsx`: Tab picker filtering for HTML documents + native file picker.
+  - `DetailsStep.tsx`: App metadata editor, integrated Lucide `IconPicker`, network mode toggle (`offline` vs `cdn`), and panel width slider.
+  - `ReviewStep.tsx`: Preflight inspection summary, size bar, and creation trigger.
+  - `PreflightReport.tsx`: Detailed contributor breakdown and findings list.
+  - `NetworkBadge.tsx`: Visual network status indicator.
+  - `AppRail.tsx`: Dynamic left rail with App Builder launcher button and scrollable app icon stack.
+  - `AppPanelPlaceholder.tsx`: Right panel drawer showing app metadata, isolated origin notice, reload button, and direct "Edit .cntxt File" editor integration.
+- **Shell & Navigation Integration (`ActivityBar.tsx`, `Sidebar.tsx`, `TabBar.tsx`, `ShellFrame.tsx`)**:
+  - ActivityBar now renders the dynamic AppRail in both desktop vertical and mobile bottom modes.
+  - Tab context menu now offers "Set as panel app" on documents containing HTML, preloading the builder directly.
+  - Sidebar seamlessly hosts both the App Builder and active Panel Apps with dynamic panel width matching the app's manifest.
+  - ShellFrame hydrates the panel apps registry on initial startup.
+- **Comprehensive Unit Test Suite (`tests/panelApps.test.ts`)**:
+  - Added 17 unit tests verifying dynamic fence selection, .cntxt round trips, preflight scanning, source extraction, and registry state management (417/417 tests passing across 41 test files).
+
 ## [0.5.1] — 2026-10-09
 
 ### Syntax Color Highlighting Granularity & Code Block Overhaul

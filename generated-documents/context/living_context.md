@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.17
+Version: v2.18
 Last Updated: 2026-10-09
-Last Updated By: Prod Agent (Syntax Highlighting Granularity Switcher & Code Block Overhaul; Tri-Platform Parity)
+Last Updated By: Prod Agent (Panel Apps App Builder & Shell Integration — Flow A Complete)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -11,23 +11,26 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-12 Complete & Verified; Tri-Platform Suite Live)
+  [x] Feature Implementation (FG-01..FG-13 Flow A Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 400/400 Live across 40 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
+    [x] Testing (Vitest 417/417 Live across 41 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.1 Portable Executable, Signed Installers & Android APK Built)
+  [x] Packaging & Release (v0.5.2 Portable Executable & Native Installers Built)
 
-Current Feature Group: Syntax Color Highlighting Granularity & Code Block Overhaul
-Status: completed / verified (AI Studio 4-button switcher grid live in SettingsPanel, immediate CodeMirror reactivity verified, hierarchical heading palettes active, codeblock top whitespace reduced, Android APK and Desktop exes packaged, 400/400 unit tests passing)
+Current Feature Group: FG-13 Panel Apps Desktop (Flow A: Builder & Shell Integration)
+Status: completed / verified (Panel App Builder wizard, Dynamic Rail with AppRail presenter, static Preflight Scanner with offline badge, .cntxt round-trip parser, Rust parent dir creation, Tab context menu integration, 417/417 unit tests passing)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
-Unit Tests: written [x] passing [x] (400/400 unit tests passing across 40 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
+Unit Tests: written [x] passing [x] (417/417 unit tests passing across 41 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/plans/feature_group_FG13_panel_apps_desktop_2026-10-09.md
 Notes:
-- Task 16: Syntax Highlighting Granularity Switcher: Replaced dropdown with single-row 4-button switcher (Auto, Markdown, Headers, OFF) in SettingsPanel.tsx, matching AI Studio build with dynamic indicator badge and contextual info card.
-- Task 17: Hierarchical Heading Color Palettes: Implemented per-theme THEME_MARKDOWN_PALETTES for all 9 themes in src/themes/index.ts; Headers Only preserves distinct H1-H6 colors while stripping non-heading token colors.
-- Task 18: Editor Reactivity Bugfix: Added settings.syntaxHighlighting to useEffect dependency array in Editor.tsx; deprecated conflicting markdownHighlightingCompartment override, routing 100% through themeCompartment.
-- Task 19: Code Block Spacing & Scoped Monochrome: Added .cm-live-codeblock-start + .cm-live-codeblock-mid top padding rule (6px) and scoped monochrome rules for headers-only and markdown-formatted.
-- Task 20: Tri-Platform Synchronization: Ported updates to cntxt-web and CNTXT Android target; verified with clean lint, vitest, and release builds.
+- Task 21: FG-13 Panel Apps Flow A Architecture: Created canonical domain models in contracts/data_shapes.ts (PanelAppManifest, PanelAppRecord, PanelAppNetworkMode) and strict Zod runtime validators in src/contracts/boundarySchemas.ts.
+- Task 22: .cntxt Format & Dynamic Code Fence: Implemented dynamic pickFence avoiding backtick collision and round-trip verified buildCntxtApp / parseCntxtApp.
+- Task 23: Preflight Scanner & Network Badge: Built scanHtml identifying external links/scripts, soft 512KB and hard 2MB limits, unsafe parent/top calls, top byte contributors, and dynamic Offline-ready / Needs network badge.
+- Task 24: Builder Wizard Presenter Suite: Built 3-step wizard in src/components/panelApps/ (SourceStep, DetailsStep, ReviewStep) reusing existing IconPicker, with preflight inspection and size meter.
+- Task 25: App Rail & Host Drawer: Built AppRail (desktop vertical + mobile horizontal) and AppPanelPlaceholder with direct "Edit .cntxt File" editor integration, active width adjustment, and rail persistence.
+- Task 26: Rust Directory Auto-Creation: Enhanced write_file command in src-tauri/src/commands/file.rs with fs::create_dir_all for seamless nested folder writes (e.g. Panel Apps/).
+- Task 27: Tab Header Integration: Added "Set as panel app" item in TabBar context menu, automatically detecting HTML documents and preloading the App Builder.
+- Task 28: Full Test & Release Gates Verified: 417/417 unit tests pass (tests/panelApps.test.ts 17/17 clean), 0 platform leaks, 100% contract synchronization, portable exe and setup installers compiled.
 - Task 1: Cargo Profile & Feature Lockdown (P-05): default = [] (devtools strictly opt-in); production profile with codegen-units = 1, lto = "thin", incremental = false, opt-level = 3, strip = true.
 - Task 2: Path Security & .env Redaction (P-04, D-07): validate_path enforced across get_file_name, detect_language_from_path, get_file_modified_time, open_file_explorer, get_dir_name; .env redacted in read_directory; TOCTOU race window closed in delete_file via immediate pre-deletion re-canonicalization; FileNode is outgoing-only (derived Serialize, constructed exclusively by Rust read_directory), returning typed file tree to TypeScript; TypeScript boundary validates shape via boundarySchemas.
 - Task 3: Secure OS Keyring Secrets Engine (P-02, P-18): completely removed .secrets_fallback.json; desktop strictly routes through keyring::Entry; mobile rejects plaintext fallback; has_api_key returns Result<bool, String>; secret deletion error swallowing eliminated.

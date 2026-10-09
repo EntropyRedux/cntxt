@@ -15,6 +15,8 @@ import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Tab } from '../../types';
 import { addDocumentListener, addWindowListener, useRuntimeBridge } from '../../adapters';
+import { resolveHtml } from '../../features/panelApps/source/resolveHtml';
+import { useBuilderStore } from '../../features/panelApps/state/builderStore';
 
 export const TabBar: React.FC = () => {
   const { 
@@ -728,6 +730,25 @@ export const TabBar: React.FC = () => {
               <Copy className="w-3.5 h-3.5 text-[var(--text-muted)]" />
               <span>Duplicate Tab</span>
             </button>
+            {resolveHtml(contextMenu.tab.content, contextMenu.tab.title).ok && (
+              <button
+                onClick={() => {
+                  const resolved = resolveHtml(contextMenu.tab.content, contextMenu.tab.title);
+                  useBuilderStore.getState().start({
+                    kind: 'tab',
+                    docId: contextMenu.tab.id,
+                    name: contextMenu.tab.title,
+                    content: resolved.ok ? resolved.html : contextMenu.tab.content,
+                  });
+                  useSettingsStore.getState().setActiveSidebarTab('app-builder');
+                  setContextMenu(null);
+                }}
+                className="w-full px-3 py-1.5 text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center gap-2 text-[var(--text-primary)]"
+              >
+                <Layers className="w-3.5 h-3.5 text-[var(--accent-primary)] group-hover:text-white" />
+                <span>Set as panel app</span>
+              </button>
+            )}
             {contextMenu.tab.filePath && (
               <>
                 <div className="my-1 border-t border-[var(--border-primary)]" />

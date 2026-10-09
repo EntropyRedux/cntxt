@@ -19,13 +19,17 @@ import {
   Sparkles,
   Upload,
   Download,
-  FolderGit2
+  FolderGit2,
+  Layers
 } from 'lucide-react';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { triggerFileDownload, triggerFileInput } from '../../adapters';
 import { PersonalGitHubLibraryModal } from './PersonalGitHubLibraryModal';
+import { AppBuilderPanel } from '../panelApps/AppBuilderPanel';
+import { AppPanelPlaceholder } from '../panelApps/AppPanelPlaceholder';
+import { usePanelAppsStore } from '../../features/panelApps/state/panelAppsStore';
 
 const STORAGE_KEY = 'contextpad_sidepanel_width';
 const DEFAULT_DESKTOP_WIDTH = 340;
@@ -125,6 +129,16 @@ export const Sidebar: React.FC = () => {
       }
     }).catch(err => console.warn('[Sidebar] Failed to load stored width', err));
   }, [bridge.storage]);
+
+  // Adjust width if active panel app specifies default width
+  useEffect(() => {
+    if (settings.activeSidebarTab === 'panel-app') {
+      const activeApp = usePanelAppsStore.getState().apps.find(a => a.id === usePanelAppsStore.getState().activeId);
+      if (activeApp?.panelWidth) {
+        setWidth(activeApp.panelWidth);
+      }
+    }
+  }, [settings.activeSidebarTab]);
 
   const [isResizing, setIsResizing] = useState(false);
 
@@ -244,6 +258,10 @@ export const Sidebar: React.FC = () => {
         return { title: 'Token Analytics', icon: Coins };
       case 'settings':
         return { title: 'Preferences', icon: Settings };
+      case 'app-builder':
+        return { title: 'Panel App Builder', icon: Layers };
+      case 'panel-app':
+        return { title: 'Panel App', icon: Sparkles };
       default:
         return { title: 'Side Panel', icon: Sparkles };
     }
@@ -263,6 +281,10 @@ export const Sidebar: React.FC = () => {
         return <TokenAnalytics />;
       case 'settings':
         return <SettingsPanel />;
+      case 'app-builder':
+        return <AppBuilderPanel onClose={() => toggleSidebar()} />;
+      case 'panel-app':
+        return <AppPanelPlaceholder onClose={() => toggleSidebar()} />;
       default:
         return <TemplateManager />;
     }
@@ -320,7 +342,8 @@ export const Sidebar: React.FC = () => {
         />
       )}
 
-      {/* Side Panel Header */}
+      {/* Side Panel Header (hidden for self-contained panel app and builder) */}
+      {settings.activeSidebarTab !== 'app-builder' && settings.activeSidebarTab !== 'panel-app' && (
       <div className="flex items-center justify-between h-9 px-3 border-b border-[var(--border-primary)] bg-[var(--sidebar-header-bg)]/80 backdrop-blur-xs shrink-0 text-xs select-none">
         <div className="flex items-center gap-2 min-w-0">
           <TabIcon className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
@@ -413,6 +436,7 @@ export const Sidebar: React.FC = () => {
           </button>
         </div>
       </div>
+      )}
 
       {/* Tab Panel View Content */}
       <div className="flex-1 h-full overflow-hidden">

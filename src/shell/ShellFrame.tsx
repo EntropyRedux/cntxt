@@ -17,6 +17,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useFileHistoryStore } from '../store/fileHistoryStore';
 import { useImageModalStore } from '../store/imageModalStore';
 import { useAuthStore } from '../store/authStore';
+import { usePanelAppsStore } from '../features/panelApps/state/panelAppsStore';
 import { WebAuthGateway } from '../components/Auth/WebAuthGateway';
 import { compressAndConvertToDataUrl, generateImageAlt } from '../services/imageService';
 import { openDocumentWithLargeDocCheck } from '../services/largeDocHelper';
@@ -68,6 +69,7 @@ export const ShellFrame: React.FC = () => {
       initializeRibbon(bridge.storage),
       initializeFormattingStore(bridge.storage),
       initializeFileHistory(bridge.storage),
+      usePanelAppsStore.getState().initialize(bridge.storage),
     ]).catch((e) => console.error('Store init batch failed', e));
   }, [bridge, initializeSettings, initializeTabs, initializeTemplates, initializeActions, initializeRibbon, initializeFormattingStore, initializeFileHistory]);
 

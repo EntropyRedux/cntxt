@@ -145,7 +145,7 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   showSidebar: boolean;
   showRibbon?: boolean;
   showMenuBar?: boolean;
-  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'tokens' | 'settings';
+  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'tokens' | 'settings' | 'app-builder' | 'panel-app';
   showLivePreview: boolean;
   editorMode: 'raw' | 'rendered';
   enableMarkdownRendering: boolean;
@@ -632,5 +632,34 @@ export interface LibraryCollection {
 
 export type LibraryViewTab = 'my-library' | 'community';
 export type MyLibraryFilter = 'all' | 'mine' | 'community' | 'imported';
+
+// ==========================================
+// 10. Panel Apps Domain Shapes
+// ==========================================
+
+export type PanelAppRuntime = 'html';
+export type PanelAppNetworkMode = 'offline' | 'cdn';
+export type PanelAppCreatedFrom = 'file' | 'tab' | 'prompt';
+
+export interface PanelAppManifest {
+  schemaVersion: 1;
+  id: string; // origin-safe: lowercase alnum (12 to 32 chars)
+  name: string; // 1 to 40 chars
+  icon: string; // Lucide icon key from iconCatalog
+  description: string;
+  runtime: PanelAppRuntime;
+  network: PanelAppNetworkMode;
+  panelWidth: number; // 280 to 1200 px
+  createdFrom: PanelAppCreatedFrom;
+}
+
+export interface PanelAppRecord {
+  id: string;
+  path: string; // location of the .cntxt file
+  name: string;
+  icon: string;
+  network?: PanelAppNetworkMode;
+  panelWidth?: number;
+}
 
 
