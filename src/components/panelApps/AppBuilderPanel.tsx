@@ -6,6 +6,7 @@ import { useRuntimeBridge } from '../../adapters';
 import { resolveHtml } from '../../features/panelApps/source/resolveHtml';
 import { scanHtml } from '../../features/panelApps/preflight/scan';
 import { createPanelApp } from '../../features/panelApps/services/createPanelApp';
+import { useSettingsStore } from '../../store/settingsStore';
 import { SourceStep } from './SourceStep';
 import { DetailsStep } from './DetailsStep';
 import { ReviewStep } from './ReviewStep';
@@ -20,6 +21,7 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
   const bridge = useRuntimeBridge();
   const { tabs } = useTabStore();
   const { addNotification } = useNotificationStore();
+  const { setActiveSidebarTab } = useSettingsStore();
 
   const {
     step,
@@ -109,7 +111,7 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
       );
 
       reset();
-      if (onClose) onClose();
+      setActiveSidebarTab('panel-app');
     } catch (err) {
       console.error('[AppBuilderPanel] Creation failed:', err);
       addNotification('Creation Failed', (err as Error).message || 'Failed to create panel app', 'error');

@@ -38,3 +38,7 @@ assets/
 playwright-report/
 test-results/
 blob-report/
+
+# Runtime Generated Panel Apps
+Panel Apps/
+src-tauri/Panel Apps/

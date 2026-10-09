@@ -131,14 +131,15 @@ export const Sidebar: React.FC = () => {
   }, [bridge.storage]);
 
   // Adjust width if active panel app specifies default width
+  const activePanelAppId = usePanelAppsStore(state => state.activeId);
   useEffect(() => {
     if (settings.activeSidebarTab === 'panel-app') {
-      const activeApp = usePanelAppsStore.getState().apps.find(a => a.id === usePanelAppsStore.getState().activeId);
+      const activeApp = usePanelAppsStore.getState().apps.find(a => a.id === activePanelAppId);
       if (activeApp?.panelWidth) {
         setWidth(activeApp.panelWidth);
       }
     }
-  }, [settings.activeSidebarTab]);
+  }, [settings.activeSidebarTab, activePanelAppId]);
 
   const [isResizing, setIsResizing] = useState(false);
 
