@@ -184,8 +184,8 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
 
     const isOffline = (manifest?.network ?? activeApp.network) === 'offline';
     const cspMeta = isOffline
-      ? `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' data:; script-src 'unsafe-inline' 'unsafe-eval' blob: data:; img-src data: blob:; font-src data:; connect-src 'none';">`
-      : `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https: http: data: blob:; script-src 'unsafe-inline' 'unsafe-eval' https: http: blob: data:; img-src https: http: data: blob:; font-src https: http: data:; worker-src blob: data: https:; frame-src 'self' data: blob:; connect-src https: http: ws: wss:;">`;
+      ? `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' data: blob:; script-src 'unsafe-inline' 'unsafe-eval' blob: data:; img-src data: blob:; font-src data: blob:; connect-src 'none';">`
+      : `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https: http: data: blob:; script-src 'unsafe-inline' 'unsafe-eval' https: http: blob: data:; img-src https: http: data: blob:; font-src https: http: data: blob:; worker-src 'self' blob: data: https: http:; frame-src 'self' data: blob: https: http:; connect-src https: http: ws: wss:; media-src https: http: data: blob:;">`;
 
     // Dynamic storage polyfill avoiding static token checks
     const storeToken = 'local' + 'Storage';
@@ -602,7 +602,7 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
           <iframe
             key={`${activeApp.id}-${reloadKey}`}
             srcDoc={preparedHtml}
-            sandbox="allow-scripts allow-forms allow-modals allow-downloads"
+            sandbox="allow-scripts allow-forms allow-modals allow-downloads allow-popups"
             title={activeApp.name}
             className="w-full h-full border-none bg-white select-auto"
           />

@@ -116,12 +116,12 @@ pub fn open_devtools(window: tauri::WebviewWindow, session_token: Option<String>
     if !super::is_authorized_request(&raw_win, session_token.as_deref()) {
         return;
     }
-    #[cfg(debug_assertions)]
+    #[cfg(any(debug_assertions, feature = "devtools"))]
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         window.open_devtools();
     }
-    #[cfg(not(all(debug_assertions, not(any(target_os = "android", target_os = "ios")))))]
+    #[cfg(not(all(any(debug_assertions, feature = "devtools"), not(any(target_os = "android", target_os = "ios")))))]
     {
         let _ = window;
     }
@@ -133,7 +133,7 @@ pub fn toggle_devtools(window: tauri::WebviewWindow, session_token: Option<Strin
     if !super::is_authorized_request(&raw_win, session_token.as_deref()) {
         return;
     }
-    #[cfg(debug_assertions)]
+    #[cfg(any(debug_assertions, feature = "devtools"))]
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         if window.is_devtools_open() {
@@ -142,7 +142,7 @@ pub fn toggle_devtools(window: tauri::WebviewWindow, session_token: Option<Strin
             window.open_devtools();
         }
     }
-    #[cfg(not(all(debug_assertions, not(any(target_os = "android", target_os = "ios")))))]
+    #[cfg(not(all(any(debug_assertions, feature = "devtools"), not(any(target_os = "android", target_os = "ios")))))]
     {
         let _ = window;
     }
