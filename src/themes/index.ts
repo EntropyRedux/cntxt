@@ -4,6 +4,7 @@ import { HighlightStyle, syntaxHighlighting, defaultHighlightStyle } from '@code
 import { tags as t } from '@lezer/highlight';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { ThemeName } from '../types';
+import { createMarkdownHighlighting, createHeadersOnlyHighlighting } from './markdownHighlighting';
 
 // ==========================================
 // 1. Google Material 3 Light Theme & Highlight
@@ -533,7 +534,219 @@ export const parchmentTheme = EditorView.theme({
 }, { dark: false });
 
 
-export function getEditorThemeExtension(themeName: ThemeName): Extension {
+export interface MarkdownPalette {
+  h1: string;
+  h2: string;
+  h3: string;
+  h4: string;
+  strong?: string;
+  emphasis?: string;
+  strikethrough?: string;
+  monospace?: string;
+  monospaceBg?: string;
+  link?: string;
+  url?: string;
+  quote?: string;
+  list?: string;
+}
+
+export function isDarkTheme(themeName: ThemeName): boolean {
+  return themeName !== 'google-material-3' && themeName !== 'github-light' && themeName !== 'parchment';
+}
+
+export const THEME_MARKDOWN_PALETTES: Record<ThemeName, MarkdownPalette> = {
+  'google-material-3': {
+    h1: '#0B57D0',
+    h2: '#006874',
+    h3: '#6750A4',
+    h4: '#9C4146',
+    strong: '#1F1F1F',
+    emphasis: '#00639B',
+    strikethrough: '#747775',
+    monospace: '#0B57D0',
+    monospaceBg: '#D3E3FD',
+    link: '#0B57D0',
+    url: '#00639B',
+    quote: '#00639B',
+    list: '#0B57D0'
+  },
+  'github-light': {
+    h1: '#0B57D0',
+    h2: '#006874',
+    h3: '#6750A4',
+    h4: '#9C4146',
+    strong: '#1F1F1F',
+    emphasis: '#00639B',
+    strikethrough: '#747775',
+    monospace: '#0B57D0',
+    monospaceBg: '#D3E3FD',
+    link: '#0B57D0',
+    url: '#00639B',
+    quote: '#00639B',
+    list: '#0B57D0'
+  },
+  'parchment': {
+    h1: '#9C522B',
+    h2: '#783A16',
+    h3: '#B45309',
+    h4: '#A0522D',
+    strong: '#1C1917',
+    emphasis: '#9C522B',
+    strikethrough: '#9E9484',
+    monospace: '#9C522B',
+    monospaceBg: '#F4E7DB',
+    link: '#9C522B',
+    url: '#B45309',
+    quote: '#6E6659',
+    list: '#9C522B'
+  },
+  'contextpad-dark': {
+    h1: '#569CD6',
+    h2: '#4EC9B0',
+    h3: '#9CDCFE',
+    h4: '#C586C0',
+    strong: '#DCDCAA',
+    emphasis: '#CE9178',
+    strikethrough: '#858585',
+    monospace: '#CE9178',
+    monospaceBg: 'rgba(206, 145, 120, 0.1)',
+    link: '#3794FF',
+    url: '#9CDCFE',
+    quote: '#6A9955',
+    list: '#569CD6'
+  },
+  'one-dark': {
+    h1: '#61AFEF',
+    h2: '#98C379',
+    h3: '#E5C07B',
+    h4: '#C678DD',
+    strong: '#ABB2BF',
+    emphasis: '#E5C07B',
+    strikethrough: '#5C6370',
+    monospace: '#98C379',
+    monospaceBg: 'rgba(152, 195, 121, 0.1)',
+    link: '#61AFEF',
+    url: '#61AFEF',
+    quote: '#5C6370',
+    list: '#61AFEF'
+  },
+  'dracula': {
+    h1: '#BD93F9',
+    h2: '#FF79C6',
+    h3: '#8BE9FD',
+    h4: '#50FA7B',
+    strong: '#FFB86C',
+    emphasis: '#F1FA8C',
+    strikethrough: '#6272A4',
+    monospace: '#F1FA8C',
+    monospaceBg: 'rgba(241, 250, 140, 0.1)',
+    link: '#8BE9FD',
+    url: '#8BE9FD',
+    quote: '#6272A4',
+    list: '#FF79C6'
+  },
+  'nord': {
+    h1: '#88C0D0',
+    h2: '#81A1C1',
+    h3: '#8FBCBB',
+    h4: '#B48EAD',
+    strong: '#ECEFF4',
+    emphasis: '#EBCB8B',
+    strikethrough: '#4C566A',
+    monospace: '#88C0D0',
+    monospaceBg: 'rgba(136, 192, 208, 0.1)',
+    link: '#88C0D0',
+    url: '#88C0D0',
+    quote: '#4C566A',
+    list: '#88C0D0'
+  },
+  'monokai': {
+    h1: '#FF6188',
+    h2: '#FC9867',
+    h3: '#FFD866',
+    h4: '#AB9DF2',
+    strong: '#FCFCFA',
+    emphasis: '#78DCE8',
+    strikethrough: '#727072',
+    monospace: '#FFD866',
+    monospaceBg: 'rgba(255, 216, 102, 0.1)',
+    link: '#78DCE8',
+    url: '#78DCE8',
+    quote: '#727072',
+    list: '#FF6188'
+  },
+  'github-dark': {
+    h1: '#58A6FF',
+    h2: '#79C0FF',
+    h3: '#7EE787',
+    h4: '#D2A8FF',
+    strong: '#E6EDF3',
+    emphasis: '#79C0FF',
+    strikethrough: '#8B949E',
+    monospace: '#A5D6FF',
+    monospaceBg: 'rgba(165, 214, 255, 0.1)',
+    link: '#58A6FF',
+    url: '#58A6FF',
+    quote: '#8B949E',
+    list: '#58A6FF'
+  },
+  'solarized-dark': {
+    h1: '#268BD2',
+    h2: '#2AA198',
+    h3: '#859900',
+    h4: '#6C71C4',
+    strong: '#93A1A1',
+    emphasis: '#2AA198',
+    strikethrough: '#586E75',
+    monospace: '#2AA198',
+    monospaceBg: 'rgba(42, 161, 152, 0.1)',
+    link: '#268BD2',
+    url: '#268BD2',
+    quote: '#586E75',
+    list: '#268BD2'
+  }
+};
+
+export function createHeadersOnlyStyle(palette: MarkdownPalette): HighlightStyle {
+  return HighlightStyle.define([
+    { tag: t.heading1, color: palette.h1, fontWeight: 'bold', fontSize: '1.25em' },
+    { tag: t.heading2, color: palette.h2, fontWeight: 'bold', fontSize: '1.15em' },
+    { tag: t.heading3, color: palette.h3, fontWeight: 'bold', fontSize: '1.05em' },
+    { tag: [t.heading4, t.heading5, t.heading6], color: palette.h4, fontWeight: 'bold' },
+    { tag: t.strong, fontWeight: 'bold' },
+    { tag: t.emphasis, fontStyle: 'italic' },
+    { tag: t.strikethrough, textDecoration: 'line-through' }
+  ]);
+}
+
+export function createMarkdownFormattedStyle(palette: MarkdownPalette): HighlightStyle {
+  return HighlightStyle.define([
+    { tag: t.heading1, color: palette.h1, fontWeight: 'bold', fontSize: '1.25em' },
+    { tag: t.heading2, color: palette.h2, fontWeight: 'bold', fontSize: '1.15em' },
+    { tag: t.heading3, color: palette.h3, fontWeight: 'bold', fontSize: '1.05em' },
+    { tag: [t.heading4, t.heading5, t.heading6], color: palette.h4, fontWeight: 'bold' },
+    { tag: t.strong, color: palette.strong, fontWeight: 'bold' },
+    { tag: t.emphasis, color: palette.emphasis, fontStyle: 'italic' },
+    { tag: t.strikethrough, color: palette.strikethrough, textDecoration: 'line-through' },
+    { 
+      tag: t.monospace, 
+      color: palette.monospace, 
+      backgroundColor: palette.monospaceBg, 
+      borderRadius: '3px', 
+      padding: '1px 3px' 
+    },
+    { tag: t.link, color: palette.link, textDecoration: 'underline' },
+    { tag: t.url, color: palette.url || palette.link },
+    { tag: t.quote, color: palette.quote, fontStyle: 'italic' },
+    { tag: t.list, color: palette.list, fontWeight: 'bold' },
+    { tag: t.meta, color: palette.strikethrough }
+  ]);
+}
+
+export function getEditorThemeExtension(
+  themeName: ThemeName,
+  syntaxMode: 'auto' | 'automatic' | 'markdown' | 'markdown-formatted' | 'headers' | 'headers-only' | 'none' | 'off' = 'auto'
+): Extension {
   let theme: Extension;
   let highlightStyle: HighlightStyle;
 
@@ -578,6 +791,77 @@ export function getEditorThemeExtension(themeName: ThemeName): Extension {
       break;
   }
 
+  // 1. OFF / None Mode: Display all text in editor as white (for dark themes) and black (for light themes)
+  if (syntaxMode === 'off' || syntaxMode === 'none') {
+    const isDark = isDarkTheme(themeName);
+    const solidColor = isDark ? '#FFFFFF' : '#000000';
+    const monochromeTheme = EditorView.theme({
+      '&': {
+        color: `${solidColor} !important`,
+      },
+      '.cm-content': {
+        color: `${solidColor} !important`,
+        caretColor: `${solidColor} !important`,
+      },
+      '.cm-line, .cm-line *': {
+        color: `${solidColor} !important`,
+        '-webkit-text-fill-color': `${solidColor} !important`,
+      },
+      '.cm-cursor, .cm-dropCursor': {
+        borderLeftColor: `${solidColor} !important`,
+      },
+      '.cm-live-h1, .cm-live-h2, .cm-live-h3, .cm-live-h4, .cm-live-h5, .cm-live-h6': {
+        color: `${solidColor} !important`,
+        '-webkit-text-fill-color': `${solidColor} !important`,
+      },
+      '.cm-live-bold, .cm-live-italic, .cm-live-strikethrough, .cm-live-code-pill, .cm-live-tag, .cm-live-link, .cm-live-quote-marker, .cm-live-task-done, .cm-live-task-item': {
+        color: `${solidColor} !important`,
+        '-webkit-text-fill-color': `${solidColor} !important`,
+      },
+      '.cm-live-codeblock-header, .cm-live-codeblock-header *': {
+        color: `${solidColor} !important`,
+        '-webkit-text-fill-color': `${solidColor} !important`,
+      }
+    });
+
+    return [
+      theme,
+      monochromeTheme
+    ];
+  }
+
+  // 2. Headers Only: Only headings get rich hierarchical palette colors; all other marks/code monochrome
+  if (syntaxMode === 'headers-only' || syntaxMode === 'headers') {
+    const palette = THEME_MARKDOWN_PALETTES[themeName] || THEME_MARKDOWN_PALETTES['contextpad-dark'];
+    const headersOnlyStyle = createHeadersOnlyStyle(palette);
+    const isDark = isDarkTheme(themeName);
+    const baseColor = isDark ? '#FFFFFF' : '#000000';
+    const headersOnlyTheme = EditorView.theme({
+      '.cm-live-code-pill, .cm-live-tag, .cm-live-link': {
+        color: `${baseColor} !important`,
+        '-webkit-text-fill-color': `${baseColor} !important`,
+        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08) !important' : 'rgba(0, 0, 0, 0.06) !important',
+      }
+    });
+
+    return [
+      theme,
+      headersOnlyTheme,
+      syntaxHighlighting(headersOnlyStyle)
+    ];
+  }
+
+  // 3. Markdown Formatted Only: Headers, bold, italicized, or any text formatted with markdown get colors; code syntax monochrome
+  if (syntaxMode === 'markdown-formatted' || syntaxMode === 'markdown') {
+    const palette = THEME_MARKDOWN_PALETTES[themeName] || THEME_MARKDOWN_PALETTES['contextpad-dark'];
+    const mdFormattedStyle = createMarkdownFormattedStyle(palette);
+    return [
+      theme,
+      syntaxHighlighting(mdFormattedStyle)
+    ];
+  }
+
+  // 4. Automatic / Auto: Default full multi-color syntax highlighting
   return [
     theme,
     syntaxHighlighting(highlightStyle),

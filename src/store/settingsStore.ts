@@ -60,6 +60,7 @@ const DEFAULT_SETTINGS: ViewSettings = {
   fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code Variable', 'Fira Code', Menlo, Monaco, 'Courier New', monospace",
   wordWrap: true,
   typingDirection: 'top-to-bottom',
+  syntaxHighlighting: 'auto',
   editorMaxWidth: 'standard',
   editorPadding: 'normal',
   theme: 'contextpad-dark',

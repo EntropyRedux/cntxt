@@ -2,7 +2,7 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.5.1) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Full Codebase Security & Re-Audit Remediation (22/22 findings resolved), Brand Redesign & High-Res App Iconography across all platforms, and Large Document TOC Chunking & Quick Append Architecture. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.5.1) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Syntax Highlighting Granularity Switcher (Auto / Markdown / Headers / OFF) with Immediate CodeMirror Reactivity, Full Codebase Security & Re-Audit Remediation (22/22 findings resolved), Brand Redesign & High-Res App Iconography across all platforms, and Large Document TOC Chunking & Quick Append Architecture. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
 ## Downloads (v0.5.1)
 

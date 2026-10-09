@@ -557,6 +557,90 @@ export const SettingsPanel: React.FC = () => {
             </select>
           </div>
 
+          {/* Syntax Color Highlighting Switcher (AI Studio Single-Row 4-Button Grid) */}
+          <div className="space-y-1.5 pt-1 border-t border-[var(--border-subtle)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[var(--text-primary)] block font-medium">Syntax Color Highlighting</span>
+                <span className="text-[10px] text-[var(--text-muted)]">Control colorization for headers, markdown, and text</span>
+              </div>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                (settings.syntaxHighlighting || 'automatic') === 'off' || settings.syntaxHighlighting === 'none'
+                  ? 'bg-rose-500/15 text-rose-500'
+                  : (settings.syntaxHighlighting || 'automatic') === 'automatic' || settings.syntaxHighlighting === 'auto'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-[var(--accent-container)] text-[var(--on-accent-container)]'
+              }`}>
+                {settings.syntaxHighlighting === 'off' || settings.syntaxHighlighting === 'none'
+                  ? 'Off' 
+                  : settings.syntaxHighlighting === 'headers-only' || settings.syntaxHighlighting === 'headers'
+                    ? 'Headers' 
+                    : settings.syntaxHighlighting === 'markdown-formatted' || settings.syntaxHighlighting === 'markdown'
+                      ? 'Markdown' 
+                      : 'Auto'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-1.5 pt-1">
+              {[
+                { id: 'automatic', label: 'Auto' },
+                { id: 'markdown-formatted', label: 'Markdown' },
+                { id: 'headers-only', label: 'Headers' },
+                { id: 'off', label: 'OFF' },
+              ].map(opt => {
+                const isCurrent = 
+                  (settings.syntaxHighlighting || 'automatic') === opt.id ||
+                  (settings.syntaxHighlighting === 'auto' && opt.id === 'automatic') ||
+                  (settings.syntaxHighlighting === 'markdown' && opt.id === 'markdown-formatted') ||
+                  (settings.syntaxHighlighting === 'headers' && opt.id === 'headers-only') ||
+                  (settings.syntaxHighlighting === 'none' && opt.id === 'off');
+                return (
+                  <button
+                    key={opt.id}
+                    id={`btn-syntax-mode-${opt.id}`}
+                    type="button"
+                    onClick={() => {
+                      updateSettings({ syntaxHighlighting: opt.id as any });
+                      addNotification(
+                        'Syntax Highlighting Updated',
+                        opt.id === 'off' 
+                          ? 'Turned OFF: Monochrome white on dark themes, black on light themes'
+                          : opt.id === 'headers-only'
+                            ? 'Headers Only: Only headings get colors'
+                            : opt.id === 'markdown-formatted'
+                              ? 'Markdown Formatted: Headers, bold, italicized, and formatted text get colors'
+                              : 'Automatic: Full syntax color highlighting active',
+                        'info'
+                      );
+                    }}
+                    className={`min-h-[36px] flex items-center justify-center py-1.5 px-1 text-[10.5px] sm:text-[11px] font-semibold rounded-md border text-center transition-all cursor-pointer truncate ${
+                      isCurrent
+                        ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                        : 'bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-[10px] text-[var(--text-muted)] bg-[var(--card-secondary-bg)] p-2 rounded border border-[var(--border-subtle)] leading-normal">
+              {((settings.syntaxHighlighting || 'automatic') === 'automatic' || settings.syntaxHighlighting === 'auto') && (
+                <span><strong>Automatic:</strong> Full multi-color syntax highlighting for markdown, code blocks, variables, and keywords.</span>
+              )}
+              {(settings.syntaxHighlighting === 'markdown-formatted' || settings.syntaxHighlighting === 'markdown') && (
+                <span><strong>Markdown Formatted:</strong> Headers, bold, italicized, and markdown-formatted text only get colors. Plain text and code blocks remain monochrome.</span>
+              )}
+              {(settings.syntaxHighlighting === 'headers-only' || settings.syntaxHighlighting === 'headers') && (
+                <span><strong>Headers Only:</strong> Only headings (#, ##, etc.) get colors. Bold, italic, code blocks, and body text remain monochrome.</span>
+              )}
+              {(settings.syntaxHighlighting === 'off' || settings.syntaxHighlighting === 'none') && (
+                <span><strong>Syntax Highlighting OFF:</strong> All text in editor displays as solid white font on dark themes, and solid black font on light themes.</span>
+              )}
+            </div>
+          </div>
+
           {/* Editor Font Family Selector */}
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between">

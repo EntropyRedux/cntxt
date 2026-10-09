@@ -42,3 +42,24 @@ export function createMarkdownHighlighting(accentOverridesHeadings: boolean = tr
 
   return Prec.high(style);
 }
+
+/**
+ * ContextPad Headers-Only syntax highlighting.
+ * Highlights headings with the active accent color, keeping all other markdown/text tokens plain.
+ */
+export function createHeadersOnlyHighlighting(accentOverridesHeadings: boolean = true): Extension {
+  const headingColor = accentOverridesHeadings ? 'var(--accent-primary, #007ACC)' : '#569CD6';
+
+  const style = syntaxHighlighting(
+    HighlightStyle.define([
+      { tag: tags.heading1, color: headingColor, fontWeight: 'bold', fontSize: '1.45em' },
+      { tag: tags.heading2, color: headingColor, fontWeight: 'bold', fontSize: '1.25em' },
+      { tag: tags.heading3, color: headingColor, fontWeight: 'bold', fontSize: '1.15em' },
+      { tag: tags.heading4, color: headingColor, fontWeight: 'bold', fontSize: '1.05em' },
+      { tag: tags.heading5, color: headingColor, fontWeight: 'bold' },
+      { tag: tags.heading6, color: headingColor, fontWeight: 'bold' },
+    ])
+  );
+
+  return Prec.high(style);
+}

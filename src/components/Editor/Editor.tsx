@@ -20,7 +20,7 @@ import { templateVariablesExtension, variableTabKeymap } from '../../extensions/
 import { inlineFormulasExtension } from '../../extensions/inlineFormulas';
 import { base64FoldExtension } from '../../extensions/base64FoldExtension';
 import { liveMarkdownExtension, refreshLiveMarkdownEffect } from '../../extensions/liveMarkdown';
-import { createMarkdownHighlighting } from '../../themes/markdownHighlighting';
+import { createMarkdownHighlighting, createHeadersOnlyHighlighting } from '../../themes/markdownHighlighting';
 import { useActionStore } from '../../store/actionStore';
 import { lineCounterSelectionExtension } from '../../extensions/lineNumberSelection';
 import { imageDropPasteExtension } from '../../extensions/imageDropPasteExtension';
@@ -174,6 +174,17 @@ const getLanguageExtension = (lang: SupportedLanguage): Extension => {
   }
 };
 
+const getMarkdownHighlightingExtension = (
+  _isRendered: boolean,
+  _isMdOrText: boolean,
+  _syntaxMode?: string
+): Extension => {
+  // All syntax highlighting (automatic, markdown-formatted, headers-only, off)
+  // is centrally handled via themeCompartment using getEditorThemeExtension,
+  // precisely matching the AI Studio specification without conflicting high-priority overrides.
+  return [];
+};
+
 const getGuttersExtension = (
   isRendered: boolean,
   isMarkdownOrText: boolean,
@@ -295,7 +306,7 @@ const buildEditorExtensions = (
       ...foldKeymap,
       indentWithTab
     ]),
-    themeCompartment.of(getEditorThemeExtension(settings.theme)),
+    themeCompartment.of(getEditorThemeExtension(settings.theme, settings.syntaxHighlighting || 'automatic')),
     slashCommandExtension(),
     templateVariablesCompartment.of(
       templateVariablesExtension(isRenderedMode && isMarkdownOrText)
@@ -308,7 +319,11 @@ const buildEditorExtensions = (
       base64FoldExtension(!isRenderedMode && isMarkdownOrText)
     ),
     markdownHighlightingCompartment.of(
-      !isRenderedMode && isMarkdownOrText ? createMarkdownHighlighting(true) : []
+      getMarkdownHighlightingExtension(
+        isRenderedMode,
+        isMarkdownOrText,
+        settings.syntaxHighlighting || 'auto'
+      )
     ),
     liveMarkdownCompartment.of(
       isRenderedMode && isMarkdownOrText
@@ -378,7 +393,7 @@ const buildReconfigureEffects = (
 
   return [
     languageCompartment.reconfigure(getLanguageExtension(lang)),
-    themeCompartment.reconfigure(getEditorThemeExtension(currentSettings.theme)),
+    themeCompartment.reconfigure(getEditorThemeExtension(currentSettings.theme, currentSettings.syntaxHighlighting || 'automatic')),
     fontThemeCompartment.reconfigure(
       getFontThemeExtension(currentSettings.fontFamily, currentSettings.fontSize)
     ),
@@ -392,7 +407,11 @@ const buildReconfigureEffects = (
       inlineFormulasExtension(isRenderedMode && isMarkdownOrText)
     ),
     markdownHighlightingCompartment.reconfigure(
-      !isRenderedMode && isMarkdownOrText ? createMarkdownHighlighting(true) : []
+      getMarkdownHighlightingExtension(
+        isRenderedMode,
+        isMarkdownOrText,
+        currentSettings.syntaxHighlighting || 'auto'
+      )
     ),
     liveMarkdownCompartment.reconfigure(
       isRenderedMode && isMarkdownOrText
@@ -661,6 +680,7 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     settings.editorMaxWidth,
     settings.editorPadding,
     settings.largeFileThreshold,
+    settings.syntaxHighlighting,
     bridge
   ]);
 
@@ -696,8 +716,21 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
     : editorWidthPx[settings.editorMaxWidth ?? 'standard'];
   const activePadding = editorPaddingPx[settings.editorPadding ?? 'normal'];
 
+  const syntaxModeAttr = 
+    (settings.syntaxHighlighting === 'off' || settings.syntaxHighlighting === 'none')
+      ? 'off'
+      : (settings.syntaxHighlighting === 'headers-only' || settings.syntaxHighlighting === 'headers')
+      ? 'headers-only'
+      : (settings.syntaxHighlighting === 'markdown-formatted' || settings.syntaxHighlighting === 'markdown')
+      ? 'markdown-formatted'
+      : 'automatic';
+
   return (
-    <div className="w-full h-full relative overflow-hidden bg-[var(--editor-bg)] flex flex-col min-h-0">
+    <div 
+      className="w-full h-full relative overflow-hidden bg-[var(--editor-bg)] flex flex-col min-h-0"
+      data-syntax-mode={syntaxModeAttr}
+      data-syntax-highlighting={settings.syntaxHighlighting || 'auto'}
+    >
       {currentTab?.isTruncatedView && (
         <div className="w-full bg-amber-500/10 border-b border-amber-500/25 px-3 py-1.5 flex items-center justify-between text-xs text-amber-300 z-10 shrink-0 select-none">
           <div className="flex items-center gap-2">
@@ -723,6 +756,8 @@ export const Editor: React.FC<EditorProps> = ({ tabId, content, language }) => {
       <div 
         ref={containerRef} 
         className={`w-full h-full flex-1 overflow-hidden min-h-0 ${isRenderedMode && isMarkdownOrText ? 'cm-rendered-canvas' : 'cm-raw-canvas'} ${!settings.wordWrap ? 'cm-wrap-off' : ''}`} 
+        data-syntax-mode={syntaxModeAttr}
+        data-syntax-highlighting={settings.syntaxHighlighting || 'auto'}
         style={{ 
           fontFamily: settings.fontFamily,
           '--editor-max-width': activeMaxWidth,

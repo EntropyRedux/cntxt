@@ -19,7 +19,7 @@ All background processes (live token estimation, autosave loop, live markdown sy
 
 ### Quality & Verification Gates
 - Playwright 1.63.0 suite (`npm run test:e2e`): 24 Chromium tests green.
-- Unit suite: 399 Vitest tests across 40 suites (`npm test`) 100% passing.
+- Unit suite: 400 Vitest tests across 40 suites (`npm test`) 100% passing.
 - Native Rust security suite: 8 tests passing (`cargo test`) verifying path validation, URL character filtering, system root protection, and session token authorization.
 - Platform Purity: 0 platform leaks across 146 files (`npm run lint`), 100% contract parity.
 

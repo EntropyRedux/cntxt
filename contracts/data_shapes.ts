@@ -121,6 +121,7 @@ export interface EditorSettings {
   showLineNumbers: boolean;
   showCodeBlockMarkers: boolean;
   typingDirection?: 'top-to-bottom' | 'bottom-to-up';
+  syntaxHighlighting?: 'auto' | 'automatic' | 'markdown' | 'markdown-formatted' | 'headers' | 'headers-only' | 'none' | 'off';
   enableLargeDocDetection?: boolean;
   largeDocThresholdKb?: number;
   largeDocThresholdLines?: number;

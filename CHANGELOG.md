@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.1] — 2026-10-09
 
+### Syntax Color Highlighting Granularity & Code Block Overhaul
+- **AI Studio Single-Row 4-Button Switcher Grid (`src/components/Sidebar/SettingsPanel.tsx`)**:
+  - Replaced legacy settings dropdown with single-row 4-button grid switcher: `Auto`, `Markdown`, `Headers`, `OFF`.
+  - Added active state highlight styling (`var(--accent-primary)`), indicator badge, contextual explanation card, and toast notifications.
+  - Added mobile touch target compliance (`min-h-[36px] flex items-center justify-center`) and responsive typography (`text-[10.5px] sm:text-[11px]`).
+- **Hierarchical Heading Color Palettes (`src/themes/index.ts`, `src/index.css`)**:
+  - Implemented per-theme `THEME_MARKDOWN_PALETTES` across all 9 themes (`google-material-3`, `github-light`, `parchment`, `one-dark`, `dracula`, `nord`, `monokai`, `github-dark`, `solarized-dark`, `contextpad-dark`).
+  - `Headers Only` mode now preserves rich hierarchical heading colors (H1 blue, H2 green/cyan, H3 teal, H4 purple, etc.) while stripping non-heading token colors (inline code pills, tags, links, quotes, and code blocks) to clean base monochrome text.
+  - `OFF` / `None` mode renders strict solid monochrome text (#FFFFFF on dark themes, #000000 on light themes).
+  - `Markdown Formatted` mode renders headers, bold, italic, tags, and links in color while keeping code blocks monochrome.
+- **Immediate Editor Reactivity Bugfix (`src/components/Editor/Editor.tsx`)**:
+  - Added `settings.syntaxHighlighting` to the `useEffect` dependency array in `Editor.tsx`, fixing the bug where syntax mode changes did not reactively reconfigure the active CodeMirror canvas until a document reload.
+  - Deprecated conflicting `markdownHighlightingCompartment` override, consolidating 100% of syntax highlighting into `themeCompartment` via `getEditorThemeExtension`.
+- **Code Block Aesthetic & Spacing Refinements (`src/index.css`)**:
+  - Added `.cm-live-codeblock-start + .cm-live-codeblock-mid { padding-top: 6px !important; }` to eliminate excessive top whitespace gap inside fenced containers.
+  - Added scoped monochrome rules for fenced code blocks in `headers-only` and `markdown-formatted` modes.
+- **Tri-Platform Verification & Packaging**:
+  - Fresh Windows portable binary (`dist-portable/CNTXT_0.5.1_portable.exe`, 13.67 MB) and installers (`dist-installer/`).
+  - Fresh signed Android APK (`dist-android/CNTXT-v0.5.1-arm64.apk`, 26.62 MB).
+  - 400/400 unit tests passing, 0 platform leaks, 100% contract synchronization.
+
 ### Full Codebase Re-Audit Remediation & Security Hardening
 - **Complete Re-Audit Remediation (22/22 Findings Resolved)**:
   - Systematically remediated findings R-01..R-13 and D-01..D-09 against all 9 Audit Pillars.

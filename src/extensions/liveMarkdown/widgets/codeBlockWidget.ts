@@ -24,8 +24,12 @@ export class CodeBlockHeaderWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const meta = getLanguageMeta(this.language);
 
+    // Check if there is an extra parameter or block identifier after |
+    const rawParts = this.language.split('|');
+    const extraParam = rawParts.length > 1 ? rawParts.slice(1).join('|').trim() : '';
+
     const header = createElement('div', {
-      className: 'cm-live-codeblock-header select-none flex items-center justify-between px-3 py-1.5 border-b border-[#2E2E38] bg-[#16161B] text-[#A1A1AA] rounded-t-[7px] w-full cursor-pointer'
+      className: 'cm-live-codeblock-header select-none flex items-center justify-between px-3 py-1.5 border-b border-[var(--codeblock-header-border)] bg-[var(--codeblock-header-bg)] text-[var(--text-secondary)] rounded-t-[7px] w-full cursor-pointer'
     });
 
     header.addEventListener('click', (e) => {
@@ -38,7 +42,7 @@ export class CodeBlockHeaderWidget extends WidgetType {
     });
 
     const left = createElement('div', {
-      className: 'flex items-center gap-2'
+      className: 'flex items-center gap-2 overflow-hidden'
     });
 
     const dot = createElement('span', {
@@ -55,11 +59,20 @@ export class CodeBlockHeaderWidget extends WidgetType {
     badge.textContent = meta.name;
     left.appendChild(badge);
 
+    if (extraParam) {
+      const paramBadge = createElement('span', {
+        className: 'text-[10px] font-mono text-[var(--text-muted)] truncate max-w-[200px]',
+        title: extraParam
+      });
+      paramBadge.textContent = extraParam;
+      left.appendChild(paramBadge);
+    }
+
     header.appendChild(left);
 
     const copyBtn = createElement('button', {
       type: 'button',
-      className: 'cm-live-copy-code-btn flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium text-[#A1A1AA] hover:text-white hover:bg-[#27272F] transition-all cursor-pointer',
+      className: 'cm-live-copy-code-btn flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] active:scale-95 transition-all cursor-pointer shrink-0',
       title: 'Copy code snippet',
       'aria-label': `Copy ${meta.name} code snippet`
     });
@@ -83,11 +96,11 @@ export class CodeBlockHeaderWidget extends WidgetType {
       try {
         await copyText(this.codeContent, getActiveBridge() || undefined);
         copyLabel.textContent = 'Copied!';
-        copyBtn.classList.add('text-[#10B981]');
-        copyIcon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+        copyBtn.classList.add('text-[var(--status-success)]');
+        copyIcon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--status-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
         setTimeout(() => {
           copyLabel.textContent = 'Copy';
-          copyBtn.classList.remove('text-[#10B981]');
+          copyBtn.classList.remove('text-[var(--status-success)]');
           copyIcon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
         }, 2000);
       } catch (err) {

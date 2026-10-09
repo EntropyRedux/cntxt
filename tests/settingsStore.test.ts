@@ -25,6 +25,7 @@ describe('SettingsStore', () => {
         uiDensity: 'desktop',
         touchOptimized: false,
         sidebarOverlay: false,
+        syntaxHighlighting: 'auto',
       },
     });
   });
@@ -192,5 +193,22 @@ describe('SettingsStore', () => {
 
     store.setTypingDirection('bottom-to-up');
     expect(useSettingsStore.getState().settings.typingDirection).toBe('bottom-to-up');
+  });
+
+  it('updates syntax highlighting options (auto, markdown, headers, none)', () => {
+    const store = useSettingsStore.getState();
+    expect(store.settings.syntaxHighlighting).toBe('auto');
+
+    store.updateSettings({ syntaxHighlighting: 'headers' });
+    expect(useSettingsStore.getState().settings.syntaxHighlighting).toBe('headers');
+
+    store.updateSettings({ syntaxHighlighting: 'markdown' });
+    expect(useSettingsStore.getState().settings.syntaxHighlighting).toBe('markdown');
+
+    store.updateSettings({ syntaxHighlighting: 'none' });
+    expect(useSettingsStore.getState().settings.syntaxHighlighting).toBe('none');
+
+    store.updateSettings({ syntaxHighlighting: 'auto' });
+    expect(useSettingsStore.getState().settings.syntaxHighlighting).toBe('auto');
   });
 });

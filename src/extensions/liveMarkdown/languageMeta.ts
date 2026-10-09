@@ -5,7 +5,7 @@ export interface LanguageMeta {
 }
 
 export function getLanguageMeta(rawLang: string): LanguageMeta {
-  const lang = rawLang.toLowerCase().trim();
+  const lang = (rawLang || '').split('|')[0].trim().toLowerCase();
   switch (lang) {
     case 'ts':
     case 'typescript':
