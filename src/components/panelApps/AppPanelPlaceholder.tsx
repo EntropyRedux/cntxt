@@ -130,7 +130,7 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
     const isOffline = (manifest?.network ?? activeApp.network) === 'offline';
     const cspMeta = isOffline
       ? `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' data:; script-src 'unsafe-inline' 'unsafe-eval' blob: data:; img-src data: blob:; font-src data:; connect-src 'none';">`
-      : `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https: http: data:; script-src 'unsafe-inline' 'unsafe-eval' https: http: blob: data:; img-src https: http: data: blob:; font-src https: http: data:; worker-src blob: data: https:; frame-src 'self' data: blob:; connect-src https: http: ws: wss:;">`;
+      : `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https: http: data: blob:; script-src 'unsafe-inline' 'unsafe-eval' https: http: blob: data:; img-src https: http: data: blob:; font-src https: http: data:; worker-src blob: data: https:; frame-src 'self' data: blob:; connect-src https: http: ws: wss:;">`;
 
     // Dynamic storage polyfill avoiding static token checks
     const storeToken = 'local' + 'Storage';

@@ -7,8 +7,7 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
-    <!-- Fonts are bundled locally via Fontsource - no external network requests -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss: ws: http://127.0.0.1:* http://localhost:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: data:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss: ws: http://127.0.0.1:* http://localhost:*; worker-src 'self' blob: https: data:; frame-src 'self' data: blob: about:; object-src 'none'; base-uri 'self';" />
   </head>
   <body class="bg-[var(--app-bg)] text-[var(--text-primary)] antialiased selection:bg-[var(--accent-primary)] selection:text-white">
     <div id="root"></div>
