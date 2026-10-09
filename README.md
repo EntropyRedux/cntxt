@@ -2,32 +2,33 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.5.1) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Syntax Highlighting Granularity Switcher (Auto / Markdown / Headers / OFF) with Immediate CodeMirror Reactivity, Full Codebase Security & Re-Audit Remediation (22/22 findings resolved), Brand Redesign & High-Res App Iconography across all platforms, and Large Document TOC Chunking & Quick Append Architecture. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.5.2) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Panel Apps Engine (Sandboxed HTML Mini-Apps with .cntxt format, App Builder wizard, Dynamic App Rail, Preflight Scanner, Lifecycle Management & Resilient Path Resolution), Syntax Highlighting Granularity Switcher, Full Codebase Security & Re-Audit Remediation (22/22 findings resolved), and Brand Redesign across all platforms. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.5.1)
+## Downloads (v0.5.2)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.1_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.1/CNTXT_0.5.1_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.1_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.1/CNTXT_0.5.1_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.1_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.1/CNTXT_0.5.1_portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.1_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.2/CNTXT_0.5.1_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.1_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.2/CNTXT_0.5.1_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.1_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.2/CNTXT_0.5.1_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download app-arm64-release.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.1/app-arm64-release.apk) | Signed with Release Keystore / Installable via ADB |
+| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download app-arm64-release.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.2/app-arm64-release.apk) | Signed with Release Keystore / Installable via ADB |
 
 ### Linux
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Debian Package** | `.deb` | amd64 | [Download CNTXT_0.5.1_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.1/CNTXT_0.5.1_amd64.deb) | Verified Debian package bundle |
-| **Standalone Portable** | Binary | x64 | [Download cntxt-portable](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.1/cntxt-portable) | Standalone binary |
+| **Debian Package** | `.deb` | amd64 | [Download CNTXT_0.5.1_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.2/CNTXT_0.5.1_amd64.deb) | Verified Debian package bundle |
+| **Standalone Portable** | Binary | x64 | [Download cntxt-portable](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.2/cntxt-portable) | Standalone binary |
 
 ## What It Is
 
 CNTXT builds on the ContextPad concept with a clean, portable frontend architecture:
 
+- **Panel Apps Engine** — turn any standalone HTML document into a persistent, sandboxed mini-app within CNTXT. Includes a 3-step creation wizard (`AppBuilderPanel`), dynamic app rail (`AppRail`), offline-readiness preflight scanner, dedicated data partitions, and full lifecycle management (reload, reset state, reveal, edit, remove, and delete).
 - **Portability-first** — a typed `IRuntimeBridge` contract (`src/ui-contract/bridgeContract.ts`) is the *only* boundary between the UI and the platform (Tauri desktop, Android mobile, web, or mock). No component, store, or service touches `window`, `navigator`, `localStorage`, or `indexedDB` directly; all platform access lives in `src/adapters/`.
 - **Modular shell architecture** — Classic / Prototype / Workbench shell modes with a typed design system (`src/design/`), primitive component library (`src/primitives/`), and touch-friendly mobile accessory toolbar (`MobileAccessoryBar`).
 - **Tauri v2 runtime** — native Rust commands for file operations (`rfd` dialogs on desktop, Scoped Storage plugins on mobile), window management, sandboxed keyring/storage secrets, and client-side LivePreview with synchronized scrolling and markdown decoration rendering.

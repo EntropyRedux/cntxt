@@ -1,15 +1,15 @@
 # ContextPad Component Manifest
 
 - **Project:** CNTXT (ContextPad) — Modular Frontend UI Development Platform
-- **Version:** 0.5.1
-- **Generated:** 2026-10-07
+- **Version:** 0.5.2
+- **Generated:** 2026-10-09
 - **Specification:** Solo Dev AI-Assisted Workflow Stage 2/3 Handoff Manifest
 
 ---
 
 ## 1. Architecture & Global Invariants
 
-All visual presenter components are 100% pure UI driven strictly by typed props and headless store hooks (`useRuntimeBridge`, `useTabStore`, `useSettingsStore`, `useRibbonStore`, `useAuthStore`). Zero direct native IPC calls (`invoke()`), un-quarantined browser globals, or unhandled persistence promises exist in visual layers.
+All visual presenter components are 100% pure UI driven strictly by typed props and headless store hooks (`useRuntimeBridge`, `useTabStore`, `useSettingsStore`, `useRibbonStore`, `useAuthStore`, `usePanelAppsStore`). Zero direct native IPC calls (`invoke()`), un-quarantined browser globals, or unhandled persistence promises exist in visual layers.
 
 ### Background Processes & Gating
 All background processes (live token estimation, autosave loop, live markdown sync) are strictly gated under **Settings -> Experimental** and disabled or throttled by default:
@@ -19,9 +19,9 @@ All background processes (live token estimation, autosave loop, live markdown sy
 
 ### Quality & Verification Gates
 - Playwright 1.63.0 suite (`npm run test:e2e`): 24 Chromium tests green.
-- Unit suite: 400 Vitest tests across 40 suites (`npm test`) 100% passing.
+- Unit suite: 417 Vitest tests across 41 suites (`npm test`) 100% passing.
 - Native Rust security suite: 8 tests passing (`cargo test`) verifying path validation, URL character filtering, system root protection, and session token authorization.
-- Platform Purity: 0 platform leaks across 146 files (`npm run lint`), 100% contract parity.
+- Platform Purity: 0 platform leaks across 161 files (`npm run lint`), 100% contract parity.
 
 ---
 
@@ -33,6 +33,16 @@ All background processes (live token estimation, autosave loop, live markdown sy
 | `ClassicShell` | `src/shell/ClassicShell.tsx` | Pure shell presenter | `--bg-main`, `--card-bg`, `--card-border`, `--text-primary` | `mocks/index.ts` (demo mode only) | Keyboard shortcuts listener | `tests/shell.contract.md` | PORT AS-IS |
 | `ShellEditorContainer` | `src/shell/ShellEditorContainer.tsx` | Editor/preview pane container | `--bg-main`, `--card-border` | None | Tab synchronization | `tests/editor.contract.md` | PORT AS-IS |
 | `ErrorBoundary` | `src/components/Common/ErrorBoundary.tsx` | `{ children, regionName, fallbackClassName }` | `--card-bg`, `--card-border`, `--status-error`, `--text-primary` | None | None | `tests/errorBoundary.contract.md` | PORT AS-IS |
+
+### Panel Apps Presenters (FG-13)
+| Component | Location | Props Contract | Theme Tokens Used | Mock Data Used | Background Processes | Test Contract | Port Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `AppBuilderPanel` | `src/components/panelApps/AppBuilderPanel.tsx` | `{ onClose, workspacePath }` | `--sidebar-bg`, `--sidebar-header-bg`, `--card-bg`, `--border-primary`, `--accent-primary` | None | None | `tests/panelApps.test.ts` | PORT AS-IS |
+| `AppRail` | `src/components/panelApps/AppRail.tsx` | `{ isMobile, activeAppId, onOpenApp, onOpenBuilder }` | `--rail-bg`, `--card-hover-bg`, `--accent-primary` | None | None | `tests/panelApps.test.ts` | PORT AS-IS |
+| `AppPanelPlaceholder` | `src/components/panelApps/AppPanelPlaceholder.tsx` | Pure Presenter | `--sidebar-bg`, `--card-bg`, `--border-primary`, `--text-primary` | None | Sandboxed PostMessage Sync | `tests/panelApps.test.ts` | PORT AS-IS |
+| `SourceStep` | `src/components/panelApps/SourceStep.tsx` | `{ tabs, selectedTabId, onSelectTab, onPickFile, ... }` | `--card-bg`, `--border-subtle`, `--accent-primary` | None | None | `tests/panelApps.test.ts` | PORT AS-IS |
+| `DetailsStep` | `src/components/panelApps/DetailsStep.tsx` | `{ name, icon, description, network, panelWidth, ... }` | `--card-bg`, `--border-subtle`, `--accent-primary` | None | None | `tests/panelApps.test.ts` | PORT AS-IS |
+| `ReviewStep` | `src/components/panelApps/ReviewStep.tsx` | `{ details, preflight, creating, onCreate }` | `--card-bg`, `--border-subtle`, `--accent-primary` | None | Preflight analysis | `tests/panelApps.test.ts` | PORT AS-IS |
 
 ### Navigation & Command Controls
 | Component | Location | Props Contract | Theme Tokens Used | Mock Data Used | Background Processes | Test Contract | Port Status |

@@ -49,6 +49,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Comprehensive Unit Test Suite (`tests/panelApps.test.ts`)**:
   - Added 17 unit tests verifying dynamic fence selection, .cntxt round trips, preflight scanning, source extraction, and registry state management (417/417 tests passing across 41 test files).
 
+### Panel Apps: Resilient Path Resolution, Lifecycle Management & Production CSP Overhaul
+- **Dedicated Default Storage Directory & Native Command (`src-tauri/src/commands/file.rs`, `src-tauri/src/lib.rs`)**:
+  - Added native `get_default_panel_apps_dir` Rust command that securely resolves and auto-creates `%APPDATA%\com.cntxt.desktop\Panel Apps` on Windows (and system-appropriate app config directories on macOS/Linux).
+  - Wired into `IFileSystemBridge` (`getDefaultAppsDir`) and implemented on `TauriRuntimeAdapter`.
+  - Guaranteed that newly created panel apps without an open workspace save to an absolute, permanent user path rather than volatile relative paths.
+- **Auto-Healing Path Resolution & Manual Relink (`src/components/panelApps/AppPanelPlaceholder.tsx`)**:
+  - Implemented multi-candidate search order when loading `.cntxt` files (workspace root, AppData Panel Apps folder, and local dev folder).
+  - Automatically heals stale or relative paths upon discovery, immediately updating the registry with the verified absolute path.
+  - Added "Locate .cntxt File..." file picker button to the panel error fallback card, allowing manual re-linking of relocated files.
+- **Full App Lifecycle & Management Suite (`AppRail.tsx`, `AppPanelPlaceholder.tsx`, `AppBuilderPanel.tsx`)**:
+  - **App Rail Right-Click Context Menu**: Right-clicking any app icon provides quick actions: *Open in Panel*, *Reset Stored Data*, *Edit in Editor*, *Reveal in File Explorer*, *Remove from Rail*, and *Delete App & File*.
+  - **Panel Header Action Controls**: Header toolbar buttons for *Reload*, *Reset State*, *Reveal in Explorer*, *Edit Source*, and *Remove / Delete*.
+  - **App Builder "Manage Apps" Tab**: Tabbed switcher between *Create App* (3-step wizard) and *Manage Apps ({count})* with cards displaying app metadata, path, network status, and 1-click management actions.
+  - **Data State Partition Reset**: Completely clears an app's sandboxed local data partition (`cntxt_app_data_<id>`) and reloads with clean state.
+  - **Safe Deletion**: Dispatches native `delete_file` command to delete `.cntxt` files from disk and purges data partitions from storage.
+- **Production CSP & DevTools Enablement (`src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/src/commands/window.rs`)**:
+  - Relaxed production CSP in `tauri.conf.json` to permit `'unsafe-inline'` and `'unsafe-eval'` in `script-src` and `style-src`, resolving issues where Tailwind Play CDN and inline scripts in `.cntxt` apps failed to render in release builds.
+  - Enabled `"devtools": true` in `tauri.conf.json` and added `devtools` feature by default in `Cargo.toml`.
+  - Updated `window.rs` so pressing `F12` or `Ctrl+Shift+I` toggles DevTools in release builds on desktop for effortless diagnostics.
+
 ## [0.5.1] — 2026-10-09
 
 ### Syntax Color Highlighting Granularity & Code Block Overhaul

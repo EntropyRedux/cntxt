@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.18
+Version: v2.19
 Last Updated: 2026-10-09
-Last Updated By: Prod Agent (Panel Apps App Builder & Shell Integration — Flow A Complete)
+Last Updated By: Prod Agent (Panel Apps Resilient Paths, Full Lifecycle Suite & Production CSP Overhaul)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -11,18 +11,21 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-13 Flow A Complete & Verified; Tri-Platform Suite Live)
+  [x] Feature Implementation (FG-01..FG-13 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
     [x] Testing (Vitest 417/417 Live across 41 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.5.2 Portable Executable & Native Installers Built)
 
-Current Feature Group: FG-13 Panel Apps Desktop (Flow A: Builder & Shell Integration)
-Status: completed / verified (Panel App Builder wizard, Dynamic Rail with AppRail presenter, static Preflight Scanner with offline badge, .cntxt round-trip parser, Rust parent dir creation, Tab context menu integration, 417/417 unit tests passing)
+Current Feature Group: FG-13 Panel Apps Desktop (Complete & Verified)
+Status: completed / verified (App Builder wizard, Dynamic Rail with AppRail presenter, static Preflight Scanner, .cntxt round-trip parser, AppData default directory, path auto-healing, full lifecycle management suite, production CSP & DevTools support, 417/417 unit tests passing)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
 Unit Tests: written [x] passing [x] (417/417 unit tests passing across 41 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/plans/feature_group_FG13_panel_apps_desktop_2026-10-09.md
 Notes:
+- Task 29: Resilient Path Resolution & Default Apps Directory: Added native command `get_default_panel_apps_dir` resolving `%APPDATA%\com.cntxt.desktop\Panel Apps`. Ensured newly created apps save to permanent absolute paths. Built auto-healing resolution checking workspace root, AppData, and local paths with automatic registry self-repair and manual "Locate .cntxt File..." re-link fallback.
+- Task 30: Full Panel App Lifecycle & Management: Added right-click context menu on `AppRail` (Open, Reset Data, Edit, Reveal, Remove, Delete), panel header action controls, and `AppBuilderPanel` tabbed switcher ("Create App" vs "Manage Apps ({count})") with data partition resets and file deletions.
+- Task 31: Production CSP & DevTools Enablement: Relaxed `tauri.conf.json` CSP to permit `'unsafe-inline'` and `'unsafe-eval'` in `script-src` and `style-src` so inline scripts and runtime compilers (Tailwind Play CDN, Lucide, KaTeX) execute properly in release builds. Enabled `devtools: true` and wired `F12` / `Ctrl+Shift+I` in desktop release builds.
 - Task 21: FG-13 Panel Apps Flow A Architecture: Created canonical domain models in contracts/data_shapes.ts (PanelAppManifest, PanelAppRecord, PanelAppNetworkMode) and strict Zod runtime validators in src/contracts/boundarySchemas.ts.
 - Task 22: .cntxt Format & Dynamic Code Fence: Implemented dynamic pickFence avoiding backtick collision and round-trip verified buildCntxtApp / parseCntxtApp.
 - Task 23: Preflight Scanner & Network Badge: Built scanHtml identifying external links/scripts, soft 512KB and hard 2MB limits, unsafe parent/top calls, top byte contributors, and dynamic Offline-ready / Needs network badge.
