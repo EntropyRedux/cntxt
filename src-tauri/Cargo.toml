@@ -14,7 +14,7 @@ name = "cntxt"
 path = "src/main.rs"
 
 [features]
-default = ["devtools"]
+default = []
 custom-protocol = ["tauri/custom-protocol"]
 devtools = ["tauri/devtools"]
 

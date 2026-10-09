@@ -423,6 +423,12 @@ export const ShellFrame: React.FC = () => {
       }
       e.preventDefault();
       useSettingsStore.getState().toggleWordWrap();
+    } else if (e.key === 'Escape') {
+      const { settings, toggleSidebar } = useSettingsStore.getState();
+      if (settings.showSidebar && (settings.activeSidebarTab === 'panel-app' || settings.activeSidebarTab === 'app-builder')) {
+        e.preventDefault();
+        toggleSidebar();
+      }
     } else if (e.key === 'F12' || (modifier && e.shiftKey && e.key.toLowerCase() === 'i')) {
       e.preventDefault();
       bridge.window.toggleDevTools?.();
