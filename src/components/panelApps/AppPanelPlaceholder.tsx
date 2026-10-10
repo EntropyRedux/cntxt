@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { usePanelAppsStore } from '../../features/panelApps/state/panelAppsStore';
 import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useConfirmStore } from '../../store/confirmStore';
 import { useRuntimeBridge } from '../../adapters';
 import { parseCntxtApp, updateCntxtAppState } from '../../features/panelApps/format/cntxtApp';
 import { buildThemeInjection } from '../../features/panelApps/theme/themeSync';
@@ -461,15 +462,21 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
     addNotification('App Reloaded', `Reloading ${activeApp.name}`, 'info');
   };
 
-  const handleClearAppData = async () => {
+  const handleClearAppData = () => {
     if (!activeApp) return;
-    if (window.confirm(`Reset all stored data for "${activeApp.name}"? This clears its stored data state and reloads the app with fresh defaults.`)) {
-      const key = `cntxt_app_data_${activeApp.id}`;
-      await bridge.storage.removeItem(key);
-      setStorageData({});
-      setReloadKey((k) => k + 1);
-      addNotification('Data Reset', `Local storage data for "${activeApp.name}" was cleared.`, 'info');
-    }
+    useConfirmStore.getState().showConfirm({
+      title: 'Reset Stored Data',
+      message: `Reset all stored data for "${activeApp.name}"? This clears its stored data state and reloads the app with fresh defaults.`,
+      confirmLabel: 'Reset Data',
+      variant: 'warning',
+      onConfirm: async () => {
+        const key = `cntxt_app_data_${activeApp.id}`;
+        await bridge.storage.removeItem(key);
+        setStorageData({});
+        setReloadKey((k) => k + 1);
+        addNotification('Data Reset', `Local storage data for "${activeApp.name}" was cleared.`, 'info');
+      }
+    });
   };
 
   const handleRevealInExplorer = async () => {
@@ -519,28 +526,41 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
   };
 
   const handleRemove = () => {
-    if (window.confirm(`Remove "${activeApp.name}" from your panel apps rail? (The .cntxt file on disk will NOT be deleted)`)) {
-      remove(activeApp.id, bridge.storage);
-      if (onClose) onClose();
-      addNotification('Panel App Removed', `"${activeApp.name}" removed from rail`, 'info');
-    }
+    if (!activeApp) return;
+    useConfirmStore.getState().showConfirm({
+      title: 'Remove Panel App',
+      message: `Remove "${activeApp.name}" from your panel apps rail? (The .cntxt file on disk will NOT be deleted)`,
+      confirmLabel: 'Remove',
+      variant: 'warning',
+      onConfirm: () => {
+        remove(activeApp.id, bridge.storage);
+        if (onClose) onClose();
+        addNotification('Panel App Removed', `"${activeApp.name}" removed from rail`, 'info');
+      }
+    });
   };
 
-  const handleDeleteAppAndFile = async () => {
+  const handleDeleteAppAndFile = () => {
     if (!activeApp) return;
-    if (window.confirm(`Permanently delete "${activeApp.name}" and remove its .cntxt file from disk? This cannot be undone.`)) {
-      try {
-        if (bridge.fs.deleteFile) {
-          await bridge.fs.deleteFile(activeApp.path);
+    useConfirmStore.getState().showConfirm({
+      title: 'Delete App & File',
+      message: `Permanently delete "${activeApp.name}" and remove its .cntxt file from disk? This cannot be undone.`,
+      confirmLabel: 'Delete Permanently',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          if (bridge.fs.deleteFile) {
+            await bridge.fs.deleteFile(activeApp.path);
+          }
+        } catch (err) {
+          console.warn('[AppPanelPlaceholder] Failed to delete file on disk:', err);
         }
-      } catch (err) {
-        console.warn('[AppPanelPlaceholder] Failed to delete file on disk:', err);
+        await bridge.storage.removeItem(`cntxt_app_data_${activeApp.id}`);
+        remove(activeApp.id, bridge.storage);
+        if (onClose) onClose();
+        addNotification('Panel App Deleted', `Deleted "${activeApp.name}" and file removed`, 'info');
       }
-      await bridge.storage.removeItem(`cntxt_app_data_${activeApp.id}`);
-      remove(activeApp.id, bridge.storage);
-      if (onClose) onClose();
-      addNotification('Panel App Deleted', `Deleted "${activeApp.name}" and file removed`, 'info');
-    }
+    });
   };
 
   const isOverlayActive = Boolean((loading && !rawHtml) || error || showInfo);

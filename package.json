@@ -51,7 +51,6 @@
     "@tauri-apps/api": "^2",
     "@vitejs/plugin-react": "^5.0.4",
     "canvas-confetti": "^1.9.4",
-    "idb-keyval": "^6.3.0",
     "katex": "^0.18.5",
     "lucide-react": "^0.546.0",
     "mermaid": "^11.17.2",

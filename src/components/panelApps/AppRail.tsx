@@ -14,6 +14,7 @@ import { useRuntimeBridge } from '../../adapters';
 import { usePanelAppsStore } from '../../features/panelApps/state/panelAppsStore';
 import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useConfirmStore } from '../../store/confirmStore';
 
 export interface AppRailProps {
   apps: PanelAppRecord[];
@@ -68,13 +69,19 @@ export const AppRail: React.FC<AppRailProps> = ({
     });
   };
 
-  const handleClearAppData = async (app: PanelAppRecord) => {
-    if (window.confirm(`Reset all stored data for "${app.name}"? This clears its stored data state.`)) {
-      const key = `cntxt_app_data_${app.id}`;
-      await bridge.storage.removeItem(key);
-      addNotification('Data Reset', `Local storage for "${app.name}" was reset.`, 'info');
-    }
+  const handleClearAppData = (app: PanelAppRecord) => {
     setContextMenu(null);
+    useConfirmStore.getState().showConfirm({
+      title: 'Reset Stored Data',
+      message: `Reset all stored data for "${app.name}"? This clears its stored data state.`,
+      confirmLabel: 'Reset Data',
+      variant: 'warning',
+      onConfirm: async () => {
+        const key = `cntxt_app_data_${app.id}`;
+        await bridge.storage.removeItem(key);
+        addNotification('Data Reset', `Local storage for "${app.name}" was reset.`, 'info');
+      }
+    });
   };
 
   const handleOpenInEditor = async (app: PanelAppRecord) => {
@@ -106,27 +113,39 @@ export const AppRail: React.FC<AppRailProps> = ({
   };
 
   const handleRemoveApp = (app: PanelAppRecord) => {
-    if (window.confirm(`Remove "${app.name}" from your panel apps rail? (The .cntxt file on disk will NOT be deleted)`)) {
-      remove(app.id, bridge.storage);
-      addNotification('App Removed', `"${app.name}" removed from rail`, 'info');
-    }
     setContextMenu(null);
+    useConfirmStore.getState().showConfirm({
+      title: 'Remove App from Rail',
+      message: `Remove "${app.name}" from your panel apps rail? (The .cntxt file on disk will NOT be deleted)`,
+      confirmLabel: 'Remove',
+      variant: 'warning',
+      onConfirm: () => {
+        remove(app.id, bridge.storage);
+        addNotification('App Removed', `"${app.name}" removed from rail`, 'info');
+      }
+    });
   };
 
-  const handleDeleteAppAndFile = async (app: PanelAppRecord) => {
-    if (window.confirm(`Permanently delete "${app.name}" and remove its .cntxt file from disk? This cannot be undone.`)) {
-      try {
-        if (bridge.fs.deleteFile) {
-          await bridge.fs.deleteFile(app.path);
-        }
-      } catch (err) {
-        console.warn('[AppRail] Failed to delete file on disk:', err);
-      }
-      await bridge.storage.removeItem(`cntxt_app_data_${app.id}`);
-      remove(app.id, bridge.storage);
-      addNotification('App Deleted', `Deleted "${app.name}" and removed file`, 'info');
-    }
+  const handleDeleteAppAndFile = (app: PanelAppRecord) => {
     setContextMenu(null);
+    useConfirmStore.getState().showConfirm({
+      title: 'Delete App & File',
+      message: `Permanently delete "${app.name}" and remove its .cntxt file from disk? This cannot be undone.`,
+      confirmLabel: 'Delete Permanently',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          if (bridge.fs.deleteFile) {
+            await bridge.fs.deleteFile(app.path);
+          }
+        } catch (err) {
+          console.warn('[AppRail] Failed to delete file on disk:', err);
+        }
+        await bridge.storage.removeItem(`cntxt_app_data_${app.id}`);
+        remove(app.id, bridge.storage);
+        addNotification('App Deleted', `Deleted "${app.name}" and removed file`, 'info');
+      }
+    });
   };
 
   if (orientation === 'horizontal') {

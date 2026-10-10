@@ -106,7 +106,7 @@ export const PersonalGitHubLibraryModal: React.FC<PersonalGitHubLibraryModalProp
       setSessionStorageItem('cntxt_github_custom_token', cfg.customToken);
     }
     // Redact customToken from unencrypted persistent storage
-    const safeCfg = cfg ? { ...cfg, customToken: undefined } : null;
+    const safeCfg: Partial<PersonalGitHubLibraryConfig> | null = cfg ? { ...cfg, customToken: undefined } : null;
     setSafeStorageItem(STORAGE_KEYS.GITHUB_LIBRARY_CONFIG, safeCfg ? JSON.stringify(safeCfg) : '');
     setGitHubLibraryConfig(cfg);
   };

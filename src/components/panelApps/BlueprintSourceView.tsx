@@ -4,6 +4,7 @@ import { BlueprintAnswers } from '../../features/panelApps/blueprint/answers';
 import { buildArchetypePrompt } from '../../features/panelApps/blueprint/promptBuilder';
 import { extractHtmlFromReply } from '../../features/panelApps/import/extractReply';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useConfirmStore } from '../../store/confirmStore';
 import { useTabStore } from '../../store/tabStore';
 import { useRuntimeBridge } from '../../adapters';
 import { 
@@ -141,18 +142,26 @@ export const BlueprintSourceView: React.FC<BlueprintSourceViewProps> = ({
       return;
     }
 
+    const pushTab = () => {
+      setPromptTabId(tabToPush.id);
+      updateTabContent(tabToPush.id, generatedPrompt);
+      setCustomPrompt(generatedPrompt);
+      setIsPromptEdited(false);
+      addNotification('Tab Updated', 'Pushed updated form prompt to editor tab', 'info');
+    };
+
     if (isPromptEdited && tabToPush.content !== generatedPrompt) {
-      const proceed = window.confirm(
-        'The editor tab contains manual changes. Overwrite with the regenerated form prompt?'
-      );
-      if (!proceed) return;
+      useConfirmStore.getState().showConfirm({
+        title: 'Overwrite Manual Changes',
+        message: 'The editor tab contains manual changes. Overwrite with the regenerated form prompt?',
+        confirmLabel: 'Overwrite',
+        variant: 'warning',
+        onConfirm: pushTab,
+      });
+      return;
     }
 
-    setPromptTabId(tabToPush.id);
-    updateTabContent(tabToPush.id, generatedPrompt);
-    setCustomPrompt(generatedPrompt);
-    setIsPromptEdited(false);
-    addNotification('Tab Updated', 'Pushed updated form prompt to editor tab', 'info');
+    pushTab();
   };
 
   const handleImportFromActiveTab = () => {
@@ -399,7 +408,7 @@ export const BlueprintSourceView: React.FC<BlueprintSourceViewProps> = ({
                       </label>
                       <select
                         value={answers.persistence}
-                        onChange={(e) => setAnswers({ ...answers, persistence: e.target.value as any })}
+                        onChange={(e) => setAnswers({ ...answers, persistence: e.target.value as BlueprintAnswers['persistence'] })}
                         className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded px-2 py-1 text-[var(--text-primary)] outline-none text-[11px]"
                       >
                         <option value="file">File-backed (.cntxt)</option>
@@ -414,7 +423,7 @@ export const BlueprintSourceView: React.FC<BlueprintSourceViewProps> = ({
                       </label>
                       <select
                         value={answers.themeMode}
-                        onChange={(e) => setAnswers({ ...answers, themeMode: e.target.value as any })}
+                        onChange={(e) => setAnswers({ ...answers, themeMode: e.target.value as BlueprintAnswers['themeMode'] })}
                         className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded px-2 py-1 text-[var(--text-primary)] outline-none text-[11px]"
                       >
                         <option value="cntxt">Sync with CNTXT (14 tokens)</option>

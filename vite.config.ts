@@ -36,8 +36,6 @@ export default defineConfig(() => {
         '@codemirror/lang-css',
         '@codemirror/lang-json',
         '@codemirror/lang-sql',
-        '@codemirror/lang-rust',
-        '@codemirror/lang-cpp',
         '@lezer/highlight',
         '@tauri-apps/api/core',
         '@tauri-apps/api/event',
@@ -88,7 +86,6 @@ export default defineConfig(() => {
               if (id.includes('@supabase')) return 'vendor-supabase';
               if (id.includes('@codemirror') || id.includes('@lezer')) return 'vendor-codemirror';
               if (id.includes('lucide-react')) return 'vendor-lucide';
-              if (id.includes('react') || id.includes('zustand')) return 'vendor-react';
               return 'vendor';
             }
           },

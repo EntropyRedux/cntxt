@@ -25,6 +25,7 @@ import {
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useConfirmStore } from '../../store/confirmStore';
 import { triggerFileDownload, triggerFileInput } from '../../adapters';
 import { PersonalGitHubLibraryModal } from './PersonalGitHubLibraryModal';
 import { AppBuilderPanel } from '../panelApps/AppBuilderPanel';
@@ -89,19 +90,27 @@ export const Sidebar: React.FC = () => {
           return;
         }
 
-        if (preview.duplicates.length > 0) {
-          const proceed = window.confirm(
-            `Duplicate template names found:\n${preview.duplicates.join(', ')}\n\nImport anyway? (Duplicate items will be added with new unique IDs)`
+        const doCommit = () => {
+          commitImportTemplates(preview.newTemplates);
+          addNotification(
+            'Import Complete',
+            `Successfully imported ${preview.newTemplates.length} template(s)`,
+            'success'
           );
-          if (!proceed) return;
+        };
+
+        if (preview.duplicates.length > 0) {
+          useConfirmStore.getState().showConfirm({
+            title: 'Duplicate Templates Found',
+            message: `Duplicate template names found:\n${preview.duplicates.join(', ')}\n\nImport anyway? (Duplicate items will be added with new unique IDs)`,
+            confirmLabel: 'Import Anyway',
+            variant: 'warning',
+            onConfirm: doCommit,
+          });
+          return;
         }
 
-        commitImportTemplates(preview.newTemplates);
-        addNotification(
-          'Import Complete',
-          `Successfully imported ${preview.newTemplates.length} template(s)`,
-          'success'
-        );
+        doCommit();
       } catch {
         addNotification('Import Error', 'Invalid or unreadable template JSON', 'error');
       }

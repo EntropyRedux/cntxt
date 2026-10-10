@@ -69,7 +69,7 @@ interface TemplateState {
   closeVariableModal: () => void;
   extractVariables: (content: string) => string[];
 
-  previewImportTemplates: (jsonOrArray: string | any[]) => ImportPreviewResult;
+  previewImportTemplates: (jsonOrArray: string | unknown[]) => ImportPreviewResult;
   commitImportTemplates: (templatesToAdd: Template[]) => number;
   importTemplates: (imported: Template[] | string) => number;
   exportTemplates: () => string;

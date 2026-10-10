@@ -248,6 +248,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         return mapFileNodes(rawEntries);
       } catch (err) {
         console.error('[TauriRuntimeAdapter] readDirectory error:', err);
+        useNotificationStore.getState().addNotification('Directory Error', `Failed to read directory ${path}: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return null;
       }
     },
@@ -330,6 +331,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         return files || [];
       } catch (err) {
         console.error('[TauriRuntimeAdapter] getPendingFiles error:', err);
+        useNotificationStore.getState().addNotification('Pending Files Error', `Failed to check pending files: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return [];
       }
     },
@@ -371,6 +373,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         return await this.invokeTauriVoid('delete_file', { path });
       } catch (err) {
         console.error('[TauriRuntimeAdapter] deleteFile error:', err);
+        useNotificationStore.getState().addNotification('Delete Error', `Failed to delete file ${path}: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return false;
       }
     },
@@ -380,6 +383,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         return await this.invokeTauri<string>('get_default_panel_apps_dir');
       } catch (err) {
         console.error('[TauriRuntimeAdapter] getDefaultAppsDir error:', err);
+        useNotificationStore.getState().addNotification('System Error', `Failed to resolve default apps directory: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return null;
       }
     },
@@ -389,6 +393,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         return await this.invokeTauriVoid('open_file_explorer', { path });
       } catch (err) {
         console.error('[TauriRuntimeAdapter] openFileExplorer error:', err);
+        useNotificationStore.getState().addNotification('File Explorer Error', `Failed to reveal file in explorer: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return false;
       }
     }
@@ -402,6 +407,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         return true;
       } catch (err) {
         console.error('[TauriRuntimeAdapter] newWindow error:', err);
+        useNotificationStore.getState().addNotification('Window Error', `Failed to open new window: ${(err as Error)?.message || 'Unknown error'}`, 'error');
         return false;
       }
     },
@@ -432,6 +438,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
         }
       } catch (err) {
         console.error('[TauriRuntimeAdapter] toggleMaximize error:', err);
+        useNotificationStore.getState().addNotification('Window Error', `Failed to toggle window maximize state: ${(err as Error)?.message || 'Unknown error'}`, 'error');
       }
     },
     startDragging: async (): Promise<void> => {

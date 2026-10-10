@@ -344,7 +344,7 @@ class PersonalGitHubLibraryService {
       const jsonStr = JSON.stringify(manifest, null, 2);
       const encoded = utf8ToBase64(jsonStr);
 
-      const body: Record<string, any> = {
+      const body: Record<string, unknown> = {
         message: `sync(cntxt): update personal library (${items.length} items, ${collections.length} collections)`,
         content: encoded,
         branch,

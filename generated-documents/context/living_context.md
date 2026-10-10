@@ -23,6 +23,13 @@ Background Processes: none (all sync & remote fetch user-initiated or explicit o
 Unit Tests: written [x] passing [x] (449/449 unit tests passing across 43 suites in CNTXT, 59/59 passing in cntxt-web, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md
 Notes:
+- Task 41: Full Codebase Remediation Execution (2026-10-10):
+  - Phase 1 (Type Hygiene & Config): Eliminated 5 residual `any` in `templateStore.ts`, `BlueprintSourceView.tsx`, `SettingsPanel.tsx`, and `personalGitHubLibraryService.ts`. Fixed `tsconfig.json` exclude typo (`"generated_documents"` -> `"generated-documents"`). Added `noImplicitAny: true`, `noImplicitThis: true`, `alwaysStrict: true` in `tsconfig.json`. Verified 0 `any` / `as any` across `src/` (DC-1, DC-3, F3.2).
+  - Phase 2 (Dependency & Bundler Hygiene): Removed unused `idb-keyval` from `package.json` (F5.1). Pruned unlisted `@codemirror/lang-rust` and `@codemirror/lang-cpp` from `vite.config.ts` `optimizeDeps` (F5.2). Eliminated circular manual chunk warning (`vendor -> vendor-react -> vendor`) by merging vendor packages cleanly into single `vendor` chunk (F5.3).
+  - Phase 3 (Observable User Notifications on IPC Bridge): Wired `useNotificationStore.getState().addNotification(...)` into catch blocks for `readDirectory`, `getPendingFiles`, `deleteFile`, `getDefaultAppsDir`, `openFileExplorer`, `newWindow`, and `toggleMaximize` in `tauriRuntimeAdapter.ts` (F9.1, DC-2).
+  - Phase 4 (Presenter Purity & Modal Confirmations): Replaced blocking native `window.confirm` across `AppBuilderPanel.tsx`, `AppRail.tsx`, `AppPanelPlaceholder.tsx`, `BlueprintSourceView.tsx`, and `Sidebar.tsx` with asynchronous `useConfirmStore.getState().showConfirm(...)` routing through `ConfirmationModal` (F2.1).
+  - Phase 5 (Strict Mode): Enforced `noImplicitAny: true`, `noImplicitThis: true`, `alwaysStrict: true` cleanly with 0 compiler errors (F3.1).
+  - Verification Gates: 449/449 unit tests pass across 43 suites; 0 platform leaks across 169 files; 100% contract parity.
 - Task 40: Full Codebase Audit Pass 2 Reconciliation (2026-10-10):
   - Audit Scope & Pipeline: Evaluated raw findings in `/generated-documents/audits/raw_findings_full_codebase_2026-10-10.md` against architectural invariants, documented tradeoffs, and runtime contracts.
   - Disposition & Classification: Reconciled 19 findings resulting in 10 `[VALID DEFECT]` (F2.1, F3.1, F3.2, F5.1, F5.2, F5.3, F9.1, DC-1, DC-2, DC-3) and 9 `[APPROVED TRADEOFF]` (F1.1, F1.2, F5.4, F6.1, F8.1, F8.2, F9.2, F9.3, DC-4).
@@ -83,8 +90,8 @@ Notes:
 - Task 19: v0.5.1 Production Packaging & Authenticode Signing (2026-10-09): Bumped project version to 0.5.1 across package.json, Cargo.toml, and tauri.conf.json. Generated standalone portable executable (dist-portable/CNTXT_0.5.1_portable.exe and CNTXT-portable.exe), NSIS setup installer (dist-installer/CNTXT_0.5.1_x64-setup.exe), and WiX MSI installer (dist-installer/CNTXT_0.5.1_x64_en-US.msi), signed with Authenticode SHA256 and RFC 3161 timestamps via npm run package:sign.
 - Task 20: Truncated Large Document Read-Only Safety Interlock (2026-10-09): Implemented zero-risk data loss prevention guard for large document selective loading. Extended Tab contract with isTruncatedView and rawFullContent; locked onSaveFile in eventDispatcher.ts against overwriting files from truncated views; added restoreFullContent to tabStore; rendered interactive warning banner in Editor.tsx with 1-click 'Open Full Document' restore; added comprehensive unit tests (tests/largeDocModal.test.ts 11/11 pass, 399/399 unit tests green).
 - Verification Gate Snapshot (2026-10-09): npm run lint (0 errors, 145 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (24/24 green on cold server with port killed); npm run build (0 errors, chunks optimized).
-Last Audit Reconciliation: 2026-10-10 — Full Codebase Audit Reconciled (CONDITIONAL PASS; 10 Valid Defects Classified, 9 Approved Tradeoffs Ratified, Remediation Backlog in /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-10-10.md).
-Last Git Checkpoint: 2026-10-10 — FG-15 Prompt Archetypes & Tab Sync, Multi-Agent Vision, Full Codebase Audit Reconciliation
+Last Audit Reconciliation: 2026-10-10 — Full Codebase Audit Reconciled & Remediated (All 10 Valid Defects F2.1, F3.1, F3.2, F5.1, F5.2, F5.3, F9.1, DC-1, DC-2, DC-3 Fully Resolved; 449/449 Tests Green; 0 Leaks across 169 Files; Zero Circular Chunks).
+Last Git Checkpoint: 2026-10-10 — Full Codebase Audit Remediation Complete (All 10 Defects Resolved)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v2.1

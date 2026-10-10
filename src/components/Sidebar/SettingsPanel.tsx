@@ -583,10 +583,10 @@ export const SettingsPanel: React.FC = () => {
 
             <div className="grid grid-cols-4 gap-1.5 pt-1">
               {[
-                { id: 'automatic', label: 'Auto' },
-                { id: 'markdown-formatted', label: 'Markdown' },
-                { id: 'headers-only', label: 'Headers' },
-                { id: 'off', label: 'OFF' },
+                { id: 'automatic' as const, label: 'Auto' },
+                { id: 'markdown-formatted' as const, label: 'Markdown' },
+                { id: 'headers-only' as const, label: 'Headers' },
+                { id: 'off' as const, label: 'OFF' },
               ].map(opt => {
                 const isCurrent = 
                   (settings.syntaxHighlighting || 'automatic') === opt.id ||
@@ -600,7 +600,7 @@ export const SettingsPanel: React.FC = () => {
                     id={`btn-syntax-mode-${opt.id}`}
                     type="button"
                     onClick={() => {
-                      updateSettings({ syntaxHighlighting: opt.id as any });
+                      updateSettings({ syntaxHighlighting: opt.id });
                       addNotification(
                         'Syntax Highlighting Updated',
                         opt.id === 'off' 
