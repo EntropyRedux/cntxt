@@ -664,4 +664,106 @@ export interface PanelAppRecord {
   panelWidth?: number;
 }
 
+// ==========================================
+// 11. Host Command Bus & RPC Domain Shapes (FG-16)
+// ==========================================
 
+export type CntxtRpcDomain = 'editor' | 'tabs' | 'workspace' | 'templates' | 'actions' | 'notify';
+
+export type CntxtRpcErrorCode =
+  | 'NOT_FOUND'
+  | 'PERMISSION_DENIED'
+  | 'VALIDATION_ERROR'
+  | 'EXECUTION_ERROR'
+  | 'TIMEOUT'
+  | 'PATH_TRAVERSAL';
+
+export interface CntxtRpcError {
+  code: CntxtRpcErrorCode;
+  message: string;
+}
+
+export interface CntxtRpcRequest<T = unknown> {
+  id: string;
+  domain: CntxtRpcDomain;
+  action: string;
+  appId: string;
+  payload?: T;
+}
+
+export interface CntxtRpcResponse<T = unknown> {
+  id: string;
+  success: boolean;
+  data?: T;
+  error?: CntxtRpcError;
+}
+
+// Editor Domain Payloads & Results
+export interface EditorInsertPayload {
+  text: string;
+  mode?: 'cursor' | 'replace' | 'append';
+}
+
+export interface EditorActiveDocumentResult {
+  title: string;
+  content: string;
+  language: string;
+  filePath?: string;
+  isDirty: boolean;
+}
+
+// Tab Domain Payloads & Results
+export interface TabCreatePayload {
+  title: string;
+  content: string;
+  language?: string;
+  filePath?: string;
+}
+
+export interface TabSummaryResult {
+  id: string;
+  title: string;
+  filePath?: string;
+  isDirty: boolean;
+  language: string;
+}
+
+// Workspace Domain Payloads & Results
+export interface WorkspaceInfoResult {
+  rootPath: string;
+  projectName: string;
+  fileCount: number;
+}
+
+export interface WorkspaceListFilesPayload {
+  pattern?: string;
+}
+
+export interface WorkspaceReadFilePayload {
+  relativePath: string;
+}
+
+export interface WorkspaceWriteFilePayload {
+  relativePath: string;
+  content: string;
+}
+
+// Template Domain Payloads
+export interface TemplateApplyPayload {
+  templateId: string;
+  variables: Record<string, string>;
+}
+
+// Action Domain Payloads
+export interface ActionExecutePayload {
+  actionId: string;
+  input?: string;
+}
+
+// Notification Domain Payloads
+export interface NotifyPayload {
+  type: 'info' | 'success' | 'warning' | 'error';
+  title?: string;
+  message: string;
+  duration?: number;
+}

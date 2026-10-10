@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.25
+Version: v2.26
 Last Updated: 2026-10-10
-Last Updated By: Prod Agent (v0.5.5 Packaging, Authenticode Signing & Verification)
+Last Updated By: Prod Agent (FG-16 Host Command Bus & Mini Panel App RPC Bridge Implementation)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -11,18 +11,25 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-15 Complete & Verified; Tri-Platform Suite Live)
+  [x] Feature Implementation (FG-01..FG-16 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 449/449 Live across 43 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
+    [x] Testing (Vitest 471/471 Live across 44 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.5.5 Authenticode Signed Portable Executable & Native Installers Built)
 
 Current Feature Group: FG-16: Host Command Bus & Mini Panel App RPC Bridge
-Status: scoped / planned (Feature group definition documented in /generated-documents/plans/feature_group_FG16_host_command_bus_2026-10-10.md; FG-15 completed and shipped in v0.5.4/v0.5.5)
+Status: completed / verified (FG-16 implemented and verified with 471/471 tests passing; FG-17 terminal bus is next planned group)
 Background Processes: none (all RPC commands are event-driven and user-initiated)
-Unit Tests: written [x] passing [x] (449/449 unit tests passing across 43 suites in CNTXT, 59/59 passing in cntxt-web, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
+Unit Tests: written [x] passing [x] (471/471 unit tests passing across 44 suites in CNTXT, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/plans/feature_group_FG16_host_command_bus_2026-10-10.md
 Notes:
+- Task 43: FG-16 Host Command Bus & Mini Panel App RPC Bridge (2026-10-10):
+  - Canonical Contracts & Boundary Schemas: Added CntxtRpcDomain, CntxtRpcRequest, CntxtRpcResponse, and domain payload contracts in contracts/data_shapes.ts and Zod boundary validators in src/contracts/boundarySchemas.ts.
+  - Headless HostCommandBus Engine: Built src/features/panelApps/rpc/hostCommandBus.ts providing pure service handlers for editor (getSelection, insert at cursor/replace/append, getActiveDocument), tabs (list, create, focus), workspace (getInfo, listFiles, readFile, writeFile), templates (list, apply with variables), actions (list, execute), and notify (toasts via useNotificationStore).
+  - Security & Dirty Tab Interlock: Implemented strict path canonicalization rejecting traversal (..) and sensitive files (.env, .ssh, .git); mediated background file writes to active dirty tab buffers to prevent unsaved user edit loss.
+  - Client SDK Injection & PostMessage Router: Built buildClientSdkInjection in src/features/panelApps/rpc/clientSdk.ts injecting typed Promise-based window.CNTXT SDK into sandboxed iframes; wired CNTXT_RPC_REQUEST dispatcher in AppPanelPlaceholder.tsx.
+  - Prompt Archetype Evolution: Updated src/features/panelApps/blueprint/promptBuilder.ts documenting window.CNTXT host SDK capabilities and examples for LLM app generation.
+  - Verification Gates: 471/471 unit tests passing across 44 suites (tests/hostCommandBus.test.ts 22/22 green), 171 files scanned with 0 platform leaks, and 100% canonical contract synchronization.
 - Task 42: v0.5.5 Production Packaging & Authenticode Signing (2026-10-10):
   - Bumped version to 0.5.5 across package.json, src-tauri/Cargo.toml, and src-tauri/tauri.conf.json.
   - Generated standalone portable executable (dist-portable/CNTXT_0.5.5_portable.exe and CNTXT-portable.exe), NSIS setup installer (dist-installer/CNTXT_0.5.5_x64-setup.exe), and WiX MSI installer (dist-installer/CNTXT_0.5.5_x64_en-US.msi).
@@ -96,7 +103,7 @@ Notes:
 - Task 20: Truncated Large Document Read-Only Safety Interlock (2026-10-09): Implemented zero-risk data loss prevention guard for large document selective loading. Extended Tab contract with isTruncatedView and rawFullContent; locked onSaveFile in eventDispatcher.ts against overwriting files from truncated views; added restoreFullContent to tabStore; rendered interactive warning banner in Editor.tsx with 1-click 'Open Full Document' restore; added comprehensive unit tests (tests/largeDocModal.test.ts 11/11 pass, 399/399 unit tests green).
 - Verification Gate Snapshot (2026-10-09): npm run lint (0 errors, 145 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (24/24 green on cold server with port killed); npm run build (0 errors, chunks optimized).
 Last Audit Reconciliation: 2026-10-10 — Remediation Verification Audit Reconciled (CONDITIONAL PASS; 8 of 10 Defects Fully Resolved & Verified, F3.1 Strict Roadmap Documented, F5.3 Circular Chunk Cleared; 449/449 Tests Green; 0 Leaks across 169 Files).
-Last Git Checkpoint: 2026-10-10 — v0.5.5 Release Packaging, Authenticode Signing & Verification Gates Clean
+Last Git Checkpoint: 2026-10-10 — FG-16 Host Command Bus & RPC Bridge Implemented & Verified (471/471 Tests Green)
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v2.1

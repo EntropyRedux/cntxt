@@ -190,6 +190,24 @@ ${viewportLayoutRules}
 
 ${persistenceSection}
 
+## Host Command Bus & Workspace Integration (window.CNTXT)
+If your application interacts with the user's active document, tabs, or workspace, leverage the pre-injected asynchronous \`window.CNTXT\` Host SDK:
+1. **Editor Domain**:
+   - \`const selection = await window.CNTXT.editor.getSelection();\`
+   - \`await window.CNTXT.editor.insert({ text: '# Result\\n', mode: 'cursor' });\` (mode: 'cursor' | 'replace' | 'append')
+   - \`const doc = await window.CNTXT.editor.getActiveDocument();\` (returns { title, content, language, filePath, isDirty })
+2. **Tab Domain**:
+   - \`const tabs = await window.CNTXT.tabs.list();\`
+   - \`await window.CNTXT.tabs.create({ title: 'Analysis.md', content: '# Analysis\\n...', language: 'markdown' });\`
+   - \`await window.CNTXT.tabs.focus(tabId);\`
+3. **Workspace Domain (Sandboxed to Project Root)**:
+   - \`const info = await window.CNTXT.workspace.getInfo();\`
+   - \`const files = await window.CNTXT.workspace.listFiles();\`
+   - \`const { content } = await window.CNTXT.workspace.readFile('notes/scratchpad.md');\`
+   - \`await window.CNTXT.workspace.writeFile('notes/scratchpad.md', newContent);\`
+4. **User Feedback**:
+   - \`await window.CNTXT.notify({ type: 'success', title: 'Task Done', message: 'Report generated successfully' });\`
+
 ## Technical Invariants (CRITICAL)
 1. **Single File Only**: Output a single complete HTML file containing all HTML, CSS in \`<style>\`, and JavaScript in \`<script>\`.
 2. **Zero External Dependencies**: Do NOT import external CDNs (no unpkg, cdnjs, tailwind cdn, react cdn, font cdn). Write vanilla CSS and vanilla JavaScript.

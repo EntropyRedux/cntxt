@@ -15,7 +15,15 @@ import {
   CommunityLibraryItem, 
   LibraryCollection,
   PanelAppManifest,
-  PanelAppRecord 
+  PanelAppRecord,
+  CntxtRpcRequest,
+  EditorInsertPayload,
+  TabCreatePayload,
+  WorkspaceReadFilePayload,
+  WorkspaceWriteFilePayload,
+  TemplateApplyPayload,
+  ActionExecutePayload,
+  NotifyPayload
 } from '../../contracts/data_shapes';
 
 export const SupportedLanguageSchema: z.ZodType<SupportedLanguage> = z.enum([
@@ -299,3 +307,121 @@ export function validatePanelAppRecords(data: unknown) {
   return z.array(PanelAppRecordSchema).safeParse(data);
 }
 
+// ==========================================
+// Host Command Bus & RPC Boundary Schemas (FG-16)
+// ==========================================
+
+export const CntxtRpcDomainSchema = z.enum([
+  'editor',
+  'tabs',
+  'workspace',
+  'templates',
+  'actions',
+  'notify',
+]);
+
+export const CntxtRpcRequestSchema: z.ZodType<CntxtRpcRequest> = z.object({
+  id: z.string().min(1),
+  domain: CntxtRpcDomainSchema,
+  action: z.string().min(1),
+  appId: z.string().min(1),
+  payload: z.unknown().optional(),
+});
+
+export const EditorInsertPayloadSchema: z.ZodType<EditorInsertPayload> = z.object({
+  text: z.string(),
+  mode: z.enum(['cursor', 'replace', 'append']).optional(),
+});
+
+export const TabCreatePayloadSchema: z.ZodType<TabCreatePayload> = z.object({
+  title: z.string().trim().min(1).max(100),
+  content: z.string(),
+  language: z.string().optional(),
+  filePath: z.string().optional(),
+});
+
+export const WorkspaceListFilesPayloadSchema = z.object({
+  pattern: z.string().optional(),
+});
+
+export function pathIsAbsoluteOrSensitive(p: string): boolean {
+  const normalized = p.replace(/\\/g, '/');
+  // Check absolute Windows drive (e.g. C:) or Unix root (/)
+  if (/^[a-zA-Z]:/.test(normalized) || normalized.startsWith('/')) return true;
+  // Check directory traversal or sensitive paths
+  const segments = normalized.split('/');
+  for (const seg of segments) {
+    if (seg === '..' || seg === '.git' || seg === '.ssh' || seg === '.env' || seg.startsWith('.env.')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Reject directory traversal (..) and absolute/sensitive paths
+export const SafeRelativePathSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine(
+    (p) => !p.includes('..') && !pathIsAbsoluteOrSensitive(p),
+    { message: 'Path traversal or sensitive path access rejected' }
+  );
+
+export const WorkspaceReadFilePayloadSchema: z.ZodType<WorkspaceReadFilePayload> = z.object({
+  relativePath: SafeRelativePathSchema,
+});
+
+export const WorkspaceWriteFilePayloadSchema: z.ZodType<WorkspaceWriteFilePayload> = z.object({
+  relativePath: SafeRelativePathSchema,
+  content: z.string().max(2 * 1024 * 1024, 'Payload exceeds 2MB maximum limit'),
+});
+
+export const TemplateApplyPayloadSchema: z.ZodType<TemplateApplyPayload> = z.object({
+  templateId: z.string().min(1),
+  variables: z.record(z.string(), z.string()),
+});
+
+export const ActionExecutePayloadSchema: z.ZodType<ActionExecutePayload> = z.object({
+  actionId: z.string().min(1),
+  input: z.string().optional(),
+});
+
+export const NotifyPayloadSchema: z.ZodType<NotifyPayload> = z.object({
+  type: z.enum(['info', 'success', 'warning', 'error']),
+  title: z.string().max(100).optional(),
+  message: z.string().min(1).max(500),
+  duration: z.number().int().positive().optional(),
+});
+
+export function validateRpcRequest(data: unknown) {
+  return CntxtRpcRequestSchema.safeParse(data);
+}
+
+export function validateEditorInsert(data: unknown) {
+  return EditorInsertPayloadSchema.safeParse(data);
+}
+
+export function validateTabCreate(data: unknown) {
+  return TabCreatePayloadSchema.safeParse(data);
+}
+
+export function validateWorkspaceReadFile(data: unknown) {
+  return WorkspaceReadFilePayloadSchema.safeParse(data);
+}
+
+export function validateWorkspaceWriteFile(data: unknown) {
+  return WorkspaceWriteFilePayloadSchema.safeParse(data);
+}
+
+export function validateTemplateApply(data: unknown) {
+  return TemplateApplyPayloadSchema.safeParse(data);
+}
+
+export function validateActionExecute(data: unknown) {
+  return ActionExecutePayloadSchema.safeParse(data);
+}
+
+export function validateNotify(data: unknown) {
+  return NotifyPayloadSchema.safeParse(data);
+}

@@ -8,6 +8,8 @@ import { parseCntxtApp, updateCntxtAppState } from '../../features/panelApps/for
 import { buildThemeInjection } from '../../features/panelApps/theme/themeSync';
 import { PanelAppManifest } from '../../contracts/data_shapes';
 import { safePersist } from '../../services/storageHelper';
+import { HostCommandBus } from '../../features/panelApps/rpc/hostCommandBus';
+import { buildClientSdkInjection } from '../../features/panelApps/rpc/clientSdk';
 import { AppIcon } from '../Common/AppIcon';
 import { NetworkBadge } from './NetworkBadge';
 import { 
@@ -33,6 +35,8 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
   const { apps, activeId, remove, reload } = usePanelAppsStore();
   const { createTab } = useTabStore();
   const { addNotification } = useNotificationStore();
+
+  const hostCommandBus = useMemo(() => new HostCommandBus(bridge), [bridge]);
 
   const [manifest, setManifest] = useState<PanelAppManifest | null>(null);
   const [rawHtml, setRawHtml] = useState<string>('');
@@ -166,6 +170,18 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
       } else if (type === 'CNTXT_APP_STORAGE_CLEAR') {
         setStorageData({});
         safePersist(bridge.storage, storageSaveKey, JSON.stringify({}), 'App Origin Storage');
+      }
+
+      // 4. Host Command Bus RPC Bridge (FG-16)
+      if (type === 'CNTXT_RPC_REQUEST' && e.data.request) {
+        const sourceWin = e.source as WindowProxy | null;
+        hostCommandBus.handleRequest(e.data.request).then((response) => {
+          try {
+            sourceWin?.postMessage({ type: 'CNTXT_RPC_RESPONSE', response }, '*');
+          } catch {
+            // Sandboxed iframe cross-origin postMessage ignore
+          }
+        });
       }
     };
 
@@ -346,31 +362,9 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
             }
           };
 
-          // Expose unified window.CNTXT SDK for panel apps
-          window.CNTXT = {
-            state: {
-              get: function() { return window.__INIT_STATE__; },
-              save: function(s) {
-                window.__INIT_STATE__ = s;
-                window.parent.postMessage({ type: 'CNTXT_STATE_SAVE', state: s, appId: '${activeApp.id}' }, '*');
-              },
-              onInit: function(cb) {
-                if (typeof cb !== 'function') return;
-                window.addEventListener('message', function(ev) {
-                  if (ev.data && ev.data.type === 'CNTXT_STATE_INIT') {
-                    if (ev.data.state !== null && ev.data.state !== undefined) {
-                      window.__INIT_STATE__ = ev.data.state;
-                    }
-                    cb(ev.data.state);
-                  }
-                });
-              }
-            },
-            storage: lsObj,
-            ready: function() {
-              window.parent.postMessage({ type: 'CNTXT_APP_READY' }, '*');
-            }
-          };
+          // Expose unified window.CNTXT SDK for panel apps (FG-16)
+          ${buildClientSdkInjection(activeApp.id)}
+          window.CNTXT.storage = lsObj;
 
           // Live host theme synchronization listener
           window.addEventListener('message', function(e) {
