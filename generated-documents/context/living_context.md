@@ -17,11 +17,11 @@ Active Stage:
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.5.5 Authenticode Signed Portable Executable & Native Installers Built)
 
-Current Feature Group: FG-16 Host Command Bus & FG-17 Multi-Agent Terminal Bus (Vision & Architecture Scoped)
-Status: in-planning / vision mapped (Architectural vision documented in /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md; Project Brief updated to v2.1; FG-15 completed and shipped; v0.5.5 remediation & bundler hardening release binaries built & signed)
-Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
+Current Feature Group: FG-16: Host Command Bus & Mini Panel App RPC Bridge
+Status: scoped / planned (Feature group definition documented in /generated-documents/plans/feature_group_FG16_host_command_bus_2026-10-10.md; FG-15 completed and shipped in v0.5.4/v0.5.5)
+Background Processes: none (all RPC commands are event-driven and user-initiated)
 Unit Tests: written [x] passing [x] (449/449 unit tests passing across 43 suites in CNTXT, 59/59 passing in cntxt-web, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
-Active Plan: /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md
+Active Plan: /generated-documents/plans/feature_group_FG16_host_command_bus_2026-10-10.md
 Notes:
 - Task 42: v0.5.5 Production Packaging & Authenticode Signing (2026-10-10):
   - Bumped version to 0.5.5 across package.json, src-tauri/Cargo.toml, and src-tauri/tauri.conf.json.
