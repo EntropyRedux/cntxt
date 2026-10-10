@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.23
+Version: v2.24
 Last Updated: 2026-10-10
-Last Updated By: Prod Agent (FG-15 Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync)
+Last Updated By: Prod Agent (Multi-Agent Terminal Bus & Host Command Bus Visioning)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -11,18 +11,22 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-13 Complete & Verified; Tri-Platform Suite Live)
+  [x] Feature Implementation (FG-01..FG-15 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 445/445 Live across 43 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
+    [x] Testing (Vitest 449/449 Live across 43 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.5.4 Authenticode Signed Portable Executable & Native Installers Built)
 
-Current Feature Group: FG-15 Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync
-Status: completed / verified (3 prompt archetypes: build, brainstorm, adapt; starterHtml.ts deleted; Adapt from Active Tab; Approach B live CodeMirror tab sync with Resync & Update Tab overwrite guard; 449/449 CNTXT tests + 59/59 cntxt-web tests passing; 0 platform leaks)
+Current Feature Group: FG-16 Host Command Bus & FG-17 Multi-Agent Terminal Bus (Vision & Architecture Scoped)
+Status: in-planning / vision mapped (Architectural vision documented in /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md; Project Brief updated to v2.1; FG-15 completed and shipped in v0.5.4 release binaries)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
 Unit Tests: written [x] passing [x] (449/449 unit tests passing across 43 suites in CNTXT, 59/59 passing in cntxt-web, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
-Active Plan: /generated-documents/plans/feature_group_FG15_blueprint_archetypes_and_tab_sync_2026-10-10.md
+Active Plan: /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md
 Notes:
+- Task 39: Architectural Vision — Multi-Agent Terminal Bus & Host Command Bus:
+  - Vision Document: Authored `/generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md` detailing the paradigm shift of `.cntxt` files into persistent, multiplexed multi-process terminal buses for concurrent CLI agent orchestration.
+  - Project Brief Bump (v2.1): Updated `/generated-documents/context/project_brief_v2.1.md` adding FG-16 (Host Command Bus & RPC Bridge) and FG-17 (`.cntxt` Multi-Session Terminal Bus) to the core feature roadmap.
+  - Invariant Continuity: Ensured all terminal stream ingestion respects universal presenter purity, dirty tab write protection, path traversal whitelisting, and strict offline-capable sandboxing.
 - Task 38: Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync (FG-15):
   - Archetypes Catalog: Replaced hardcoded toy apps in `templates.ts` with 3 foundational prompt archetypes: `build` (scaffolds new app with 14 theme tokens & state protocol), `brainstorm` (ideation prompt exploring 3 concepts for 320-480px sidebar), and `adapt` (ports existing HTML/JS/CSS to CNTXT architecture and theme variables).
   - Deprecation of Starter Apps: Permanently deleted `starterHtml.ts` (1,063 lines of embedded string literals) from both `CNTXT` and `cntxt-web`, keeping the builder focused cleanly on prompt orchestration and code ingestion.
