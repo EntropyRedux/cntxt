@@ -5,7 +5,25 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
----
+## [0.5.6] — 2026-10-10
+
+### Host Command Bus & Mini Panel App RPC Bridge (FG-16)
+- **Unified Host Command Bus (`window.CNTXT` via `postMessage`)**:
+  - Implemented headless `HostCommandBus` service (`src/features/panelApps/rpc/hostCommandBus.ts`) routing asynchronous RPC requests from sandboxed iframes.
+  - Injected Promise-based client SDK (`src/features/panelApps/rpc/clientSdk.ts`) pre-exposing `window.CNTXT.call`, `window.CNTXT.ready`, and domain namespaces (`editor`, `tabs`, `workspace`, `templates`, `actions`, `notify`).
+- **Domain Capabilities Exposed to Panel Apps**:
+  - **Editor Domain**: Read selected text (`editor.getSelection`), insert/replace/append text into active document (`editor.insert`), and inspect active document metadata (`editor.getActiveDocument`).
+  - **Tabs Domain**: Enumerate open editor tabs (`tabs.list`), create new tabs with prefilled title/content/language (`tabs.create`), and switch active tab focus (`tabs.focus`).
+  - **Workspace Domain**: Read workspace info (`workspace.getInfo`), list project files with relative paths (`workspace.listFiles`), read workspace files (`workspace.readFile`), and write workspace files (`workspace.writeFile`).
+  - **Templates & Actions Domain**: Query prompt template catalog (`templates.list`), expand variables (`templates.apply`), enumerate actions (`actions.list`), and execute sandboxed actions (`actions.execute`).
+  - **Notification Domain**: Dispatch observable toasts (`notify.notify`) via `useNotificationStore`.
+- **Security Invariants & Sandboxing**:
+  - Strict path canonicalization preventing directory traversal (`..`), absolute drive escapes, and sensitive files (`.env*`, `.git/*`, `.ssh/*`).
+  - Dirty tab overwrite mediation: background writes to files open and dirty in editor tabs update the in-memory tab buffer directly rather than overwriting disk.
+- **Blueprint System Prompt Evolution**:
+  - Updated `promptBuilder.ts` system prompts with `window.CNTXT` host SDK documentation and concrete patterns for LLM app scaffolding.
+- **Verification Gates & Test Suite**:
+  - Expanded Vitest test suite to 471 tests across 44 suites with 22 dedicated test cases in `tests/hostCommandBus.test.ts`.
 
 ## [0.5.5] — 2026-10-10
 

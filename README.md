@@ -2,16 +2,16 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.5.5) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Blueprint Prompt Archetypes (`build`, `brainstorm`, `adapt`) with 2-way editor tab sync, Panel Apps Engine with Keep-Alive host & 14-token universal theme sync, Strict Typing (`noImplicitAny`, `noImplicitThis`), Accessible Confirm Modals, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.5.6) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Host Command Bus & RPC Bridge (`window.CNTXT` via `postMessage`), Sandboxed Mini Panel Apps co-processor engine with path traversal guards & dirty tab mediation, Blueprint Prompt Archetypes (`build`, `brainstorm`, `adapt`) with 2-way editor tab sync, 14-token universal theme sync, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.5.5)
+## Downloads (v0.5.6)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.5_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.5/CNTXT_0.5.5_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.5_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.5/CNTXT_0.5.5_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.5_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.5/CNTXT_0.5.5_portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.6_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.6/CNTXT_0.5.6_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.6_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.6/CNTXT_0.5.6_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.6_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.6/CNTXT_0.5.6_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
