@@ -236,6 +236,7 @@ ${topic}
 2. **Single-File Monolithic Runtime**: Apps run as single-file HTML/CSS/JS without external CDNs.
 3. **State Persistence**: Supports file-backed persistent JSON state synchronized with the host active document workspace.
 4. **Theme Engine**: Adapts dynamically to CNTXT's 14 CSS theme tokens (--bg-primary, --text-primary, --accent-primary, etc.).
+5. **Host Integration (window.CNTXT)**: Apps can be active co-processors communicating via \`window.CNTXT\` (inspect/insert editor text, create editor tabs, query workspace files, pop toast notifications).
 
 ## Task
 Propose 3 distinct, high-utility sidebar panel app concepts addressing the problem space above.
@@ -244,7 +245,8 @@ For each concept, provide:
 2. **Key Inputs, Outputs & Core Interactions**
 3. **Layout & Density Recommendation** (Single-column, compact card, or split-pane)
 4. **What State Should Be Persisted** (Inputs, checklist items, history log, etc.)
-5. **Why it shines in a 360px sidebar** while writing or editing documents.
+5. **Host SDK Touchpoints** (Does it read selection? Insert notes? Create tabs? Dispatch toasts?)
+6. **Why it shines in a 360px sidebar** while writing or editing documents.
 
 End your response by asking which concept I want to generate, or offer to combine elements into a custom specification.`;
 }
@@ -256,7 +258,7 @@ export function buildAdaptPrompt(answers: BlueprintAnswers): string {
 
   return `# PROMPT: Adapt Existing Web App to CNTXT Panel Architecture${nameLabel}
 
-You are an expert web application architect. Refactor the existing HTML application below so that it adheres strictly to the CNTXT panel architecture, 14-token theme engine, and state synchronization protocol.
+You are an expert web application architect. Refactor the existing HTML application below so that it adheres strictly to the CNTXT panel architecture, 14-token theme engine, state synchronization protocol, and Host Command Bus.
 
 ## Existing Application Code
 \`\`\`html
@@ -276,13 +278,18 @@ ${htmlPayload}
    - Root \`html, body\` must have \`height: 100vh; overflow: hidden; margin: 0; padding: 10px;\`.
    - Scrollable body content must have \`flex: 1; min-height: 0; overflow-y: auto;\`.
    - Bottom controls, toolbars, and inputs must have \`flex-shrink: 0;\` to prevent clipping in a 100vh sidebar.
-4. **CNTXT State Persistence**:
-   - Replace any browser storage (or in-memory-only state) with the CNTXT postMessage protocol:
-     - On init: post \`{ type: 'CNTXT_APP_READY' }\` to \`window.parent\`.
-     - On message \`CNTXT_STATE_INIT\`: restore application inputs and state variables.
-     - On state change: debounce (300ms) and post \`{ type: 'CNTXT_STATE_SAVE', state: serializedState }\` to \`window.parent\`.
+4. **CNTXT State Persistence & window.CNTXT SDK**:
+   - Replace any browser storage (or in-memory-only state) with the pre-injected \`window.CNTXT\` SDK:
+     - On init: \`window.CNTXT.ready()\` (or postMessage \`{ type: 'CNTXT_APP_READY' }\`) and listen for restored state via \`window.CNTXT.state.onInit((state) => applyState(state))\` (or fallback \`message\` event with \`CNTXT_STATE_INIT\`).
+     - On state change: debounce (300ms) and dispatch \`window.CNTXT.state.save(serializedState)\` (or postMessage \`{ type: 'CNTXT_STATE_SAVE', state: serializedState }\`).
    ${targetStateDescription ? `- **State to persist**: ${targetStateDescription}` : '- **State to persist**: Persist all essential user inputs, items, history, and selections.'}
-5. **Clean Sandbox Hygiene**:
+5. **Host Command Bus Capabilities (Optional Co-Processing)**:
+   - If the app benefits from host integration, use the pre-injected \`window.CNTXT\` APIs:
+     - Notifications: \`await window.CNTXT.notify({ type: 'success', title: 'Done', message: '...' })\`
+     - Editor: \`await window.CNTXT.editor.insert({ text: '...', mode: 'cursor' })\` or \`await window.CNTXT.editor.getSelection()\`
+     - Tabs: \`await window.CNTXT.tabs.create({ title: 'Note.md', content: '...', language: 'markdown' })\`
+     - Workspace: \`await window.CNTXT.workspace.getInfo()\` or \`await window.CNTXT.workspace.readFile(path)\`
+6. **Clean Sandbox Hygiene**:
    - Remove any top-level \`window.top\` or \`window.parent\` location redirects.
    - Remove any external CDN script/style links (bootstrap, tailwind cdn, react cdn, unpkg, cdnjs). Everything must be self-contained vanilla HTML/CSS/JS.
    - Include \`<meta name="viewport" content="width=device-width, initial-scale=1.0">\`.

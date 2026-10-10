@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+﻿import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// Mock notificationStore
 const mockAddNotification = vi.fn();
 vi.mock('../src/store/notificationStore', () => ({
   useNotificationStore: {
-    getState: () => ({ addNotification: mockAddNotification }),
+    getState: () => ({
+      addNotification: mockAddNotification,
+    }),
   },
 }));
 
@@ -22,223 +23,191 @@ import {
 } from '../src/adapters/authStorageAdapter';
 
 describe('authStorageAdapter', () => {
+  let mockLocalStorage: { [key: string]: string };
+  let mockSessionStorage: { [key: string]: string };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    // Clean localStorage/sessionStorage
-    localStorage.clear();
-    sessionStorage.clear();
-    mockAddNotification.mockClear();
-  });
+    mockLocalStorage = {};
+    mockSessionStorage = {};
 
-  afterEach(() => {
-    vi.clearAllMocks();
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn((key: string) => mockLocalStorage[key] ?? null),
+        setItem: vi.fn((key: string, value: string) => { mockLocalStorage[key] = value; }),
+        removeItem: vi.fn((key: string) => { delete mockLocalStorage[key]; }),
+        clear: vi.fn(() => { mockLocalStorage = {}; }),
+      },
+      writable: true,
+    });
+
+    Object.defineProperty(window, 'sessionStorage', {
+      value: {
+        getItem: vi.fn((key: string) => mockSessionStorage[key] ?? null),
+        setItem: vi.fn((key: string, value: string) => { mockSessionStorage[key] = value; }),
+      },
+      writable: true,
+    });
   });
 
   describe('getStoredGuestMode', () => {
-    it('returns true when guest mode is stored as "true"', () => {
-      localStorage.setItem(STORAGE_KEYS.GUEST_MODE, 'true');
+    it('returns true when stored as "true"', () => {
+      mockLocalStorage[STORAGE_KEYS.GUEST_MODE] = 'true';
       expect(getStoredGuestMode()).toBe(true);
     });
 
-    it('returns false when guest mode is stored as anything else', () => {
-      localStorage.setItem(STORAGE_KEYS.GUEST_MODE, 'false');
+    it('returns false when not stored', () => {
       expect(getStoredGuestMode()).toBe(false);
     });
 
-    it('returns false when key is not present', () => {
+    it('returns false when stored as non-true', () => {
+      mockLocalStorage[STORAGE_KEYS.GUEST_MODE] = 'false';
       expect(getStoredGuestMode()).toBe(false);
     });
 
-    it('returns false and notifies on localStorage error', () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-        throw new Error('Storage access denied');
+    it('notifies on error and returns false', () => {
+      vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+        throw new Error('Storage unavailable');
       });
-      const result = getStoredGuestMode();
-      expect(result).toBe(false);
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        'Storage Warning', 'Failed to read guest mode preference.', 'warning'
-      );
+      expect(getStoredGuestMode()).toBe(false);
+      expect(mockAddNotification).toHaveBeenCalledWith('Storage Warning', 'Failed to read guest mode preference.', 'warning');
     });
   });
 
   describe('setStoredGuestMode', () => {
     it('sets "true" when enabled', () => {
       setStoredGuestMode(true);
-      expect(localStorage.getItem(STORAGE_KEYS.GUEST_MODE)).toBe('true');
+      expect(window.localStorage.setItem).toHaveBeenCalledWith(STORAGE_KEYS.GUEST_MODE, 'true');
     });
 
     it('removes key when disabled', () => {
-      localStorage.setItem(STORAGE_KEYS.GUEST_MODE, 'true');
       setStoredGuestMode(false);
-      expect(localStorage.getItem(STORAGE_KEYS.GUEST_MODE)).toBeNull();
+      expect(window.localStorage.removeItem).toHaveBeenCalledWith(STORAGE_KEYS.GUEST_MODE);
     });
 
-    it('notifies on localStorage error when setting', () => {
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw new Error('Quota exceeded');
-      });
+    it('notifies when setItem throws', () => {
+      vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('Quota exceeded'); });
       setStoredGuestMode(true);
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        'Storage Warning', 'Failed to save guest mode preference.', 'warning'
-      );
+      expect(mockAddNotification).toHaveBeenCalledWith('Storage Warning', 'Failed to save guest mode preference.', 'warning');
     });
 
-    it('notifies on localStorage error when removing', () => {
-      vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
-        throw new Error('Access denied');
-      });
+    it('notifies when removeItem throws', () => {
+      vi.spyOn(window.localStorage, 'removeItem').mockImplementation(() => { throw new Error('Storage error'); });
       setStoredGuestMode(false);
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        'Storage Warning', 'Failed to save guest mode preference.', 'warning'
-      );
+      expect(mockAddNotification).toHaveBeenCalledWith('Storage Warning', 'Failed to save guest mode preference.', 'warning');
     });
   });
 
   describe('getStoredOnboardingCompleted', () => {
-    it('returns true when onboarding completed is stored as "true"', () => {
-      localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
+    it('returns true when stored as "true"', () => {
+      mockLocalStorage[STORAGE_KEYS.ONBOARDING_COMPLETED] = 'true';
       expect(getStoredOnboardingCompleted()).toBe(true);
     });
 
-    it('returns false when key is absent', () => {
+    it('returns false when not stored', () => {
       expect(getStoredOnboardingCompleted()).toBe(false);
     });
 
-    it('returns false and notifies on error', () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-        throw new Error('Corrupted');
-      });
-      const result = getStoredOnboardingCompleted();
-      expect(result).toBe(false);
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        'Storage Warning', 'Failed to read onboarding state.', 'warning'
-      );
+    it('notifies on error and returns false', () => {
+      vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => { throw new Error('unavailable'); });
+      expect(getStoredOnboardingCompleted()).toBe(false);
+      expect(mockAddNotification).toHaveBeenCalledWith('Storage Warning', 'Failed to read onboarding state.', 'warning');
     });
   });
 
   describe('setStoredOnboardingCompleted', () => {
-    it('sets "true" when completed is true', () => {
+    it('sets "true" when completed', () => {
       setStoredOnboardingCompleted(true);
-      expect(localStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED)).toBe('true');
+      expect(window.localStorage.setItem).toHaveBeenCalledWith(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
     });
 
-    it('removes key when completed is false', () => {
-      localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
+    it('removes key when not completed', () => {
       setStoredOnboardingCompleted(false);
-      expect(localStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED)).toBeNull();
+      expect(window.localStorage.removeItem).toHaveBeenCalledWith(STORAGE_KEYS.ONBOARDING_COMPLETED);
     });
 
-    it('notifies on error', () => {
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw new Error('Failed');
-      });
+    it('notifies when setItem throws', () => {
+      vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('Quota exceeded'); });
       setStoredOnboardingCompleted(true);
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        'Storage Warning', 'Failed to save onboarding state.', 'warning'
-      );
+      expect(mockAddNotification).toHaveBeenCalledWith('Storage Warning', 'Failed to save onboarding state.', 'warning');
     });
   });
 
   describe('clearStoredAuthSession', () => {
-    it('removes both AUTH_USER and GUEST_MODE keys', () => {
-      localStorage.setItem(STORAGE_KEYS.AUTH_USER, 'user123');
-      localStorage.setItem(STORAGE_KEYS.GUEST_MODE, 'true');
-      localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
+    it('removes AUTH_USER and GUEST_MODE keys', () => {
+      mockLocalStorage[STORAGE_KEYS.AUTH_USER] = '{"user":"test"}';
+      mockLocalStorage[STORAGE_KEYS.GUEST_MODE] = 'true';
 
       clearStoredAuthSession();
 
-      expect(localStorage.getItem(STORAGE_KEYS.AUTH_USER)).toBeNull();
-      expect(localStorage.getItem(STORAGE_KEYS.GUEST_MODE)).toBeNull();
-      // Other keys should remain
-      expect(localStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED)).toBe('true');
+      expect(window.localStorage.removeItem).toHaveBeenCalledWith(STORAGE_KEYS.AUTH_USER);
+      expect(window.localStorage.removeItem).toHaveBeenCalledWith(STORAGE_KEYS.GUEST_MODE);
     });
 
-        it('notifies on error', () => {
-      vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
-        throw new Error('Permission blocked');
-      });
+    it('notifies when localStorage throws', () => {
+      vi.spyOn(window.localStorage, 'removeItem').mockImplementation(() => { throw new Error('Storage locked'); });
       clearStoredAuthSession();
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        'Storage Warning', 'Failed to clear local session data.', 'warning'
-      );
+      expect(mockAddNotification).toHaveBeenCalledWith('Storage Warning', 'Failed to clear local session data.', 'warning');
     });
   });
 
   describe('getSafeStorageItem', () => {
-    it('returns the stored value for a key', () => {
-      localStorage.setItem('custom_key', 'custom_value');
-      expect(getSafeStorageItem('custom_key')).toBe('custom_value');
+    it('returns stored value', () => {
+      mockLocalStorage['mykey'] = 'myvalue';
+      expect(getSafeStorageItem('mykey')).toBe('myvalue');
     });
 
-    it('returns null for a missing key', () => {
-      expect(getSafeStorageItem('nonexistent')).toBeNull();
+    it('returns null for missing key', () => {
+      expect(getSafeStorageItem('missing')).toBeNull();
     });
 
-    it('returns null and notifies on error', () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-        throw new Error('Blocked');
-      });
-      const result = getSafeStorageItem('some_key');
-      expect(result).toBeNull();
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        'Storage Warning', 'Failed to read storage key "some_key".', 'warning'
-      );
+    it('notifies on error and returns null', () => {
+      vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => { throw new Error('unreadable'); });
+      expect(getSafeStorageItem('mykey')).toBeNull();
+      expect(mockAddNotification).toHaveBeenCalledWith('Storage Warning', 'Failed to read storage key \"mykey\".', 'warning');
     });
   });
 
   describe('setSafeStorageItem', () => {
-    it('writes a value to localStorage', () => {
-      setSafeStorageItem('my_key', 'my_value');
-      expect(localStorage.getItem('my_key')).toBe('my_value');
+    it('sets value in localStorage', () => {
+      setSafeStorageItem('mykey', 'myvalue');
+      expect(window.localStorage.setItem).toHaveBeenCalledWith('mykey', 'myvalue');
     });
 
     it('notifies on error', () => {
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw new Error('Quota');
-      });
-      setSafeStorageItem('my_key', 'my_value');
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        'Storage Warning', 'Failed to persist storage key "my_key".', 'warning'
-      );
+      vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+      setSafeStorageItem('mykey', 'myvalue');
+      expect(mockAddNotification).toHaveBeenCalledWith('Storage Warning', 'Failed to persist storage key \"mykey\".', 'warning');
     });
   });
 
   describe('getSessionStorageItem', () => {
-    it('returns the stored session value', () => {
-      sessionStorage.setItem('session_key', 'session_val');
-      expect(getSessionStorageItem('session_key')).toBe('session_val');
+    it('returns stored value', () => {
+      mockSessionStorage['skey'] = 'svalue';
+      expect(getSessionStorageItem('skey')).toBe('svalue');
     });
 
-    it('returns null for missing session key', () => {
+    it('returns null for missing key', () => {
       expect(getSessionStorageItem('missing')).toBeNull();
     });
 
-    it('returns null and notifies on error', () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-        throw new Error('Session blocked');
-      });
-      const result = getSessionStorageItem('sess_key');
-      expect(result).toBeNull();
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        'Storage Warning', 'Failed to read session key "sess_key".', 'warning'
-      );
+    it('notifies on error and returns null', () => {
+      vi.spyOn(window.sessionStorage, 'getItem').mockImplementation(() => { throw new Error('err'); });
+      expect(getSessionStorageItem('skey')).toBeNull();
+      expect(mockAddNotification).toHaveBeenCalledWith('Storage Warning', 'Failed to read session key \"skey\".', 'warning');
     });
   });
 
   describe('setSessionStorageItem', () => {
-    it('writes a value to sessionStorage', () => {
-      setSessionStorageItem('sess_key', 'sess_val');
-      expect(sessionStorage.getItem('sess_key')).toBe('sess_val');
+    it('sets value in sessionStorage', () => {
+      setSessionStorageItem('skey', 'svalue');
+      expect(window.sessionStorage.setItem).toHaveBeenCalledWith('skey', 'svalue');
     });
 
     it('notifies on error', () => {
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw new Error('Session full');
-      });
-      setSessionStorageItem('sess_key', 'sess_val');
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        'Storage Warning', 'Failed to persist session key "sess_key".', 'warning'
-      );
+      vi.spyOn(window.sessionStorage, 'setItem').mockImplementation(() => { throw new Error('err'); });
+      setSessionStorageItem('skey', 'svalue');
+      expect(mockAddNotification).toHaveBeenCalledWith('Storage Warning', 'Failed to persist session key \"skey\".', 'warning');
     });
   });
 });

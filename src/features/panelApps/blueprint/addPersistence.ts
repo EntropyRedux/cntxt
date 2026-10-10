@@ -26,26 +26,36 @@ ${existingHtml.trim()}
 
 ## Requirements
 1. **Preserve Functionality & Design**: Do NOT break or redesign existing visual appearance, layouts, or interactive behavior. All existing features must continue to work seamlessly.
-2. **Implement CNTXT State Protocol**:
+2. **Implement CNTXT State Protocol & window.CNTXT SDK**:
    - On initialization (after DOMContentLoaded / script load), post readiness message:
      \`\`\`javascript
-     window.parent.postMessage({ type: 'CNTXT_APP_READY' }, '*');
+     if (window.CNTXT && window.CNTXT.ready) {
+       window.CNTXT.ready();
+     } else {
+       window.parent.postMessage({ type: 'CNTXT_APP_READY' }, '*');
+     }
      \`\`\`
    - Listen for host restoration message:
      \`\`\`javascript
+     if (window.CNTXT && window.CNTXT.state) {
+       window.CNTXT.state.onInit((savedState) => {
+         if (savedState) applyLoadedState(savedState);
+       });
+     }
      window.addEventListener('message', (event) => {
        if (event.data && event.data.type === 'CNTXT_STATE_INIT') {
          const savedState = event.data.state;
-         if (savedState) {
-           // Restore application state/inputs/items
-           applyLoadedState(savedState);
-         }
+         if (savedState) applyLoadedState(savedState);
        }
      });
      \`\`\`
    - When user state changes (e.g. form inputs, lists, settings, canvas items), debounce save (e.g. 300ms) and dispatch:
      \`\`\`javascript
-     window.parent.postMessage({ type: 'CNTXT_STATE_SAVE', state: serializeState() }, '*');
+     if (window.CNTXT && window.CNTXT.state) {
+       window.CNTXT.state.save(serializeState());
+     } else {
+       window.parent.postMessage({ type: 'CNTXT_STATE_SAVE', state: serializeState() }, '*');
+     }
      \`\`\`
 ${targetStateDescription ? `3. **State to Persist**: ${targetStateDescription}` : '3. **State to Persist**: Capture all essential user inputs, active selections, and state variables.'}
 4. **Self-Contained**: Keep everything in a single HTML file with inline \`<style>\` and \`<script>\`. Zero external CDN dependencies.
