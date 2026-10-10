@@ -108,12 +108,19 @@ describe('SettingsStore', () => {
     expect(useSettingsStore.getState().settings.showRibbon).toBe(initialState);
   });
 
-  it('manages theme settings', () => {
+  it('manages theme settings and auto-adapts font family', () => {
     const store = useSettingsStore.getState();
-    store.setTheme('light');
-    expect(useSettingsStore.getState().settings.theme).toBe('light');
-    store.setTheme('dark');
-    expect(useSettingsStore.getState().settings.theme).toBe('dark');
+    store.setTheme('parchment');
+    expect(useSettingsStore.getState().settings.theme).toBe('parchment');
+    expect(useSettingsStore.getState().settings.fontFamily).toContain('Literata');
+
+    store.setTheme('google-material-3');
+    expect(useSettingsStore.getState().settings.theme).toBe('google-material-3');
+    expect(useSettingsStore.getState().settings.fontFamily).toContain('Plus Jakarta Sans');
+
+    store.setTheme('contextpad-dark');
+    expect(useSettingsStore.getState().settings.theme).toBe('contextpad-dark');
+    expect(useSettingsStore.getState().settings.fontFamily).toContain('JetBrains Mono');
   });
 
   it('toggles status bar visibility', () => {

@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.19
-Last Updated: 2026-10-09
-Last Updated By: Prod Agent (Panel Apps Resilient Paths, Full Lifecycle Suite & Production CSP Overhaul)
+Version: v2.23
+Last Updated: 2026-10-10
+Last Updated By: Prod Agent (FG-15 Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,16 +13,35 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-13 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 417/417 Live across 41 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
+    [x] Testing (Vitest 445/445 Live across 43 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.2 Portable Executable & Native Installers Built)
+  [x] Packaging & Release (v0.5.4 Authenticode Signed Portable Executable & Native Installers Built)
 
-Current Feature Group: FG-13 Panel Apps Desktop (Complete & Verified)
-Status: completed / verified (App Builder wizard, Dynamic Rail with AppRail presenter, static Preflight Scanner, .cntxt round-trip parser, AppData default directory, path auto-healing, full lifecycle management suite, production CSP & DevTools support, 417/417 unit tests passing)
+Current Feature Group: FG-15 Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync
+Status: completed / verified (3 prompt archetypes: build, brainstorm, adapt; starterHtml.ts deleted; Adapt from Active Tab; Approach B live CodeMirror tab sync with Resync & Update Tab overwrite guard; 449/449 CNTXT tests + 59/59 cntxt-web tests passing; 0 platform leaks)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
-Unit Tests: written [x] passing [x] (417/417 unit tests passing across 41 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
-Active Plan: /generated-documents/plans/feature_group_FG13_panel_apps_desktop_2026-10-09.md
+Unit Tests: written [x] passing [x] (449/449 unit tests passing across 43 suites in CNTXT, 59/59 passing in cntxt-web, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
+Active Plan: /generated-documents/plans/feature_group_FG15_blueprint_archetypes_and_tab_sync_2026-10-10.md
 Notes:
+- Task 38: Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync (FG-15):
+  - Archetypes Catalog: Replaced hardcoded toy apps in `templates.ts` with 3 foundational prompt archetypes: `build` (scaffolds new app with 14 theme tokens & state protocol), `brainstorm` (ideation prompt exploring 3 concepts for 320-480px sidebar), and `adapt` (ports existing HTML/JS/CSS to CNTXT architecture and theme variables).
+  - Deprecation of Starter Apps: Permanently deleted `starterHtml.ts` (1,063 lines of embedded string literals) from both `CNTXT` and `cntxt-web`, keeping the builder focused cleanly on prompt orchestration and code ingestion.
+  - Adapt from Active Tab: Integrated `useTabStore` inspection in `BlueprintSourceView.tsx` allowing 1-click import of HTML content and document title from currently active editor tabs.
+  - Approach B Editor Tab Bidirectional Sync: Added "Open in Tab" creating a live markdown tab (`[Prompt] <Archetype> - <App>.md`) in CodeMirror. "Resync from Tab" adopts editor buffer as active prompt override without lossy regex reverse-parsing. "Update Tab" pushes regenerated form changes to the tab with a confirmation guard against accidental overwriting of manual edits.
+  - Verification Gates: 449/449 CNTXT tests passing across 43 suites, 59/59 cntxt-web tests passing, 0 platform leaks, 100% canonical contract synchronization.
+- Task 37: Theme Font Auto-Adaptation Engine & Panel Apps Script Execution (v0.5.3 Hotfix):
+  - Theme Font Auto-Adaptation: Added `autoAdaptFontToTheme` (default `true`) to `ViewSettings` and `settingsStore.ts`. When switching themes (via ShellTitleBar, SettingsPanel, shortcuts, or command palette), `fontFamily` now automatically adapts to that theme's curated default font (`THEME_DEFAULT_FONTS`) without getting trapped in `isFontCustomizedByUser`. Added user toggle in `SettingsPanel.tsx` under Typography and synchronized `FontSelectorModal.tsx`.
+  - Panel Apps Script CSP Fix: In `AppPanelPlaceholder.tsx`, inline `<script>` blocks in `preparedHtml` are now automatically transformed into `<script src="data:text/javascript;base64,..."></script>`. Because `data:` is permitted in `script-src` (`script-src 'self' blob: data:`), WebView2 executes all panel app scripts, event listeners, and storage shims without requiring `'unsafe-inline'` in `tauri.conf.json`, fully preserving strict CSP regression gate compliance while making buttons and app logic 100% interactive.
+- Task 36: Panel App Click Interception & srcDoc Fix + Prompt Editor (v0.5.3):
+  - Fixed pointer/click interception in WebView2: Eliminated the full-height transparent DOM overlay in AppPanelPlaceholder that sat above the iframe at z-10 and intercepted mouse hit-testing on Windows; converted to h-10 header only, rendering main overlay strictly during diagnostics or error states.
+  - Fixed iframe mounting race condition in AppFrameHost: Removed conflicting `src="about:blank"` when `doc` is populated and keyed iframe on content availability (`${id}:${nonce}:${doc ? 'ready' : 'empty'}`) ensuring iframe content mounts cleanly upon asynchronous file read completion.
+  - Guarded state init handshake: Prevented clobbering default application state with empty `{}` by passing `state: null` when no saved file state exists.
+  - Blueprint Builder Prompt Editor: Added interactive prompt viewer/editor in BlueprintSourceView (Desktop + Web) with toggle button, editable monospace textarea, live prompt override, edited badge, and one-click reset to default prompt.
+  - Built & Authenticode-signed v0.5.3 release packages: CNTXT_0.5.3_portable.exe (14.38 MB), CNTXT_0.5.3_x64-setup.exe (6.65 MB), CNTXT_0.5.3_x64_en-US.msi (7.69 MB).
+- Task 32: Panel Apps Reset Fix & Keep-Alive App Host: Built AppFrameHost maintaining mounted iframe DOM nodes in stable layout across panel switches with CSS visibility preservation (pointer-events: auto/none, topOffset: 40px, sandbox="allow-scripts allow-same-origin allow-forms allow-modals"). Implemented LRU queue in panelAppsStore capped at MAX_LIVE_APPS = 5 with deliberate reloadNonce recreation and clean close(id) teardown.
+- Task 33: Flow B Prompt Builder & Safe Reply Extractor: Created src/features/panelApps/blueprint/ pure code modules (answers.ts, promptBuilder.ts, templates.ts, addPersistence.ts) and safe reply extractor in import/extractReply.ts. Generates high-leverage prompts enforcing single-file HTML, zero external CDNs, viewport meta, 512KB soft size limit, sandbox compliance, and full CNTXT state protocol.
+- Task 34: Universal CNTXT Theme Engine Integration (14 Tokens & Real-Time Sync): Integrated 14 CNTXT CSS theme variables (--bg-primary, --bg-secondary, --bg-tertiary, --text-primary, --text-secondary, --text-muted, --accent-primary, --accent-hover, --border-primary, --border-subtle, --card-bg, --card-hover-bg, --sidebar-bg, --sidebar-header-bg) and color-scheme: dark light. Serve-time CSS injection into <head>, live CNTXT_THEME_UPDATE postMessage broadcast from AppFrameHost on settings theme changes, and dynamic :root property updates inside the sandboxed iframe without reloading.
+- Task 35: File-Backed State Persistence & Reload-Loop Protection: Extended .cntxt format parser/serializer in cntxtApp.ts with dedicated ```state code block. Enforced 512KB state size cap (STATE_MAX_BYTES). Implemented reload-loop protection: HTML content comparison guards against iframe recreation when only state updates, dirty active editor tab check prevents overwriting in-flight user edits, and re-read before write prevents concurrent modification races.
 - Task 29: Resilient Path Resolution & Default Apps Directory: Added native command `get_default_panel_apps_dir` resolving `%APPDATA%\com.cntxt.desktop\Panel Apps`. Ensured newly created apps save to permanent absolute paths. Built auto-healing resolution checking workspace root, AppData, and local paths with automatic registry self-repair and manual "Locate .cntxt File..." re-link fallback.
 - Task 30: Full Panel App Lifecycle & Management: Added right-click context menu on `AppRail` (Open, Reset Data, Edit, Reveal, Remove, Delete), panel header action controls, and `AppBuilderPanel` tabbed switcher ("Create App" vs "Manage Apps ({count})") with data partition resets and file deletions.
 - Task 31: Production CSP & Back Button Lifecycle: Enforced strict production CSP in `tauri.conf.json` with zero `'unsafe-inline'` or `'unsafe-eval'` in `script-src` while allowing child iframe sandboxing. Added Escape and back-navigation lifecycle handling in `ShellFrame.tsx` to cleanly dismiss open panel apps and builder before window exit. Locked Cargo default features to `[]` for release security.

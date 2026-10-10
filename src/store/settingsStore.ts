@@ -107,7 +107,9 @@ const DEFAULT_SETTINGS: ViewSettings = {
     enabled: true,
     jsonLint: true,
     markdownLint: true
-  }
+  },
+  autoAdaptFontToTheme: true,
+  isFontCustomizedByUser: false
 };
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
@@ -145,9 +147,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
 
     // On cold start, if the user hasn't explicitly customized their font, ensure the font matches the theme's curated default
-    if (!initialSettings.isFontCustomizedByUser && initialSettings.theme) {
+    // On cold start, if autoAdaptFontToTheme is true (default), ensure font matches the theme's curated default
+    const shouldAutoAdaptOnColdStart = initialSettings.autoAdaptFontToTheme !== false;
+    if (shouldAutoAdaptOnColdStart && initialSettings.theme) {
       const themeDefault = THEME_DEFAULT_FONTS[initialSettings.theme];
-      if (themeDefault) {
+      if (themeDefault && (!initialSettings.isFontCustomizedByUser || initialSettings.autoAdaptFontToTheme)) {
         initialSettings.fontFamily = themeDefault;
       }
     }
@@ -159,16 +163,26 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const current = get().settings;
     let fontFamilyToApply = updates.fontFamily;
     
-    // When changing themes, switch to that theme's default fitting font if user hasn't explicitly customized font
+    // When changing themes, auto-adapt font to that theme's default fitting font unless autoAdaptFontToTheme is explicitly disabled
     if (updates.theme && updates.theme !== current.theme) {
-      if (!current.isFontCustomizedByUser && !updates.fontFamily) {
-        fontFamilyToApply = THEME_DEFAULT_FONTS[updates.theme] || current.fontFamily;
+      const shouldAutoAdapt = updates.autoAdaptFontToTheme ?? current.autoAdaptFontToTheme ?? true;
+      if (shouldAutoAdapt && !updates.fontFamily) {
+        const themeDefault = THEME_DEFAULT_FONTS[updates.theme];
+        if (themeDefault) {
+          fontFamilyToApply = themeDefault;
+        }
       }
       clearMermaidCache();
     }
 
     if (updates.fontFamily && updates.fontFamily !== current.fontFamily) {
-      updates.isFontCustomizedByUser = true;
+      const activeTheme = updates.theme || current.theme;
+      const themeDefault = THEME_DEFAULT_FONTS[activeTheme];
+      if (updates.fontFamily !== themeDefault) {
+        updates.isFontCustomizedByUser = true;
+      } else {
+        updates.isFontCustomizedByUser = false;
+      }
     }
 
     if (updates.enableLiveDomSync !== undefined && updates.enableLiveMarkdownSync === undefined) {

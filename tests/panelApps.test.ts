@@ -1,10 +1,13 @@
 /** @vitest-environment jsdom */
+import React from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
+import { render } from '@testing-library/react';
 import { pickFence } from '../src/features/panelApps/format/fence';
 import { buildCntxtApp, parseCntxtApp } from '../src/features/panelApps/format/cntxtApp';
 import { scanHtml } from '../src/features/panelApps/preflight/scan';
 import { resolveHtml } from '../src/features/panelApps/source/resolveHtml';
 import { usePanelAppsStore } from '../src/features/panelApps/state/panelAppsStore';
+import { AppFrameHost } from '../src/components/panelApps/AppFrameHost';
 import { PanelAppManifest } from '../contracts/data_shapes';
 
 describe('Panel Apps: Dynamic Code Fence Selection', () => {
@@ -177,6 +180,72 @@ describe('Panel Apps: Store Registry', () => {
 
     store.remove(app.id);
     expect(usePanelAppsStore.getState().apps).toHaveLength(0);
+    expect(usePanelAppsStore.getState().activeId).toBeNull();
+  });
+});
+
+describe('Panel Apps: Keep-Alive Host & LRU Lifecycle (Reset Fix)', () => {
+  beforeEach(() => {
+    usePanelAppsStore.getState().hydrate([]);
+    usePanelAppsStore.getState().open(null);
+    usePanelAppsStore.setState({ mounted: [], reloadNonce: {} });
+  });
+
+  it('keeps the same iframe DOM node when visible toggles between true and false', () => {
+    const props = {
+      mountedIds: ['app-1'],
+      activeId: 'app-1',
+      reloadNonce: {},
+      getUrl: () => 'about:blank',
+      titleOf: () => 'Test App',
+    };
+    const { container, rerender } = render(React.createElement(AppFrameHost, { ...props, visible: true }));
+    const frame = container.querySelector('iframe');
+    expect(frame).not.toBeNull();
+
+    rerender(React.createElement(AppFrameHost, { ...props, visible: false }));
+    expect(container.querySelector('iframe')).toBe(frame);
+
+    rerender(React.createElement(AppFrameHost, { ...props, visible: true }));
+    expect(container.querySelector('iframe')).toBe(frame);
+  });
+
+  it('replaces the iframe only when reloadNonce changes', () => {
+    const base = {
+      mountedIds: ['app-1'],
+      activeId: 'app-1',
+      visible: true,
+      getUrl: () => 'about:blank',
+      titleOf: () => 'Test App',
+    };
+    const { container, rerender } = render(React.createElement(AppFrameHost, { ...base, reloadNonce: { 'app-1': 0 } }));
+    const frame = container.querySelector('iframe');
+
+    rerender(React.createElement(AppFrameHost, { ...base, reloadNonce: { 'app-1': 1 } }));
+    expect(container.querySelector('iframe')).not.toBe(frame);
+  });
+
+  it('caps live mounted apps to MAX_LIVE_APPS (5) and evicts the oldest non-active app', () => {
+    ['app-1', 'app-2', 'app-3', 'app-4', 'app-5', 'app-6'].forEach((id) => {
+      usePanelAppsStore.getState().open(id);
+    });
+
+    const state = usePanelAppsStore.getState();
+    expect(state.mounted).toHaveLength(5);
+    expect(state.mounted).not.toContain('app-1');
+    expect(state.mounted).toEqual(['app-2', 'app-3', 'app-4', 'app-5', 'app-6']);
+    expect(state.activeId).toBe('app-6');
+  });
+
+  it('close(id) unmounts the app and clears activeId if active', () => {
+    usePanelAppsStore.getState().open('app-1');
+    usePanelAppsStore.getState().open('app-2');
+
+    expect(usePanelAppsStore.getState().mounted).toEqual(['app-1', 'app-2']);
+    expect(usePanelAppsStore.getState().activeId).toBe('app-2');
+
+    usePanelAppsStore.getState().close('app-2');
+    expect(usePanelAppsStore.getState().mounted).toEqual(['app-1']);
     expect(usePanelAppsStore.getState().activeId).toBeNull();
   });
 });

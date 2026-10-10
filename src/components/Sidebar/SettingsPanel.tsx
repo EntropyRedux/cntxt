@@ -338,7 +338,7 @@ export const SettingsPanel: React.FC = () => {
                 key={t.id}
                 type="button"
                 onClick={() => {
-                  updateSettings({ theme: t.id, fontFamily: themeDefaultFontFamily });
+                  updateSettings({ theme: t.id, fontFamily: themeDefaultFontFamily, isFontCustomizedByUser: false, autoAdaptFontToTheme: true });
                   bridge.theme.applyTheme(t.id);
                   addNotification('Theme & Font Applied', `Switched to ${t.name} (Font: ${matchingFont.name})`, 'info');
                 }}
@@ -641,6 +641,35 @@ export const SettingsPanel: React.FC = () => {
             </div>
           </div>
 
+          {/* Auto-adapt Font to Theme */}
+          <div className="flex items-center justify-between py-1">
+            <div>
+              <span className="text-[var(--text-primary)] block font-medium">Auto-Adapt Font to Theme</span>
+              <span className="text-[10px] text-[var(--text-muted)]">Switch to each theme's default curated font</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const nextVal = !(settings.autoAdaptFontToTheme ?? true);
+                const updates: Partial<typeof settings> = { autoAdaptFontToTheme: nextVal };
+                if (nextVal) {
+                  updates.fontFamily = THEME_DEFAULT_FONTS[settings.theme] || settings.fontFamily;
+                  updates.isFontCustomizedByUser = false;
+                }
+                updateSettings(updates);
+              }}
+              className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                (settings.autoAdaptFontToTheme ?? true) ? 'bg-[var(--accent-primary)]' : 'bg-[var(--border-primary)]'
+              }`}
+            >
+              <div
+                className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
+                  (settings.autoAdaptFontToTheme ?? true) ? 'right-0.75' : 'left-0.75'
+                }`}
+              />
+            </button>
+          </div>
+
           {/* Editor Font Family Selector */}
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between">
@@ -651,7 +680,15 @@ export const SettingsPanel: React.FC = () => {
             </div>
             <select
               value={settings.fontFamily}
-              onChange={(e) => updateSettings({ fontFamily: e.target.value })}
+              onChange={(e) => {
+                const newFont = e.target.value;
+                const isDefault = newFont === THEME_DEFAULT_FONTS[settings.theme];
+                updateSettings({ 
+                  fontFamily: newFont,
+                  isFontCustomizedByUser: !isDefault,
+                  autoAdaptFontToTheme: isDefault
+                });
+              }}
               className="theme-input w-full font-medium rounded px-2 py-1.5 text-xs text-[var(--text-primary)]"
             >
               {CURATED_FONTS.map(f => (

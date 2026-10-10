@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.4] — 2026-10-10
+
+### Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync (FG-15)
+- **Foundational Prompt Archetypes (`templates.ts`, `promptBuilder.ts`)**:
+  - Replaced hardcoded sample applications with 3 core prompt archetypes:
+    - **`build` (Build New App)**: Generates complete single-file HTML specifications enforcing the 14 CNTXT theme tokens, file-backed state sync protocol, and 512KB sandbox budget.
+    - **`brainstorm` (Brainstorm & Ideate)**: Formulates an interactive AI prompt to explore 3 sidebar panel app concepts for a 320–480px width constraint.
+    - **`adapt` (Adapt Existing HTML)**: Generates an adapter prompt to refactor existing HTML/JS/CSS widgets into the CNTXT panel architecture, theme engine, and state protocol.
+  - Added `buildArchetypePrompt` dispatcher and canonical `BlueprintArchetype` type to contracts.
+- **Permanent Retirement of Starter Apps (`starterHtml.ts`)**:
+  - Completely removed `starterHtml.ts` (1,063 lines of embedded string literals) from the codebase.
+  - Eliminated the "Use Starter App" action in `BlueprintSourceView.tsx`, slimming bundle size and focusing the App Builder cleanly on prompt orchestration and code ingestion.
+- **Adapt from Current Active Tab (`BlueprintSourceView.tsx`)**:
+  - Added 1-click **"Load from active tab: <Title>"** button in the `adapt` archetype view, automatically populating the existing HTML payload and default application name from the currently focused document.
+- **Approach B Editor Tab Bidirectional Sync (`BlueprintSourceView.tsx`)**:
+  - Added **"Open in Tab"**: Opens a live Markdown tab titled `[Prompt] <Archetype> - <App>.md` in the CodeMirror editor.
+  - Added **"Resync from Tab"**: Adopts manual edits from the editor tab buffer as the active prompt override (`customPrompt`) with an `"Edited Override"` badge without lossy regex reverse-parsing.
+  - Added **"Update Tab"**: Pushes form modifications to the open tab with an explicit confirmation guard against overwriting manual editor edits.
+- **Theme Engine Light Theme & Background Sync Fix**:
+  - Defined universal root token fallbacks in `src/index.css` mapping the 14 panel app theme variables (`--bg-primary`, `--bg-secondary`, `--bg-tertiary`, `--accent-hover`, `--card-hover-bg`, `--sidebar-header-bg`) across all light and dark themes.
+  - Enhanced `getRootComputedStyleProperty` and `getRootAttribute` in `domHelper.ts` to inspect the active `[data-theme]` container rather than solely querying `document.documentElement`.
+  - Updated `isDarkTheme()` in `themeSync.ts` to accurately detect `google-material-3`, `material-light`, `github-light`, and `parchment` as light themes, switching default fallback injection to high-contrast light theme tokens.
+- **Timer / Keep-Alive State Loop Fix (`AppPanelPlaceholder.tsx`)**:
+  - Resolved immediate Pomodoro timer stop defect by removing `storageData` and `fileState` from `preparedHtml` memo dependencies.
+  - Initialized `window.__INIT_STATE__` dynamically and retained state references via `useRef`, preventing `srcDoc` re-evaluations and iframe DOM teardowns upon debounced `CNTXT_STATE_SAVE` events.
+- **Prompt Tab Deduplication & Live Reuse (`BlueprintSourceView.tsx`)**:
+  - Updated `handleOpenPromptTab` to search open tabs for any existing `[Prompt]` tab.
+  - If already open, the tab is focused, title synchronized, and content updated with `activePrompt` rather than creating duplicate tabs.
+- **Full Verification & Parity**:
+  - 449/449 unit tests passing across 43 test suites in CNTXT.
+  - 59/59 unit tests passing in cntxt-web.
+  - 0 platform leaks across all 169 files in CNTXT and 143 files in cntxt-web.
+
+## [0.5.3] — 2026-10-10
+
+### Panel Apps: State Persistence, Keep-Alive Host & Flow B Theme Integration
+- **Keep-Alive App Host & LRU Queue (`AppFrameHost.tsx`, `panelAppsStore.ts`)**:
+  - Resolved panel-switch reset defect by introducing `AppFrameHost` keep-alive DOM container.
+  - Keeps mounted app iframes alive in the DOM using CSS visibility toggling (`style={{ visibility: isActive && visible ? 'visible' : 'hidden', pointerEvents: isActive && visible ? 'auto' : 'none', top: topOffset }}`).
+  - Preserves `sandbox="allow-scripts allow-same-origin allow-forms allow-modals"`.
+  - Implemented LRU queue capped at `MAX_LIVE_APPS = 5` with deliberate `reloadNonce` recreation and clean `close(id)` unmounting.
+- **Flow B Blueprint Pure Code Modules (`src/features/panelApps/blueprint/`, `import/`)**:
+  - `answers.ts`: Zod schema for Blueprint answers (`appName`, `purpose`, `inputsOutputs`, `persistence`, `layout`, `themeMode`, `templateId`).
+  - `promptBuilder.ts`: High-leverage LLM prompt generator enforcing single-file HTML, zero CDNs, viewport meta, 512KB soft size limit, sandbox compliance, and 14 CNTXT theme variables.
+  - `templates.ts`: Built-in catalog of starter blueprints (Note Scratchpad, Checklist Runner, Tape Calculator, JSON Inspector, Pomodoro Timer).
+  - `addPersistence.ts`: Specialized prompt generator to retrofit existing monolithic HTML apps with CNTXT state sync.
+  - `extractReply.ts`: Safe markdown extractor identifying largest HTML candidate, handling unterminated code blocks, raw doctypes, and CRLF normalization without code execution.
+- **Universal CNTXT Theme Engine Integration (`themeSync.ts`, `AppFrameHost.tsx`)**:
+  - Integrated 14 CNTXT CSS theme tokens (`--bg-primary`, `--bg-secondary`, `--bg-tertiary`, `--text-primary`, `--text-secondary`, `--text-muted`, `--accent-primary`, `--accent-hover`, `--border-primary`, `--border-subtle`, `--card-bg`, `--card-hover-bg`, `--sidebar-bg`, `--sidebar-header-bg`) and `color-scheme: dark light`.
+  - Serve-time CSS injection into `<head>` before scripts run.
+  - Live `CNTXT_THEME_UPDATE` postMessage broadcast from `AppFrameHost` updating `:root` properties dynamically without reloading the iframe.
+- **File-Backed State Persistence & Reload-Loop Protection (`cntxtApp.ts`, `AppPanelPlaceholder.tsx`)**:
+  - Extended `.cntxt` format parser and serializer with dedicated ` ```state ` code block.
+  - Handled `CNTXT_APP_READY` handshake and `CNTXT_STATE_SAVE` message sync.
+  - Enforced 512KB state size limit (`STATE_MAX_BYTES`).
+  - Implemented reload-loop protection: HTML content comparison guards against iframe recreation when only state updates, dirty active editor tab check prevents overwriting in-flight user edits, and re-read before write prevents concurrent modification races.
+- **Full Verification**:
+  - 445/445 unit tests passing across 43 test suites in CNTXT.
+  - 55/55 unit tests passing in cntxt-web.
+  - 0 platform leaks across 168 files in CNTXT and 142 files in cntxt-web.
+
 ## [0.5.2] — 2026-10-09
 
 ### Panel Apps: App Builder & Host Shell Integration (Flow A)

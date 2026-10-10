@@ -436,3 +436,16 @@ export function installViewportResizeStabilizer(rootId = 'root'): () => void {
     vpUnlisten?.();
   };
 }
+
+export function getRootComputedStyleProperty(property: string): string {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return '';
+  const themeEl = document.querySelector('[data-theme]') || document.documentElement;
+  return getComputedStyle(themeEl).getPropertyValue(property).trim();
+}
+
+export function getRootAttribute(attr: string): string {
+  if (typeof document === 'undefined') return '';
+  const themeEl = document.querySelector(`[${attr}]`) || document.documentElement;
+  return themeEl.getAttribute(attr) || '';
+}
+

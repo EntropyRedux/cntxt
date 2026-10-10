@@ -49,11 +49,16 @@ export const FontSelectorModal: React.FC<FontSelectorModalProps> = ({
   if (!isOpen) return null;
 
   const handleSelectFont = (font: CuratedFont) => {
-    updateSettings({ fontFamily: font.fontFamily });
+    const isDefault = font.fontFamily === themeDefaultFontFamily;
+    updateSettings({ 
+      fontFamily: font.fontFamily,
+      isFontCustomizedByUser: !isDefault,
+      autoAdaptFontToTheme: isDefault
+    });
   };
 
   const handleResetToThemeDefault = () => {
-    updateSettings({ fontFamily: themeDefaultFontFamily });
+    updateSettings({ fontFamily: themeDefaultFontFamily, isFontCustomizedByUser: false, autoAdaptFontToTheme: true });
   };
 
   const isCurrentFont = (font: CuratedFont) => {

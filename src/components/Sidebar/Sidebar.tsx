@@ -29,6 +29,7 @@ import { triggerFileDownload, triggerFileInput } from '../../adapters';
 import { PersonalGitHubLibraryModal } from './PersonalGitHubLibraryModal';
 import { AppBuilderPanel } from '../panelApps/AppBuilderPanel';
 import { AppPanelPlaceholder } from '../panelApps/AppPanelPlaceholder';
+import { AppFrameHost } from '../panelApps/AppFrameHost';
 import { usePanelAppsStore } from '../../features/panelApps/state/panelAppsStore';
 
 const STORAGE_KEY = 'contextpad_sidepanel_width';
@@ -132,14 +133,19 @@ export const Sidebar: React.FC = () => {
 
   // Adjust width if active panel app specifies default width
   const activePanelAppId = usePanelAppsStore(state => state.activeId);
+  const panelApps = usePanelAppsStore(state => state.apps);
+  const mountedPanelAppIds = usePanelAppsStore(state => state.mounted);
+  const panelAppsReloadNonce = usePanelAppsStore(state => state.reloadNonce);
+  const panelAppsHtmlCache = usePanelAppsStore(state => state.htmlCache);
+
   useEffect(() => {
     if (settings.activeSidebarTab === 'panel-app') {
-      const activeApp = usePanelAppsStore.getState().apps.find(a => a.id === activePanelAppId);
+      const activeApp = panelApps.find(a => a.id === activePanelAppId);
       if (activeApp?.panelWidth) {
         setWidth(activeApp.panelWidth);
       }
     }
-  }, [settings.activeSidebarTab, activePanelAppId]);
+  }, [settings.activeSidebarTab, activePanelAppId, panelApps]);
 
   const [isResizing, setIsResizing] = useState(false);
 
@@ -440,8 +446,33 @@ export const Sidebar: React.FC = () => {
       )}
 
       {/* Tab Panel View Content */}
-      <div className="flex-1 h-full overflow-hidden">
-        {renderContent()}
+      <div className="flex-1 h-full overflow-hidden relative">
+        {/* Stable Keep-Alive App Host: keeps mounted panel app iframes alive in the DOM across panel switches */}
+        <AppFrameHost
+          mountedIds={mountedPanelAppIds}
+          activeId={settings.activeSidebarTab === 'panel-app' ? activePanelAppId : null}
+          visible={settings.activeSidebarTab === 'panel-app'}
+          reloadNonce={panelAppsReloadNonce}
+          getUrl={() => 'about:blank'}
+          getSrcDoc={(id) => panelAppsHtmlCache[id] || ''}
+          titleOf={(id) => panelApps.find((a) => a.id === id)?.name ?? id}
+          topOffset="40px"
+          theme={settings.theme}
+        />
+
+        {/* When active tab is NOT panel-app, render that panel above */}
+        {settings.activeSidebarTab !== 'panel-app' && (
+          <div className="absolute inset-0 z-10 bg-[var(--sidebar-bg)] overflow-hidden">
+            {renderContent()}
+          </div>
+        )}
+
+        {/* When active tab IS panel-app, render AppPanelPlaceholder overlay controls */}
+        {settings.activeSidebarTab === 'panel-app' && (
+          <div className="absolute inset-x-0 top-0 z-10 pointer-events-none h-full">
+            <AppPanelPlaceholder onClose={() => toggleSidebar()} />
+          </div>
+        )}
       </div>
 
       {/* Personal GitHub Library Modal */}

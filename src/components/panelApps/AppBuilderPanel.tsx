@@ -161,6 +161,34 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
     }
   };
 
+  // Blueprint HTML loader handler
+  const handleLoadBlueprintHtml = (
+    appName: string,
+    rawHtml: string,
+    note: string,
+    templateId?: string,
+    description?: string
+  ) => {
+    let icon = 'Sparkles';
+    if (templateId === 'note-scratchpad') icon = 'FileText';
+    else if (templateId === 'task-runner') icon = 'CheckSquare';
+    else if (templateId === 'quick-calc') icon = 'Calculator';
+    else if (templateId === 'json-tool') icon = 'Code';
+    else if (templateId === 'timer-pomodoro') icon = 'Clock';
+
+    setSource(
+      { kind: 'file', path: '', name: appName, content: rawHtml },
+      rawHtml,
+      note
+    );
+
+    setDetails({
+      name: appName,
+      description: description || '',
+      icon,
+    });
+  };
+
   // Validation
   const nameTrimmed = details.name.trim();
   const isNameValid = nameTrimmed.length >= 1 && nameTrimmed.length <= 40;
@@ -432,6 +460,7 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
                 selectedTabId={source?.kind === 'tab' ? source.docId : null}
                 onSelectTab={handleSelectTab}
                 onPickFile={handlePickFile}
+                onLoadBlueprintHtml={handleLoadBlueprintHtml}
                 sourceNote={sourceNote}
                 hasValidHtml={hasValidHtml}
                 htmlLength={html?.length || 0}

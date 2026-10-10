@@ -1,10 +1,12 @@
 /**
  * Format serializer and deserializer for .cntxt panel app files.
- * Single source of truth: frontmatter manifest + dynamic-fenced HTML.
+ * Single source of truth: frontmatter manifest + dynamic-fenced HTML + optional state block.
  */
 import { PanelAppManifest } from '../../../contracts/data_shapes';
 import { PanelAppManifestSchema } from '../../../contracts/boundarySchemas';
 import { pickFence } from './fence';
+
+export const STATE_MAX_BYTES = 512 * 1024; // 512 KB
 
 const KEY_ORDER = [
   'schemaVersion',
@@ -18,16 +20,28 @@ const KEY_ORDER = [
   'createdFrom',
 ] as const;
 
-export function buildCntxtApp(manifest: PanelAppManifest, html: string): string {
+export function buildCntxtApp(manifest: PanelAppManifest, html: string, state?: unknown): string {
   const m = PanelAppManifestSchema.parse(manifest);
   const front = KEY_ORDER.map((k) => `${k}: ${JSON.stringify(m[k])}`).join('\n');
   const fence = pickFence(html);
   const body = html.endsWith('\n') ? html : html + '\n';
-  return `---\n${front}\n---\n\n# ${m.name}\n\n${fence}html\n${body}${fence}\n`;
+  let out = `---\n${front}\n---\n\n# ${m.name}\n\n${fence}html\n${body}${fence}\n`;
+
+  if (state !== undefined && state !== null) {
+    const serializedState =
+      typeof state === 'string'
+        ? state.trim()
+        : JSON.stringify(state, null, 2);
+    if (serializedState) {
+      out += `\n\`\`\`state\n${serializedState}\n\`\`\`\n`;
+    }
+  }
+
+  return out;
 }
 
 export type ParseResult =
-  | { ok: true; manifest: PanelAppManifest; html: string }
+  | { ok: true; manifest: PanelAppManifest; html: string; state?: string }
   | { ok: false; error: string };
 
 export function parseCntxtApp(text: string): ParseResult {
@@ -61,9 +75,53 @@ export function parseCntxtApp(text: string): ParseResult {
   const close = lines.findIndex((l, i) => i > open && closeRe.test(l));
   if (close === -1) return { ok: false, error: 'Unterminated html code block' };
 
+  // check for state code block
+  const stateOpen = lines.findIndex((l) => /^`{3,}state[ \t]*$/.test(l));
+  let stateStr: string | undefined;
+  if (stateOpen !== -1) {
+    const sFenceLen = lines[stateOpen].match(/^`+/)![0].length;
+    const sCloseRe = new RegExp('^`{' + sFenceLen + ',}[ \\t]*$');
+    const sClose = lines.findIndex((l, i) => i > stateOpen && sCloseRe.test(l));
+    if (sClose !== -1) {
+      stateStr = lines.slice(stateOpen + 1, sClose).join('\n');
+    }
+  }
+
   return {
     ok: true,
     manifest: parsed.data,
     html: lines.slice(open + 1, close).join('\n'),
+    state: stateStr,
   };
+}
+
+export function updateCntxtAppState(text: string, state: unknown): string {
+  const serialized =
+    typeof state === 'string'
+      ? state.trim()
+      : JSON.stringify(state, null, 2);
+
+  const byteLength = new TextEncoder().encode(serialized).length;
+  if (byteLength > STATE_MAX_BYTES) {
+    throw new Error(`State size exceeds ${STATE_MAX_BYTES / 1024} KB limit`);
+  }
+
+  const src = text.replace(/\r\n/g, '\n');
+  const lines = src.split('\n');
+  const stateOpen = lines.findIndex((l) => /^`{3,}state[ \t]*$/.test(l));
+
+  if (stateOpen !== -1) {
+    const sFenceLen = lines[stateOpen].match(/^`+/)![0].length;
+    const sCloseRe = new RegExp('^`{' + sFenceLen + ',}[ \\t]*$');
+    const sClose = lines.findIndex((l, i) => i > stateOpen && sCloseRe.test(l));
+    if (sClose !== -1) {
+      const before = lines.slice(0, stateOpen + 1);
+      const after = lines.slice(sClose);
+      return [...before, serialized, ...after].join('\n');
+    }
+  }
+
+  // Not found: append at end
+  const trimmed = src.trimEnd();
+  return `${trimmed}\n\n\`\`\`state\n${serialized}\n\`\`\`\n`;
 }

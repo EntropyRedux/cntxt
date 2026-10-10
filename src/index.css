@@ -51,7 +51,24 @@ body {
    Universal Theme Variables Engine (Dark & Material 3 Light Support)
    ========================================================================= */
 
-:root,
+:root {
+  /* 14 Universal Panel App Theme Tokens (mapped to active theme variables) */
+  --bg-primary: var(--app-bg, #18181B);
+  --bg-secondary: var(--sidebar-bg, #1F1F24);
+  --bg-tertiary: var(--card-secondary-bg, #25252A);
+  --text-primary: var(--text-primary, #EDEDED);
+  --text-secondary: var(--text-secondary, #A1A1AA);
+  --text-muted: var(--text-muted, #71717A);
+  --accent-primary: var(--accent-primary, #007ACC);
+  --accent-hover: var(--accent-primary-hover, #0066A6);
+  --border-primary: var(--border-primary, #2B2B33);
+  --border-subtle: var(--border-subtle, #222228);
+  --card-bg: var(--card-bg, #25252A);
+  --card-hover-bg: var(--card-hover-bg, #2E2E36);
+  --sidebar-bg: var(--sidebar-bg, #1F1F24);
+  --sidebar-header-bg: var(--sidebar-header-bg, #18181B);
+}
+
 [data-theme="contextpad-dark"] {
   --app-bg: #18181B;
   --titlebar-bg: #141417;
@@ -128,6 +145,14 @@ body {
 
 [data-theme="google-material-3"],
 [data-theme="material-light"] {
+  /* 14 Universal Panel App Theme Tokens */
+  --bg-primary: #EDF2FA;
+  --bg-secondary: #F0F4F9;
+  --bg-tertiary: #E8EEF5;
+  --accent-hover: #0842A0;
+  --card-hover-bg: #EDF2FA;
+  --sidebar-header-bg: #E8EEF5;
+
   --app-bg: #EDF2FA;
   --titlebar-bg: #DFE4EC;
   --titlebar-fg: #1F1F1F;
@@ -202,6 +227,14 @@ body {
    ========================================================================= */
 
 [data-theme="github-light"] {
+  /* 14 Universal Panel App Theme Tokens */
+  --bg-primary: #F6F8FA;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #EAEEF2;
+  --accent-hover: #0854AF;
+  --card-hover-bg: #F6F8FA;
+  --sidebar-header-bg: #FFFFFF;
+
   --app-bg: #F6F8FA;
   --titlebar-bg: #EAEEF2;
   --titlebar-fg: #24292F;
@@ -276,6 +309,14 @@ body {
    ========================================================================= */
 
 [data-theme="parchment"] {
+  /* 14 Universal Panel App Theme Tokens */
+  --bg-primary: #F3EDE1;
+  --bg-secondary: #FAF6EE;
+  --bg-tertiary: #EAE2D2;
+  --accent-hover: #7E3E1E;
+  --card-hover-bg: #EAE2D2;
+  --sidebar-header-bg: #DFD5C2;
+
   --app-bg: #F3EDE1;
   --titlebar-bg: #DFD5C2;
   --titlebar-fg: #1C1917;

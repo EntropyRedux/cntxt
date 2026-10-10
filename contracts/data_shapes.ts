@@ -169,6 +169,7 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   autocompleteConfig: AutocompleteConfig;
   spellCheckConfig: SpellCheckConfig;
   codeLintConfig: CodeLintConfig;
+  autoAdaptFontToTheme?: boolean;
   isFontCustomizedByUser?: boolean;
 }
 
@@ -640,6 +641,7 @@ export type MyLibraryFilter = 'all' | 'mine' | 'community' | 'imported';
 export type PanelAppRuntime = 'html';
 export type PanelAppNetworkMode = 'offline' | 'cdn';
 export type PanelAppCreatedFrom = 'file' | 'tab' | 'prompt';
+export type BlueprintArchetype = 'build' | 'brainstorm' | 'adapt';
 
 export interface PanelAppManifest {
   schemaVersion: 1;
