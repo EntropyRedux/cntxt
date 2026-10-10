@@ -23,6 +23,11 @@ Background Processes: none (all sync & remote fetch user-initiated or explicit o
 Unit Tests: written [x] passing [x] (449/449 unit tests passing across 43 suites in CNTXT, 59/59 passing in cntxt-web, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md
 Notes:
+- Task 40: Full Codebase Audit Pass 2 Reconciliation (2026-10-10):
+  - Audit Scope & Pipeline: Evaluated raw findings in `/generated-documents/audits/raw_findings_full_codebase_2026-10-10.md` against architectural invariants, documented tradeoffs, and runtime contracts.
+  - Disposition & Classification: Reconciled 17 findings resulting in 9 `[VALID DEFECT]` (F2.1, F3.1, F3.2, F5.1, F5.2, F5.3, F9.1, DC-1, DC-3) and 8 `[APPROVED TRADEOFF]` (F1.1, F1.2, F5.4, F6.1, F8.1, F8.2, F9.2, F9.3, DC-4).
+  - Verdict: Assigned CONDITIONAL PASS. Core invariants (purity, security, token authorization, 449/449 test suite) are 100% verified.
+  - Remediation Backlog: Authored `/generated-documents/plans/refactor_plan_full_codebase_remediation_2026-10-10.md` scoping surgical remediation across 5 phases.
 - Task 39: Architectural Vision — Multi-Agent Terminal Bus & Host Command Bus:
   - Vision Document: Authored `/generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md` detailing the paradigm shift of `.cntxt` files into persistent, multiplexed multi-process terminal buses for concurrent CLI agent orchestration.
   - Project Brief Bump (v2.1): Updated `/generated-documents/context/project_brief_v2.1.md` adding FG-16 (Host Command Bus & RPC Bridge) and FG-17 (`.cntxt` Multi-Session Terminal Bus) to the core feature roadmap.
@@ -78,14 +83,14 @@ Notes:
 - Task 19: v0.5.1 Production Packaging & Authenticode Signing (2026-10-09): Bumped project version to 0.5.1 across package.json, Cargo.toml, and tauri.conf.json. Generated standalone portable executable (dist-portable/CNTXT_0.5.1_portable.exe and CNTXT-portable.exe), NSIS setup installer (dist-installer/CNTXT_0.5.1_x64-setup.exe), and WiX MSI installer (dist-installer/CNTXT_0.5.1_x64_en-US.msi), signed with Authenticode SHA256 and RFC 3161 timestamps via npm run package:sign.
 - Task 20: Truncated Large Document Read-Only Safety Interlock (2026-10-09): Implemented zero-risk data loss prevention guard for large document selective loading. Extended Tab contract with isTruncatedView and rawFullContent; locked onSaveFile in eventDispatcher.ts against overwriting files from truncated views; added restoreFullContent to tabStore; rendered interactive warning banner in Editor.tsx with 1-click 'Open Full Document' restore; added comprehensive unit tests (tests/largeDocModal.test.ts 11/11 pass, 399/399 unit tests green).
 - Verification Gate Snapshot (2026-10-09): npm run lint (0 errors, 145 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (24/24 green on cold server with port killed); npm run build (0 errors, chunks optimized).
-Last Audit Reconciliation: 2026-10-07 — Reconciled Full Codebase Re-Audit (All 22 Findings R-01..R-13 and D-01..D-09 Fully Resolved & Verified; All 5 Verification Gates Green).
-Last Git Checkpoint: 2026-10-09 — Truncated View Read-Only Safety Guard & Full Document Restore
+Last Audit Reconciliation: 2026-10-10 — Full Codebase Audit Reconciled (CONDITIONAL PASS; 9 Valid Defects Classified, 8 Approved Tradeoffs Ratified, Remediation Backlog in /generated-documents/plans/refactor_plan_full_codebase_remediation_2026-10-10.md).
+Last Git Checkpoint: 2026-10-10 — FG-15 Prompt Archetypes & Tab Sync, Multi-Agent Vision, Full Codebase Audit Reconciliation
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
-Brief Version: v2.0
-Brief Location: /generated-documents/context/project_brief_v2.0.md
-Last Brief Update: 2026-10-01
-Reason for last update: Formalized Tri-Platform Hybrid Architecture (Web SaaS on Vercel + Supabase, Desktop on Tauri v2/Rust, Android on Tauri Mobile), Free-Tier SaaS constraints, rate-limit-free GitHub CDN catalog, and universal IRuntimeBridge contract.
+Brief Version: v2.1
+Brief Location: /generated-documents/context/project_brief_v2.1.md
+Last Brief Update: 2026-10-10
+Reason for last update: Formalized FG-16 (Host Command Bus & RPC Bridge) and FG-17 (Multi-Agent Terminal Bus on .cntxt format) alongside Tri-Platform Hybrid Architecture.
 
 ━━━ CANONICAL DATA SHAPES ━━━
 Location: /contracts/data_shapes.ts & /generated-documents/context/contracts/data_shapes.ts (Option B Polyglot Mirror Synchronized)
