@@ -5,7 +5,7 @@
 > **Author:** Prod Agent  
 > **Date:** 2026-10-10  
 > **Based on Reconciled Audit:** `generated-documents/audits/raw_findings_full_codebase_2026-10-10.md`  
-> **Verdict:** CONDITIONAL PASS (9 Valid Defects, 8 Approved Tradeoffs)  
+> **Verdict:** CONDITIONAL PASS (10 Valid Defects, 9 Approved Tradeoffs)  
 > **Status:** Remediation Backlog Formulated for Execution
 
 ---
@@ -21,9 +21,9 @@ The audit verified that the primary architectural pillars remain strong:
 - **Zero Memory Leaks & CSP Hardening**: No `eval` or dynamic `new Function` in `src/`.
 - **Sandbox Compliance**: Webview2 executes sandboxed panel apps with isolated shims.
 
-However, Pass 1 identified 17 raw findings. Upon Pass 2 reconciliation, **9 findings were classified as [VALID DEFECT]** and **8 findings were classified as [APPROVED TRADEOFF]**.
+However, Pass 1 identified 19 raw findings. Upon Pass 2 reconciliation, **10 findings were classified as [VALID DEFECT]** and **9 findings were classified as [APPROVED TRADEOFF]**.
 
-This refactor plan defines the phased remediation backlog to eliminate all 9 valid defects without breaking existing behavior or introducing regressions.
+This refactor plan defines the phased remediation backlog to eliminate all 10 valid defects without breaking existing behavior or introducing regressions.
 
 ---
 
