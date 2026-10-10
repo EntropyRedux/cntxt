@@ -50,6 +50,7 @@ export function buildClientSdkInjection(appId: string): string {
           try {
             window.parent.postMessage({
               type: 'CNTXT_RPC_REQUEST',
+              appId: '${appId}',
               request: {
                 id: reqId,
                 domain: domain,

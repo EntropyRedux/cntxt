@@ -151,25 +151,32 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
       }
 
       // 3. Storage sync (local store proxy shim)
-      if (appId !== activeApp.id) return;
-      const storageSaveKey = `cntxt_app_data_${activeApp.id}`;
+      if (
+        type === 'CNTXT_APP_STORAGE_SYNC' ||
+        type === 'CNTXT_APP_STORAGE_REMOVE' ||
+        type === 'CNTXT_APP_STORAGE_CLEAR'
+      ) {
+        if (appId !== activeApp.id) return;
+        const storageSaveKey = `cntxt_app_data_${activeApp.id}`;
 
-      if (type === 'CNTXT_APP_STORAGE_SYNC') {
-        setStorageData((prev) => {
-          const updated = { ...prev, [key]: value };
-          safePersist(bridge.storage, storageSaveKey, JSON.stringify(updated), 'App Origin Storage');
-          return updated;
-        });
-      } else if (type === 'CNTXT_APP_STORAGE_REMOVE') {
-        setStorageData((prev) => {
-          const updated = { ...prev };
-          delete updated[key];
-          safePersist(bridge.storage, storageSaveKey, JSON.stringify(updated), 'App Origin Storage');
-          return updated;
-        });
-      } else if (type === 'CNTXT_APP_STORAGE_CLEAR') {
-        setStorageData({});
-        safePersist(bridge.storage, storageSaveKey, JSON.stringify({}), 'App Origin Storage');
+        if (type === 'CNTXT_APP_STORAGE_SYNC') {
+          setStorageData((prev) => {
+            const updated = { ...prev, [key]: value };
+            safePersist(bridge.storage, storageSaveKey, JSON.stringify(updated), 'App Origin Storage');
+            return updated;
+          });
+        } else if (type === 'CNTXT_APP_STORAGE_REMOVE') {
+          setStorageData((prev) => {
+            const updated = { ...prev };
+            delete updated[key];
+            safePersist(bridge.storage, storageSaveKey, JSON.stringify(updated), 'App Origin Storage');
+            return updated;
+          });
+        } else if (type === 'CNTXT_APP_STORAGE_CLEAR') {
+          setStorageData({});
+          safePersist(bridge.storage, storageSaveKey, JSON.stringify({}), 'App Origin Storage');
+        }
+        return;
       }
 
       // 4. Host Command Bus RPC Bridge (FG-16)
@@ -182,6 +189,7 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
             // Sandboxed iframe cross-origin postMessage ignore
           }
         });
+        return;
       }
     };
 
