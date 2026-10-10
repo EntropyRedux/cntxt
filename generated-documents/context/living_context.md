@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.24
+Version: v2.25
 Last Updated: 2026-10-10
-Last Updated By: Prod Agent (Multi-Agent Terminal Bus & Host Command Bus Visioning)
+Last Updated By: Prod Agent (v0.5.5 Packaging, Authenticode Signing & Verification)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -15,14 +15,19 @@ Active Stage:
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
     [x] Testing (Vitest 449/449 Live across 43 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.4 Authenticode Signed Portable Executable & Native Installers Built)
+  [x] Packaging & Release (v0.5.5 Authenticode Signed Portable Executable & Native Installers Built)
 
 Current Feature Group: FG-16 Host Command Bus & FG-17 Multi-Agent Terminal Bus (Vision & Architecture Scoped)
-Status: in-planning / vision mapped (Architectural vision documented in /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md; Project Brief updated to v2.1; FG-15 completed and shipped in v0.5.4 release binaries)
+Status: in-planning / vision mapped (Architectural vision documented in /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md; Project Brief updated to v2.1; FG-15 completed and shipped; v0.5.5 remediation & bundler hardening release binaries built & signed)
 Background Processes: none (all sync & remote fetch user-initiated or explicit opt-in)
 Unit Tests: written [x] passing [x] (449/449 unit tests passing across 43 suites in CNTXT, 59/59 passing in cntxt-web, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md
 Notes:
+- Task 42: v0.5.5 Production Packaging & Authenticode Signing (2026-10-10):
+  - Bumped version to 0.5.5 across package.json, src-tauri/Cargo.toml, and src-tauri/tauri.conf.json.
+  - Generated standalone portable executable (dist-portable/CNTXT_0.5.5_portable.exe and CNTXT-portable.exe), NSIS setup installer (dist-installer/CNTXT_0.5.5_x64-setup.exe), and WiX MSI installer (dist-installer/CNTXT_0.5.5_x64_en-US.msi).
+  - Signed all targets with SHA256 Authenticode and RFC 3161 timestamps via scripts/sign-installers.ps1.
+  - Verified 0 lint errors across 169 files, 0 platform leaks, and 100% contract synchronization.
 - Task 41: Full Codebase Remediation Execution (2026-10-10):
   - Phase 1 (Type Hygiene & Config): Eliminated 5 residual `any` in `templateStore.ts`, `BlueprintSourceView.tsx`, `SettingsPanel.tsx`, and `personalGitHubLibraryService.ts`. Fixed `tsconfig.json` exclude typo (`"generated_documents"` -> `"generated-documents"`). Added `noImplicitAny: true`, `noImplicitThis: true`, `alwaysStrict: true` in `tsconfig.json`. Verified 0 `any` / `as any` across `src/` (DC-1, DC-3, F3.2).
   - Phase 2 (Dependency & Bundler Hygiene): Removed unused `idb-keyval` from `package.json` (F5.1). Pruned unlisted `@codemirror/lang-rust` and `@codemirror/lang-cpp` from `vite.config.ts` `optimizeDeps` (F5.2). Eliminated circular manual chunk warning (`vendor -> vendor-react -> vendor`) by merging vendor packages cleanly into single `vendor` chunk (F5.3).
@@ -91,7 +96,7 @@ Notes:
 - Task 20: Truncated Large Document Read-Only Safety Interlock (2026-10-09): Implemented zero-risk data loss prevention guard for large document selective loading. Extended Tab contract with isTruncatedView and rawFullContent; locked onSaveFile in eventDispatcher.ts against overwriting files from truncated views; added restoreFullContent to tabStore; rendered interactive warning banner in Editor.tsx with 1-click 'Open Full Document' restore; added comprehensive unit tests (tests/largeDocModal.test.ts 11/11 pass, 399/399 unit tests green).
 - Verification Gate Snapshot (2026-10-09): npm run lint (0 errors, 145 files clean, 100% contract sync); cargo test (8/8 security tests); npm test (399/399 unit tests across 40 suites); Playwright E2E (24/24 green on cold server with port killed); npm run build (0 errors, chunks optimized).
 Last Audit Reconciliation: 2026-10-10 — Remediation Verification Audit Reconciled (CONDITIONAL PASS; 8 of 10 Defects Fully Resolved & Verified, F3.1 Strict Roadmap Documented, F5.3 Circular Chunk Cleared; 449/449 Tests Green; 0 Leaks across 169 Files).
-Last Git Checkpoint: 2026-10-10 — Full Codebase Audit Remediation Complete (All 10 Defects Resolved)
+Last Git Checkpoint: 2026-10-10 — v0.5.5 Release Packaging, Authenticode Signing & Verification Gates Clean
 
 ━━━ PROJECT BRIEF REFERENCE ━━━
 Brief Version: v2.1

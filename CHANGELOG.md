@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.5] — 2026-10-10
+
+### Full Codebase Remediation, Strict Typing & Bundler Hardening
+- **Universal Presenter Purity & Accessible Confirmation Modals (Pillar 2 / F2.1)**:
+  - Eliminated all blocking native `window.confirm` calls across `AppBuilderPanel.tsx`, `AppRail.tsx`, `AppPanelPlaceholder.tsx`, `BlueprintSourceView.tsx`, and `Sidebar.tsx`.
+  - Routed all destructive operations (data reset, rail removal, file deletion, tab overwrite, duplicate template imports) through `useConfirmStore` and the accessible, theme-styled `ConfirmationModal`.
+- **Zero Loose `any` Types & Compiler Strict Typing Invariants (Pillar 3 / F3.1, F3.2)**:
+  - Enabled TypeScript compiler invariants: `"noImplicitAny": true`, `"noImplicitThis": true`, and `"alwaysStrict": true` in `tsconfig.json`.
+  - Replaced residual `any` and `as any` casts in `templateStore.ts`, `BlueprintSourceView.tsx`, `SettingsPanel.tsx`, `personalGitHubLibraryService.ts`, and `PersonalGitHubLibraryModal.tsx` with strict unions and `Record<string, unknown>`.
+  - Verified 0 `: any` and 0 `as any` occurrences across the entire production codebase (`src/`).
+- **Dependency & Bundler Hygiene (Pillar 5 / F5.1, F5.2, F5.3)**:
+  - Pruned unused `idb-keyval` from `package.json`.
+  - Pruned unlisted `@codemirror/lang-rust` and `@codemirror/lang-cpp` entries from `vite.config.ts` `optimizeDeps`.
+  - Consolidated manual vendor chunks in `vite.config.ts`, completely eliminating the circular chunk warning (`vendor -> vendor-react -> vendor`).
+- **Observable Error Notifications on IPC Bridge (Pillar 9 / F9.1)**:
+  - Added user-facing toast notifications via `useNotificationStore.getState().addNotification(...)` across all non-critical Tauri bridge catch blocks (`readDirectory`, `getPendingFiles`, `deleteFile`, `getDefaultAppsDir`, `openFileExplorer`, `newWindow`, `toggleMaximize`).
+- **Documentation & Configuration Contract Integrity (DC-1, DC-2, DC-3)**:
+  - Corrected `tsconfig.json` exclude path typo from `"generated_documents"` to `"generated-documents"`.
+  - Synchronized `living_context.md` (v2.24) and `project_brief_v2.1.md`.
+
 ## [0.5.4] — 2026-10-10
 
 ### Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync (FG-15)
