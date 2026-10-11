@@ -767,3 +767,48 @@ export interface NotifyPayload {
   message: string;
   duration?: number;
 }
+
+// ==========================================
+// 12. General-Purpose Workflow Studio Shapes (FG-17)
+// ==========================================
+
+export type WorkflowCategory = 'create' | 'brainstorm';
+
+export type WorkflowCompletionAction = 
+  | 'create-cntxt-tab' 
+  | 'create-panel-app' 
+  | 'open-editor-tab' 
+  | 'save-to-workspace' 
+  | 'copy-prompt';
+
+export interface WorkflowVariableField {
+  key: string;            // e.g. "appName"
+  label: string;          // e.g. "App Name"
+  defaultValue?: string;  // e.g. "DocuBridge"
+  isRequired: boolean;
+  type: 'text' | 'textarea' | 'code' | 'select';
+  options?: string[];     // for select fields (e.g. layout, persistence)
+  placeholder?: string;
+  description?: string;
+}
+
+export interface WorkflowStep {
+  id: string;
+  title: string;
+  description: string;
+  template: string;       // Prompt containing {{variables}}
+  fields: WorkflowVariableField[];
+  outputVariableKey?: string; // e.g. "application_code"
+}
+
+export interface WorkflowDefinition {
+  id: string;
+  category: WorkflowCategory;
+  name: string;
+  description: string;
+  icon: string;
+  steps: WorkflowStep[];
+  completionAction: WorkflowCompletionAction;
+  isBuiltin: boolean;
+}
+

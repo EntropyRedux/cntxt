@@ -14,17 +14,17 @@ import { DetailsStep } from './DetailsStep';
 import { ReviewStep } from './ReviewStep';
 import { AppIcon } from '../Common/AppIcon';
 import { NetworkBadge } from './NetworkBadge';
-import { 
-  X, 
-  ArrowLeft, 
-  ArrowRight, 
-  Layers, 
-  Play, 
-  RotateCcw, 
-  FileEdit, 
-  FolderOpen, 
-  Trash2, 
-  Plus 
+import {
+  X,
+  ArrowLeft,
+  ArrowRight,
+  Layers,
+  Play,
+  RotateCcw,
+  FileEdit,
+  FolderOpen,
+  Trash2,
+  Plus
 } from 'lucide-react';
 
 export interface AppBuilderPanelProps {
@@ -154,6 +154,10 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
         res.html,
         res.note
       );
+      const pre = scanHtml(res.html);
+      setDetails({
+        network: pre.offlineReady ? 'offline' : 'cdn',
+      });
     }
   };
 
@@ -175,6 +179,10 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
         res.html,
         res.note
       );
+      const pre = scanHtml(res.html);
+      setDetails({
+        network: pre.offlineReady ? 'offline' : 'cdn',
+      });
     } catch (e) {
       addNotification('File Error', (e as Error).message || 'Failed to open file', 'error');
     }
@@ -201,10 +209,13 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
       note
     );
 
+    const pre = scanHtml(rawHtml);
+
     setDetails({
       name: appName,
       description: description || '',
       icon,
+      network: pre.offlineReady ? 'offline' : 'cdn',
     });
   };
 
@@ -272,11 +283,10 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
         <button
           type="button"
           onClick={() => setPanelMode('create')}
-          className={`flex-1 py-1.5 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-            panelMode === 'create'
+          className={`flex-1 py-1.5 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${panelMode === 'create'
               ? 'bg-[var(--accent-primary)] text-white shadow-2xs'
               : 'text-[var(--text-secondary)] hover:bg-[var(--card-hover-bg)]'
-          }`}
+            }`}
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Create App</span>
@@ -284,11 +294,10 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
         <button
           type="button"
           onClick={() => setPanelMode('manage')}
-          className={`flex-1 py-1.5 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-            panelMode === 'manage'
+          className={`flex-1 py-1.5 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${panelMode === 'manage'
               ? 'bg-[var(--accent-primary)] text-white shadow-2xs'
               : 'text-[var(--text-secondary)] hover:bg-[var(--card-hover-bg)]'
-          }`}
+            }`}
         >
           <Layers className="w-3.5 h-3.5" />
           <span>Manage Apps ({apps.length})</span>
@@ -418,11 +427,10 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
             <button
               type="button"
               onClick={() => setStep('source')}
-              className={`flex items-center gap-1 cursor-pointer transition-colors ${
-                step === 'source'
+              className={`flex items-center gap-1 cursor-pointer transition-colors ${step === 'source'
                   ? 'text-[var(--accent-primary)] font-semibold'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
+                }`}
             >
               <span className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[10px]">
                 1
@@ -436,13 +444,12 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
               type="button"
               disabled={!hasValidHtml}
               onClick={() => hasValidHtml && setStep('details')}
-              className={`flex items-center gap-1 transition-colors ${
-                step === 'details'
+              className={`flex items-center gap-1 transition-colors ${step === 'details'
                   ? 'text-[var(--accent-primary)] font-semibold'
                   : hasValidHtml
-                  ? 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'
-                  : 'text-[var(--text-muted)] opacity-40 cursor-not-allowed'
-              }`}
+                    ? 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'
+                    : 'text-[var(--text-muted)] opacity-40 cursor-not-allowed'
+                }`}
             >
               <span className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[10px]">
                 2
@@ -456,13 +463,12 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
               type="button"
               disabled={!hasValidHtml || !isNameValid}
               onClick={() => hasValidHtml && isNameValid && setStep('review')}
-              className={`flex items-center gap-1 transition-colors ${
-                step === 'review'
+              className={`flex items-center gap-1 transition-colors ${step === 'review'
                   ? 'text-[var(--accent-primary)] font-semibold'
                   : hasValidHtml && isNameValid
-                  ? 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'
-                  : 'text-[var(--text-muted)] opacity-40 cursor-not-allowed'
-              }`}
+                    ? 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'
+                    : 'text-[var(--text-muted)] opacity-40 cursor-not-allowed'
+                }`}
             >
               <span className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[10px]">
                 3
@@ -533,11 +539,10 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
                   type="button"
                   disabled={!hasValidHtml}
                   onClick={() => setStep('details')}
-                  className={`h-8 px-3.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-                    hasValidHtml
+                  className={`h-8 px-3.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${hasValidHtml
                       ? 'bg-[var(--accent-primary)] text-white hover:opacity-95 shadow-2xs'
                       : 'bg-[var(--card-secondary-bg)] text-[var(--text-muted)] cursor-not-allowed opacity-50 border border-[var(--border-subtle)]'
-                  }`}
+                    }`}
                 >
                   <span>Next: Details</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -549,11 +554,10 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
                   type="button"
                   disabled={!isNameValid}
                   onClick={() => setStep('review')}
-                  className={`h-8 px-3.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-                    isNameValid
+                  className={`h-8 px-3.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${isNameValid
                       ? 'bg-[var(--accent-primary)] text-white hover:opacity-95 shadow-2xs'
                       : 'bg-[var(--card-secondary-bg)] text-[var(--text-muted)] cursor-not-allowed opacity-50 border border-[var(--border-subtle)]'
-                  }`}
+                    }`}
                 >
                   <span>Next: Review</span>
                   <ArrowRight className="w-3.5 h-3.5" />

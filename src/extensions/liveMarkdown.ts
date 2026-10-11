@@ -166,7 +166,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             line.from,
             line.to,
             Decoration.replace({
-              widget: new CodeBlockHeaderWidget(block.language, block.codeContent, line.from)
+              widget: new CodeBlockHeaderWidget(block.language, block.codeContent, line.from, block.startLine, block.endLine)
             })
           );
         } else if (role === 'mid') {

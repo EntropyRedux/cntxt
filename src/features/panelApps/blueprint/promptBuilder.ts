@@ -90,8 +90,8 @@ Design a polished, modern, and self-contained aesthetic with cohesive color pale
 
   const persistenceSection =
     persistence === 'file'
-      ? `## State Persistence & Seamless CNTXT SDK
-State is saved directly in the user's \`.cntxt\` document by the host. A unified \`window.CNTXT\` SDK is pre-injected into your runtime:
+      ? `## State Persistence (Primary: .cntxt File State Dump)
+State is saved directly in the user's \`.cntxt\` document by the host inside a dedicated \`\`\`state\`\`\` code block. A unified \`window.CNTXT\` Host SDK is pre-injected into your runtime:
 1. Announce readiness on startup:
    \`\`\`javascript
    if (window.CNTXT && window.CNTXT.ready) {
@@ -116,7 +116,7 @@ State is saved directly in the user's \`.cntxt\` document by the host. A unified
      }
    });
    \`\`\`
-3. Whenever user modifies state (inputs, checklist items, counters, tape history), debounce (e.g. 300ms) and dispatch:
+3. Whenever user modifies state (inputs, checklist items, counters, tape history, document lists), debounce (e.g. 300ms) and dispatch:
    \`\`\`javascript
    if (window.CNTXT && window.CNTXT.state) {
      window.CNTXT.state.save(serializeState());
@@ -126,12 +126,12 @@ State is saved directly in the user's \`.cntxt\` document by the host. A unified
    \`\`\`
 ${persistNotes ? `Additional persistence notes: ${persistNotes}` : ''}`
       : persistence === 'native'
-      ? `## State Persistence (Local Storage)
+      ? `## State Persistence (Browser Local Storage)
 Persist user state using standard browser local storage (window['local' + 'Storage']).
 Prefix your storage key with \`cntxt_${appName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_\` to avoid key collisions.
 ${persistNotes ? `Additional persistence notes: ${persistNotes}` : ''}`
-      : `## State Persistence
-This app is stateless across sessions (resets cleanly on re-open).`;
+      : `## State Persistence (Session Only / Stateless)
+This app is stateless across sessions (resets cleanly on re-open or reload).`;
 
   const layoutGuideline =
     layout === 'two-column'
@@ -159,7 +159,7 @@ This app runs inside a fixed-height sidebar panel. To ensure elements (especiall
      color: var(--text-primary);
    }
    \`\`\`
-2. Any middle content (tape records, lists, notes, output log) MUST be scrollable:
+2. Any middle content (tape records, lists, notes, output log, preview canvas) MUST be scrollable:
    \`\`\`css
    .scrollable-body {
      flex: 1;
@@ -177,6 +177,7 @@ This app runs inside a fixed-height sidebar panel. To ensure elements (especiall
   return `# PROMPT: Create Monolithic Panel App "${appName}"
 
 You are an expert web application architect. Build a self-contained, single-file monolithic HTML application named "${appName}".
+This is the **Build** workflow — the primary and ONLY workflow authorized to produce runnable single-file applications for CNTXT.
 
 ## Core Purpose & Specifications
 - **App Name**: ${appName}
@@ -191,15 +192,18 @@ ${viewportLayoutRules}
 ${persistenceSection}
 
 ## Host Command Bus & Workspace Integration (window.CNTXT)
-If your application interacts with the user's active document, tabs, or workspace, leverage the pre-injected asynchronous \`window.CNTXT\` Host SDK:
+If your application interacts with the user's active document, tabs, or workspace, leverage the pre-injected asynchronous \`window.CNTXT\` Host SDK.
+**IMPORTANT**: You MUST use these exact verified methods. NEVER hallucinate non-existent APIs:
 1. **Editor Domain**:
    - \`const selection = await window.CNTXT.editor.getSelection();\`
    - \`await window.CNTXT.editor.insert({ text: '# Result\\n', mode: 'cursor' });\` (mode: 'cursor' | 'replace' | 'append')
    - \`const doc = await window.CNTXT.editor.getActiveDocument();\` (returns { title, content, language, filePath, isDirty })
+   *(DO NOT invent \`window.CNTXT.insertAtCursor\` — use \`window.CNTXT.editor.insert\`)*
 2. **Tab Domain**:
    - \`const tabs = await window.CNTXT.tabs.list();\`
    - \`await window.CNTXT.tabs.create({ title: 'Analysis.md', content: '# Analysis\\n...', language: 'markdown' });\`
    - \`await window.CNTXT.tabs.focus(tabId);\`
+   *(DO NOT invent \`window.CNTXT.openTab\` — use \`window.CNTXT.tabs.create\`)*
 3. **Workspace Domain (Sandboxed to Project Root)**:
    - \`const info = await window.CNTXT.workspace.getInfo();\`
    - \`const files = await window.CNTXT.workspace.listFiles();\`
@@ -207,15 +211,25 @@ If your application interacts with the user's active document, tabs, or workspac
    - \`await window.CNTXT.workspace.writeFile('notes/scratchpad.md', newContent);\`
 4. **User Feedback**:
    - \`await window.CNTXT.notify({ type: 'success', title: 'Task Done', message: 'Report generated successfully' });\`
+   *(DO NOT invent \`window.CNTXT.showToast\` or \`window.CNTXT.toast\` — use \`window.CNTXT.notify\`)*
 
-## Technical Invariants (CRITICAL)
+## Strict Non-Negotiables (Zero Hallucinations & Guardrails)
 1. **Single File Only**: Output a single complete HTML file containing all HTML, CSS in \`<style>\`, and JavaScript in \`<script>\`.
-2. **Zero External Dependencies**: Do NOT import external CDNs (no unpkg, cdnjs, tailwind cdn, react cdn, font cdn). Write vanilla CSS and vanilla JavaScript.
+2. **Viewport Anti-Clipping Protocol**: \`html, body\` must have \`height: 100vh; overflow: hidden;\`, scrollable middle has \`flex: 1; min-height: 0; overflow-y: auto;\`, bottom controls have \`flex-shrink: 0;\`.
 3. **Viewport & Meta**: Must include:
    \`<meta name="viewport" content="width=device-width, initial-scale=1.0">\`
-4. **Sandboxed Environment**: The iframe runs with \`sandbox="allow-scripts allow-same-origin allow-forms allow-modals"\`. Do not attempt top-level navigation.
-5. **Size Limit**: Keep payload lightweight (under ~${softSizeKb} KB).
-6. **Robust Error Handling**: Handle empty states, invalid inputs, and boundary conditions gracefully with user-friendly notices.
+4. **Verified Host APIs**: Rely strictly on the exact \`window.CNTXT\` signatures shown above.
+5. **Sandboxed Environment**: The iframe runs with \`sandbox="allow-scripts allow-same-origin allow-forms allow-modals"\`. Do not attempt top-level navigation (\`window.top.location\`).
+6. **Payload Size**: Keep the payload lightweight (under ~${softSizeKb} KB).
+7. **CDN & Dependencies Policy**:
+   - For standard UI tools, write vanilla CSS and vanilla JavaScript without external dependencies.
+   - For complex domains (e.g. PDF parsing/rendering via pdf.js, docx previewing, zip handling via JSZip, canvas charting), you ARE PERMITTED to import reputable HTTPS CDNs (cdnjs, jsdelivr, unpkg). CNTXT's host security scanner will automatically detect external resources and enable CDN network mode.
+8. **Robust Error Handling**: Handle empty states, invalid inputs, and file drop errors gracefully with user-friendly notices.
+
+## Creative Freedom (Where You Can Innovate)
+- **Visual Presentation & Ergonomics**: Design intuitive micro-interactions, responsive button states, clean cards, and smooth CSS transitions.
+- **Domain Capabilities**: Include practical shortcuts, filters, format switchers, drag-and-drop dropzones, and productivity helpers tailored to the app's purpose.
+- **Internal Logic**: Use clean vanilla JS architectures, reactive state objects, and modular functions.
 ${extra ? `\n## Extra Instructions\n${extra}\n` : ''}
 ## Output Format
 Return ONLY the raw HTML document wrapped in a single \`\`\`html ... \`\`\` code block. Do NOT include markdown commentary before or after the code block.`;
@@ -231,12 +245,18 @@ CNTXT supports persistent side-panel applications (320px–480px width) running 
 ## Problem Space / Focus Area
 ${topic}
 
+## Important Rule: Concept Formulation Only (No Code Generation)
+DO NOT generate any HTML, CSS, JavaScript, or runnable application code blocks in this response.
+This is the **Brainstorm** workflow. Your role is to formulate high-utility concept specifications that the user can refine and feed into CNTXT's **Build** workflow.
+
 ## Architectural Constraints of CNTXT Panel Apps
-1. **Sidebar Form Factor**: Width is constrained (320px default, resizable up to 600px). Height is 100vh. Bottom controls must not clip.
-2. **Single-File Monolithic Runtime**: Apps run as single-file HTML/CSS/JS without external CDNs.
-3. **State Persistence**: Supports file-backed persistent JSON state synchronized with the host active document workspace.
-4. **Theme Engine**: Adapts dynamically to CNTXT's 14 CSS theme tokens (--bg-primary, --text-primary, --accent-primary, etc.).
-5. **Host Integration (window.CNTXT)**: Apps can be active co-processors communicating via \`window.CNTXT\` (inspect/insert editor text, create editor tabs, query workspace files, pop toast notifications).
+1. **Sidebar Form Factor**: Width is constrained (320px–480px width, resizable up to 960px). Height is 100vh. Bottom controls must not clip.
+2. **State Persistence Options**:
+   - \`file\`: Persistent state dumped directly in the \`.cntxt\` document's \`\`\`state\`\`\` block [Default & Recommended]
+   - \`native\`: Browser local storage (window['local' + 'Storage'])
+   - \`none\`: Session-only / stateless
+3. **Theme Engine**: Adapts dynamically to CNTXT's 14 CSS theme tokens (--bg-primary, --text-primary, --accent-primary, etc.).
+4. **Host Integration (window.CNTXT)**: Access to editor selection/insertion, tab creation, workspace file operations, and toast notifications.
 
 ## Task
 Propose 3 distinct, high-utility sidebar panel app concepts addressing the problem space above.
@@ -248,7 +268,7 @@ For each concept, provide:
 5. **Host SDK Touchpoints** (Does it read selection? Insert notes? Create tabs? Dispatch toasts?)
 6. **Why it shines in a 360px sidebar** while writing or editing documents.
 
-End your response by asking which concept I want to generate, or offer to combine elements into a custom specification.`;
+End your response by summarizing the 3 concepts and prompting the user to copy their favorite concept into the **Build** tab of CNTXT App Builder to generate the application.`;
 }
 
 export function buildAdaptPrompt(answers: BlueprintAnswers): string {
@@ -258,7 +278,12 @@ export function buildAdaptPrompt(answers: BlueprintAnswers): string {
 
   return `# PROMPT: Adapt Existing Web App to CNTXT Panel Architecture${nameLabel}
 
-You are an expert web application architect. Refactor the existing HTML application below so that it adheres strictly to the CNTXT panel architecture, 14-token theme engine, state synchronization protocol, and Host Command Bus.
+You are an expert web application architect for CNTXT.
+Analyze the existing HTML application below to produce an architectural adaptation specification for CNTXT's side panel environment.
+
+## Important Rule: Analysis & Specification Only (No Direct Code Generation)
+DO NOT generate a runnable HTML application in this response.
+Analyze the provided code and extract structured blueprint specification answers so the user can paste them into the **Build** workflow to construct the monolithic application.
 
 ## Existing Application Code
 \`\`\`html
@@ -284,18 +309,18 @@ ${htmlPayload}
      - On state change: debounce (300ms) and dispatch \`window.CNTXT.state.save(serializedState)\` (or postMessage \`{ type: 'CNTXT_STATE_SAVE', state: serializedState }\`).
    ${targetStateDescription ? `- **State to persist**: ${targetStateDescription}` : '- **State to persist**: Persist all essential user inputs, items, history, and selections.'}
 5. **Host Command Bus Capabilities (Optional Co-Processing)**:
-   - If the app benefits from host integration, use the pre-injected \`window.CNTXT\` APIs:
+   - If the app benefits from host integration, use the verified pre-injected \`window.CNTXT\` APIs:
      - Notifications: \`await window.CNTXT.notify({ type: 'success', title: 'Done', message: '...' })\`
      - Editor: \`await window.CNTXT.editor.insert({ text: '...', mode: 'cursor' })\` or \`await window.CNTXT.editor.getSelection()\`
      - Tabs: \`await window.CNTXT.tabs.create({ title: 'Note.md', content: '...', language: 'markdown' })\`
      - Workspace: \`await window.CNTXT.workspace.getInfo()\` or \`await window.CNTXT.workspace.readFile(path)\`
-6. **Clean Sandbox Hygiene**:
+6. **Clean Sandbox Hygiene & CDN Policy**:
    - Remove any top-level \`window.top\` or \`window.parent\` location redirects.
-   - Remove any external CDN script/style links (bootstrap, tailwind cdn, react cdn, unpkg, cdnjs). Everything must be self-contained vanilla HTML/CSS/JS.
+   - For standard UI tools, replace heavy external frameworks with vanilla HTML/CSS/JS. If specialized utilities (PDF, Docx, Zip, Charts) require external CDNs, use reputable HTTPS CDNs (cdnjs, jsdelivr, unpkg).
    - Include \`<meta name="viewport" content="width=device-width, initial-scale=1.0">\`.
 ${extra ? `\n## Extra Instructions\n${extra}\n` : ''}
 ## Output Format
-Return ONLY the refactored, complete HTML document wrapped in a single \`\`\`html ... \`\`\` code block. Do NOT include extraneous markdown commentary.`;
+Provide the architectural analysis and extracted Blueprint specification fields (App Name, Purpose, Inputs/Outputs, Persistence, Layout) ready for the user to copy into the **Build** tab.`;
 }
 
 export function buildArchetypePrompt(answers: BlueprintAnswers): string {

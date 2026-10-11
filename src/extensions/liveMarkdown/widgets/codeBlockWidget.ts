@@ -8,7 +8,9 @@ export class CodeBlockHeaderWidget extends WidgetType {
   constructor(
     readonly language: string,
     readonly codeContent: string,
-    readonly linePos: number
+    readonly linePos: number,
+    readonly startLine?: number,
+    readonly endLine?: number
   ) {
     super();
   }
@@ -17,7 +19,9 @@ export class CodeBlockHeaderWidget extends WidgetType {
     return (
       this.language === other.language &&
       this.codeContent === other.codeContent &&
-      this.linePos === other.linePos
+      this.linePos === other.linePos &&
+      this.startLine === other.startLine &&
+      this.endLine === other.endLine
     );
   }
 
@@ -33,7 +37,10 @@ export class CodeBlockHeaderWidget extends WidgetType {
     });
 
     header.addEventListener('click', (e) => {
-      if (!(e.target as HTMLElement)?.closest('.cm-live-copy-code-btn')) {
+      if (
+        !(e.target as HTMLElement)?.closest('.cm-live-copy-code-btn') &&
+        !(e.target as HTMLElement)?.closest('.cm-live-clear-code-btn')
+      ) {
         view.dispatch({
           selection: { anchor: this.linePos }
         });
@@ -69,6 +76,68 @@ export class CodeBlockHeaderWidget extends WidgetType {
     }
 
     header.appendChild(left);
+
+    const right = createElement('div', {
+      className: 'flex items-center gap-1.5 shrink-0'
+    });
+
+    const clearBtn = createElement('button', {
+      type: 'button',
+      className: 'cm-live-clear-code-btn flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] active:scale-95 transition-all cursor-pointer shrink-0',
+      title: 'Clear code block (Undo with Ctrl+Z)',
+      'aria-label': `Clear ${meta.name} code block`
+    });
+
+    const clearIcon = createElement('span');
+    clearIcon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
+    clearBtn.appendChild(clearIcon);
+
+    const clearLabel = createElement('span');
+    clearLabel.textContent = 'Clear';
+    clearBtn.appendChild(clearLabel);
+
+    clearBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    clearBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (this.startLine !== undefined && this.endLine !== undefined && this.endLine >= this.startLine) {
+        const doc = view.state.doc;
+        if (this.startLine <= doc.lines && this.endLine <= doc.lines) {
+          const startLineObj = doc.line(this.startLine);
+          const from = Math.min(doc.length, startLineObj.to + 1);
+          const endLineObj = doc.line(this.endLine);
+          const to = endLineObj.from;
+          if (to >= from) {
+            const currentInner = doc.sliceString(from, to);
+            if (currentInner !== '\n') {
+              view.dispatch({
+                changes: { from, to, insert: '\n' },
+                selection: { anchor: from },
+                userEvent: 'delete.codeblock'
+              });
+            } else {
+              view.dispatch({
+                selection: { anchor: from }
+              });
+            }
+            view.focus();
+            clearLabel.textContent = 'Cleared!';
+            clearBtn.classList.add('text-[var(--status-success)]');
+            setTimeout(() => {
+              clearLabel.textContent = 'Clear';
+              clearBtn.classList.remove('text-[var(--status-success)]');
+            }, 1500);
+          }
+        }
+      }
+    });
+
+    right.appendChild(clearBtn);
 
     const copyBtn = createElement('button', {
       type: 'button',
@@ -109,7 +178,8 @@ export class CodeBlockHeaderWidget extends WidgetType {
       }
     });
 
-    header.appendChild(copyBtn);
+    right.appendChild(copyBtn);
+    header.appendChild(right);
     return header;
   }
 

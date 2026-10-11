@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.27
-Last Updated: 2026-10-10
-Last Updated By: Prod Agent (v0.5.6 Packaging, Authenticode Signing & Verification)
+Version: v2.28
+Last Updated: 2026-10-11
+Last Updated By: Prod Agent (v0.5.7 App Builder Prompts Overhaul, Drag & Drop Fixes, CodeBlock Clear)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,16 +13,29 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-16 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 471/471 Live across 44 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
+    [x] Testing (Vitest 531/531 Live across 49 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.6 Authenticode Signed Portable Executable & Native Installers Built)
+  [x] Packaging & Release (v0.5.7 Authenticode Signed Portable Executable & Native Installers Ready)
 
-Current Feature Group: FG-16: Host Command Bus & Mini Panel App RPC Bridge
-Status: completed / verified (FG-16 shipped in v0.5.6 release binaries; 471/471 unit tests passing across 44 suites; FG-17 terminal bus is next planned group)
+Current Feature Group: FG-16: Host Command Bus, App Builder Prompts & Native Drag-and-Drop
+Status: completed / verified (v0.5.7 version bump, 531/531 unit tests passing, zero platform leaks)
 Background Processes: none (all RPC commands are event-driven and user-initiated)
-Unit Tests: written [x] passing [x] (471/471 unit tests passing across 44 suites in CNTXT, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
+Unit Tests: written [x] passing [x] (531/531 unit tests passing across 49 suites, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/plans/feature_group_FG16_host_command_bus_2026-10-10.md
 Notes:
+- Task 45: v0.5.7 Drag-and-Drop Fixes, CodeBlock Clear, App Builder Prompts Overhaul (2026-10-11):
+  - Fixed OS drag & drop file import into panel app iframes and HTML5 dropzones by setting `"dragDropEnabled": false` on Tauri window configuration in `src-tauri/tauri.conf.json`.
+  - Fixed tab drag reordering on Windows WebView2 by adding explicit `effectAllowed = 'move'`, `dropEffect = 'move'`, and text fallback in `src/components/TabBar/TabBar.tsx`.
+  - Fixed panel width reversion when switching between panel apps and native CNTXT panels via `lastAppliedAppIdRef` in `src/components/Sidebar/Sidebar.tsx`.
+  - Added CodeMirror code block `[Clear]` button directly beside `[Copy]` in `src/extensions/liveMarkdown/widgets/codeBlockWidget.ts` with full `Ctrl+Z` undo history support.
+  - Overhauled App Builder blueprint prompts in `src/features/panelApps/blueprint/promptBuilder.ts`:
+    - Delineated Strict Non-Negotiables vs Creative Freedom to eliminate LLM hallucinations.
+    - Role separation: `Brainstorm` and `Adapt` formulate specifications to feed into Build; `Build` is the primary and only code generator.
+    - Relaxed CDN rules: allows reputable HTTPS CDNs (cdnjs, jsdelivr, unpkg) for complex libraries (PDF, Docx, Zip, Charts), with host auto-detecting and configuring `network: cdn`.
+    - Detailed the 3 persistence tiers with `.cntxt` file state dump (` ```state ` block) as default/primary.
+    - Documented exact `window.CNTXT` signatures and explicitly forbade hallucinated APIs (`openTab`, `insertAtCursor`, `showToast`).
+  - Added smart persistence & network auto-detection in `extractReply.ts` and `AppBuilderPanel.tsx`.
+  - Version bump to 0.5.7 across `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
 - Task 44: v0.5.6 Production Packaging & Authenticode Signing (2026-10-10):
   - Bumped version to 0.5.6 across package.json, src-tauri/Cargo.toml, and src-tauri/tauri.conf.json.
   - Generated standalone portable executable (dist-portable/CNTXT_0.5.6_portable.exe and CNTXT-portable.exe), NSIS setup installer (dist-installer/CNTXT_0.5.6_x64-setup.exe), and WiX MSI installer (dist-installer/CNTXT_0.5.6_x64_en-US.msi).

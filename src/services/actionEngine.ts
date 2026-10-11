@@ -895,7 +895,7 @@ export interface ObjectExpressionNode {
 export class ActionParser {
   private idx = 0;
 
-  constructor(private tokens: ActionToken[]) {}
+  constructor(private tokens: ActionToken[]) { }
 
   private peek(): ActionToken {
     return this.tokens[this.idx] || { type: ActionTokenType.EOF, value: '', pos: 0 };
@@ -1175,12 +1175,12 @@ export class ActionParser {
 }
 
 class ReturnSignal {
-  constructor(public readonly value: unknown) {}
+  constructor(public readonly value: unknown) { }
 }
 
 class Scope {
   private bindings = new Map<string, unknown>();
-  constructor(public readonly parent: Scope | null = null) {}
+  constructor(public readonly parent: Scope | null = null) { }
 
   public declare(name: string, value: unknown): void {
     this.bindings.set(name, value);

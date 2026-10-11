@@ -6,13 +6,13 @@
  */
 
 import { z } from 'zod';
-import { 
-  SupportedLanguage, 
-  Tab, 
-  LibraryField, 
-  ItemSource, 
-  UserLibraryItem, 
-  CommunityLibraryItem, 
+import {
+  SupportedLanguage,
+  Tab,
+  LibraryField,
+  ItemSource,
+  UserLibraryItem,
+  CommunityLibraryItem,
   LibraryCollection,
   PanelAppManifest,
   PanelAppRecord,

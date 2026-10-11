@@ -147,11 +147,17 @@ export const Sidebar: React.FC = () => {
   const panelAppsReloadNonce = usePanelAppsStore(state => state.reloadNonce);
   const panelAppsHtmlCache = usePanelAppsStore(state => state.htmlCache);
 
+  // Track the last app ID whose default width was applied to prevent reverting on tab switch
+  const lastAppliedAppIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (settings.activeSidebarTab === 'panel-app') {
-      const activeApp = panelApps.find(a => a.id === activePanelAppId);
-      if (activeApp?.panelWidth) {
-        setWidth(activeApp.panelWidth);
+    if (settings.activeSidebarTab === 'panel-app' && activePanelAppId) {
+      if (lastAppliedAppIdRef.current !== activePanelAppId) {
+        lastAppliedAppIdRef.current = activePanelAppId;
+        const activeApp = panelApps.find(a => a.id === activePanelAppId);
+        if (activeApp?.panelWidth) {
+          setWidth(activeApp.panelWidth);
+        }
       }
     }
   }, [settings.activeSidebarTab, activePanelAppId, panelApps]);

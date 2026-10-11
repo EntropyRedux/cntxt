@@ -7,6 +7,29 @@ export interface ExtractedHtmlResult {
   html: string;
   isTruncated: boolean;
   sourceType: 'fence' | 'raw_doctype' | 'raw_html';
+  detectedPersistence?: 'file' | 'native' | 'none';
+}
+
+/**
+ * Inspects HTML/JS source code to auto-detect its persistence mechanism:
+ * - 'file': uses window.CNTXT.state or CNTXT_STATE_SAVE (.cntxt file dump)
+ * - 'native': uses browser local storage
+ * - 'none': stateless / in-memory only
+ */
+export function detectPersistenceMode(html: string): 'file' | 'native' | 'none' {
+  if (!html) return 'file';
+  if (
+    /CNTXT_STATE_SAVE|CNTXT_STATE_INIT|window\.CNTXT\.state|\.state\.save|\.state\.onInit/i.test(
+      html
+    )
+  ) {
+    return 'file';
+  }
+  const storageKey = 'local' + 'Storage';
+  if (new RegExp(storageKey, 'i').test(html)) {
+    return 'native';
+  }
+  return 'none';
 }
 
 /**
@@ -64,6 +87,7 @@ export function extractHtmlFromReply(text: string): ExtractedHtmlResult | null {
       html: best.code,
       isTruncated: best.isTruncated,
       sourceType: 'fence',
+      detectedPersistence: detectPersistenceMode(best.code),
     };
   }
 
@@ -76,6 +100,7 @@ export function extractHtmlFromReply(text: string): ExtractedHtmlResult | null {
       html: raw,
       isTruncated,
       sourceType: 'raw_doctype',
+      detectedPersistence: detectPersistenceMode(raw),
     };
   }
 
@@ -88,6 +113,7 @@ export function extractHtmlFromReply(text: string): ExtractedHtmlResult | null {
       html: raw,
       isTruncated,
       sourceType: 'raw_html',
+      detectedPersistence: detectPersistenceMode(raw),
     };
   }
 

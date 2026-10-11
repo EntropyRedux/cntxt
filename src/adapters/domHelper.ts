@@ -410,7 +410,7 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
  * @returns Cleanup function that removes the listeners.
  */
 export function installViewportResizeStabilizer(rootId = 'root'): () => void {
-  if (typeof window === 'undefined') return () => {};
+  if (typeof window === 'undefined') return () => { };
 
   const sync = () => {
     const root = document.getElementById(rootId);

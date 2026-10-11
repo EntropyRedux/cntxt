@@ -134,7 +134,7 @@ export const VariableExtractionModal: React.FC = () => {
   const handleExportBlueprint = async () => {
     const baseName = activeTab?.title ? activeTab.title.replace(/\.[^/.]+$/, '') : 'Document';
     const blueprintFileName = `${baseName}_blueprint.cntxt`;
-    
+
     // Structure blueprint content with raw template and metadata
     const blueprintData = {
       format: 'CNTXT_BLUEPRINT_V1',
@@ -159,7 +159,7 @@ export const VariableExtractionModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div 
+      <div
         className="w-full max-w-4xl max-h-[88vh] flex flex-col bg-[var(--modal-bg)] border border-[var(--modal-border)] rounded-xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
@@ -188,44 +188,40 @@ export const VariableExtractionModal: React.FC = () => {
         <div className="flex items-center gap-1.5 p-3 border-b border-[var(--border-primary)] bg-[var(--bg-primary)] overflow-x-auto text-xs">
           <button
             onClick={() => setMode('answered')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shrink-0 ${
-              mode === 'answered'
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shrink-0 ${mode === 'answered'
                 ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] font-medium shadow-xs'
                 : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-            }`}
+              }`}
           >
             <CheckSquare className="w-3.5 h-3.5" />
             Answered Variables
           </button>
           <button
             onClick={() => setMode('rows_with_vars')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shrink-0 ${
-              mode === 'rows_with_vars'
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shrink-0 ${mode === 'rows_with_vars'
                 ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] font-medium shadow-xs'
                 : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-            }`}
+              }`}
           >
             <Code className="w-3.5 h-3.5" />
             Rows with Variables
           </button>
           <button
             onClick={() => setMode('rows_without_vars')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shrink-0 ${
-              mode === 'rows_without_vars'
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shrink-0 ${mode === 'rows_without_vars'
                 ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] font-medium shadow-xs'
                 : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-            }`}
+              }`}
           >
             <FileText className="w-3.5 h-3.5" />
             Rows without Variables
           </button>
           <button
             onClick={() => setMode('selection')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shrink-0 ${
-              mode === 'selection'
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shrink-0 ${mode === 'selection'
                 ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] font-medium shadow-xs'
                 : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-            }`}
+              }`}
           >
             <FileCode className="w-3.5 h-3.5" />
             Selected Text
