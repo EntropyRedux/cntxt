@@ -5,6 +5,17 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7] — 2026-10-11
+
+### Code Block Clear Action & Testing Ergonomics
+- **Live Markdown Code Block Header Clear Action**:
+  - Added a responsive "Clear" button with trash icon alongside the copy button in `CodeBlockHeaderWidget` (`src/extensions/liveMarkdown/widgets/codeBlockWidget.ts`).
+  - Dispatches an atomic deletion transaction (`changes: { from, to, insert: '\n' }`) tagged with `userEvent: 'delete.codeblock'` allowing instant undo via `Ctrl+Z`.
+  - Automatically focuses the editor and displays transient "Cleared!" success feedback.
+- **Runtime Bridge Testing Resilience**:
+  - Exported `_resetGlobalBridge` in `src/adapters/runtimeBridge.tsx` ensuring isolated state between test suites.
+  - Enabled jsdom test environment across `tests/authStorageAdapter.test.ts` and `tests/runtimeBridge.test.tsx` (568/568 passing).
+
 ## [0.5.6] — 2026-10-10
 
 ### Host Command Bus & Mini Panel App RPC Bridge (FG-16)

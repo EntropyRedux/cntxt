@@ -1,4 +1,5 @@
-﻿import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+/** @vitest-environment jsdom */
 import React from 'react';
 import { renderHook } from '@testing-library/react';
 
@@ -25,7 +26,7 @@ vi.mock('../src/adapters/androidRuntimeAdapter', () => ({
   AndroidRuntimeAdapter: MockAndroidRuntimeAdapter,
 }));
 
-import { getRuntimeBridge, RuntimeBridgeProvider, useRuntimeBridge } from '../src/adapters/runtimeBridge';
+import { getRuntimeBridge, RuntimeBridgeProvider, useRuntimeBridge, _resetGlobalBridge } from '../src/adapters/runtimeBridge';
 
 // ---- Helper to reset global window state ----
 function setWindowFlag(flag: string, value: any) {
@@ -39,9 +40,11 @@ describe('runtimeBridge', () => {
 
   beforeEach(() => {
     vi.resetModules();
+    _resetGlobalBridge();
   });
 
   afterEach(() => {
+    _resetGlobalBridge();
     // Clean up window flags
     setWindowFlag('AndroidBridge', UNDEFINED);
     setWindowFlag('isTauri', UNDEFINED);

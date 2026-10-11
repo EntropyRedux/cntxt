@@ -96,21 +96,29 @@ What this app will NOT do:
 - Inline fallback mock data masquerading as functional features.
 
 ━━━ CORE FEATURE GROUPS ━━━
-- FG-01: Core Workspace Shell & Document Tab Lifecycle
-- FG-02: Sandboxed JavaScript Actions & In-Document Widgets (AST Engine)
-- FG-03: Prompt Engineering Templates & Dynamic Formulas
-- FG-04: Native File System & Workspace Explorer (Desktop OS & Android SAF)
-- FG-05: Playwright E2E Test Suite & Test Automation
-- FG-06: Layout Margins & Theme Refinements
-- FG-07: Editor Resiliency, Multi-Tab State Architecture & UX Refinements
-- FG-08: Android APK Porting & Mobile Architecture Adaptation
-- FG-09: Mobile UI Ergonomics & Navigation (`MobileAccessoryBar`, `MobileBottomNav`)
-- FG-10: Tri-Platform Cloud Sync, Community Library & Free-Tier Web SaaS Engine
-- FG-13: Panel Apps Flow A (Manifest, Rail, Preflight Scanner, .cntxt Dynamic Fence)
-- FG-14: Panel Apps Flow B (Keep-Alive Host, Prompt Builder, Theme Engine, State Protocol)
-- FG-15: Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync
-- FG-16: Host Command Bus & Mini Panel App RPC Bridge (In-Progress / Upcoming)
-- FG-17: `.cntxt` Multi-Session Terminal Bus & Multi-Agent Orchestration (Planned)
+- FG-01: Core Workspace Shell & Document Tab Lifecycle (Completed)
+- FG-02: Sandboxed JavaScript Actions & In-Document Widgets (AST Engine) (Completed)
+- FG-03: Prompt Engineering Templates & Dynamic Formulas (Completed)
+- FG-04: Native File System & Workspace Explorer (Desktop OS & Android SAF) (Completed)
+- FG-05: Playwright E2E Test Suite & Test Automation (Completed)
+- FG-06: Layout Margins & Theme Refinements (Completed)
+- FG-07: Editor Resiliency, Multi-Tab State Architecture & UX Refinements (Completed)
+- FG-08: Android APK Porting & Mobile Architecture Adaptation (Completed)
+- FG-09: Mobile UI Ergonomics & Navigation (`MobileAccessoryBar`, `MobileBottomNav`) (Completed)
+- FG-10: Tri-Platform Cloud Sync, Community Library & Free-Tier Web SaaS Engine (Completed)
+- FG-13: Panel Apps Flow A (Manifest, Rail, Preflight Scanner, .cntxt Dynamic Fence) (Completed)
+- FG-14: Panel Apps Flow B (Keep-Alive Host, Prompt Builder, Theme Engine, State Protocol) (Completed)
+- FG-15: Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync (Completed)
+- FG-16: Host Command Bus & Mini Panel App RPC Bridge (Completed)
+
+━━━ AUTHORITATIVE IMPLEMENTATION QUEUE ━━━
+1. Priority 1: TERMINAL Shells & Multi-Agent Orchestration (FG-17)
+2. Priority 2: Visual & Declarative Workflow Builder (FG-18)
+3. Priority 3: New RPC Access Points & Inter-Panel Event Bus (FG-19)
+4. Priority 4: Convert App Builder into General-Purpose Prompt & Workflow Studio (Declarative Schemas) (FG-20)
+5. Priority 5: Community Library Catalog & GitHub Sync + Publishing (FG-21)
+6. Priority 6: Android Build Mods, Touch Ergonomics & Outline Quick Append (FG-22)
+7. Priority 7: Large Document Virtual Buffer Coordinator & Non-Destructive Disk Splicing (FG-23)
 
 ━━━ ERROR HANDLING, VALIDATION & NOTIFICATIONS ━━━
 - Form & Input Validation Standard: Strict runtime validation using Zod boundary schemas (`boundarySchemas.ts`).

@@ -62,3 +62,7 @@ export const useRuntimeBridge = (): IRuntimeBridge => {
   }
   return bridge;
 };
+
+export const _resetGlobalBridge = (): void => {
+  globalBridgeInstance = null;
+};

@@ -1,4 +1,5 @@
-﻿import { describe, it, expect, beforeEach, vi } from 'vitest';
+/** @vitest-environment jsdom */
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const mockAddNotification = vi.fn();
 vi.mock('../src/store/notificationStore', () => ({

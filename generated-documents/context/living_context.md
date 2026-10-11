@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.27
-Last Updated: 2026-10-10
-Last Updated By: Prod Agent (v0.5.6 Packaging, Authenticode Signing & Verification)
+Version: v2.29
+Last Updated: 2026-10-11
+Last Updated By: Prod Agent (Authoritative Feature Roadmap & Implementation Queue Formalization)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,16 +13,21 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-16 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 471/471 Live across 44 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
+    [x] Testing (Vitest 568/568 Live across 51 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.6 Authenticode Signed Portable Executable & Native Installers Built)
+  [x] Packaging & Release (v0.5.7 Authenticode Signed Portable Executable & Native Installers Built)
 
-Current Feature Group: FG-16: Host Command Bus & Mini Panel App RPC Bridge
-Status: completed / verified (FG-16 shipped in v0.5.6 release binaries; 471/471 unit tests passing across 44 suites; FG-17 terminal bus is next planned group)
+Current Feature Group: FG-16: Host Command Bus & Mini Panel App RPC Bridge (Shipped) | Next: Priority 1 — Terminal Shells & Multi-Agent Orchestration (FG-17)
+Status: roadmap aligned / ready for implementation (v0.5.7 shipped; 568/568 unit tests passing across 51 suites; 7-stage roadmap recorded)
 Background Processes: none (all RPC commands are event-driven and user-initiated)
-Unit Tests: written [x] passing [x] (471/471 unit tests passing across 44 suites in CNTXT, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
-Active Plan: /generated-documents/plans/feature_group_FG16_host_command_bus_2026-10-10.md
+Unit Tests: written [x] passing [x] (568/568 unit tests passing across 51 suites in CNTXT, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
+Active Plan: /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md
 Notes:
+- Task 45: v0.5.7 Code Block Clear Action & Testing Ergonomics (2026-10-11):
+  - Retained live markdown code block header "Clear" button in src/extensions/liveMarkdown/widgets/codeBlockWidget.ts and src/extensions/liveMarkdown.ts with Ctrl+Z undo support and transient "Cleared!" feedback.
+  - Exported _resetGlobalBridge in src/adapters/runtimeBridge.tsx and enabled jsdom test environment across tests/authStorageAdapter.test.ts and tests/runtimeBridge.test.tsx (568/568 tests passing).
+  - Preserved FG-17 Workflow Studio implementation and plan on git branch backup/fg17-studio-rebuild.
+  - Reverted main to pre-FG-17 base with 0.5.7 binaries.
 - Task 44: v0.5.6 Production Packaging & Authenticode Signing (2026-10-10):
   - Bumped version to 0.5.6 across package.json, src-tauri/Cargo.toml, and src-tauri/tauri.conf.json.
   - Generated standalone portable executable (dist-portable/CNTXT_0.5.6_portable.exe and CNTXT-portable.exe), NSIS setup installer (dist-installer/CNTXT_0.5.6_x64-setup.exe), and WiX MSI installer (dist-installer/CNTXT_0.5.6_x64_en-US.msi).
@@ -280,6 +285,105 @@ Notes:
 - Provider Token Persistence: GitHub OAuth returns `provider_token` once upon token exchange. Storing it in `localStorage` (`cntxt_provider_token`) allows `getSessionProviderToken()` to provide persistent GitHub API access across application sessions.
 - Personal GitHub Cloud Library: Modal (`PersonalGitHubLibraryModal.tsx`) and service (`personalGitHubLibraryService.ts`) enable users to sync prompts, skills, and templates directly to/from personal GitHub repositories with branch selection and private repo support.
 - Portable & Installer Packaging: Rebuilt standalone `CNTXT-portable.exe` (14.32 MB), NSIS installer (6.61 MB), and WiX MSI (7.65 MB).
+
+Feature Group: FG-13: Panel Apps Flow A (Manifest, Rail, Preflight Scanner, .cntxt Dynamic Fence)
+Status: completed / verified (2026-10-09)
+Target Platform(s): Desktop (Tauri v2) + Web (Vercel) + Mobile (Android)
+Background Processes: none
+Unit Tests: written [x] passing [x] (tests/panelApps.test.ts, tests/createPanelApp.test.ts)
+Notes:
+- Canonical PanelAppManifest, PanelAppRecord, and Zod boundary schemas in boundarySchemas.ts.
+- Dynamic pickFence eliminating backtick collisions when packaging monolithic HTML into .cntxt format.
+- Preflight scanner detecting external script links, size budgeting (512KB soft / 2MB hard), and offline readiness.
+- AppRail presenter (desktop vertical + mobile horizontal) and AppBuilderPanel wizard.
+
+Feature Group: FG-14: Panel Apps Flow B (Keep-Alive Host, Prompt Builder, Theme Engine, State Protocol)
+Status: completed / verified (2026-10-09)
+Target Platform(s): Desktop (Tauri v2) + Web (Vercel) + Mobile (Android)
+Background Processes: none
+Unit Tests: written [x] passing [x] (tests/panelAppsFlowB.test.ts, tests/mermaidTheming.test.ts)
+Notes:
+- AppFrameHost with keep-alive iframe layout across panel switches and CSS visibility caching.
+- Universal 14-token theme synchronization injecting CSS variables into sandboxed iframe :root.
+- File-backed state persistence via dedicated ```state code block with 512KB cap and dirty-tab protection.
+
+Feature Group: FG-15: Blueprint Prompt Archetypes & Editor Tab Bidirectional Sync
+Status: completed / verified (2026-10-10)
+Target Platform(s): Desktop (Tauri v2) + Web (Vercel) + Mobile (Android)
+Background Processes: none
+Unit Tests: written [x] passing [x] (449/449 tests passing across 43 suites)
+Notes:
+- Foundational prompt archetypes: `build`, `brainstorm`, `adapt`.
+- Direct adaptation from active editor tab HTML content.
+- Bidirectional editor tab sync ("Open in Tab", "Resync from Tab", "Update Tab") with manual edit guards.
+
+Feature Group: FG-16: Host Command Bus & Mini Panel App RPC Bridge
+Status: completed / verified (2026-10-10)
+Target Platform(s): Desktop (Tauri v2) + Web (Vercel) + Mobile (Android)
+Background Processes: none
+Unit Tests: written [x] passing [x] (22/22 tests in tests/hostCommandBus.test.ts, 568/568 full suite passing)
+Notes:
+- Headless HostCommandBus service and injected Promise-based window.CNTXT SDK (editor, tabs, workspace, templates, actions, notify).
+- Strict path canonicalization preventing directory traversal and sensitive file access.
+- Mediated dirty tab buffer writes preventing unsaved text loss.
+
+━━━ IMPLEMENTATION ROADMAP & PLANNED FEATURE QUEUE ━━━
+
+The following is the authoritative, sequential order of implementation for upcoming feature groups:
+
+1. Priority 1: TERMINAL Shells & Multi-Agent Orchestration (FG-17)
+   - Scope:
+     - Native Rust Terminal PTY Engine (`src-tauri`): process management via `portable-pty` / `tokio::process` exposing `spawn_pty`, `write_pty`, `resize_pty`, and `kill_pty` with rate-limited chunk streaming over Tauri IPC events.
+     - The `.cntxt` Multi-Session Terminal Bus Document: persistent disk format preserving stdout/stderr/ANSI streams in `.cntxt` files (`---` YAML channel manifest + ` ```state ` JSON transcript buffer).
+     - CodeMirror / xterm Terminal Tab Presenter (`*TerminalView.tsx`): ANSI color rendering, channel switcher (tabs/split), interactive keyboard stdin.
+     - Multi-Agent Orchestration Panel Apps: sandboxed mini apps monitoring concurrent CLI agents, pause/retry, and piping active tab context to agent stdin.
+     - Localhost REST Gateway: lightweight Rust HTTP listener on `127.0.0.1:port` with `X-CNTXT-Token` auth allowing external CLI agents to invoke the Command Bus directly.
+   - Reference Documents:
+     - `/generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md`
+     - `/generated-documents/context/project_brief_v2.1.md`
+
+2. Priority 2: Workflow Builder
+   - Scope:
+     - Visual and declarative workflow builder interface allowing users to assemble, configure, and chain multi-step prompt pipelines, scripts, and tool actions.
+     - Interactive step sequencing, input/output slot mapping, condition branching, and schema validation.
+     - Runtime workflow execution runner with step-by-step progress indicators and rollback capabilities.
+
+3. Priority 3: New RPC Access Points
+   - Scope:
+     - Expansion of the `HostCommandBus` / `window.CNTXT` RPC bridge (`hostCommandBus.ts` and `clientSdk.ts`).
+     - Terminal domain endpoints: `terminal.listChannels`, `terminal.spawn`, `terminal.sendInput`, `terminal.kill`.
+     - Advanced editor manipulation: multi-cursor control, fold/unfold ranges, diagnostic marker injection, and selection range querying.
+     - Workspace event bus: inter-panel event pub/sub allowing multiple panel apps and editor tabs to react to shared application events.
+
+4. Priority 4: Convert App Builder into General-Purpose Prompt & Workflow Studio driven by Declarative Schemas
+   - Scope:
+     - Architectural rebuild of the App Builder panel into a Universal Prompt & Workflow Studio driven by declarative schemas (`WorkflowDefinition`, `WorkflowStep`, `WorkflowVariableField`).
+     - Two primary workspaces: `Create` (Output artifacts: Panel Apps, Document specs, Code generation) and `Brainstorm`/`Refine`.
+     - Complete eradication of inline `[[{{...}}]]` HTML input widgets from CodeMirror lines while preserving clean typography for `{{variables}}` and first-class `[[action:...]]` action buttons.
+     - Immutable template variable extraction with reactive panel value dictionary (`values: Record<string, string>`).
+     - Single-writer editor tab locking (`isEditorLocked`) with YAML frontmatter bidirectional synchronization.
+     - Auto-resizing multiline textareas (`AutoResizingTextarea`) with AST-clean code pasting.
+     - 1-click App Rail installation transform (`panel_app_convert_active_tab`).
+   - Reference Branch:
+     - Implementation and test suite preserved on git branch `backup/fg17-studio-rebuild`.
+
+5. Priority 5: Community Library & GitHub Sync + Publishing
+   - Scope:
+     - Community Library browser integration backed by GitHub CDN (`EntropyRedux/cntxt-library`) and client-side IndexedDB caching.
+     - 1-click GitHub sync, export, and in-app PR / Issue submission workflow for directly contributing custom prompt templates, workflows, and skills into the public community repository.
+     - Personal GitHub Library enhancements (multi-branch switching, tag filtering, and conflict resolution).
+
+6. Priority 6: Android Build Mods & Enhancements
+   - Scope:
+     - Touch ergonomics and layout refinements for mobile (`MobileAccessoryBar`, `MobileBottomNav`).
+     - Table of Contents Outline quick append message box (`android_toc_quick_append_plan_2026-10-03.md`) for 1-tap note insertion into specific headings.
+     - Virtual keyboard handling, dynamic typing direction engine (RTL), and touch density optimizations.
+
+7. Priority 7: Large Document Optimizations
+   - Scope:
+     - Full Virtual Buffer Coordinator (`chunkBufferService.ts` as specified in `feature_group_large_doc_chunk_buffer_plan_2026-10-09.md`).
+     - Non-destructive disk splicing for selective TOC-chunked large file editing.
+     - Dynamic paging and virtualization of large documents (> 5MB) without loading full files into CodeMirror DOM memory.
 
 ━━━ ARCHITECTURAL DECISIONS LOG ━━━
 
