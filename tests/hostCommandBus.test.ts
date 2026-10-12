@@ -448,6 +448,61 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
     });
   });
 
+  describe('Terminal Domain (FG-17)', () => {
+    it('spawns, lists, sends input, and kills a terminal channel via RPC', async () => {
+      // 1. Spawn channel
+      const spawnRes = await bus.handleRequest({
+        id: 'req-term-spawn',
+        domain: 'terminal',
+        action: 'spawn',
+        appId: 'test-agent',
+        payload: {
+          id: 'agent-cli-1',
+          name: 'CLI Agent',
+          command: 'npm',
+          args: ['run', 'lint']
+        }
+      });
+      expect(spawnRes.success).toBe(true);
+
+      // 2. List channels
+      const listRes = await bus.handleRequest({
+        id: 'req-term-list',
+        domain: 'terminal',
+        action: 'listChannels',
+        appId: 'test-agent'
+      });
+      expect(listRes.success).toBe(true);
+      const channels = listRes.data as Array<{ id: string; name: string }>;
+      expect(channels.some(c => c.id === 'agent-cli-1')).toBe(true);
+
+      // 3. Send Input
+      const inputRes = await bus.handleRequest({
+        id: 'req-term-input',
+        domain: 'terminal',
+        action: 'sendInput',
+        appId: 'test-agent',
+        payload: {
+          channelId: 'agent-cli-1',
+          data: 'y\n'
+        }
+      });
+      expect(inputRes.success).toBe(true);
+
+      // 4. Kill channel
+      const killRes = await bus.handleRequest({
+        id: 'req-term-kill',
+        domain: 'terminal',
+        action: 'kill',
+        appId: 'test-agent',
+        payload: {
+          channelId: 'agent-cli-1'
+        }
+      });
+      expect(killRes.success).toBe(true);
+    });
+  });
+
   describe('Client SDK Polyfill Generation', () => {
     it('generates the client SDK script containing all domain APIs', () => {
       const sdkCode = buildClientSdkInjection('my-custom-app-123');
@@ -459,8 +514,10 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
       expect(sdkCode).toContain('window.CNTXT.templates');
       expect(sdkCode).toContain('window.CNTXT.actions');
       expect(sdkCode).toContain('window.CNTXT.notify');
+      expect(sdkCode).toContain('window.CNTXT.terminal');
       expect(sdkCode).toContain('window.CNTXT.state');
       expect(sdkCode).toContain('window.CNTXT.ready');
     });
   });
 });
+

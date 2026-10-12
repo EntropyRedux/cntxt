@@ -217,4 +217,29 @@ fn test_commands_token_gating_reflection() {
         assert!(window_rs.contains(cmd), "Command {} must exist in window.rs", cmd);
     }
     assert_eq!(window_rs.matches("session_token: Option<String>").count(), 9);
+
+    // All pty commands must require session token
+    let pty_rs = include_str!("../commands/pty.rs");
+    let pty_cmds = [
+        "pub async fn spawn_pty",
+        "pub async fn write_pty",
+        "pub async fn resize_pty",
+        "pub async fn kill_pty",
+        "pub async fn list_pty_sessions",
+        "pub async fn spawn_external_terminal",
+    ];
+    for cmd in &pty_cmds {
+        assert!(pty_rs.contains(cmd), "Command {} must exist in pty.rs", cmd);
+    }
+    assert_eq!(pty_rs.matches("session_token: Option<String>").count(), 6);
+}
+
+#[test]
+fn test_pty_command_sanitization() {
+    let pty_rs = include_str!("../commands/pty.rs");
+    // Verify sanitize_command checks forbidden characters
+    assert!(pty_rs.contains("forbidden_chars"));
+    assert!(pty_rs.contains("';'"));
+    assert!(pty_rs.contains("'|'"));
+    assert!(pty_rs.contains("'&'"));
 }

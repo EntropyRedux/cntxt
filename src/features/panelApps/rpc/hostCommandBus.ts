@@ -22,8 +22,12 @@ import {
   validateTemplateApply,
   validateActionExecute,
   validateNotify,
+  validateTerminalSpawn,
+  validateTerminalSendInput,
+  validateTerminalKill
 } from '../../../contracts/boundarySchemas';
 import { useTabStore } from '../../../store/tabStore';
+import { useTerminalStore } from '../../../store/terminalStore';
 import { useActionStore } from '../../../store/actionStore';
 import { useTemplateStore } from '../../../store/templateStore';
 import { useNotificationStore } from '../../../store/notificationStore';
@@ -107,6 +111,8 @@ export class HostCommandBus {
         return this.handleActionsDomain(action, payload);
       case 'notify':
         return this.handleNotifyDomain(action, payload);
+      case 'terminal':
+        return this.handleTerminalDomain(action, payload);
       default:
         throw { code: 'NOT_FOUND', message: `Unknown domain: ${domain}` };
     }
@@ -476,4 +482,87 @@ export class HostCommandBus {
         throw { code: 'NOT_FOUND', message: `Unknown notify action: ${action}` };
     }
   }
+
+  // ==========================================
+  // Terminal Domain (FG-17)
+  // ==========================================
+
+  private async handleTerminalDomain(action: string, payload: unknown): Promise<unknown> {
+    const terminalStore = useTerminalStore.getState();
+
+    switch (action) {
+      case 'listChannels': {
+        const channels = terminalStore.getChannelList();
+        return channels.map((ch) => ({
+          id: ch.id,
+          name: ch.name,
+          status: ch.status,
+          exitCode: ch.exitCode,
+          cwd: ch.cwd,
+        }));
+      }
+
+      case 'spawn': {
+        const validation = validateTerminalSpawn(payload);
+        if (!validation.success) {
+          throw { code: 'VALIDATION_ERROR', message: validation.error.message };
+        }
+        const { id, name, command, args, cwd } = validation.data;
+        const channelId = terminalStore.createChannel({
+          id,
+          name,
+          command,
+          args,
+          cwd,
+        });
+
+        if (this.bridge.terminal?.isAvailable()) {
+          try {
+            terminalStore.setChannelStatus(channelId, 'running');
+            await this.bridge.terminal.spawn({
+              id: channelId,
+              command,
+              args,
+              cwd,
+            });
+          } catch (err: unknown) {
+            terminalStore.setChannelStatus(channelId, 'error');
+            throw { code: 'EXECUTION_ERROR', message: String(err) };
+          }
+        }
+        return { channelId };
+      }
+
+      case 'sendInput': {
+        const validation = validateTerminalSendInput(payload);
+        if (!validation.success) {
+          throw { code: 'VALIDATION_ERROR', message: validation.error.message };
+        }
+        const { channelId, data } = validation.data;
+        if (this.bridge.terminal?.isAvailable()) {
+          await this.bridge.terminal.write(channelId, data);
+        } else {
+          terminalStore.appendOutput(channelId, 'stdout', data);
+        }
+        return { success: true };
+      }
+
+      case 'kill': {
+        const validation = validateTerminalKill(payload);
+        if (!validation.success) {
+          throw { code: 'VALIDATION_ERROR', message: validation.error.message };
+        }
+        const { channelId } = validation.data;
+        if (this.bridge.terminal?.isAvailable()) {
+          await this.bridge.terminal.kill(channelId);
+        }
+        terminalStore.setChannelStatus(channelId, 'exited', -1);
+        return { success: true };
+      }
+
+      default:
+        throw { code: 'NOT_FOUND', message: `Unknown terminal action: ${action}` };
+    }
+  }
 }
+

@@ -103,6 +103,7 @@ async fn new_window(window: tauri::Window, app_handle: tauri::AppHandle, session
             .transparent(false)
             .theme(Some(tauri::Theme::Dark))
             .shadow(true)
+            .disable_drag_drop_handler()
             .build()
             .map_err(|e| format!("Failed to create window: {}", e))?;
     }
@@ -227,6 +228,12 @@ pub fn run() {
             new_window,
             commands::auth::open_oauth_url,
             commands::auth::start_oauth_listener,
+            commands::pty::spawn_pty,
+            commands::pty::write_pty,
+            commands::pty::resize_pty,
+            commands::pty::kill_pty,
+            commands::pty::list_pty_sessions,
+            commands::pty::spawn_external_terminal,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

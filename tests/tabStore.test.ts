@@ -136,4 +136,23 @@ describe('TabStore', () => {
     setDemoWelcomeDisabled(false);
     expect(isDemoWelcomeDisabled()).toBe(false);
   });
+
+  it('reorders tabs correctly from source to target index', () => {
+    const idA = useTabStore.getState().createTab('A.md', 'Content A');
+    const idB = useTabStore.getState().createTab('B.md', 'Content B');
+    const idC = useTabStore.getState().createTab('C.md', 'Content C');
+
+    let state = useTabStore.getState();
+    expect(state.tabs.map(t => t.id)).toEqual([idA, idB, idC]);
+
+    // Move first tab (index 0) to third position (index 2)
+    useTabStore.getState().reorderTabs(0, 2);
+    state = useTabStore.getState();
+    expect(state.tabs.map(t => t.id)).toEqual([idB, idC, idA]);
+
+    // Move last tab (index 2) back to first position (index 0)
+    useTabStore.getState().reorderTabs(2, 0);
+    state = useTabStore.getState();
+    expect(state.tabs.map(t => t.id)).toEqual([idA, idB, idC]);
+  });
 });

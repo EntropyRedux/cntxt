@@ -83,6 +83,7 @@ if (fs.existsSync(releaseBinary)) {
   try {
     if (isWindows) {
       execSync('taskkill /F /IM CNTXT-portable.exe /T 2>nul || exit 0', { stdio: 'ignore' });
+      execSync(`taskkill /F /IM CNTXT_${version}_portable.exe /T 2>nul || exit 0`, { stdio: 'ignore' });
     } else if (isLinux) {
       execSync('pkill -f "cntxt" 2>/dev/null || true', { stdio: 'ignore' });
     }
@@ -93,7 +94,19 @@ if (fs.existsSync(releaseBinary)) {
   const targetName = isWindows ? `CNTXT_${version}_portable.exe` : 'cntxt-portable';
   const targetPath = path.join(portableDir, targetName);
 
-  fs.copyFileSync(releaseBinary, targetPath);
+  let copied = false;
+  try {
+    fs.copyFileSync(releaseBinary, targetPath);
+    copied = true;
+  } catch (err) {
+    if (err.code === 'EBUSY') {
+      console.warn(`⚠️ Warning: ${targetName} is currently running and locked by the OS.`);
+      console.warn(`   Close the running instance to update: ${targetPath}`);
+    } else {
+      throw err;
+    }
+  }
+
   if (isWindows) {
     const unversionedPath = path.join(portableDir, 'CNTXT-portable.exe');
     try {
@@ -102,14 +115,16 @@ if (fs.existsSync(releaseBinary)) {
       console.warn(`Could not update CNTXT-portable.exe: ${e.message}`);
     }
   }
-  if (!isWindows) {
+  if (!isWindows && copied) {
     fs.chmodSync(targetPath, 0o755);
   }
 
-  const stats = fs.statSync(targetPath);
-  const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-  console.log(`✅ Portable build complete!`);
-  console.log(`📍 Output: ${targetPath} (${sizeMB} MB)`);
+  if (fs.existsSync(targetPath)) {
+    const stats = fs.statSync(targetPath);
+    const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+    console.log(`✅ Portable build complete!`);
+    console.log(`📍 Output: ${targetPath} (${sizeMB} MB)`);
+  }
 } else {
   console.error(`⏸ Build finished, but ${releaseBinary} was not found.`);
   process.exit(1);

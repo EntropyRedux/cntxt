@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.29
-Last Updated: 2026-10-11
-Last Updated By: Prod Agent (Authoritative Feature Roadmap & Implementation Queue Formalization)
+Version: v2.35
+Last Updated: 2026-10-12
+Last Updated By: Pass 1 Independent Auditor / Review Agent (Omni Terminal Tri-Toggle Experimental Gating & v0.5.9 Release)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -11,18 +11,91 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-16 Complete & Verified; Tri-Platform Suite Live)
+  [x] Feature Implementation (FG-01..FG-18 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 568/568 Live across 51 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 8/8 Live)
+    [x] Testing (Vitest 620/620 Live across 59 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 9/9 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.7 Authenticode Signed Portable Executable & Native Installers Built)
+  [x] Packaging & Release (v0.5.9 Authenticode Signed Portable Executable & Native Installers Built)
 
-Current Feature Group: FG-16: Host Command Bus & Mini Panel App RPC Bridge (Shipped) | Next: Priority 1 — Terminal Shells & Multi-Agent Orchestration (FG-17)
-Status: roadmap aligned / ready for implementation (v0.5.7 shipped; 568/568 unit tests passing across 51 suites; 7-stage roadmap recorded)
-Background Processes: none (all RPC commands are event-driven and user-initiated)
-Unit Tests: written [x] passing [x] (568/568 unit tests passing across 51 suites in CNTXT, 8 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
-Active Plan: /generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md
+Current Feature Group: FG-18: Omni Terminal Multi-Agent Mission Control Gating & v0.5.9 Release
+Status: [x] complete & verified (strict 3-toggle experimental gating, defaults set to false, web parity verified, signed binary built)
+Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus && enableOmniTerminal; disabled by default)
+Unit Tests: written [x] passing [x] (620/620 unit tests passing across 59 suites in CNTXT, 9 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
+Active Plan: /generated-documents/plans/feature_group_FG18_omni_terminal_file_driven_redesign_2026-10-12.md
 Notes:
+- Task 54: Omni Terminal Experimental Tri-Toggle Gating & v0.5.9 Release (2026-10-12):
+  - Strict 3-Toggle Feature Gate: In accordance with Pillar 7 of the workspace engineering rules, the Omni Terminal subsystem is strictly gated behind three experimental settings:
+    1. `enableExperimentalSettings`: Master Experimental Settings toggle
+    2. `enableTerminalBus`: "Terminal Shells & Multi-Agent Bus" toggle
+    3. `enableOmniTerminal`: "Omni Terminal Mission Control" toggle
+  - Helper Function & Default Invariants: Implemented `isOmniTerminalFeatureEnabled(settings: ViewSettings): boolean` in `src/store/settingsStore.ts`. In `DEFAULT_SETTINGS` and in `SettingsPanel.tsx`, default values for `enableTerminalBus` and `enableOmniTerminal` were changed from `true` to `false`.
+  - Comprehensive UI & Command Gating:
+    - `ActivityBar.tsx`: Dynamically filters out the Omni Terminal navigation icon when disabled.
+    - `Sidebar.tsx`: Renders a clean informational disabled banner with an "Open Settings" button when `'omni-terminal'` is selected while disabled.
+    - `OmniFloatingChat.tsx`: Suppresses floating window pop-out when disabled.
+    - `CommandPalette.tsx`: Omits Omni Terminal commands when disabled.
+  - Web SaaS Parity: UI gating and state persistence verified across web browser and desktop runtime.
+  - Packaging & Test Verification: Added comprehensive unit tests in `tests/settingsStore.test.ts` verifying all 8 combinations of experimental settings flags; bumped version to `0.5.9` across all manifests and built signed portable executable.
+- Task 53: FG-18 Omni Terminal File-Driven Architecture Redesign & Strategic Planning (2026-10-12):
+  - Paradigm Shift: Replaced fragile real-time curses terminal scraping with a clean, file-driven synchronization model powered by watching `session_output.cntxt`.
+  - Workspace vs Target Folder Separation: Terminals and scripts always execute with `cwd = workspacePath` (active CNTXT File Explorer folder), while session logs (`_output.cntxt` and `_raw.cntxt`) are saved to the user-selected `targetFolder`.
+  - Script Templates Primitive: Pre-configured script templates under category `'SCRIPTS'` for `@agy` (Antigravity CLI, `#10b981`), `@cline` (Cline CLI, `#6366f1`), `@opencode` (OpenCode CLI, `#f59e0b`), `@kilo` (Kilo CLI, `#06b6d4`), and `@pwsh` (PowerShell, `#8b5cf6`).
+  - Rich Markdown Chat Interface: Chat bubbles support GitHub-flavored markdown (headers, bold, italics, tables, syntax-highlighted code blocks, Mermaid diagrams), equipped with `[ 📋 Copy ]` and `[ 📝 Open in Editor ]` actions.
+  - Smart Text Injector & Dynamic Attention Controls: Injects text to targeted `@handle` or broadcasts to AI agents; displays dynamic color-coded attention ribbons (`[ Allow ]`, `[ Allow Always ]`, `[ Reject / Deny ]`) when agents require permission. Micro keypad (`↑`, `↓`, `Enter`, `Space`, `Y`, `N`, `^C`) and `@`/`/` autocomplete.
+  - Hybrid Terminal Architecture: Default Headless PTY with 1-click in-app `TerminalView` tab toggle, with optional 1-click native Windows Terminal (`wt.exe`) launch.
+  - Plan Artifact: Formalized in `/generated-documents/plans/feature_group_FG18_omni_terminal_file_driven_redesign_2026-10-12.md`.
+- Task 52: Pre-Configured CLI Agent Presets (Antigravity, Cline, OpenCode) & Quote-Aware Spawning (2026-10-11):
+  - Pre-Configured Ecosystem Presets: Updated `AgentRosterBar.tsx` with 1-click presets pre-configured for the user's installed agents:
+    - `@agy`: Antigravity CLI (`powershell.exe -NoLogo -NoExit -Command "agy --dangerously-skip-permissions"`, role: `Auditor Agent`)
+    - `@cline`: Cline CLI (`powershell.exe -NoLogo -NoExit -Command "cline --auto-approve true"`, role: `Prod Agent`)
+    - `@opencode`: OpenCode CLI (`powershell.exe -NoLogo -NoExit -Command "opencode --auto"`, role: `Prod Agent`)
+    - `@pwsh`: Native PowerShell (`powershell.exe -NoLogo`, role: `Custom`)
+  - Quote-Aware Command Tokenizer: Implemented `parseCommandLine` in `omniDocumentSync.ts` and integrated into `startAgent` in `omniTerminalStore.ts`, preserving quoted `-Command` and flags without broken argument splitting.
+  - Verification: 617/617 Vitest tests passing across 58 suites, 0 platform leaks across 184 files, 100% contract synchronization.
+- Task 51: Interactive TUI Choice Chips, Micro Keypad & Screen Redraw Deduplication (2026-10-11):
+  - Interactive Choice Chips Engine: Built `src/features/omniTerminal/format/omniPromptDetector.ts` detecting arrow-key select menus (`>`, `❯`, `*`), confirmation prompts (`[y/N]`, `(y/n)`), and navigation hints. Renders options as 1-click interactive button chips in `ChatMessageBubble.tsx` that dispatch raw terminal key sequences (`\r`, `\x1b[B\r`, `y\r`).
+  - Micro Terminal Keypad Strip & Keyboard Interception: Integrated compact keypad strip in `ChatInputBar.tsx` (`↑`, `↓`, `↵ Enter`, `Space`, `Y`, `N`, `Ctrl+C`). Intercepts physical arrow keys, Enter, and Space when input is empty, directly controlling interactive CLI prompts without manual typing.
+  - Virtual Screen Redraw Deduplication: Handled DEC clear-screen (`\x1b[2J`) in `omniTerminalStore.ts` and merged consecutive in-progress updates from the same agent, eliminating duplicated prompts and fragmented bubbles across screen redraws.
+  - Pixel-Perfect Fixed-Width Monospace: Rendered ASCII art banners and CLI logos in fixed-width `font-mono whitespace-pre` containers, eliminating proportional font distortion.
+  - Verification: 616/616 Vitest tests passing across 58 suites, 0 platform leaks across 184 files, 100% contract synchronization.
+- Task 50: Omni Terminal Stability & Output Hygiene Overhaul (2026-10-11):
+  - React Error #310 Elimination: Identified and resolved hook order violation in `src/components/OmniTerminal/OmniFloatingChat.tsx` where early return preceded `useEffect`. All hooks now execute unconditionally; wrapped `<OmniFloatingChat />` in `<ErrorBoundary>` in `ClassicShell.tsx`; added docked placeholder in `Sidebar.tsx` preventing duplicate concurrent mounts.
+  - Comprehensive ANSI/VT100 Clean Stream: Upgraded `stripAnsi`, `resolveCarriageReturns`, and `cleanTerminalStream` in `src/features/omniTerminal/format/omniDocumentSync.ts` to handle DEC private modes (`\x1b[?25l`, `\x1b[?1004h`, `\x1b[?9001h`), OSC window titles, keypad switches, and CRLF normalization. Sanitized chat bubble content in `omniTerminalStore.ts` and clean deliverables in `_output.cntxt`.
+  - Rich Colored Raw Terminal Dropdown: Rendered terminal tokens with `parseAnsi` in `ChatMessageBubble.tsx` for clean inspection of raw terminal output.
+  - Quick Agent Presets: Added 1-click quick presets in `AgentRosterBar.tsx` for Antigravity CLI (`agy`), Claude Code (`claude`), Aider (`aider`), and PowerShell (`pwsh`).
+  - Verification: 612/612 Vitest tests pass across 57 suites, 9/9 Rust security tests pass, 0 platform leaks across 183 files, 100% contract parity.
+- Task 49: HTML5 Drag-and-Drop Restoration & WebView2 OLE Interception Fix (2026-10-11):
+  - Root Cause Analysis: In Tauri v2 on Windows, default `dragDropEnabled: true` hooks Windows OLE drag-drop at the OS HWND level to intercept file drops, completely suppressing Microsoft WebView2's internal HTML5 Drag and Drop events (`draggable="true"`, `dragstart`, `dragover`, `drop`) across both the top-level application and child `iframe` elements (breaking tab reordering and custom panel apps).
+  - Native Configuration Fix: Configured `"dragDropEnabled": false` in `src-tauri/tauri.conf.json` and `.disable_drag_drop_handler()` in `src-tauri/src/lib.rs`.
+  - Frontend TabBar Hardening: Configured `e.dataTransfer.effectAllowed = 'move'` in `handleDragStart`, `e.dataTransfer.dropEffect = 'move'` in `handleDragOver` and `handleDragEnter`, container drop zone handling in `scrollContainerRef`, and dual-source index resolution in `handleDrop`.
+  - Verification & Release: 612/612 Vitest tests passing across 57 suites, 9/9 Rust security tests clean, compiled and Authenticode-signed `dist-portable/CNTXT_0.5.8_portable.exe`.
+- Task 48: FG-18 Omni Terminal Subsystem Implementation & Verification (2026-10-11):
+  - Canonical Contracts & Boundary Schemas: Added `OmniAgentRole`, `OmniShellSpawnMode`, `OmniSessionStatus`, `OmniAgentProfile`, `OmniChatMessage`, `OmniSession` in `contracts/data_shapes.ts` (100% in sync across all 3 mirror paths) and Zod validators in `boundarySchemas.ts` (20/20 tests passing).
+  - Native Rust External Terminal Spawner: Implemented `spawn_external_terminal` in `src-tauri/src/commands/pty.rs` with token authorization and path canonicalization (supporting `wt.exe` and `powershell.exe`). 9/9 Rust security tests passing.
+  - Dual `.cntxt` Document Bus (`omniDocumentSync.ts`): Built serializer/extractor managing `[session]_raw.cntxt` (append-only turn flight recorder with ANSI and `<thought>` trajectories) and `[session]_output.cntxt` (synthesized executive report capturing clean deliverables and pinned blocks).
+  - Headless Omni Terminal Store (`omniTerminalStore.ts`): Multi-agent roster, session lifecycle, PTY chunk accumulation, 800ms turn idle debounce, and automatic disk synchronization.
+  - Role-Gated Host Command Bus RPCs (`omniRoleGate.ts`): Enforces Pillar 2 architectural invariants — Auditor Agent is strictly read-only for codebase files and blocked from inserting code into active editor; Prod Agent retains full write capabilities; Tester Agent is test-scoped.
+  - Universal Presenters & Pop-Out Draggable FAB: Built docked sidebar view `OmniTerminalView.tsx`, status roster `AgentRosterBar.tsx`, bubble feed `ChatMessageBubble.tsx`, autocompleting input `ChatInputBar.tsx`, and draggable floating window `OmniFloatingChat.tsx`.
+  - Settings Gating: Added `enableOmniTerminal` under Settings -> Experimental Features (Pillar 7).
+  - Verification Gates: 611/611 Vitest tests passing across 57 suites (up from 589); 9/9 Rust security tests clean; 0 platform leaks across 183 files; 100% contract parity.
+- Task 47: FG-18 Omni Terminal Subsystem Planning & Architecture (2026-10-11):
+  - Formalized comprehensive plan in /generated-documents/plans/feature_group_FG18_omni_terminal_multi_agent_mission_control_2026-10-11.md.
+  - Native Device Storage Folder Picker: Integration with bridge.dialog.openFolderDialog setting canonical session workspace.
+  - Dual .cntxt Document Bus: [session]_raw.cntxt (complete stream, reasoning trajectories, ANSI codes) and [session]_output.cntxt (programmatically extracted deliverables, stripping <thought> blocks and command noise).
+  - Dual Shell Spawning: Headless PTY (in-app streaming) vs External OS Window (wt.exe, powershell.exe).
+  - Chat-First Multi-Agent Canvas: Broadcast vs targeted @mention routing (@agy, @claude, @cline).
+  - Dynamic Template-Driven Agent Roster: Powered by useTemplateStore (zero hardcoded agents).
+  - Role-Gated Host Command Bus RPCs: Auditor Agent (strictly read-only code, writes to audits/), Prod Agent (full write access), Tester Agent (test-scoped).
+  - Dual-Mode UI Layout: Docked resizable right sidebar tab + 1-click Pop-Out Draggable FAB Floating Chat for desktop multitasking and mobile touch mode.
+- Task 46: FG-17 Terminal Shells & Multi-Agent Orchestration (2026-10-11):
+  - Native Rust PTY Engine (`src-tauri`): Process management via `portable-pty = "0.8"` isolated strictly to desktop targets `cfg(not(any(target_os = "android", target_os = "ios")))`. Implemented `spawn_pty`, `write_pty`, `resize_pty`, `kill_pty`, and `list_pty_sessions` with single-use session token gating, canonical working directory validation, and shell command/argument metacharacter sanitization. Reader thread streams chunks over Tauri IPC (`terminal:chunk:{id}`, `terminal:exit:{id}`).
+  - Cross-Platform `ITerminalBridge`: Added to `IRuntimeBridge` contract with live implementation in `tauriRuntimeAdapter.ts` and clean disabled stubs in `browserRuntimeAdapter.ts` and `androidRuntimeAdapter.ts`.
+  - Headless Ring-Buffer Terminal Store (`src/store/terminalStore.ts`): Multi-channel state with rolling memory protection (`MAX_CHANNEL_BUFFER_CHARS = 250_000`, `MAX_CHANNEL_LOG_ENTRIES = 1_000`), exit code tracking, active channel switching, and custom event listeners.
+  - Universal Terminal Presenter (`TerminalView.tsx` & `ansiParser.ts`): Pure UI presenter with zero-dependency ANSI 16-color/graphics tokenizer, auto-scroll lock with pause-on-wheel, stdin input bar with command history, and web warning banner. Wired tab routing in `ShellEditorContainer.tsx` and `TabBar.tsx` (`tabType === 'terminal'`).
+  - `.cntxt` Document Bus Persistence (`cntxtTerminalBus.ts`): Document serializer/deserializer preserving channel configuration and transcript logs in YAML frontmatter and JSON state fence.
+  - Host Command Bus & RPC Integration (`hostCommandBus.ts` & `clientSdk.ts`): Exposed `terminal` domain (`listChannels`, `spawn`, `sendInput`, `kill`) via `window.CNTXT.terminal.*` for sandboxed panel apps.
+  - Settings Gating: Added `enableTerminalBus` toggle under Settings -> Experimental (Pillar 7).
+  - Verification Gates: 589/589 unit tests pass across 54 suites (up from 568); 9/9 Rust security tests pass; 0 platform leaks across 175 files; 100% canonical contract synchronization.
 - Task 45: v0.5.7 Code Block Clear Action & Testing Ergonomics (2026-10-11):
   - Retained live markdown code block header "Clear" button in src/extensions/liveMarkdown/widgets/codeBlockWidget.ts and src/extensions/liveMarkdown.ts with Ctrl+Z undo support and transient "Cleared!" feedback.
   - Exported _resetGlobalBridge in src/adapters/runtimeBridge.tsx and enabled jsdom test environment across tests/authStorageAdapter.test.ts and tests/runtimeBridge.test.tsx (568/568 tests passing).
@@ -327,18 +400,48 @@ Notes:
 - Strict path canonicalization preventing directory traversal and sensitive file access.
 - Mediated dirty tab buffer writes preventing unsaved text loss.
 
+Feature Group: FG-17: Terminal Shells & Multi-Agent Orchestration
+Status: completed / verified (2026-10-11)
+Target Platform(s): Desktop (Tauri v2 + Rust std::process/PTY) + Web (Safe disabled state / virtual relay) + Mobile (Safe disabled state)
+Background Processes: event-driven IPC streaming (gated under Settings -> Experimental -> `enableTerminalBus`)
+Unit Tests: written [x] passing [x] (tests/terminalStore.test.ts 9/9, tests/ansiParser.test.ts 4/4, tests/cntxtTerminalBus.test.ts 3/3, tests/hostCommandBus.test.ts 23/23, Rust security tests 9/9; full suite 589/589 passing)
+Notes:
+- Native Rust PTY Engine (`src-tauri/src/commands/pty.rs`) powered by `portable-pty = "0.8"` isolated to desktop target cfg.
+- Ephemeral single-use session token authorization, root path canonicalization, command & argument metacharacter sanitization.
+- `ITerminalBridge` added to `IRuntimeBridge` across Desktop, Web, and Mobile.
+- Headless ring-buffer terminal store (`src/store/terminalStore.ts`) with rolling memory limits (`MAX_CHANNEL_BUFFER_CHARS = 250_000`).
+- Universal pure presenter `TerminalView.tsx` with zero-dependency ANSI tokenizer, autoscroll pause-on-wheel, stdin command history.
+- Persistent `.cntxt` terminal bus document format (`cntxtTerminalBus.ts`) for multi-session transcripts.
+- `HostCommandBus` / `window.CNTXT.terminal.*` RPC domain for mini panel apps.
+- User-facing toggle `enableTerminalBus` in Settings -> Experimental Features.
+
+Feature Group: FG-18: Omni Terminal Multi-Agent Mission Control & Dual-Bus Subsystem
+Status: completed / verified (2026-10-11)
+Target Platform(s): Desktop (Tauri v2 + Rust PTY / External Terminal) + Web (Virtual Relay & IndexedDB) + Mobile (Android Draggable FAB Touch Interface)
+Background Processes: event-driven PTY streaming & debounced 800ms disk sync (gated behind Settings -> Experimental -> `enableOmniTerminal`)
+Unit Tests: written [x] passing [x] (tests/boundarySchemas.test.ts 20/20, tests/omniDocumentSync.test.ts 7/7, tests/omniTerminalStore.test.ts 5/5, tests/omniRoleGate.test.ts 7/7, Rust security tests 9/9; full suite 611/611 passing across 57 test files)
+Notes:
+- Native Device Storage Folder Picker: Integration with `bridge.fs.openDirectory()` setting canonical session workspace for all spawned shells and documents.
+- Dual .cntxt Document Bus: `[session]_raw.cntxt` (append-only flight recorder with reasoning trajectories, tool traces, ANSI streams) and `[session]_output.cntxt` (synthesized executive report stripping <thought> blocks and command noise).
+- Dual Shell Spawning Modes: Headless PTY (in-app streaming) vs External OS Window (`wt.exe` / `powershell.exe`) via `spawn_external_terminal`.
+- Chat-First Multi-Agent Canvas: Broadcast vs targeted `@mention` syntax (`@agy`, `@claude`, `@cline`).
+- Dynamic Template-Driven Agent Roster: Powered by `useTemplateStore` (zero hardcoded agents).
+- Role-Gated Host Command Bus RPCs: `Auditor Agent` (strictly read-only code, writes to `audits/`), `Prod Agent` (full write access), `Tester Agent` (test-scoped).
+- Dual-Mode UI Layout: Docked resizable right sidebar tab (`activeSidebarTab: 'omni-terminal'`) + 1-click Pop-Out Draggable FAB Floating Chat (`OmniFloatingChat.tsx`) for desktop multitasking and mobile touch mode.
+
 ━━━ IMPLEMENTATION ROADMAP & PLANNED FEATURE QUEUE ━━━
 
 The following is the authoritative, sequential order of implementation for upcoming feature groups:
 
-1. Priority 1: TERMINAL Shells & Multi-Agent Orchestration (FG-17)
+1. Priority 1: TERMINAL Shells & Multi-Agent Orchestration (FG-17) [COMPLETED / SHIPPED — Task 46]
    - Scope:
-     - Native Rust Terminal PTY Engine (`src-tauri`): process management via `portable-pty` / `tokio::process` exposing `spawn_pty`, `write_pty`, `resize_pty`, and `kill_pty` with rate-limited chunk streaming over Tauri IPC events.
+     - Native Rust Terminal PTY Engine (`src-tauri`): process management via `portable-pty` exposing `spawn_pty`, `write_pty`, `resize_pty`, and `kill_pty` with rate-limited chunk streaming over Tauri IPC events.
      - The `.cntxt` Multi-Session Terminal Bus Document: persistent disk format preserving stdout/stderr/ANSI streams in `.cntxt` files (`---` YAML channel manifest + ` ```state ` JSON transcript buffer).
-     - CodeMirror / xterm Terminal Tab Presenter (`*TerminalView.tsx`): ANSI color rendering, channel switcher (tabs/split), interactive keyboard stdin.
-     - Multi-Agent Orchestration Panel Apps: sandboxed mini apps monitoring concurrent CLI agents, pause/retry, and piping active tab context to agent stdin.
-     - Localhost REST Gateway: lightweight Rust HTTP listener on `127.0.0.1:port` with `X-CNTXT-Token` auth allowing external CLI agents to invoke the Command Bus directly.
+     - Universal Terminal Tab Presenter (`TerminalView.tsx`): ANSI color rendering, channel switcher, interactive keyboard stdin.
+     - Host Command Bus RPC integration (`window.CNTXT.terminal.*`).
+     - Experimental settings toggle (`enableTerminalBus`).
    - Reference Documents:
+     - `/generated-documents/plans/feature_group_FG17_terminal_shells_multi_agent_bus_2026-10-11.md`
      - `/generated-documents/context/vision_multi_agent_terminal_bus_2026-10-10.md`
      - `/generated-documents/context/project_brief_v2.1.md`
 

@@ -87,6 +87,9 @@ const DEFAULT_SETTINGS: ViewSettings = {
   enableAutosave: true,
   enableLiveDomSync: true,
   enableLiveMarkdownSync: true,
+  enableTerminalBus: false,
+  enableOmniTerminal: false,
+  isOmniFloating: false,
   autosaveIntervalMs: 1000,
   enableLargeDocDetection: true,
   largeDocThresholdKb: 500,
@@ -291,3 +294,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
   }
 }));
+
+/**
+ * Gate helper: Omni Terminal is only active when all three toggles are enabled:
+ * 1. Experimental Settings master toggle
+ * 2. Terminal Shells & Multi-Agent Bus toggle
+ * 3. Omni Terminal Mission Control toggle
+ */
+export function isOmniTerminalFeatureEnabled(settings: ViewSettings): boolean {
+  return Boolean(
+    settings.enableExperimentalSettings &&
+    settings.enableTerminalBus &&
+    settings.enableOmniTerminal
+  );
+}
+

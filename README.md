@@ -2,16 +2,16 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.5.6) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Host Command Bus & RPC Bridge (`window.CNTXT` via `postMessage`), Sandboxed Mini Panel Apps co-processor engine with path traversal guards & dirty tab mediation, Blueprint Prompt Archetypes (`build`, `brainstorm`, `adapt`) with 2-way editor tab sync, 14-token universal theme sync, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.5.9) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Host Command Bus & RPC Bridge (`window.CNTXT` via `postMessage`), Sandboxed Mini Panel Apps co-processor engine with path traversal guards & dirty tab mediation, Blueprint Prompt Archetypes (`build`, `brainstorm`, `adapt`) with 2-way editor tab sync, 14-token universal theme sync, Experimental Multi-Agent Omni Terminal (tri-toggle gated), and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.5.6)
+## Downloads (v0.5.9)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.6_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.6/CNTXT_0.5.6_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.6_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.6/CNTXT_0.5.6_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.6_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.6/CNTXT_0.5.6_portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.9_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.9/CNTXT_0.5.9_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.9_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.9/CNTXT_0.5.9_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.9_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.9/CNTXT_0.5.9_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
@@ -98,14 +98,15 @@ are found.
 
 ## Current Status & Verification
  
-- **Production Release (v0.5.1)**:
+- **Production Release (v0.5.9)**:
   - **Tri-Platform Suite Alignment**: Full production parity across Web SaaS (Vercel + Supabase), Native Desktop (Windows / macOS / Linux via Tauri v2), and Mobile (Android via Tauri Mobile cdylib runtime).
+  - **Experimental Omni Terminal Mission Control (Tri-Toggle Gated)**: Multi-agent mission control & terminal shells gated strictly behind three settings toggles (`enableExperimentalSettings`, `enableTerminalBus`, and `enableOmniTerminal`) under Settings -> Experimental. Defaults to disabled out of the box for clean UI and web parity.
   - **Brand Redesign & Master Iconography**: Universal deployment of high-resolution centered transparent brand icon across all desktop formats (`.ico`, `.png`, `Square*`), Android mipmap launcher densities (`ic_launcher*`), iOS/macOS (`icon.icns`), and Web (`favicon`, `logo.png`).
   - **Large Document Truncation & Safety Interlock**: Threshold-driven selective TOC loading with read-only preview mode locking to eliminate accidental disk file overwrite, accompanied by 1-click full document restoration.
-  - **Full Codebase Security & Re-Audit Remediation (22/22 Findings Resolved)**: Complete remediation of findings R-01..R-13 and D-01..D-09 across 5 verification gates; dynamic widget sinks routed through `sanitizePreviewHtml`; strict Web CSP; single-use window session tokens; tightened loopback OAuth security without wildcard CORS; observable `useNotificationStore` feedback across storage adapters; zero untyped `any`.
-  - **Signed Windows Installer Packages**: Official Windows NSIS setup (`dist-installer/CNTXT_0.5.1_x64-setup.exe`), WiX MSI (`dist-installer/CNTXT_0.5.1_x64_en-US.msi`), and standalone zero-install executable (`dist-portable/CNTXT_0.5.1_portable.exe`), digitally signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
-  - **Automated Test Coverage**: 399 unit tests passing across 40 suites via Vitest (`npm test`); 24 Playwright E2E tests green on cold server; 8 Rust security tests passing (`cargo test`).
-  - **Platform Purity**: `npm run lint` scans 145 files with zero platform leaks outside authorized adapters and 100% canonical contract parity.
+  - **Full Codebase Security & Re-Audit Remediation**: Complete remediation of security and audit findings across all verification gates; dynamic widget sinks routed through `sanitizePreviewHtml`; strict Web CSP; single-use window session tokens; tightened loopback OAuth security without wildcard CORS; observable `useNotificationStore` feedback across storage adapters; zero untyped `any`.
+  - **Signed Windows Installer Packages**: Official Windows NSIS setup (`dist-installer/CNTXT_0.5.9_x64-setup.exe`), WiX MSI (`dist-installer/CNTXT_0.5.9_x64_en-US.msi`), and standalone zero-install executable (`dist-portable/CNTXT_0.5.9_portable.exe`), digitally signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
+  - **Automated Test Coverage**: 620+ unit tests passing across 59 suites via Vitest (`npm test`); 24 Playwright E2E tests green on cold server; 9 Rust security tests passing (`cargo test`).
+  - **Platform Purity**: `npm run lint` scans 180+ files with zero platform leaks outside authorized adapters and 100% canonical contract parity.
 - **Living Context & Roadmap**:
   - Full living context and architecture logs: `generated-documents/context/living_context.md`.
   - Release history and change notes: [CHANGELOG.md](CHANGELOG.md).

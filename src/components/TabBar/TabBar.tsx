@@ -9,7 +9,8 @@ import {
   Layers,
   Search,
   FolderOpen,
-  Clipboard
+  Clipboard,
+  Terminal
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -126,16 +127,27 @@ export const TabBar: React.FC = () => {
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
     e.dataTransfer.setData('text/plain', String(index));
+    e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
   };
 
   const handleDrop = (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === targetIndex) return;
-    reorderTabs(draggedIndex, targetIndex);
+    e.stopPropagation();
+    const sourceIndexStr = e.dataTransfer.getData('text/plain');
+    const sourceIdx = sourceIndexStr !== '' ? parseInt(sourceIndexStr, 10) : draggedIndex;
+    if (sourceIdx !== null && !isNaN(sourceIdx) && sourceIdx !== targetIndex) {
+      reorderTabs(sourceIdx, targetIndex);
+    }
     setDraggedIndex(null);
   };
 
@@ -402,6 +414,13 @@ export const TabBar: React.FC = () => {
         ref={scrollContainerRef}
         onWheel={handleWheel}
         onScroll={checkOverflow}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDrop={(e) => {
+          if (e.target === scrollContainerRef.current) {
+            handleDrop(e, tabs.length - 1);
+          }
+        }}
         className={`flex items-stretch flex-1 min-w-0 h-full overflow-x-auto no-scrollbar scroll-smooth touch-pan-x ${
           !settings.showRibbon && (!settings.showActivityBar || isTouch) ? 'pl-10' : ''
         }`}
@@ -417,6 +436,7 @@ export const TabBar: React.FC = () => {
               draggable={!isTouch}
               onDragStart={(e) => handleDragStart(e, idx)}
               onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
               onDrop={(e) => handleDrop(e, idx)}
               onDragEnd={() => setDraggedIndex(null)}
               onClick={() => setActiveTabId(tab.id)}
@@ -432,10 +452,14 @@ export const TabBar: React.FC = () => {
               }`}
             >
               {/* Language / File Icon */}
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className="shrink-0">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
+              {tab.tabType === 'terminal' ? (
+                <Terminal className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className="shrink-0">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+              )}
 
               {/* Title */}
               <span className="truncate text-[12px] flex-1">

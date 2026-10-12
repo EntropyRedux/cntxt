@@ -230,6 +230,61 @@ graph LR
 - [ ] **@qa**: Execute end-to-end regression test suite
 - [ ] **@lead**: Publish release notes and docs
 `
+  },
+  {
+    id: 'script-antigravity-cli',
+    name: 'Antigravity CLI Agent (@agy)',
+    description: 'Launches Google Antigravity CLI with automatic permission bypass in the active workspace.',
+    category: 'SCRIPTS',
+    variables: ['extra_args'],
+    createdAt: 1730000000000,
+    updatedAt: 1730000000000,
+    isPinned: true,
+    content: `powershell.exe -NoLogo -NoExit -Command "agy --dangerously-skip-permissions {{extra_args}}"`
+  },
+  {
+    id: 'script-cline-cli',
+    name: 'Cline CLI Agent (@cline)',
+    description: 'Launches Cline autonomous coding CLI in act mode with auto-approval in the active workspace.',
+    category: 'SCRIPTS',
+    variables: ['extra_args'],
+    createdAt: 1730000000000,
+    updatedAt: 1730000000000,
+    isPinned: true,
+    content: `powershell.exe -NoLogo -NoExit -Command "cline --auto-approve true {{extra_args}}"`
+  },
+  {
+    id: 'script-opencode-cli',
+    name: 'OpenCode CLI Agent (@opencode)',
+    description: 'Launches OpenCode autonomous coding agent in the active workspace.',
+    category: 'SCRIPTS',
+    variables: ['extra_args'],
+    createdAt: 1730000000000,
+    updatedAt: 1730000000000,
+    isPinned: true,
+    content: `powershell.exe -NoLogo -NoExit -Command "opencode --auto {{extra_args}}"`
+  },
+  {
+    id: 'script-kilo-cli',
+    name: 'Kilo CLI Agent (@kilo)',
+    description: 'Launches Kilo CLI agent in the active workspace.',
+    category: 'SCRIPTS',
+    variables: ['extra_args'],
+    createdAt: 1730000000000,
+    updatedAt: 1730000000000,
+    isPinned: true,
+    content: `powershell.exe -NoLogo -NoExit -Command "kilo {{extra_args}}"`
+  },
+  {
+    id: 'script-powershell-shell',
+    name: 'PowerShell Shell (@pwsh)',
+    description: 'Launches standard interactive PowerShell console in the active workspace.',
+    category: 'SCRIPTS',
+    variables: [],
+    createdAt: 1730000000000,
+    updatedAt: 1730000000000,
+    isPinned: true,
+    content: `powershell.exe -NoLogo`
   }
 ];
 

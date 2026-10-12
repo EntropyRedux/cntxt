@@ -26,7 +26,7 @@ import { AppIcon } from '../Common/AppIcon';
 import { useTabStore } from '../../store/tabStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
-import { useSettingsStore } from '../../store/settingsStore';
+import { useSettingsStore, isOmniTerminalFeatureEnabled } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useFormattingStore } from '../../store/formattingStore';
 import { useRibbonStore } from '../../store/ribbonStore';
@@ -60,11 +60,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
   const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const { tabs, activeTabId, setActiveTabId, createTab, saveCurrentTab } = useTabStore();
+  const { tabs, activeTabId, setActiveTabId, createTab, openTerminalTab, saveCurrentTab } = useTabStore();
   const { templates, openVariableModal } = useTemplateStore();
   const { actions } = useActionStore();
   const { 
     settings, 
+    updateSettings,
     toggleSidebar, 
     toggleActivityBar, 
     toggleEditorMode, 
@@ -112,6 +113,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
         icon: 'Plus',
         shortcut: 'Ctrl+N',
         action: () => createTab()
+      },
+      {
+        id: 'cmd-new-terminal-tab',
+        title: 'New Terminal Bus Tab',
+        subtitle: 'Open an interactive terminal shell session',
+        category: 'Commands',
+        icon: 'Terminal',
+        shortcut: 'Ctrl+`',
+        action: () => {
+          openTerminalTab();
+          addNotification('Terminal Tab', 'Opened new Terminal Bus session', 'info');
+        }
       },
       {
         id: 'cmd-new-window',
@@ -198,6 +211,31 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
           setActiveSidebarTab('settings');
         }
       },
+      ...(isOmniTerminalFeatureEnabled(settings)
+        ? ([
+            {
+              id: 'cmd-open-omni-terminal',
+              title: 'Open Omni Terminal Panel',
+              subtitle: 'Multi-agent mission control, dual .cntxt logging, and targeted orchestration',
+              category: 'Commands',
+              icon: 'Bot',
+              shortcut: 'Ctrl+Shift+T',
+              action: () => {
+                setActiveSidebarTab('omni-terminal');
+              }
+            },
+            {
+              id: 'cmd-toggle-floating-omni',
+              title: settings.isOmniFloating ? 'Dock Omni Terminal to Sidebar' : 'Pop Out Omni Floating Chat',
+              subtitle: 'Detach or dock the Omni Terminal floating multi-agent chat window',
+              category: 'Commands',
+              icon: 'ExternalLink',
+              action: () => {
+                updateSettings({ isOmniFloating: !settings.isOmniFloating });
+              }
+            }
+          ] as PaletteItem[])
+        : []),
       {
         id: 'cmd-customize-formatting',
         title: 'Customize Markdown Formatting Buttons',

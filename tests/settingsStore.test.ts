@@ -218,4 +218,36 @@ describe('SettingsStore', () => {
     store.updateSettings({ syntaxHighlighting: 'auto' });
     expect(useSettingsStore.getState().settings.syntaxHighlighting).toBe('auto');
   });
+
+  it('correctly gates isOmniTerminalFeatureEnabled behind experimental master toggle and sub-toggles', async () => {
+    const { isOmniTerminalFeatureEnabled } = await import('../src/store/settingsStore');
+
+    // Defaults: experimental=false, terminalBus=false, omniTerminal=false -> disabled
+    expect(isOmniTerminalFeatureEnabled(useSettingsStore.getState().settings)).toBe(false);
+
+    // Only master experimental toggle on -> still disabled
+    useSettingsStore.getState().updateSettings({ enableExperimentalSettings: true });
+    expect(isOmniTerminalFeatureEnabled(useSettingsStore.getState().settings)).toBe(false);
+
+    // Master on + terminal bus on, but omni terminal off -> still disabled
+    useSettingsStore.getState().updateSettings({ enableTerminalBus: true, enableOmniTerminal: false });
+    expect(isOmniTerminalFeatureEnabled(useSettingsStore.getState().settings)).toBe(false);
+
+    // Master on + omni terminal on, but terminal bus off -> still disabled
+    useSettingsStore.getState().updateSettings({ enableTerminalBus: false, enableOmniTerminal: true });
+    expect(isOmniTerminalFeatureEnabled(useSettingsStore.getState().settings)).toBe(false);
+
+    // All three on -> enabled
+    useSettingsStore.getState().updateSettings({
+      enableExperimentalSettings: true,
+      enableTerminalBus: true,
+      enableOmniTerminal: true,
+    });
+    expect(isOmniTerminalFeatureEnabled(useSettingsStore.getState().settings)).toBe(true);
+
+    // Master toggle turned off -> disabled immediately
+    useSettingsStore.getState().updateSettings({ enableExperimentalSettings: false });
+    expect(isOmniTerminalFeatureEnabled(useSettingsStore.getState().settings)).toBe(false);
+  });
 });
+

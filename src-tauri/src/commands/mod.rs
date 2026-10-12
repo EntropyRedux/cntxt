@@ -4,6 +4,7 @@ pub mod secrets;
 pub mod storage;
 pub mod clipboard;
 pub mod auth;
+pub mod pty;
 
 use std::sync::RwLock;
 use std::collections::HashSet;

@@ -121,6 +121,41 @@ export interface IThemeBridge {
 }
 
 /**
+ * Terminal PTY Bridge Contract (FG-17)
+ */
+export interface TerminalChunkEvent {
+  id: string;
+  stream: string;
+  data: string;
+}
+
+export interface TerminalExitEvent {
+  id: string;
+  exitCode?: number | null;
+}
+
+export interface TerminalSpawnOptions {
+  id: string;
+  command: string;
+  args?: string[];
+  cwd?: string;
+  cols?: number;
+  rows?: number;
+}
+
+export interface ITerminalBridge {
+  isAvailable: () => boolean;
+  spawn: (options: TerminalSpawnOptions) => Promise<string>;
+  write: (id: string, data: string) => Promise<void>;
+  resize: (id: string, cols: number, rows: number) => Promise<void>;
+  kill: (id: string) => Promise<void>;
+  listSessions: () => Promise<string[]>;
+  spawnExternal?: (targetDir: string, shellOverride?: string) => Promise<boolean>;
+  onData: (id: string, callback: (event: TerminalChunkEvent) => void) => () => void;
+  onExit: (id: string, callback: (event: TerminalExitEvent) => void) => () => void;
+}
+
+/**
  * Unified Runtime Bridge Interface
  * The ONLY point of contact between UI components and the platform runtime.
  */
@@ -131,6 +166,7 @@ export interface IRuntimeBridge {
   storage: IStorageBridge;
   platform: IPlatformBridge;
   theme: IThemeBridge;
+  terminal?: ITerminalBridge;
   shareContent?: (text: string) => Promise<boolean>;
   getSessionToken?: () => Promise<string>;
   deleteFile?: (path: string) => Promise<boolean>;

@@ -16,7 +16,11 @@ import {
   BridgeFolderResult,
   BridgeDirectoryEntry, 
   SupportedLanguage,
-  WindowResizeDirection
+  WindowResizeDirection,
+  ITerminalBridge,
+  TerminalChunkEvent,
+  TerminalExitEvent,
+  TerminalSpawnOptions
 } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from './storageKeys';
 import { applyThemeTokensToElement } from '../../theme/index';
@@ -614,5 +618,133 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
   public async openExternalUrl(url: string): Promise<boolean> {
     return await this.invokeTauriVoid('open_external', { url });
   }
+
+  public terminal: ITerminalBridge = {
+    isAvailable: (): boolean => {
+      return typeof window !== 'undefined' && Boolean(
+        window.isTauri || window.__TAURI_INTERNALS__ || window.__TAURI__
+      );
+    },
+    spawn: async (options: TerminalSpawnOptions): Promise<string> => {
+      const token = await this.ensureSessionToken();
+      const res = await this.invokeTauri<string>('spawn_pty', {
+        sessionToken: token,
+        id: options.id,
+        command: options.command,
+        args: options.args || [],
+        cwd: options.cwd,
+        cols: options.cols,
+        rows: options.rows
+      });
+      if (!res) {
+        throw new Error(`Failed to spawn terminal process '${options.command}'`);
+      }
+      return res;
+    },
+    write: async (id: string, data: string): Promise<void> => {
+      const token = await this.ensureSessionToken();
+      await this.invokeTauri<void>('write_pty', {
+        sessionToken: token,
+        id,
+        data
+      });
+    },
+    resize: async (id: string, cols: number, rows: number): Promise<void> => {
+      const token = await this.ensureSessionToken();
+      await this.invokeTauri<void>('resize_pty', {
+        sessionToken: token,
+        id,
+        cols,
+        rows
+      });
+    },
+    kill: async (id: string): Promise<void> => {
+      const token = await this.ensureSessionToken();
+      await this.invokeTauri<void>('kill_pty', {
+        sessionToken: token,
+        id
+      });
+    },
+    listSessions: async (): Promise<string[]> => {
+      const token = await this.ensureSessionToken();
+      const sessions = await this.invokeTauri<string[]>('list_pty_sessions', {
+        sessionToken: token
+      });
+      return sessions || [];
+    },
+    spawnExternal: async (targetDir: string, shellOverride?: string): Promise<boolean> => {
+      const token = await this.ensureSessionToken();
+      const res = await this.invokeTauri<boolean>('spawn_external_terminal', {
+        sessionToken: token,
+        targetDir,
+        shellOverride: shellOverride || null,
+      });
+      return res ?? false;
+    },
+    onData: (id: string, callback: (event: TerminalChunkEvent) => void): (() => void) => {
+      let isDisposed = false;
+      let unlistenFn: (() => void) | null = null;
+      const eventName = `terminal:chunk:${id}`;
+
+      import('@tauri-apps/api/event').then(({ listen }) => {
+        if (isDisposed) return;
+        listen<TerminalChunkEvent>(eventName, (event) => {
+          if (!isDisposed) {
+            callback(event.payload);
+          }
+        }).then((unlisten) => {
+          if (isDisposed) {
+            unlisten();
+          } else {
+            unlistenFn = unlisten;
+          }
+        }).catch((err) => {
+          console.warn('Failed to listen to terminal chunk event:', err);
+        });
+      }).catch((err) => {
+        console.warn('Failed to load @tauri-apps/api/event:', err);
+      });
+
+      return () => {
+        isDisposed = true;
+        if (unlistenFn) {
+          unlistenFn();
+          unlistenFn = null;
+        }
+      };
+    },
+    onExit: (id: string, callback: (event: TerminalExitEvent) => void): (() => void) => {
+      let isDisposed = false;
+      let unlistenFn: (() => void) | null = null;
+      const eventName = `terminal:exit:${id}`;
+
+      import('@tauri-apps/api/event').then(({ listen }) => {
+        if (isDisposed) return;
+        listen<TerminalExitEvent>(eventName, (event) => {
+          if (!isDisposed) {
+            callback(event.payload);
+          }
+        }).then((unlisten) => {
+          if (isDisposed) {
+            unlisten();
+          } else {
+            unlistenFn = unlisten;
+          }
+        }).catch((err) => {
+          console.warn('Failed to listen to terminal exit event:', err);
+        });
+      }).catch((err) => {
+        console.warn('Failed to load @tauri-apps/api/event:', err);
+      });
+
+      return () => {
+        isDisposed = true;
+        if (unlistenFn) {
+          unlistenFn();
+          unlistenFn = null;
+        }
+      };
+    }
+  };
 }
 

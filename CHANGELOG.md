@@ -5,6 +5,130 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.9] — 2026-10-12
+
+### Omni Terminal Experimental Tri-Toggle Gating & Web Parity
+- **Hardened Three-Tier Feature Gating**:
+  - Enforced strict condition for the Omni Terminal subsystem: the feature is completely disabled unless all three experimental settings are enabled:
+    1. Master toggle: `enableExperimentalSettings` ("Enable Experimental Features")
+    2. Shell bus toggle: `enableTerminalBus` ("Terminal Shells & Multi-Agent Bus")
+    3. Mission control toggle: `enableOmniTerminal` ("Omni Terminal Mission Control")
+  - Implemented `isOmniTerminalFeatureEnabled(settings: ViewSettings): boolean` helper in `src/store/settingsStore.ts`.
+- **Safe Defaults & Out-of-the-Box Invariants**:
+  - Changed default values of `enableTerminalBus` and `enableOmniTerminal` in `DEFAULT_SETTINGS` from `true` to `false`.
+  - In `SettingsPanel.tsx`, changed fallback values from `?? true` to `?? false` and added descriptive guidance that both the Terminal Shells bus and Omni Terminal toggles must be enabled.
+- **UI & Command Gating Across Views**:
+  - `ActivityBar.tsx`: Dynamically filters out the Bot / Omni Terminal icon navigation item unless `isOmniTerminalFeatureEnabled` is true.
+  - `Sidebar.tsx`: When active tab is `'omni-terminal'` and the feature is disabled, renders a clean informational fallback banner with an "Open Settings" CTA button instead of mounting `<OmniTerminalView />`.
+  - `OmniFloatingChat.tsx`: Suppresses floating chat pop-out window when the feature is disabled.
+  - `CommandPalette.tsx`: Omits `cmd-open-omni-terminal` and `cmd-toggle-floating-omni` commands from the command palette when the feature is disabled.
+- **Web SaaS Parity & Storage Degradation**:
+  - Full UI and state persistence parity in browser/web environments without native terminal runtime dependencies.
+- **Packaging & Test Coverage**:
+  - Version bumped to `0.5.9` across `package.json`, `package-lock.json`, `tauri.conf.json`, `Cargo.toml`, `Cargo.lock`, and `manifest.md`.
+  - Added unit test suite in `tests/settingsStore.test.ts` verifying all 8 combinations of experimental toggle flags.
+  - Rebuilt and signed Windows portable and installer packages (`CNTXT_0.5.9_portable.exe`).
+
+## [0.5.8] — 2026-10-12
+
+### FG-18 Omni Terminal File-Driven Architecture Redesign & Multi-Agent Canvas
+- **Paradigm Shift from Terminal Scraping to Dual `.cntxt` Bus**:
+  - Abandoned fragile screen-scraping of TUI agents emitting VT100/ANSI redraw loops and spinners.
+  - Chat stream is 100% driven by watching `session_output.cntxt`, while unstripped stdout, stderr, and `<thought>` tags are logged to `session_raw.cntxt`.
+  - Strict path separation: `.cntxt` session documents are stored in the user-selected `targetFolder`, while terminal shells and agents execute in CNTXT's active workspace folder (`contextpad_workspace_path` from File Explorer).
+- **Scripts as CNTXT Templates Primitive**:
+  - Seeded 5 pre-configured script templates under category `'SCRIPTS'` in `defaultPresets.ts` and `templateStore.ts`:
+    - 🤖 `@agy`: Antigravity CLI (`#10b981` Emerald)
+    - 🚀 `@cline`: Cline CLI (`#6366f1` Indigo)
+    - ⚡ `@opencode`: OpenCode CLI (`#f59e0b` Amber)
+    - 🔵 `@kilo`: Kilo CLI (`#06b6d4` Cyan)
+    - 🐚 `@pwsh`: PowerShell Console (`#8b5cf6` Violet)
+- **Tracked & Color-Coded Terminal Roster**:
+  - Visual terminal roster in `AgentRosterBar.tsx` tracking all running terminals with accent color borders, status dots, 1-click script launches, and a **`[ 📺 Show in Terminal ]`** button opening the in-app terminal tab (`tabStore.openTerminalTab`).
+- **Rich Markdown Chat Bubbles**:
+  - Full GitHub-flavored markdown rendering in `OmniMarkdownViewer.tsx` (headers, bold, italics, tables, syntax-highlighted code blocks, Mermaid diagrams).
+  - Added **`[ 📋 Copy ]`** button (copies raw markdown to clipboard via `bridge.clipboard`) and **`[ 📝 Open as doc ]`** button (creates new editor tab via `tabStore.createTab`).
+- **Smart Text Injector & Dynamic Contextual Attention Center**:
+  - Injects text to targeted `@handle` or broadcasts to AI agents (excluding plain shells by default).
+  - Stacked contextual attention ribbons (`[ Allow (y) ]`, `[ Allow Always (a) ]`, `[ Reject / Deny (n) ]`) styled with each agent's accent color below the input bar when permission is required.
+  - Micro keypad strip (`↑`, `↓`, `↵ Enter`, `␣ Space`, `Y`, `N`, `^C`) and `@` mention / `/` slash command autocompletion.
+
+### Pre-Configured CLI Agent Presets (Antigravity, Cline, OpenCode) & Quote Tokenizer
+- **Native Ecosystem Presets**:
+  - Pre-configured 1-click presets in `AgentRosterBar.tsx` for **Antigravity (`@agy`)**, **Cline (`@cline`)**, **OpenCode (`@opencode`)**, and **PowerShell (`@pwsh`)**.
+  - Automatically configured non-interactive and auto-approval flags (`--dangerously-skip-permissions`, `--auto-approve true`, `--auto`) preventing permission stalls.
+- **Quote-Aware Shell Command Tokenizer**:
+  - Implemented `parseCommandLine` in `omniDocumentSync.ts` and wired into `startAgent` in `omniTerminalStore.ts`, preserving complex PowerShell `-Command "..."` parameters.
+
+### Interactive TUI Choice Chips, Micro Keypad & Virtual Redraw Deduplication
+- **1-Click Interactive Choice Chips**:
+  - Implemented `omniPromptDetector.ts` parsing interactive select menus (`>`, `❯`, `*`), confirmation prompts (`[y/N]`, `(y/n)`), and navigation hints.
+  - Rendered choices as clickable interactive buttons in `ChatMessageBubble.tsx` that calculate and dispatch relative raw byte sequences (`\r`, `\x1b[B\r`, `y\r`) directly to the agent's PTY channel.
+- **Micro Terminal Keypad & Physical Keyboard Interception**:
+  - Added micro keypad strip in `ChatInputBar.tsx` (`↑`, `↓`, `↵ Enter`, `Space`, `Y`, `N`, `^C`) for fast point-and-click control.
+  - Forwarded physical `ArrowUp`, `ArrowDown`, `Enter`, and `Space` keystrokes directly to the active agent PTY when the input box is empty, enabling natural keyboard-driven menu navigation.
+- **Screen Redraw & Deduplication Engine**:
+  - Replaced buffer content on DEC clear-screen (`\x1b[2J`) in `omniTerminalStore.ts` and merged consecutive in-progress updates from the same agent, preventing repeated duplicate prompts.
+- **Fixed Monospace ASCII Art Rendering**:
+  - Enforced `font-mono whitespace-pre` containers for CLI banners and ASCII art, eliminating proportional font distortion.
+
+### Omni Terminal Stability & Output Hygiene Overhaul
+- **Eliminated React Error #310 during Pop-Out / Docking**:
+  - Restructured `OmniFloatingChat.tsx` to eliminate hook execution order mismatch (`if (!settings.isOmniFloating) return null;` placed after all hooks).
+  - Wrapped `OmniFloatingChat` in `<ErrorBoundary>` in `ClassicShell.tsx` for crash prevention.
+  - Added docked placeholder in `Sidebar.tsx` preventing concurrent duplicate mounts of `OmniTerminalView`.
+- **Comprehensive Terminal ANSI / VT100 Control Sequence Sanitization**:
+  - Upgraded `stripAnsi`, `resolveCarriageReturns`, and `cleanTerminalStream` in `omniDocumentSync.ts` to strip DEC private modes (`\x1b[?25l`, `\x1b[?1004h`, `\x1b[?9001h`), OSC window titles, keypad switches, and CRLF line breaks.
+  - Sanitized chat feed bubbles and clean `_output.cntxt` documents so only human readable text is shown.
+  - Added colored ANSI token rendering in the collapsible Raw Terminal dropdown via `parseAnsi`.
+- **1-Click Quick Agent Presets in Omni Terminal**:
+  - Added instant preset chips in `AgentRosterBar.tsx` for **Antigravity CLI (`agy`)**, **Claude Code (`claude`)**, **Aider (`aider`)**, and **PowerShell (`pwsh`)**.
+
+### Omni Terminal Multi-Agent Mission Control & Dual-Bus Subsystem (FG-18)
+- **Native Target Storage Directory Picker**:
+  - Integrated `bridge.fs.openDirectory()` allowing users to select the canonical device folder for session documents (`_raw.cntxt` and `_output.cntxt`) and shell working directories.
+- **Dual `.cntxt` Document Bus (`omniDocumentSync.ts`)**:
+  - `[session]_raw.cntxt`: Append-only black box flight recorder logging raw terminal chunks, CLI tool traces, and `<thought>` reasoning trajectories.
+  - `[session]_output.cntxt`: Programmatically synthesized executive report capturing only deliverables, exit statuses, and annotated/pinned blocks (stripping `<thought>` and terminal noise).
+- **Dual Shell Spawning Modes**:
+  - Headless PTY (in-app streaming) vs. Native External OS Terminal (`wt.exe` / `powershell.exe`) via `spawn_external_terminal`.
+- **Chat-First Multi-Agent Canvas & Input Router**:
+  - Unified chat interface with broadcast or `@handle` targeted dispatch (`@agy`, `@claude`, `@cline`).
+  - Auto-resizing input bar with `@mention` autocomplete and prompt template insertion.
+- **Template-Driven Agent Roster (`AgentRosterBar.tsx`)**:
+  - Dynamic agent instantiation directly from prompt template library (`useTemplateStore`) with custom names, roles, commands, and spawn modes.
+- **Role-Gated Host Command Bus RPCs (`omniRoleGate.ts`)**:
+  - Enforces strict architectural invariants: `Auditor Agent` is strictly read-only for codebase files and blocked from inserting code into the active editor, while `Prod Agent` retains full write access.
+- **Dual UI Layout Modes & Draggable FAB Floating Chat**:
+  - Docked right sidebar tab (`activeSidebarTab: 'omni-terminal'`) plus 1-click Pop-Out Draggable FAB Floating Chat (`OmniFloatingChat.tsx`) for multi-tasking across all screen resolutions and touch devices.
+- **Settings Gating & Verification Gates**:
+  - Added user toggle `enableOmniTerminal` under **Settings -> Experimental Features**.
+  - 611/611 Vitest unit tests passing across 57 suites; 9/9 Rust security tests clean; 0 platform leaks across 183 files; 100% canonical contract synchronization.
+
+### Terminal Shells & Multi-Agent Orchestration Bus (FG-17)
+- **Native Rust PTY Engine (`src-tauri`)**:
+  - Implemented cross-platform PTY process management (`src-tauri/src/commands/pty.rs`) utilizing `portable-pty = "0.8"` isolated to desktop targets `cfg(not(any(target_os = "android", target_os = "ios")))`.
+  - Exposes `spawn_pty`, `write_pty`, `resize_pty`, `kill_pty`, and `list_pty_sessions` with single-use session token authorization, root path canonicalization, and shell argument sanitization.
+  - Spawned reader thread rates and streams stdout/stderr chunks over Tauri IPC events (`terminal:chunk:{id}`, `terminal:exit:{id}`).
+- **Cross-Platform `ITerminalBridge` Contract**:
+  - Extended `IRuntimeBridge` in `src/ui-contract/bridgeContract.ts` with typed terminal lifecycle interface.
+  - Implemented active Tauri IPC bridge in `src/adapters/tauriRuntimeAdapter.ts` and clean disabled stubs in `browserRuntimeAdapter.ts` and `androidRuntimeAdapter.ts`.
+- **Headless Terminal Store & Ring-Buffer Stream Buffer**:
+  - Created `src/store/terminalStore.ts` managing multi-channel sessions with rolling memory limits (`MAX_CHANNEL_BUFFER_CHARS = 250_000`, `MAX_CHANNEL_LOG_ENTRIES = 1_000`) preventing memory leaks during long-running agent output.
+  - Support for active channel switching, process exit codes, and custom event listeners.
+- **Universal Pure Terminal Presenter (`TerminalView.tsx` & `ansiParser.ts`)**:
+  - Built pure presenter in `src/components/Terminal/TerminalView.tsx` with zero-dependency ANSI 16-color/graphics tokenizer (`ansiParser.ts`).
+  - Includes auto-scroll with pause-on-wheel, stdin command input bar with up/down history, start/kill/clear/copy actions, and web/mobile platform status banner.
+  - Routed terminal tabs seamlessly in `ShellEditorContainer.tsx` and `TabBar.tsx`.
+- **Persistent `.cntxt` Terminal Bus Document Format**:
+  - Implemented `cntxtTerminalBus.ts` serializing channel configuration and transcript buffers into YAML frontmatter and JSON state blocks for multi-session persistence.
+- **Host Command Bus & RPC Expansion**:
+  - Added `terminal` domain (`listChannels`, `spawn`, `sendInput`, `kill`) in `hostCommandBus.ts`.
+  - Exposed `window.CNTXT.terminal` namespace in `clientSdk.ts` for sandboxed mini panel apps.
+- **Settings Gating & Verification Gates**:
+  - Added user toggle `enableTerminalBus` under **Settings -> Experimental Features** (Pillar 7).
+  - 589/589 Vitest unit tests passing across 54 suites; 9/9 Rust security tests clean; 0 platform leaks across 175 files; 100% contract synchronization.
+
 ## [0.5.7] — 2026-10-11
 
 ### Code Block Clear Action & Testing Ergonomics

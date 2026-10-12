@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useSettingsStore } from '../../store/settingsStore';
+import { useSettingsStore, isOmniTerminalFeatureEnabled } from '../../store/settingsStore';
 import { useRuntimeBridge, useWindowDimensions, getWindowWidth, addWindowListener } from '../../adapters';
 import { safePersist } from '../../services/storageHelper';
 import { FileExplorer } from './FileExplorer';
@@ -20,7 +20,8 @@ import {
   Upload,
   Download,
   FolderGit2,
-  Layers
+  Layers,
+  Bot
 } from 'lucide-react';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
@@ -32,13 +33,14 @@ import { AppBuilderPanel } from '../panelApps/AppBuilderPanel';
 import { AppPanelPlaceholder } from '../panelApps/AppPanelPlaceholder';
 import { AppFrameHost } from '../panelApps/AppFrameHost';
 import { usePanelAppsStore } from '../../features/panelApps/state/panelAppsStore';
+import { OmniTerminalView } from '../OmniTerminal/OmniTerminalView';
 
 const STORAGE_KEY = 'contextpad_sidepanel_width';
 const DEFAULT_DESKTOP_WIDTH = 340;
 
 export const Sidebar: React.FC = () => {
   const bridge = useRuntimeBridge();
-  const { settings, toggleSidebar } = useSettingsStore();
+  const { settings, toggleSidebar, updateSettings } = useSettingsStore();
   const { width: windowWidth } = useWindowDimensions();
   const panelRef = useRef<HTMLElement>(null);
   const isOverlay = !!settings.sidebarOverlay;
@@ -278,6 +280,8 @@ export const Sidebar: React.FC = () => {
         return { title: 'Panel App Builder', icon: Layers };
       case 'panel-app':
         return { title: 'Panel App', icon: Sparkles };
+      case 'omni-terminal':
+        return { title: 'Omni Terminal', icon: Bot };
       default:
         return { title: 'Side Panel', icon: Sparkles };
     }
@@ -301,6 +305,44 @@ export const Sidebar: React.FC = () => {
         return <AppBuilderPanel onClose={() => toggleSidebar()} />;
       case 'panel-app':
         return <AppPanelPlaceholder onClose={() => toggleSidebar()} />;
+      case 'omni-terminal':
+        if (!isOmniTerminalFeatureEnabled(settings)) {
+          return (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center text-[var(--text-muted)] select-none">
+              <Bot className="w-10 h-10 text-[var(--accent-primary)] mb-3 opacity-30" />
+              <div className="font-semibold text-sm text-[var(--text-primary)] mb-1">Omni Terminal is Disabled</div>
+              <p className="text-xs max-w-xs mb-4 text-[var(--text-secondary)] leading-relaxed">
+                Omni Terminal is an experimental feature and is currently disabled. To activate it, go to Settings and enable <strong>Experimental Settings</strong>, <strong>Terminal Shells & Multi-Agent Bus</strong>, and <strong>Omni Terminal Mission Control</strong>.
+              </p>
+              <button
+                type="button"
+                onClick={() => useSettingsStore.getState().setActiveSidebarTab('settings')}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[var(--accent-primary)] text-white hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+              >
+                Open Settings
+              </button>
+            </div>
+          );
+        }
+        if (settings.isOmniFloating) {
+          return (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center text-[var(--text-muted)] select-none">
+              <Bot className="w-10 h-10 text-[var(--accent-primary)] mb-3 opacity-80" />
+              <div className="font-semibold text-sm text-[var(--text-primary)] mb-1">Omni Terminal is Popped Out</div>
+              <p className="text-xs max-w-xs mb-4">
+                The terminal session is active in the floating window. You can interact with it there or dock it back into this sidebar.
+              </p>
+              <button
+                type="button"
+                onClick={() => updateSettings({ isOmniFloating: false })}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--accent-primary)] text-[var(--button-primary-text)] hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+              >
+                Dock Back to Sidebar
+              </button>
+            </div>
+          );
+        }
+        return <OmniTerminalView />;
       default:
         return <TemplateManager />;
     }

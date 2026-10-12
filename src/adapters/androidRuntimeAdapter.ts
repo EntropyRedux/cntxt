@@ -9,7 +9,8 @@ import {
   BridgeFileResult,
   BridgeFolderResult,
   BridgeDirectoryEntry,
-  IPlatformBridge
+  IPlatformBridge,
+  ITerminalBridge
 } from '../ui-contract/bridgeContract';
 import { getAndroidBridge } from './androidBridgeHelper';
 import { useNotificationStore } from '../store/notificationStore';
@@ -27,6 +28,19 @@ export class AndroidRuntimeAdapter extends TauriRuntimeAdapter {
       }
       return null;
     }
+  };
+
+  public override terminal: ITerminalBridge = {
+    isAvailable: (): boolean => false,
+    spawn: async (): Promise<string> => {
+      throw new Error('Terminal PTY execution is not supported on Android');
+    },
+    write: async (): Promise<void> => {},
+    resize: async (): Promise<void> => {},
+    kill: async (): Promise<void> => {},
+    listSessions: async (): Promise<string[]> => [],
+    onData: (): (() => void) => () => {},
+    onExit: (): (() => void) => () => {}
   };
 
   public override shareContent = async (text: string): Promise<boolean> => {

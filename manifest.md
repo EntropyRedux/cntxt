@@ -1,27 +1,29 @@
 # ContextPad Component Manifest
 
 - **Project:** CNTXT (ContextPad) — Modular Frontend UI Development Platform
-- **Version:** 0.5.2
-- **Generated:** 2026-10-09
+- **Version:** 0.5.9
+- **Generated:** 2026-10-12
 - **Specification:** Solo Dev AI-Assisted Workflow Stage 2/3 Handoff Manifest
 
 ---
 
 ## 1. Architecture & Global Invariants
 
-All visual presenter components are 100% pure UI driven strictly by typed props and headless store hooks (`useRuntimeBridge`, `useTabStore`, `useSettingsStore`, `useRibbonStore`, `useAuthStore`, `usePanelAppsStore`). Zero direct native IPC calls (`invoke()`), un-quarantined browser globals, or unhandled persistence promises exist in visual layers.
+All visual presenter components are 100% pure UI driven strictly by typed props and headless store hooks (`useRuntimeBridge`, `useTabStore`, `useSettingsStore`, `useRibbonStore`, `useAuthStore`, `usePanelAppsStore`, `useTerminalStore`, `useOmniTerminalStore`). Zero direct native IPC calls (`invoke()`), un-quarantined browser globals, or unhandled persistence promises exist in visual layers.
 
 ### Background Processes & Gating
-All background processes (live token estimation, autosave loop, live markdown sync) are strictly gated under **Settings -> Experimental** and disabled or throttled by default:
+All background processes (live token estimation, autosave loop, live markdown sync, terminal streaming, and Omni Terminal dual-bus sync) are strictly gated under **Settings -> Experimental** and disabled or throttled by default:
 - Autosave Interval: Configured in `useSettingsStore` (`settings.autosaveInterval`, default: 30000ms).
 - Live Token Estimation: Configured in `TokenAnalytics.tsx` and `TokenEstimator.ts`.
 - Experimental Settings Visibility: Controlled by `settings.enableExperimentalSettings` (default: `false`).
+- Terminal Bus Engine: Controlled by `settings.enableTerminalBus` (default: `false`).
+- Omni Terminal Mission Control: Controlled by `settings.enableOmniTerminal` (default: `false`, requires both Experimental Settings and Terminal Bus enabled).
 
 ### Quality & Verification Gates
 - Playwright 1.63.0 suite (`npm run test:e2e`): 24 Chromium tests green.
-- Unit suite: 417 Vitest tests across 41 suites (`npm test`) 100% passing.
-- Native Rust security suite: 8 tests passing (`cargo test`) verifying path validation, URL character filtering, system root protection, and session token authorization.
-- Platform Purity: 0 platform leaks across 161 files (`npm run lint`), 100% contract parity.
+- Unit suite: 618 Vitest tests across 58 suites (`npm test`) 100% passing.
+- Native Rust security suite: 9 tests passing (`cargo test`) verifying path validation, URL character filtering, system root protection, PTY command sanitization, and session token authorization.
+- Platform Purity: 0 platform leaks across 185 files (`npm run lint`), 100% contract parity.
 
 ---
 
@@ -58,6 +60,7 @@ All background processes (live token estimation, autosave loop, live markdown sy
 | `Editor` | `src/components/Editor/Editor.tsx` | `{ tabId, content, onChange, onCursorChange }` | CodeMirror Theme Tokens (`theme/index.ts`) | None | Autosave timer | `tests/editor.contract.md` | PORT AS-IS |
 | `FloatingSearch` | `src/components/Editor/FloatingSearch.tsx` | In-editor floating search & replace | `--card-bg`, `--card-border`, `--text-primary`, `--accent-primary` | None | None | `tests/findReplace.test.ts` | PORT AS-IS |
 | `LivePreview` | `src/components/Preview/LivePreview.tsx` | `{ content, isVisible }` | `--bg-main`, `--text-primary`, `--card-bg`, `--card-border` | None | Mermaid / KaTeX render cache | `tests/livePreview.contract.md` | PORT AS-IS |
+| `TerminalView` | `src/components/Terminal/TerminalView.tsx` | Pure Presenter | `--card-bg`, `--card-border`, `--text-primary`, `--accent-primary` | None | PTY event streaming | `tests/terminalStore.test.ts` | PORT AS-IS |
 
 ### Sidebar Panels & Utilities
 | Component | Location | Props Contract | Theme Tokens Used | Mock Data Used | Background Processes | Test Contract | Port Status |

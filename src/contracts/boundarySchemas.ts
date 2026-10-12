@@ -23,7 +23,17 @@ import {
   WorkspaceWriteFilePayload,
   TemplateApplyPayload,
   ActionExecutePayload,
-  NotifyPayload
+  NotifyPayload,
+  TerminalSpawnPayload,
+  TerminalSendInputPayload,
+  TerminalKillPayload,
+  TerminalResizePayload,
+  OmniAgentRole,
+  OmniShellSpawnMode,
+  OmniSessionStatus,
+  OmniAgentProfile,
+  OmniChatMessage,
+  OmniSession
 } from '../../contracts/data_shapes';
 
 export const SupportedLanguageSchema: z.ZodType<SupportedLanguage> = z.enum([
@@ -38,7 +48,7 @@ export const SupportedLanguageSchema: z.ZodType<SupportedLanguage> = z.enum([
   'text'
 ]);
 
-export const TabTypeSchema = z.enum(['document', 'template', 'scratchpad']);
+export const TabTypeSchema = z.enum(['document', 'template', 'scratchpad', 'terminal']);
 
 export const TabSchema: z.ZodType<Tab> = z.object({
   id: z.string().min(1),
@@ -318,6 +328,7 @@ export const CntxtRpcDomainSchema = z.enum([
   'templates',
   'actions',
   'notify',
+  'terminal',
 ]);
 
 export const CntxtRpcRequestSchema: z.ZodType<CntxtRpcRequest> = z.object({
@@ -424,4 +435,126 @@ export function validateActionExecute(data: unknown) {
 
 export function validateNotify(data: unknown) {
   return NotifyPayloadSchema.safeParse(data);
+}
+
+// ==========================================
+// Terminal Bus Validation (FG-17)
+// ==========================================
+
+export const TerminalSpawnPayloadSchema: z.ZodType<TerminalSpawnPayload> = z.object({
+  id: z.string().trim().min(1).max(64),
+  name: z.string().trim().min(1).max(64),
+  command: z.string().trim().min(1),
+  args: z.array(z.string()).optional(),
+  cwd: SafeRelativePathSchema.optional(),
+});
+
+export const TerminalSendInputPayloadSchema: z.ZodType<TerminalSendInputPayload> = z.object({
+  channelId: z.string().trim().min(1),
+  data: z.string(),
+});
+
+export const TerminalKillPayloadSchema: z.ZodType<TerminalKillPayload> = z.object({
+  channelId: z.string().trim().min(1),
+});
+
+export const TerminalResizePayloadSchema: z.ZodType<TerminalResizePayload> = z.object({
+  channelId: z.string().trim().min(1),
+  cols: z.number().int().min(10).max(500),
+  rows: z.number().int().min(2).max(200),
+});
+
+export function validateTerminalSpawn(data: unknown) {
+  return TerminalSpawnPayloadSchema.safeParse(data);
+}
+
+export function validateTerminalSendInput(data: unknown) {
+  return TerminalSendInputPayloadSchema.safeParse(data);
+}
+
+export function validateTerminalKill(data: unknown) {
+  return TerminalKillPayloadSchema.safeParse(data);
+}
+
+export function validateTerminalResize(data: unknown) {
+  return TerminalResizePayloadSchema.safeParse(data);
+}
+
+// ==========================================
+// Omni Terminal Boundary Schemas (FG-18)
+// ==========================================
+
+export const OmniAgentRoleSchema: z.ZodType<OmniAgentRole> = z.enum([
+  'Auditor Agent',
+  'Prod Agent',
+  'Tester Agent',
+  'Custom'
+]);
+
+export const OmniShellSpawnModeSchema: z.ZodType<OmniShellSpawnMode> = z.enum([
+  'headless',
+  'external-window'
+]);
+
+export const OmniSessionStatusSchema: z.ZodType<OmniSessionStatus> = z.enum([
+  'idle',
+  'running',
+  'paused',
+  'completed'
+]);
+
+export const OmniAgentProfileSchema: z.ZodType<OmniAgentProfile> = z.object({
+  id: z.string().trim().min(1),
+  name: z.string().trim().min(1),
+  handle: z.string().trim().min(1).regex(/^[a-zA-Z0-9_-]+$/),
+  role: OmniAgentRoleSchema,
+  command: z.string().trim().min(1),
+  spawnMode: OmniShellSpawnModeSchema,
+  systemDirectives: z.string().optional(),
+  templateId: z.string().optional(),
+  channelId: z.string().optional(),
+  status: z.enum(['idle', 'starting', 'busy', 'waiting_permission', 'stopped', 'error']),
+  color: z.string().optional(),
+});
+
+export const OmniChatMessageSchema: z.ZodType<OmniChatMessage> = z.object({
+  id: z.string().min(1),
+  sessionId: z.string().min(1),
+  senderId: z.string().min(1),
+  senderName: z.string().min(1),
+  targetHandle: z.string().optional(),
+  content: z.string(),
+  rawTerminalOutput: z.string().optional(),
+  thought: z.string().optional(),
+  annotatedOutput: z.string().optional(),
+  timestamp: z.string().min(1),
+  isPinnedToOutput: z.boolean(),
+  exitCode: z.number().int().optional(),
+  color: z.string().optional(),
+});
+
+export const OmniSessionSchema: z.ZodType<OmniSession> = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().min(1),
+  targetFolder: z.string().min(1),
+  workspacePath: z.string().optional(),
+  rawFilePath: z.string().min(1),
+  outputFilePath: z.string().min(1),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  pinnedAgents: z.array(OmniAgentProfileSchema),
+  status: OmniSessionStatusSchema,
+  activeTurnId: z.string().optional(),
+});
+
+export function validateOmniAgentProfile(data: unknown) {
+  return OmniAgentProfileSchema.safeParse(data);
+}
+
+export function validateOmniChatMessage(data: unknown) {
+  return OmniChatMessageSchema.safeParse(data);
+}
+
+export function validateOmniSession(data: unknown) {
+  return OmniSessionSchema.safeParse(data);
 }

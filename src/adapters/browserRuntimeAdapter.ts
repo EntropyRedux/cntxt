@@ -14,7 +14,8 @@ import {
   BridgeFileResult, 
   BridgeFolderResult,
   BridgeDirectoryEntry,
-  SupportedLanguage 
+  SupportedLanguage,
+  ITerminalBridge
 } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from './storageKeys';
 import { browserDB } from './browserIndexedDB';
@@ -536,4 +537,17 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
   public async getSessionToken(): Promise<string> {
     return 'browser-session-token';
   }
+
+  public terminal: ITerminalBridge = {
+    isAvailable: (): boolean => false,
+    spawn: async (): Promise<string> => {
+      throw new Error('Terminal PTY execution is only available in the desktop application');
+    },
+    write: async (): Promise<void> => {},
+    resize: async (): Promise<void> => {},
+    kill: async (): Promise<void> => {},
+    listSessions: async (): Promise<string[]> => [],
+    onData: (): (() => void) => () => {},
+    onExit: (): (() => void) => () => {}
+  };
 }

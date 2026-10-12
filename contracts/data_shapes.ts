@@ -21,7 +21,7 @@ export type SupportedLanguage =
   | 'css' 
   | 'text';
 
-export type TabType = 'document' | 'template' | 'scratchpad';
+export type TabType = 'document' | 'template' | 'scratchpad' | 'terminal';
 
 export interface DocumentContent {
   raw: string;
@@ -40,6 +40,7 @@ export interface Tab {
   isDirty: boolean;
   language: SupportedLanguage;
   tabType?: TabType;
+  channelId?: string;
   lastModifiedTime?: number;
   pinnedTabId?: string;
   cursorLine?: number;
@@ -145,7 +146,7 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   showSidebar: boolean;
   showRibbon?: boolean;
   showMenuBar?: boolean;
-  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'tokens' | 'settings' | 'app-builder' | 'panel-app';
+  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'tokens' | 'settings' | 'app-builder' | 'panel-app' | 'omni-terminal';
   showLivePreview: boolean;
   editorMode: 'raw' | 'rendered';
   enableMarkdownRendering: boolean;
@@ -164,6 +165,11 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   enableAutosave: boolean;
   enableLiveDomSync: boolean;
   enableLiveMarkdownSync?: boolean;
+  enableTerminalBus?: boolean;
+  enableOmniTerminal?: boolean;
+  omniStorageFolder?: string;
+  isOmniFloating?: boolean;
+  omniFloatingPosition?: { x: number; y: number };
   autosaveIntervalMs?: number;
 
   autocompleteConfig: AutocompleteConfig;
@@ -668,7 +674,7 @@ export interface PanelAppRecord {
 // 11. Host Command Bus & RPC Domain Shapes (FG-16)
 // ==========================================
 
-export type CntxtRpcDomain = 'editor' | 'tabs' | 'workspace' | 'templates' | 'actions' | 'notify';
+export type CntxtRpcDomain = 'editor' | 'tabs' | 'workspace' | 'templates' | 'actions' | 'notify' | 'terminal';
 
 export type CntxtRpcErrorCode =
   | 'NOT_FOUND'
@@ -766,4 +772,116 @@ export interface NotifyPayload {
   title?: string;
   message: string;
   duration?: number;
+}
+
+// ==========================================
+// 12. Terminal Bus & Multi-Agent Domain Shapes (FG-17)
+// ==========================================
+
+export type TerminalChannelStatus = 'idle' | 'running' | 'exited' | 'error';
+export type TerminalStreamType = 'stdout' | 'stderr' | 'system';
+
+export interface TerminalChannelConfig {
+  id: string;
+  name: string;
+  command?: string;
+  args?: string[];
+  cwd?: string;
+  env?: Record<string, string>;
+}
+
+export interface TerminalChunkEntry {
+  t: number;
+  stream: TerminalStreamType;
+  data: string;
+}
+
+export interface TerminalSessionManifest {
+  name: string;
+  type: 'terminal-bus';
+  version: string;
+  channels: TerminalChannelConfig[];
+}
+
+export interface TerminalSpawnPayload {
+  id: string;
+  name: string;
+  command: string;
+  args?: string[];
+  cwd?: string;
+}
+
+export interface TerminalSendInputPayload {
+  channelId: string;
+  data: string;
+}
+
+export interface TerminalKillPayload {
+  channelId: string;
+}
+
+export interface TerminalResizePayload {
+  channelId: string;
+  cols: number;
+  rows: number;
+}
+
+export interface TerminalChannelSummaryResult {
+  id: string;
+  name: string;
+  status: TerminalChannelStatus;
+  exitCode?: number | null;
+  cwd?: string;
+}
+
+// ==========================================
+// 13. Omni Terminal & Multi-Agent Mission Control (FG-18)
+// ==========================================
+
+export type OmniAgentRole = 'Auditor Agent' | 'Prod Agent' | 'Tester Agent' | 'Custom';
+export type OmniShellSpawnMode = 'headless' | 'external-window';
+export type OmniSessionStatus = 'idle' | 'running' | 'paused' | 'completed';
+
+export interface OmniAgentProfile {
+  id: string;
+  name: string;
+  handle: string;
+  role: OmniAgentRole;
+  command: string;
+  spawnMode: OmniShellSpawnMode;
+  systemDirectives?: string;
+  templateId?: string;
+  channelId?: string;
+  status: 'idle' | 'starting' | 'busy' | 'waiting_permission' | 'stopped' | 'error';
+  color?: string;
+}
+
+export interface OmniChatMessage {
+  id: string;
+  sessionId: string;
+  senderId: 'user' | string;
+  senderName: string;
+  targetHandle?: string;
+  content: string;
+  rawTerminalOutput?: string;
+  thought?: string;
+  annotatedOutput?: string;
+  timestamp: string;
+  isPinnedToOutput: boolean;
+  exitCode?: number;
+  color?: string;
+}
+
+export interface OmniSession {
+  id: string;
+  title: string;
+  targetFolder: string;
+  workspacePath?: string;
+  rawFilePath: string;
+  outputFilePath: string;
+  createdAt: string;
+  updatedAt: string;
+  pinnedAgents: OmniAgentProfile[];
+  status: OmniSessionStatus;
+  activeTurnId?: string;
 }

@@ -993,6 +993,40 @@ export const SettingsPanel: React.FC = () => {
                 className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer shrink-0 mt-0.5"
               />
             </div>
+
+            {/* 4. Terminal Shells & Multi-Agent Bus */}
+            <div className="flex items-start justify-between gap-2 border-t border-[var(--border-subtle)] pt-2">
+              <div>
+                <span className="text-xs text-[var(--text-primary)] block font-medium">Terminal Shells & Multi-Agent Bus</span>
+                <span className="text-[10px] text-[var(--text-muted)] leading-tight block mt-0.5">
+                  Allow persistent PTY terminal shell sessions and background multi-agent orchestration buses in .cntxt documents.
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                id="toggle-terminal-bus"
+                checked={settings.enableTerminalBus ?? false}
+                onChange={(e) => updateSettings({ enableTerminalBus: e.target.checked })}
+                className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer shrink-0 mt-0.5"
+              />
+            </div>
+
+            {/* Toggle: Omni Terminal Subsystem */}
+            <div className="flex items-start justify-between gap-2 pt-1 border-t border-[var(--border-subtle)]">
+              <div>
+                <span className="text-xs text-[var(--text-primary)] block font-medium">Omni Terminal Mission Control</span>
+                <span className="text-[10px] text-[var(--text-muted)] leading-tight block mt-0.5">
+                  Enable the collaborative multi-agent mission control panel with dual .cntxt logging and pop-out floating chat. Requires both Terminal Shells & Experimental Settings enabled.
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                id="toggle-omni-terminal"
+                checked={settings.enableOmniTerminal ?? false}
+                onChange={(e) => updateSettings({ enableOmniTerminal: e.target.checked })}
+                className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer shrink-0 mt-0.5"
+              />
+            </div>
           </div>
         )}
       </div>

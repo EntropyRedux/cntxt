@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Tab, SupportedLanguage } from '../../contracts/data_shapes';
+import { Tab, SupportedLanguage, TabType } from '../../contracts/data_shapes';
 import { WELCOME_DOCUMENT } from '../constants/welcomeDoc';
 import { MARKDOWN_GUIDE_DOCUMENT } from '../constants/markdownGuideDoc';
 import { POWER_USER_GUIDE_DOCUMENT } from '../constants/powerUserGuideDoc';
@@ -24,7 +24,7 @@ interface TabState {
 
   // Actions
   setActiveTabId: (id: string) => void;
-  createTab: (title?: string, content?: string, language?: SupportedLanguage, filePath?: string | null, pinnedTabId?: string | null) => string;
+  createTab: (title?: string, content?: string, language?: SupportedLanguage, filePath?: string | null, pinnedTabId?: string | null, tabType?: TabType) => string;
   closeTab: (tabId: string) => void;
   closeAllTabs: () => void;
   closeOtherTabs: (keepTabId: string) => void;
@@ -40,6 +40,7 @@ interface TabState {
   resetWelcomeTab: () => Promise<void>;
   openMarkdownGuideTab: () => string;
   openPowerUserGuideTab: () => string;
+  openTerminalTab: (title?: string, channelId?: string) => string;
   restoreFullContent: (tabId: string) => void;
   initializeTabs: (storage?: IStorageBridge, disableDemoWelcome?: boolean) => Promise<void>;
 }
@@ -182,7 +183,7 @@ export const useTabStore = create<TabState>((set, get) => ({
     }
   },
 
-  createTab: (title = 'Untitled.md', content = '', language: SupportedLanguage = 'markdown', filePath = null, pinnedTabId?: string) => {
+  createTab: (title = 'Untitled.md', content = '', language: SupportedLanguage = 'markdown', filePath = null, pinnedTabId?: string, tabType: TabType = 'document') => {
     const id = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     const newTab: Tab = {
       id,
@@ -192,6 +193,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       folderPath: null,
       isDirty: false,
       language,
+      tabType,
       lastModifiedTime: Date.now(),
       cursorLine: 1,
       cursorCol: 1,
@@ -608,6 +610,38 @@ export const useTabStore = create<TabState>((set, get) => ({
     set({ tabs: updated });
     writeTabCache(updated, activeTabId);
     saveTabsMeta(updated, activeTabId);
+  },
+
+  openTerminalTab: (title = 'Terminal', channelId?: string) => {
+    const { tabs } = get();
+    if (channelId) {
+      const existing = tabs.find((t) => t.channelId === channelId);
+      if (existing) {
+        set({ activeTabId: existing.id });
+        return existing.id;
+      }
+    }
+
+    const id = `term_tab_${Date.now()}`;
+    const newTab: Tab = {
+      id,
+      title,
+      content: '',
+      filePath: null,
+      folderPath: null,
+      isDirty: false,
+      language: 'text',
+      tabType: 'terminal',
+      channelId,
+      lastModifiedTime: Date.now(),
+      cursorLine: 1,
+      cursorCol: 1,
+    };
+    const newTabs = [...tabs, newTab];
+    set({ tabs: newTabs, activeTabId: id });
+    writeTabCache(newTabs, id);
+    saveTabsMeta(newTabs, id);
+    return id;
   }
 }));
 
@@ -615,7 +649,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 function saveTabsMeta(tabs: Tab[], activeTabId: string) {
   if (!activeStorage) return;
   try {
-    const metaOnly = tabs.map(({ id, title, filePath, folderPath, isDirty, language, lastModifiedTime, isPinned, pinnedTabId }) => ({
+    const metaOnly = tabs.map(({ id, title, filePath, folderPath, isDirty, language, lastModifiedTime, isPinned, pinnedTabId, tabType }) => ({
       id,
       title,
       filePath,
@@ -624,7 +658,8 @@ function saveTabsMeta(tabs: Tab[], activeTabId: string) {
       language,
       lastModifiedTime,
       isPinned,
-      pinnedTabId
+      pinnedTabId,
+      tabType
     }));
     safePersist(activeStorage, STORAGE_KEYS.TABS_META, JSON.stringify(metaOnly), 'tabs metadata');
     safePersist(activeStorage, STORAGE_KEYS.ACTIVE_TAB_ID, activeTabId, 'active tab id');

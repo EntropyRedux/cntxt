@@ -6,9 +6,10 @@ import {
   Zap, 
   Settings,
   User,
-  FolderGit2
+  FolderGit2,
+  Bot
 } from 'lucide-react';
-import { useSettingsStore } from '../../store/settingsStore';
+import { useSettingsStore, isOmniTerminalFeatureEnabled } from '../../store/settingsStore';
 import { useAuthStore } from '../../store/authStore';
 import { ViewSettings } from '../../types';
 import { AuthPopover } from '../Auth/AuthPopover';
@@ -33,11 +34,14 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertica
   const userButtonRef = useRef<HTMLButtonElement>(null);
   const touchUserButtonRef = useRef<HTMLButtonElement>(null);
 
+  const isOmniEnabled = isOmniTerminalFeatureEnabled(settings);
+
   const navItems: { id: ViewSettings['activeSidebarTab']; label: string; ariaLabel: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'explorer', label: 'File Explorer (Ctrl+Shift+E)', ariaLabel: 'File Explorer', icon: FolderTree },
     { id: 'outline', label: 'Document Outline (Ctrl+Shift+O)', ariaLabel: 'Document Outline', icon: ListTree },
     { id: 'templates', label: 'Templates & Variables (Ctrl+Alt+T)', ariaLabel: 'Templates & Variables', icon: LayoutTemplate },
     { id: 'actions', label: 'Action Scripts & Prompts', ariaLabel: 'Action Scripts', icon: Zap },
+    ...(isOmniEnabled ? [{ id: 'omni-terminal' as const, label: 'Omni Terminal (Ctrl+Shift+T)', ariaLabel: 'Omni Terminal', icon: Bot }] : []),
   ];
 
   const handleTabClick = (tabId: ViewSettings['activeSidebarTab']) => {

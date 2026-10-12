@@ -18,6 +18,9 @@ import { Button } from '../primitives/Button';
 const Editor = lazy(() =>
   import('../components/Editor/Editor').then(m => ({ default: m.Editor }))
 );
+const TerminalView = lazy(() =>
+  import('../components/Terminal/TerminalView').then(m => ({ default: m.TerminalView }))
+);
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ShellEditorContainerProps {
@@ -71,19 +74,29 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
       {/* Editor Surface or Empty State */}
       <div className="flex-1 flex overflow-hidden relative min-h-0">
         {activeTab ? (
-          <div className="w-full h-full overflow-hidden min-h-0">
-            <div className="h-full overflow-hidden min-h-0 w-full">
-              <ErrorBoundary fallbackTitle="Editor Canvas Error">
+          activeTab.tabType === 'terminal' ? (
+            <div className="w-full h-full overflow-hidden min-h-0">
+              <ErrorBoundary fallbackTitle="Terminal Canvas Error">
                 <Suspense fallback={<EditorSkeleton />}>
-                  <Editor
-                    tabId={activeTab.id}
-                    content={activeTab.content}
-                    language={activeTab.language}
-                  />
+                  <TerminalView defaultChannelId={activeTab.channelId || activeTab.id} />
                 </Suspense>
               </ErrorBoundary>
             </div>
-          </div>
+          ) : (
+            <div className="w-full h-full overflow-hidden min-h-0">
+              <div className="h-full overflow-hidden min-h-0 w-full">
+                <ErrorBoundary fallbackTitle="Editor Canvas Error">
+                  <Suspense fallback={<EditorSkeleton />}>
+                    <Editor
+                      tabId={activeTab.id}
+                      content={activeTab.content}
+                      language={activeTab.language}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
+              </div>
+            </div>
+          )
         ) : isHydrating ? (
           /* Cold-start: show skeleton while IPC loads saved tabs.
              The LCP element becomes a shell chrome element (TitleBar/TabBar)

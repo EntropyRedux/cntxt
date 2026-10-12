@@ -103,7 +103,27 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
       const stored = await activeStorage.getItem(STORAGE_KEYS.TEMPLATES);
       let templates: Template[] = [];
       if (stored) {
-        templates = JSON.parse(stored);
+        try {
+          templates = JSON.parse(stored);
+        } catch {
+          templates = [];
+        }
+      }
+
+      // Seed defaults on initial startup or ensure script templates are present
+      if (templates.length === 0) {
+        const { DEFAULT_TEMPLATES } = await import('../constants/defaultPresets');
+        templates = [...DEFAULT_TEMPLATES];
+        await activeStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(templates));
+      } else {
+        const { DEFAULT_TEMPLATES } = await import('../constants/defaultPresets');
+        const scriptDefaults = DEFAULT_TEMPLATES.filter((t) => t.category === 'SCRIPTS');
+        const existingIds = new Set(templates.map((t) => t.id));
+        const missingScripts = scriptDefaults.filter((s) => !existingIds.has(s.id));
+        if (missingScripts.length > 0) {
+          templates = [...templates, ...missingScripts];
+          await activeStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(templates));
+        }
       }
 
       // 2. Load persisted UI state (category order, collapsed categories, pinned items)
