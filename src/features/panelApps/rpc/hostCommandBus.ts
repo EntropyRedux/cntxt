@@ -222,6 +222,14 @@ export class HostCommandBus {
           throw { code: 'VALIDATION_ERROR', message: validated.error.message };
         }
         const { title, content, language, filePath } = validated.data;
+        if (filePath) {
+          const normPath = normalizePath(filePath).toLowerCase();
+          const existing = tabStore.tabs.find((t) => t.filePath && normalizePath(t.filePath).toLowerCase() === normPath);
+          if (existing) {
+            tabStore.setActiveTabId(existing.id);
+            return { tabId: existing.id, focused: true };
+          }
+        }
         const isSupportedLang = (l?: string): l is SupportedLanguage =>
           ['markdown', 'javascript', 'typescript', 'python', 'json', 'yaml', 'html', 'css', 'text'].includes(
             l as SupportedLanguage
@@ -389,6 +397,52 @@ export class HostCommandBus {
         }
 
         await this.bridge.fs.saveFile(targetFullPath, content);
+        return { writtenTo: 'disk', path: relativePath };
+      }
+
+      case 'appendToFile': {
+        const validated = validateWorkspaceWriteFile(payload);
+        if (!validated.success) {
+          throw { code: 'VALIDATION_ERROR', message: validated.error.message };
+        }
+        if (!storedWorkspace) {
+          throw { code: 'PERMISSION_DENIED', message: 'No active workspace or default apps directory opened' };
+        }
+
+        const { relativePath, content } = validated.data;
+        const cleanRel = relativePath.replace(/^[\/\\]+/, '');
+        const targetFullPath = `${storedWorkspace}/${cleanRel}`;
+
+        if (!isPathInsideRoot(storedWorkspace, targetFullPath)) {
+          throw { code: 'PATH_TRAVERSAL', message: 'Access denied: Path escapes workspace root' };
+        }
+
+        let existing = '';
+        try {
+          const current = await this.bridge.fs.readFile(targetFullPath);
+          if (current !== null && current !== undefined) existing = current;
+        } catch {
+          existing = '';
+        }
+
+        const sep = (existing && !existing.endsWith('\n')) ? '\n' : '';
+        const finalContent = existing + sep + content;
+
+        const tabStore = useTabStore.getState();
+        const normTarget = normalizePath(targetFullPath).toLowerCase();
+        const dirtyTab = tabStore.tabs.find((t) => {
+          if (!t.filePath) return false;
+          const normTab = normalizePath(t.filePath).toLowerCase();
+          return (normTab === normTarget || normTab.endsWith(normTarget)) && t.isDirty;
+        });
+
+        if (dirtyTab) {
+          tabStore.updateTabContent(dirtyTab.id, finalContent, true);
+          editorRegistry.setContent(dirtyTab.id, finalContent);
+          return { writtenTo: 'tab_buffer', tabId: dirtyTab.id };
+        }
+
+        await this.bridge.fs.saveFile(targetFullPath, finalContent);
         return { writtenTo: 'disk', path: relativePath };
       }
 

@@ -5,6 +5,27 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.11] — 2026-10-14
+
+### HTML Panel Apps Platform Resilience & Sandbox Friction Resolution
+- **Injected SDK Clean Escaping & Zero-Syntax-Error Invariant (`clientSdk.ts`)**:
+  - Replaced escaping-prone regex string template literals in `sanitizeRelPath` with robust character indexing loops (`.charAt(0)`).
+  - Used `String.fromCharCode(10)` in `workspace.appendToFile` to eliminate template-string newline collapse that caused fatal `SyntaxError: Invalid or unexpected token` on line 1 of the injected SDK.
+- **Full Host SDK Namespace Support (`clientSdk.ts` & `hostCommandBus.ts`)**:
+  - Implemented `workspace.appendToFile(relativePath, text)` across both client SDK and host command bus, seamlessly handling new and existing markdown files with dirty tab buffer routing.
+  - Upgraded `tabs.openFile(filePath, options)` to read existing content from workspace storage, derive tab titles dynamically, and satisfy `TabCreatePayloadSchema` boundary validation.
+  - Added full aliases for `editor.insertAtCursor`, `editor.getSelectedText`, `workspace.createVirtualTab`, `workspace.getTabContent`, and `workspace.setTabContent`.
+  - Added existing tab focus detection in `tabs.create` to prevent duplicate open tabs for the same file.
+- **Container-Level Regex Auto-Healing (`AppPanelPlaceholder.tsx`)**:
+  - Injected automatic pre-processing in `preparedHtml` that automatically heals pervasive LLM markdown checklist regex hallucinations (e.g. `/^([\s]*-\s*[)[ xX](])/` -> `/^([\s]*-\s*\[)[ xX](\])/`) before passing HTML to the iframe, preventing syntax errors from freezing button event listeners.
+- **Unconditional Sandboxed Storage Polyfill & Error Observability (`AppPanelPlaceholder.tsx`)**:
+  - Unconditionally overrides `window.localStorage`, `window.sessionStorage`, and their `Window.prototype` accessors to eliminate fatal `SecurityError` in sandboxed iframes.
+  - Hydrated persistent application state directly into `window.__INIT_STORE__` on iframe load.
+  - Added iframe error telemetry (`CNTXT_APP_ERROR`) posting unhandled exceptions and syntax errors to the CNTXT host container, displaying an actionable warning badge in the panel header and triggering user notifications.
+- **AI App Builder Blueprint Prompt Hardening (`promptBuilder.ts`)**:
+  - Documented `appendToFile`, `insertAtCursor`, `openFile`, and `createVirtualTab` in the Blueprint system prompt.
+  - Added explicit checklist regex syntax guidelines to prevent future LLM inverted-bracket hallucinations.
+
 ## [0.5.10] — 2026-10-14
 
 ### App Builder & Panel Apps Platform Resilience & SDK Remediation

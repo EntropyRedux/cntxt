@@ -11,6 +11,14 @@ export function buildClientSdkInjection(appId: string): string {
       var pendingRequests = {};
       var reqCounter = 0;
 
+      function sanitizeRelPath(p) {
+        var s = String(p || '');
+        while (s.charAt(0) === '/' || s.charAt(0) === '\\\\') {
+          s = s.slice(1);
+        }
+        return s;
+      }
+
       // Handle RPC responses from the CNTXT host window
       window.addEventListener('message', function(ev) {
         if (!ev.data || typeof ev.data !== 'object') return;
@@ -99,11 +107,17 @@ export function buildClientSdkInjection(appId: string): string {
         getSelection: function() {
           return callHost('editor', 'getSelection');
         },
+        getSelectedText: function() {
+          return callHost('editor', 'getSelection');
+        },
         insert: function(options) {
           var payload = typeof options === 'string' ? { text: options, mode: 'cursor' } : options;
           return callHost('editor', 'insert', payload);
         },
         insertText: function(text) {
+          return callHost('editor', 'insert', { text: String(text || ''), mode: 'cursor' });
+        },
+        insertAtCursor: function(text) {
           return callHost('editor', 'insert', { text: String(text || ''), mode: 'cursor' });
         },
         getActiveDocument: function() {
@@ -118,9 +132,28 @@ export function buildClientSdkInjection(appId: string): string {
         create: function(options) {
           return callHost('tabs', 'create', options);
         },
-        openFile: function(filePath) {
-          var payload = typeof filePath === 'string' ? { filePath: filePath } : filePath;
-          return callHost('tabs', 'create', payload);
+        openFile: function(filePath, opts) {
+          var rawPath = typeof filePath === 'string' ? filePath : (filePath && filePath.filePath ? filePath.filePath : '');
+          var cleanPath = sanitizeRelPath(rawPath);
+          var parts = cleanPath.split('/');
+          var fallbackTitle = parts[parts.length - 1] || 'Document';
+          var title = (opts && opts.title) ? opts.title : (typeof filePath === 'object' && filePath.title ? filePath.title : fallbackTitle);
+          return window.CNTXT.workspace.readFile(cleanPath).then(function(res) {
+            var content = (res && typeof res === 'object' && 'content' in res) ? res.content : String(res || '');
+            return callHost('tabs', 'create', {
+              title: title,
+              content: content,
+              filePath: cleanPath,
+              language: 'markdown'
+            });
+          }).catch(function() {
+            return callHost('tabs', 'create', {
+              title: title,
+              content: '',
+              filePath: cleanPath,
+              language: 'markdown'
+            });
+          });
         },
         focus: function(tabId) {
           var payload = typeof tabId === 'string' ? { tabId: tabId } : tabId;
@@ -138,7 +171,7 @@ export function buildClientSdkInjection(appId: string): string {
         },
         readFile: function(relativePath) {
           var rawPath = typeof relativePath === 'string' ? relativePath : (relativePath && relativePath.relativePath ? relativePath.relativePath : '');
-          var cleanPath = String(rawPath || '').replace(/^[\/\\]+/, '');
+          var cleanPath = sanitizeRelPath(rawPath);
           var payload = typeof relativePath === 'string' ? { relativePath: cleanPath } : Object.assign({}, relativePath, { relativePath: cleanPath });
           return callHost('workspace', 'readFile', payload).then(function(res) {
             var str = (res && typeof res === 'object' && 'content' in res) ? res.content : String(res || '');
@@ -149,9 +182,40 @@ export function buildClientSdkInjection(appId: string): string {
         },
         writeFile: function(relativePath, content) {
           var rawPath = typeof relativePath === 'string' ? relativePath : (relativePath && relativePath.relativePath ? relativePath.relativePath : '');
-          var cleanPath = String(rawPath || '').replace(/^[\/\\]+/, '');
+          var cleanPath = sanitizeRelPath(rawPath);
           var payload = typeof relativePath === 'object' ? Object.assign({}, relativePath, { relativePath: cleanPath }) : { relativePath: cleanPath, content: content };
           return callHost('workspace', 'writeFile', payload);
+        },
+        appendToFile: function(relativePath, content) {
+          var rawPath = typeof relativePath === 'string' ? relativePath : (relativePath && relativePath.relativePath ? relativePath.relativePath : '');
+          var cleanPath = sanitizeRelPath(rawPath);
+          var textToAppend = typeof relativePath === 'object' && relativePath.content !== undefined ? relativePath.content : content;
+          var lf = String.fromCharCode(10);
+          return window.CNTXT.workspace.readFile(cleanPath).then(function(res) {
+            var cur = (res && typeof res === 'object' && 'content' in res) ? res.content : String(res || '');
+            var sep = (cur && cur.slice(-1) !== lf) ? lf : '';
+            var updated = cur + sep + String(textToAppend || '');
+            return window.CNTXT.workspace.writeFile(cleanPath, updated);
+          }).catch(function() {
+            return window.CNTXT.workspace.writeFile(cleanPath, String(textToAppend || ''));
+          });
+        },
+        createVirtualTab: function(title, content) {
+          return callHost('tabs', 'create', {
+            title: String(title || 'Document'),
+            content: String(content || ''),
+            language: 'markdown'
+          }).then(function(res) {
+            return (res && res.tabId) ? res.tabId : 'tab_' + Date.now();
+          });
+        },
+        getTabContent: function() {
+          return callHost('editor', 'getActiveDocument').then(function(doc) {
+            return (doc && typeof doc === 'object' && 'content' in doc) ? doc.content : '';
+          });
+        },
+        setTabContent: function(tabId, content) {
+          return callHost('editor', 'insert', { text: String(content || ''), mode: 'replace' });
         }
       };
 

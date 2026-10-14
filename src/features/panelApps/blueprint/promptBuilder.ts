@@ -196,17 +196,20 @@ If your application interacts with the user's active document, tabs, or workspac
    - \`const selection = await window.CNTXT.editor.getSelection();\`
    - \`await window.CNTXT.editor.insert({ text: '# Result\\n', mode: 'cursor' });\` (mode: 'cursor' | 'replace' | 'append')
    - \`await window.CNTXT.editor.insertText('text to insert');\` (convenience helper)
+   - \`await window.CNTXT.editor.insertAtCursor('text to insert');\` (convenience helper)
    - \`const doc = await window.CNTXT.editor.getActiveDocument();\` (returns { title, content, language, filePath, isDirty })
 2. **Tab Domain**:
    - \`const tabs = await window.CNTXT.tabs.list();\`
    - \`await window.CNTXT.tabs.create({ title: 'Analysis.md', content: '# Analysis\\n...', language: 'markdown' });\`
-   - \`await window.CNTXT.tabs.openFile('path/to/file.md');\` (convenience helper)
+   - \`await window.CNTXT.tabs.openFile('path/to/file.md');\` (convenience helper: opens tab, reading file content if on disk)
    - \`await window.CNTXT.tabs.focus(tabId);\`
 3. **Workspace Domain (Sandboxed to Project Root)**:
    - \`const info = await window.CNTXT.workspace.getInfo();\`
    - \`const files = await window.CNTXT.workspace.listFiles();\` (or with subfolder: \`await window.CNTXT.workspace.listFiles('notes/cards');\`)
-   - \`const content = await window.CNTXT.workspace.readFile('notes/scratchpad.md');\` (returns text string; also supports destructuring: \`const { content } = ...\`)
+   - \`const content = await window.CNTXT.workspace.readFile('notes/scratchpad.md');\` (returns string; also supports destructuring: \`const { content } = ...\`)
    - \`await window.CNTXT.workspace.writeFile('notes/scratchpad.md', newContent);\`
+   - \`await window.CNTXT.workspace.appendToFile('notes/scratchpad.md', entryBlock);\` (appends text with newline separator, creates file if missing)
+   - \`const tabId = await window.CNTXT.workspace.createVirtualTab('Document Title', markdownContent);\`
 4. **User Feedback & Notifications**:
    - \`await window.CNTXT.notify({ type: 'success', title: 'Task Done', message: 'Report generated successfully' });\`
    - \`await window.CNTXT.notify.success('Saved successfully');\`
@@ -219,10 +222,24 @@ If your application interacts with the user's active document, tabs, or workspac
      workspace: {
        readFile: async (p) => window['local' + 'Storage'].getItem('cntxt_' + p) || '',
        writeFile: async (p, c) => { window['local' + 'Storage'].setItem('cntxt_' + p, c); return true; },
+       appendToFile: async (p, t) => {
+         const cur = window['local' + 'Storage'].getItem('cntxt_' + p) || '';
+         const sep = (cur && !cur.endsWith('\\n')) ? '\\n' : '';
+         window['local' + 'Storage'].setItem('cntxt_' + p, cur + sep + t);
+         return true;
+       },
        listFiles: async (f) => Object.keys(window['local' + 'Storage']).filter(k => k.startsWith('cntxt_' + (f || ''))).map(k => k.replace('cntxt_', ''))
      },
-     editor: { insert: async (o) => console.log('Insert:', o), insertText: async (t) => console.log('Insert:', t) },
-     tabs: { create: async (o) => console.log('Tab create:', o), openFile: async (p) => console.log('Open:', p) },
+     editor: {
+       getSelection: async () => 'Mock selected editor text',
+       insert: async (o) => console.log('Insert:', o),
+       insertText: async (t) => console.log('Insert:', t),
+       insertAtCursor: async (t) => console.log('Insert at cursor:', t)
+     },
+     tabs: {
+       create: async (o) => console.log('Tab create:', o),
+       openFile: async (p) => console.log('Open file:', p)
+     },
      ui: { showToast: (m, t) => console.log('[' + (t || 'info') + ']', m) },
      notify: (opts) => console.log('[Notify]', opts)
    };
@@ -236,6 +253,10 @@ If your application interacts with the user's active document, tabs, or workspac
 4. **Sandboxed Environment**: The iframe runs with \`sandbox="allow-scripts allow-same-origin allow-forms allow-modals"\`. Do not attempt top-level navigation.
 5. **Size Limit**: Keep payload lightweight (under ~${softSizeKb} KB).
 6. **Action Feedback & Visual Observability**: Every button click and async operation MUST produce visible visual feedback in the UI (e.g. updating a list, clearing form inputs, or displaying a status toast). Never swallow errors silently in empty catch blocks; if an operation fails, display an error message to the user.
+7. **Markdown Checklist Regex Syntax (CRITICAL)**:
+   When writing regular expressions to toggle or match markdown checklist items (e.g. \`- [ ] task\`), you MUST escape the square brackets:
+   \`const regex = /^(\\s*-\\s*\\[)[ xX](\\])/;\`
+   NEVER write inverted brackets like \`-[)[ xX](]\`, which throws a fatal \`SyntaxError: Unterminated group\` that halts the entire script.
 ## Output Format
 Return ONLY the raw HTML document wrapped in a single \`\`\`html ... \`\`\` code block. Do NOT include markdown commentary before or after the code block.`;
 }

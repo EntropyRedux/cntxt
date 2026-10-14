@@ -41,6 +41,7 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
   const [manifest, setManifest] = useState<PanelAppManifest | null>(null);
   const [rawHtml, setRawHtml] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [showInfo, setShowInfo] = useState<boolean>(false);
   const [reloadKey, setReloadKey] = useState<number>(0);
@@ -195,6 +196,16 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
         });
         return;
       }
+
+      // 5. Runtime Error Observability
+      if (type === 'CNTXT_APP_ERROR' && (appId === activeApp.id || !appId)) {
+        const msg = e.data.message || 'Script error';
+        const loc = e.data.lineno ? ` (line ${e.data.lineno})` : '';
+        const fullErr = `${msg}${loc}`;
+        setRuntimeError(fullErr);
+        addNotification('Panel App Notice', `${activeApp.name}: ${fullErr}`, 'warning');
+        return;
+      }
     };
 
     window.addEventListener('message', handleMessage);
@@ -225,6 +236,7 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
     if (!activeApp) return;
     setLoading(true);
     setError(null);
+    setRuntimeError(null);
 
     try {
       let resolvedPath = activeApp.path;
@@ -317,6 +329,12 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
   const preparedHtml = useMemo(() => {
     if (!rawHtml || !activeApp) return '';
 
+    // Auto-heal pervasive LLM markdown checklist regex typo:
+    // e.g. lines[lineIndex].replace(/^([\s]*-\s*[)[ xX](])/, ...)
+    let cleanedHtml = rawHtml
+      .replace(/(\^?\(\[\\s\]\*-\\s\*)\[\)\s*\[\s*xX\s*\]\s*\(\]/g, '$1\\[([ xX])\\]')
+      .replace(/\[\)\s*\[\s*xX\s*\]\s*\(\]/g, '\\[([ xX])\\]');
+
     const isOffline = (manifest?.network ?? activeApp.network) === 'offline';
     const cspMeta = isOffline
       ? `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' data: blob:; script-src 'unsafe-inline' 'unsafe-eval' blob: data:; img-src data: blob:; font-src data: blob:; connect-src 'none';">`
@@ -326,9 +344,10 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
     const storeToken = 'local' + 'Storage';
     const sessToken = 'session' + 'Storage';
     const themeStyles = buildThemeInjection();
+    const initStoreJson = JSON.stringify(storageDataRef.current || storageData || {});
     const storageShim = `
       <script>
-        window.__INIT_STORE__ = window.__INIT_STORE__ || {};
+        window.__INIT_STORE__ = ${initStoreJson};
         window.__INIT_STATE__ = window.__INIT_STATE__ || null;
         (function() {
           var store = window.__INIT_STORE__ || {};
@@ -360,20 +379,44 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
           }
           var lsObj = createStorage(store, true);
           var ssObj = createStorage(sess, false);
+
+          // Unconditional robust isolated store polyfill for sandboxed iframe
           try {
-            var probe = window['${storeToken}'];
-            probe && probe.getItem('__probe__');
-          } catch(e) {
-            try { Object.defineProperty(window, '${storeToken}', { value: lsObj, configurable: true, writable: true }); } catch(err) {}
-            try { if (window.Window && window.Window.prototype) Object.defineProperty(window.Window.prototype, '${storeToken}', { get: function() { return lsObj; }, configurable: true }); } catch(err) {}
-          }
+            Object.defineProperty(window, '${storeToken}', {
+              get: function() { return lsObj; },
+              set: function() {},
+              configurable: true,
+              enumerable: true
+            });
+          } catch(e) {}
           try {
-            var sProbe = window['${sessToken}'];
-            sProbe && sProbe.getItem('__probe__');
-          } catch(e) {
-            try { Object.defineProperty(window, '${sessToken}', { value: ssObj, configurable: true, writable: true }); } catch(err) {}
-            try { if (window.Window && window.Window.prototype) Object.defineProperty(window.Window.prototype, '${sessToken}', { get: function() { return ssObj; }, configurable: true }); } catch(err) {}
-          }
+            if (window.Window && window.Window.prototype) {
+              Object.defineProperty(window.Window.prototype, '${storeToken}', {
+                get: function() { return lsObj; },
+                set: function() {},
+                configurable: true,
+                enumerable: true
+              });
+            }
+          } catch(err) {}
+          try {
+            Object.defineProperty(window, '${sessToken}', {
+              get: function() { return ssObj; },
+              set: function() {},
+              configurable: true,
+              enumerable: true
+            });
+          } catch(e) {}
+          try {
+            if (window.Window && window.Window.prototype) {
+              Object.defineProperty(window.Window.prototype, '${sessToken}', {
+                get: function() { return ssObj; },
+                set: function() {},
+                configurable: true,
+                enumerable: true
+              });
+            }
+          } catch(err) {}
 
           // Expose unified CNTXT_STORAGE bridge
           window.CNTXT_STORAGE = {
@@ -387,6 +430,28 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
               window.parent.postMessage({ type: 'CNTXT_STATE_SAVE', state: s, appId: '${activeApp.id}' }, '*');
             }
           };
+
+          // Runtime Error & Exception Observability
+          window.addEventListener('error', function(ev) {
+            try {
+              window.parent.postMessage({
+                type: 'CNTXT_APP_ERROR',
+                appId: '${activeApp.id}',
+                message: ev.message || 'Script error',
+                lineno: ev.lineno,
+                colno: ev.colno
+              }, '*');
+            } catch(e) {}
+          });
+          window.addEventListener('unhandledrejection', function(ev) {
+            try {
+              window.parent.postMessage({
+                type: 'CNTXT_APP_ERROR',
+                appId: '${activeApp.id}',
+                message: (ev.reason && (ev.reason.message || ev.reason.stack)) || String(ev.reason)
+              }, '*');
+            } catch(e) {}
+          });
 
           // Expose unified window.CNTXT SDK for panel apps (FG-16)
           ${buildClientSdkInjection(activeApp.id)}
@@ -415,20 +480,20 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
 
     // Place CSP and shim at start of head (APIs ready before app scripts)
     let fullDoc = '';
-    if (/<\/head>/i.test(rawHtml)) {
-      fullDoc = rawHtml
+    if (/<\/head>/i.test(cleanedHtml)) {
+      fullDoc = cleanedHtml
         .replace(/<head\b[^>]*>/i, (m) => `${m}\n${injectedMetaAndShim}`)
         .replace(/<\/head>/i, `${injectedTheme}\n</head>`);
-    } else if (/<head\b[^>]*>/i.test(rawHtml)) {
-      fullDoc = rawHtml.replace(/<head\b[^>]*>/i, (m) => `${m}\n${injectedMetaAndShim}\n${injectedTheme}`);
-    } else if (/<html\b[^>]*>/i.test(rawHtml)) {
-      fullDoc = rawHtml.replace(/<html\b[^>]*>/i, (m) => `${m}\n<head>${injectedMetaAndShim}\n${injectedTheme}</head>`);
+    } else if (/<head\b[^>]*>/i.test(cleanedHtml)) {
+      fullDoc = cleanedHtml.replace(/<head\b[^>]*>/i, (m) => `${m}\n${injectedMetaAndShim}\n${injectedTheme}`);
+    } else if (/<html\b[^>]*>/i.test(cleanedHtml)) {
+      fullDoc = cleanedHtml.replace(/<html\b[^>]*>/i, (m) => `${m}\n<head>${injectedMetaAndShim}\n${injectedTheme}</head>`);
     } else {
-      fullDoc = `<!doctype html><html><head>${injectedMetaAndShim}\n${injectedTheme}</head><body>${rawHtml}</body></html>`;
+      fullDoc = `<!doctype html><html><head>${injectedMetaAndShim}\n${injectedTheme}</head><body>${cleanedHtml}</body></html>`;
     }
 
     return fullDoc;
-  }, [rawHtml, manifest, activeApp]);
+  }, [rawHtml, manifest, activeApp, storageData]);
 
   // Sync prepared HTML into central keep-alive cache
   useEffect(() => {
@@ -585,6 +650,22 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
             <span className="font-semibold text-xs text-[var(--text-primary)] truncate">{activeApp.name}</span>
           </div>
           <NetworkBadge offlineReady={(manifest?.network ?? activeApp.network) === 'offline'} className="scale-90 shrink-0" />
+          {runtimeError && (
+            <div
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] truncate max-w-[150px]"
+              title={`App Warning: ${runtimeError}`}
+            >
+              <Info className="w-3 h-3 text-amber-400 shrink-0" />
+              <span className="truncate">{runtimeError}</span>
+              <button
+                type="button"
+                onClick={() => setRuntimeError(null)}
+                className="text-amber-400 hover:text-white ml-0.5 text-xs cursor-pointer font-bold"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-0.5 shrink-0">
