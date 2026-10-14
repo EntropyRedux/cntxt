@@ -103,6 +103,9 @@ export function buildClientSdkInjection(appId: string): string {
           var payload = typeof options === 'string' ? { text: options, mode: 'cursor' } : options;
           return callHost('editor', 'insert', payload);
         },
+        insertText: function(text) {
+          return callHost('editor', 'insert', { text: String(text || ''), mode: 'cursor' });
+        },
         getActiveDocument: function() {
           return callHost('editor', 'getActiveDocument');
         }
@@ -115,6 +118,10 @@ export function buildClientSdkInjection(appId: string): string {
         create: function(options) {
           return callHost('tabs', 'create', options);
         },
+        openFile: function(filePath) {
+          var payload = typeof filePath === 'string' ? { filePath: filePath } : filePath;
+          return callHost('tabs', 'create', payload);
+        },
         focus: function(tabId) {
           var payload = typeof tabId === 'string' ? { tabId: tabId } : tabId;
           return callHost('tabs', 'focus', payload);
@@ -126,14 +133,24 @@ export function buildClientSdkInjection(appId: string): string {
           return callHost('workspace', 'getInfo');
         },
         listFiles: function(options) {
-          return callHost('workspace', 'listFiles', options || {});
+          var payload = typeof options === 'string' ? { folder: options } : (options || {});
+          return callHost('workspace', 'listFiles', payload);
         },
         readFile: function(relativePath) {
-          var payload = typeof relativePath === 'string' ? { relativePath: relativePath } : relativePath;
-          return callHost('workspace', 'readFile', payload);
+          var rawPath = typeof relativePath === 'string' ? relativePath : (relativePath && relativePath.relativePath ? relativePath.relativePath : '');
+          var cleanPath = String(rawPath || '').replace(/^[\/\\]+/, '');
+          var payload = typeof relativePath === 'string' ? { relativePath: cleanPath } : Object.assign({}, relativePath, { relativePath: cleanPath });
+          return callHost('workspace', 'readFile', payload).then(function(res) {
+            var str = (res && typeof res === 'object' && 'content' in res) ? res.content : String(res || '');
+            var wrapped = new String(str);
+            wrapped.content = str;
+            return wrapped;
+          });
         },
         writeFile: function(relativePath, content) {
-          var payload = typeof relativePath === 'object' ? relativePath : { relativePath: relativePath, content: content };
+          var rawPath = typeof relativePath === 'string' ? relativePath : (relativePath && relativePath.relativePath ? relativePath.relativePath : '');
+          var cleanPath = String(rawPath || '').replace(/^[\/\\]+/, '');
+          var payload = typeof relativePath === 'object' ? Object.assign({}, relativePath, { relativePath: cleanPath }) : { relativePath: cleanPath, content: content };
           return callHost('workspace', 'writeFile', payload);
         }
       };
@@ -175,9 +192,24 @@ export function buildClientSdkInjection(appId: string): string {
         }
       };
 
-      window.CNTXT.notify = function(options) {
-        var payload = typeof options === 'string' ? { type: 'info', message: options } : options;
+      var notifyFn = function(options) {
+        var payload = typeof options === 'string' ? { type: 'info', message: options } : (options || {});
+        if (payload && !payload.message && payload.title) {
+          payload.message = payload.title;
+        }
         return callHost('notify', 'notify', payload);
+      };
+      notifyFn.info = function(msg) { return notifyFn({ type: 'info', message: String(msg) }); };
+      notifyFn.success = function(msg) { return notifyFn({ type: 'success', message: String(msg) }); };
+      notifyFn.warn = function(msg) { return notifyFn({ type: 'warning', message: String(msg) }); };
+      notifyFn.error = function(msg) { return notifyFn({ type: 'error', message: String(msg) }); };
+      notifyFn.showToast = function(msg, type) { return notifyFn({ type: type || 'info', message: String(msg) }); };
+      window.CNTXT.notify = notifyFn;
+
+      window.CNTXT.ui = {
+        showToast: function(msg, type) {
+          return notifyFn({ type: type || 'info', message: String(msg) });
+        }
       };
     })();
   `;

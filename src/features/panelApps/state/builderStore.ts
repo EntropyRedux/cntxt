@@ -27,7 +27,7 @@ interface BuilderState {
 
   // Actions
   start: (preload?: SourceRef) => void;
-  setSource: (source: SourceRef, html: string, note?: string | null) => void;
+  setSource: (source: SourceRef, html: string, note?: string | null, createdFrom?: PanelAppCreatedFrom) => void;
   setDetails: (updates: Partial<BuilderDetails>) => void;
   setStep: (step: BuilderStep) => void;
   setIsCreating: (isCreating: boolean) => void;
@@ -81,13 +81,13 @@ export const useBuilderStore = create<BuilderState>((set) => ({
     }
   },
 
-  setSource: (source, html, note) => {
+  setSource: (source, html, note, createdFrom) => {
     const cleanName = source.name.replace(/\.[^/.]+$/, '').trim() || 'My App';
     set((s) => ({
       source,
       html,
       sourceNote: note ?? null,
-      createdFrom: source.kind === 'tab' ? 'tab' : 'file',
+      createdFrom: createdFrom || (source.kind === 'tab' ? 'tab' : 'file'),
       details: {
         ...s.details,
         name: s.details.name || cleanName,

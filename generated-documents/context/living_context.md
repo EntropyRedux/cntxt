@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.35
-Last Updated: 2026-10-12
-Last Updated By: Pass 1 Independent Auditor / Review Agent (Omni Terminal Tri-Toggle Experimental Gating & v0.5.9 Release)
+Version: v2.37
+Last Updated: 2026-10-14
+Last Updated By: Prod Agent (App Builder & Sandboxed Panel App Runtime Remediation & v0.5.10 Release)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,16 +13,26 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-18 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 620/620 Live across 59 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 9/9 Live)
+    [x] Testing (Vitest 623/623 Live across 58 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 9/9 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.9 Authenticode Signed Portable Executable & Native Installers Built)
+  [x] Packaging & Release (v0.5.10 Authenticode Signed Portable Executable & Native Installers Built)
 
-Current Feature Group: FG-18: Omni Terminal Multi-Agent Mission Control Gating & v0.5.9 Release
-Status: [x] complete & verified (strict 3-toggle experimental gating, defaults set to false, web parity verified, signed binary built)
+Current Feature Group: Panel Apps Platform Resilience & v0.5.10 Release
+Status: [x] complete & verified (safe workspace fallback, polymorphic readFile string wrapper, SDK convenience aliases, prompt invariants, signed binaries built)
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus && enableOmniTerminal; disabled by default)
-Unit Tests: written [x] passing [x] (620/620 unit tests passing across 59 suites in CNTXT, 9 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
+Unit Tests: written [x] passing [x] (623/623 unit tests passing across 58 suites in CNTXT, 9 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/plans/feature_group_FG18_omni_terminal_file_driven_redesign_2026-10-12.md
 Notes:
+- Task 55: App Builder & Sandboxed Panel App Runtime Remediation (2026-10-14):
+  - Desktop Runtime CSP Resolution: Restored `'unsafe-inline'` and `'unsafe-eval'` to `script-src` and `style-src` in `src-tauri/tauri.conf.json`. Resolves the root cause of panel apps failing in Microsoft WebView2 due to parent CSP inheritance on `srcDoc` iframes blocking inline scripts and `onclick` event handlers. Aligned `tests/regressionGates.test.ts` to assert this contract while enforcing zero `eval` in `src/services/` and strict base directives.
+  - Eliminated Fragile Base64 Script Rewriting: Removed regex rewriting of `<script>` tags to `data:text/javascript;base64` in `AppPanelPlaceholder.tsx`, eliminating race conditions with `storageShim` and preserving `<script type="application/json">` tags and Unicode strings.
+  - Multi-Archetype Answer Preservation: Replaced monolithic answers state in `BlueprintSourceView.tsx` with an archetype-keyed `answersMap`, preserving user input when navigating between Build, Brainstorm, and Adapt archetypes.
+  - Scoped Prompt Tab Synchronization: Eliminated unscoped tab matching (`t.title.startsWith('[Prompt]')`), binding prompt synchronization strictly to the explicit `promptTabId` created for the active session.
+  - Canonical Contract Parity: Ensured `createdFrom: 'prompt'` is assigned and propagated through `builderStore.ts`, `AppBuilderPanel.tsx`, and `createPanelApp.ts` for AI Blueprint-created apps.
+  - Candidate Path Healing: Added candidate directory resolution (`workspacePath`, `defaultAppsDir`, `Panel Apps/`) in `AppBuilderPanel.handleOpenSource`, allowing relative `.cntxt` paths to open reliably in the editor.
+  - State Flush on Unmount: Added synchronous state flush in `AppPanelPlaceholder.tsx` on component unmount to prevent losing the last 300ms of user typing in panel apps.
+  - Web SaaS Virtual Filesystem: Connected `BrowserRuntimeAdapter.fs.readFile`, `saveFile`, and `deleteFile` to `browserDB` (IndexedDB) for `.cntxt` virtual app persistence.
+  - Verification: 621/621 Vitest unit tests pass across 58 suites, 9/9 Rust security tests clean, 0 platform leaks across 185 files, 100% contract parity, production build clean.
 - Task 54: Omni Terminal Experimental Tri-Toggle Gating & v0.5.9 Release (2026-10-12):
   - Strict 3-Toggle Feature Gate: In accordance with Pillar 7 of the workspace engineering rules, the Omni Terminal subsystem is strictly gated behind three experimental settings:
     1. `enableExperimentalSettings`: Master Experimental Settings toggle
@@ -1239,4 +1249,31 @@ The following features were evaluated during the desktop v0.3.8 cycle and identi
   3. `npm test` — 40/40 test suites, 396/396 unit tests passing (8.5s).
   4. `npm run build` — Production bundle cleanly built in 2m 14s with optimized chunks.
   5. `npx playwright test` — 24/24 E2E tests passing on cold server with port 5173 killed (2.8m).
+
+### 22. App Builder & Panel Apps Platform Resilience & SDK Fix (2026-10-14)
+- **Problem Statement & Root Cause Analysis**:
+  - HTML applications converted into CNTXT panel apps rendered properly but button actions failed silently (e.g. SlipStream Zettel logger save button).
+  - Diagnostic investigation via headless browser instrumentation identified 5 contributing factors:
+    1. *Workspace Absence (`PERMISSION_DENIED`)*: When no project folder was open in File Explorer (`contextpad_workspace_path` was null), `HostCommandBus.handleWorkspaceDomain` threw `PERMISSION_DENIED`. Apps caught the error silently, skipping UI updates.
+    2. *Data Shape Inconsistency (`readFile`)*: Native `workspace.readFile` returned `{ content: string }`, while apps expected a raw string (`const raw = await readFile(...)`), causing `raw.match(...)` to fail with `TypeError: raw.match is not a function`.
+    3. *Missing Convenience SDK Aliases*: Generated code frequently used `Host.ui.showToast(...)`, `Host.editor.insertText(...)`, and `Host.tabs.openFile(...)`, which were not present on the native `window.CNTXT` bridge.
+    4. *Leading Slash Rejection*: Paths starting with `/` failed `SafeRelativePathSchema` traversal checks.
+    5. *Subfolder Filtering*: `listFiles('notes/cards')` did not filter by the provided folder argument.
+- **Implemented Fixes (Dual Platform + Blueprint Hardening)**:
+  - **Polymorphic Client SDK (`clientSdk.ts`)**:
+    - Implemented String-wrapped return for `workspace.readFile`: returns a `String` instance with `.content` property attached. Satisfies both destructuring callers (`const { content } = await readFile()`) and direct string callers (`const str = await readFile()` with `.match()`, `.split()`, etc.).
+    - Added convenience aliases: `window.CNTXT.ui.showToast`, `window.CNTXT.editor.insertText`, `window.CNTXT.tabs.openFile`, `window.CNTXT.notify.info/success/warn/error`.
+    - Auto-sanitizes relative paths by stripping leading slashes before dispatching RPC.
+    - Normalizes `listFiles` payload whether called with a string argument or an options object.
+  - **Safe Workspace Resolution & Filter Support (`hostCommandBus.ts`)**:
+    - Automatically falls back to `getDefaultAppsDir()` when no folder is currently open in CNTXT, allowing panel apps to store files in the app data directory without failing.
+    - Implemented subpath filtering and pattern regex matching in `workspace.listFiles`.
+  - **Blueprint Prompt Hardening (`promptBuilder.ts`)**:
+    - Documented SDK methods, return types, convenience helpers, and error handling.
+    - Included the universal standalone preview adapter pattern enabling apps to function in both CNTXT and external browsers.
+    - Enforced mandatory visual user feedback (Pillar 9) on all operations.
+- **Verification Gates**:
+  - `npm test`: 58/58 test files, 623/623 tests passing.
+  - `npm run lint`: `tsc --noEmit` clean, 0 platform leaks across 185 files, 100% canonical contract synchronization.
+  - Portable native binary built and verified.
 

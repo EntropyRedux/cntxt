@@ -25,7 +25,7 @@ export function extractHtmlFromReply(text: string): ExtractedHtmlResult | null {
 
   // Strategy 1: Find all markdown code blocks
   // Regex looks for ```[optional language tag] followed by content, optionally closed by ```
-  const fenceRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)(?:```|$)/g;
+  const fenceRegex = /```([a-zA-Z0-9_-]*)[ \t]*\n([\s\S]*?)(?:```|$)/g;
   let match: RegExpExecArray | null;
   const candidates: Array<{ code: string; isTruncated: boolean; score: number }> = [];
 

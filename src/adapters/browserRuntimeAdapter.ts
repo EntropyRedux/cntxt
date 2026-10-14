@@ -273,12 +273,23 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
       return null;
     },
 
-    readFile: async (_path: string): Promise<string | null> => {
-      return null;
+    readFile: async (path: string): Promise<string | null> => {
+      const key = `cntxt_vfs_${path.replace(/\\/g, '/')}`;
+      return await browserDB.getItem(key);
     },
 
-    saveFile: async (_path: string, _content: string): Promise<boolean> => {
-      return true;
+    saveFile: async (path: string, content: string): Promise<boolean> => {
+      const key = `cntxt_vfs_${path.replace(/\\/g, '/')}`;
+      return await browserDB.setItem(key, content);
+    },
+
+    deleteFile: async (path: string): Promise<boolean> => {
+      const key = `cntxt_vfs_${path.replace(/\\/g, '/')}`;
+      return await browserDB.removeItem(key);
+    },
+
+    getDefaultAppsDir: async (): Promise<string | null> => {
+      return 'Panel Apps';
     },
 
     saveFileAs: async (suggestedName: string, content: string): Promise<string | null> => {
@@ -518,8 +529,8 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     }
   };
 
-  public async deleteFile(_path: string): Promise<boolean> {
-    return false;
+  public async deleteFile(path: string): Promise<boolean> {
+    return this.fs.deleteFile ? this.fs.deleteFile(path) : false;
   }
 
   public async openFileExplorer(_path: string): Promise<boolean> {

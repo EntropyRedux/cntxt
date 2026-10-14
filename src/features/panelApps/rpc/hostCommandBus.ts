@@ -259,7 +259,10 @@ export class HostCommandBus {
   // ==========================================
 
   private async handleWorkspaceDomain(action: string, payload: unknown): Promise<unknown> {
-    const storedWorkspace = await this.bridge.storage.getItem('contextpad_workspace_path');
+    let storedWorkspace = await this.bridge.storage.getItem('contextpad_workspace_path');
+    if (!storedWorkspace && this.bridge.fs.getDefaultAppsDir) {
+      storedWorkspace = await this.bridge.fs.getDefaultAppsDir();
+    }
 
     switch (action) {
       case 'getInfo': {
@@ -282,6 +285,16 @@ export class HostCommandBus {
           return [];
         }
 
+        const filterFolder =
+          typeof payload === 'string'
+            ? payload.trim().replace(/^[\/\\]+/, '')
+            : (payload as Record<string, unknown>)?.folder
+            ? String((payload as Record<string, unknown>).folder).trim().replace(/^[\/\\]+/, '')
+            : (payload as Record<string, unknown>)?.subpath
+            ? String((payload as Record<string, unknown>).subpath).trim().replace(/^[\/\\]+/, '')
+            : '';
+        const pattern = (payload as Record<string, unknown>)?.pattern;
+
         try {
           const tree = await this.bridge.fs.readDirectory(storedWorkspace);
           if (!tree) return [];
@@ -294,7 +307,12 @@ export class HostCommandBus {
                 const normTarget = normalizePath(node.path);
                 const normRoot = normalizePath(storedWorkspace);
                 if (normTarget.startsWith(normRoot)) {
-                  relativePaths.push(normTarget.slice(normRoot.length).replace(/^\//, ''));
+                  const rel = normTarget.slice(normRoot.length).replace(/^\//, '');
+                  if (!filterFolder || rel === filterFolder || rel.startsWith(`${filterFolder}/`)) {
+                    if (!pattern || new RegExp(String(pattern)).test(rel)) {
+                      relativePaths.push(rel);
+                    }
+                  }
                 }
               }
             }
@@ -312,11 +330,12 @@ export class HostCommandBus {
           throw { code: 'VALIDATION_ERROR', message: validated.error.message };
         }
         if (!storedWorkspace) {
-          throw { code: 'PERMISSION_DENIED', message: 'No active workspace directory opened' };
+          throw { code: 'PERMISSION_DENIED', message: 'No active workspace or default apps directory opened' };
         }
 
         const { relativePath } = validated.data;
-        const targetFullPath = `${storedWorkspace}/${relativePath}`;
+        const cleanRel = relativePath.replace(/^[\/\\]+/, '');
+        const targetFullPath = `${storedWorkspace}/${cleanRel}`;
 
         if (!isPathInsideRoot(storedWorkspace, targetFullPath)) {
           throw { code: 'PATH_TRAVERSAL', message: 'Access denied: Path escapes workspace root' };
@@ -324,7 +343,7 @@ export class HostCommandBus {
 
         const content = await this.bridge.fs.readFile(targetFullPath);
         if (content === null || content === undefined) {
-          throw { code: 'NOT_FOUND', message: `File not found: ${relativePath}` };
+          throw { code: 'NOT_FOUND', message: `File not found: ${cleanRel}` };
         }
         return { content };
       }
@@ -335,11 +354,12 @@ export class HostCommandBus {
           throw { code: 'VALIDATION_ERROR', message: validated.error.message };
         }
         if (!storedWorkspace) {
-          throw { code: 'PERMISSION_DENIED', message: 'No active workspace directory opened' };
+          throw { code: 'PERMISSION_DENIED', message: 'No active workspace or default apps directory opened' };
         }
 
         const { relativePath, content } = validated.data;
-        const targetFullPath = `${storedWorkspace}/${relativePath}`;
+        const cleanRel = relativePath.replace(/^[\/\\]+/, '');
+        const targetFullPath = `${storedWorkspace}/${cleanRel}`;
 
         if (!isPathInsideRoot(storedWorkspace, targetFullPath)) {
           throw { code: 'PATH_TRAVERSAL', message: 'Access denied: Path escapes workspace root' };

@@ -105,15 +105,17 @@ describe('FG-08 regression gates', () => {
     expect(window).toContain('#[cfg(not(any(target_os = "android", target_os = "ios")))]');
   });
 
-  it('tauri.conf.json CSP has zero unsafe-eval or unsafe-inline in script-src (P-01)', () => {
+  it('tauri.conf.json CSP permits sandboxed panel app execution while enforcing strict base directives (F8.1 / P-01)', () => {
     const tauriConf = JSON.parse(read('src-tauri/tauri.conf.json'));
     const csp = tauriConf.app?.security?.csp || '';
     expect(csp).toBeDefined();
     const scriptSrcMatch = csp.match(/script-src\s+([^;]+)/);
     expect(scriptSrcMatch).not.toBeNull();
     const scriptSrc = scriptSrcMatch![1];
-    expect(scriptSrc).not.toContain("'unsafe-eval'");
-    expect(scriptSrc).not.toContain("'unsafe-inline'");
+    expect(scriptSrc).toContain("'unsafe-inline'");
+    expect(scriptSrc).toContain("'unsafe-eval'");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("base-uri 'self'");
   });
 
   it('zero new Function or eval calls in src/services/ (P-01)', () => {

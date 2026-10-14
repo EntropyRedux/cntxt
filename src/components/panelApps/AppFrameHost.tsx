@@ -66,7 +66,7 @@ export const AppFrameHost: React.FC<AppFrameHostProps> = ({
 
         return (
           <iframe
-            key={`${id}:${nonce}:${doc ? 'ready' : 'empty'}`}
+            key={`${id}:${nonce}`}
             ref={(el) => {
               iframeRefs.current[id] = el;
             }}

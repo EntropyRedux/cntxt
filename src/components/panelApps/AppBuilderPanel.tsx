@@ -46,6 +46,7 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
     source,
     html,
     sourceNote,
+    createdFrom,
     details,
     isCreating,
     setStep,
@@ -56,7 +57,6 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
   } = useBuilderStore();
 
   const handleClose = () => {
-    reset();
     if (onClose) onClose();
   };
 
@@ -80,12 +80,53 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
 
   const handleOpenSource = async (appPath: string, appName: string) => {
     try {
-      const content = await bridge.fs.readFile?.(appPath);
+      let content = await bridge.fs.readFile?.(appPath);
+      let resolvedPath = appPath;
+
+      if (content === null || content === undefined) {
+        const normPath = appPath.replace(/\\/g, '/');
+        const fileName = normPath.split('/').pop() || '';
+        const candidates: string[] = [];
+
+        const currentWorkspace = await bridge.storage.getItem('contextpad_workspace_path');
+        if (currentWorkspace) {
+          const wsClean = currentWorkspace.replace(/[/\\]+$/, '');
+          candidates.push(`${wsClean}/${normPath}`);
+          candidates.push(`${wsClean}/Panel Apps/${fileName}`);
+          candidates.push(`${wsClean}/${fileName}`);
+        }
+
+        if (bridge.fs.getDefaultAppsDir) {
+          const defaultDir = await bridge.fs.getDefaultAppsDir();
+          if (defaultDir) {
+            const defClean = defaultDir.replace(/[/\\]+$/, '');
+            candidates.push(`${defClean}/${fileName}`);
+            candidates.push(`${defClean}/${normPath}`);
+          }
+        }
+
+        candidates.push(`Panel Apps/${fileName}`);
+        candidates.push(fileName);
+
+        for (const candidate of candidates) {
+          try {
+            const candidateContent = await bridge.fs.readFile?.(candidate);
+            if (candidateContent !== null && candidateContent !== undefined) {
+              content = candidateContent;
+              resolvedPath = candidate;
+              break;
+            }
+          } catch {
+            // try next candidate
+          }
+        }
+      }
+
       if (content !== null && content !== undefined) {
-        createTab(appName, content, 'markdown', appPath);
+        createTab(appName, content, 'markdown', resolvedPath);
         addNotification('Opened in Editor', `Now editing ${appName}`, 'info');
       } else {
-        throw new Error('File content could not be read');
+        throw new Error(`File content could not be read at: ${appPath}`);
       }
     } catch (e) {
       addNotification('Open Failed', (e as Error).message, 'error');
@@ -198,7 +239,8 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
     setSource(
       { kind: 'file', path: '', name: appName, content: rawHtml },
       rawHtml,
-      note
+      note,
+      'prompt'
     );
 
     setDetails({
@@ -222,7 +264,7 @@ export const AppBuilderPanel: React.FC<AppBuilderPanelProps> = ({ onClose, works
         {
           details,
           html,
-          createdFrom: source?.kind === 'file' ? 'file' : 'tab',
+          createdFrom: createdFrom || (source?.kind === 'file' ? 'file' : 'tab'),
         },
         bridge,
         workspacePath

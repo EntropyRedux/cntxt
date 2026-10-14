@@ -5,6 +5,31 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.10] — 2026-10-14
+
+### App Builder & Panel Apps Platform Resilience & SDK Remediation
+- **Safe Workspace Resolution & App Data Fallback**:
+  - Automatically resolves workspace path to `bridge.fs.getDefaultAppsDir()` when no folder is currently open in CNTXT File Explorer (`contextpad_workspace_path` is empty), eliminating `PERMISSION_DENIED` errors on initial app installs.
+  - Allows standalone HTML panel apps to read, write, and persist application state immediately upon installation.
+- **Polymorphic RPC Return Wrapper (`clientSdk.ts`)**:
+  - Wrapped `workspace.readFile` output in a String instance with `.content` property attached (`new String(content)`).
+  - Guarantees backward and forward compatibility for both destructuring callers (`const { content } = await readFile()`) and direct string callers (`const str = await readFile()` with `.match()`, `.split()`, etc.) without type errors or broken destructuring.
+- **Injected SDK Convenience Aliases**:
+  - Added native bridge convenience aliases matching AI-generated and web-standard patterns:
+    - `window.CNTXT.ui.showToast(message, type)`
+    - `window.CNTXT.editor.insertText(text)`
+    - `window.CNTXT.tabs.openFile(path)`
+    - `window.CNTXT.notify.info(msg)`, `.success(msg)`, `.warn(msg)`, `.error(msg)`
+  - Added automatic leading slash stripping (`/notes/...` -> `notes/...`) for path traversal schema safety.
+  - Enabled recursive subfolder filtering and regex pattern filtering in `workspace.listFiles`.
+- **Blueprint Prompt Invariants & Universal Preview Adapter**:
+  - Injected the universal standalone preview adapter pattern (`const Host = window.CNTXT || { ... }`) into Blueprint prompts so applications can be tested seamlessly both inside CNTXT panel containers and in external browsers.
+  - Hardened prompt invariants requiring explicit visual user feedback (Pillar 9) on all operations and error states.
+- **Verification Gates & Signed Release Packages**:
+  - Bumped version to `0.5.10` across `package.json`, `package-lock.json`, `tauri.conf.json`, `Cargo.toml`, and documentation manifests.
+  - All 58 Vitest suites (623 tests) passing; zero platform leaks across 185 files; 100% canonical contract parity.
+  - Built and Authenticode-signed Windows portable executable (`CNTXT_0.5.10_portable.exe`) and installers (`CNTXT_0.5.10_x64-setup.exe`, `CNTXT_0.5.10_x64_en-US.msi`).
+
 ## [0.5.9] — 2026-10-12
 
 ### Omni Terminal Experimental Tri-Toggle Gating & Web Parity

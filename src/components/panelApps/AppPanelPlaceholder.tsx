@@ -116,9 +116,9 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
           clearTimeout(saveDebounceTimer.current);
         }
 
-        saveDebounceTimer.current = setTimeout(async () => {
+        const executeSave = async (stateToSave: unknown) => {
           try {
-            const stateString = typeof newState === 'string' ? newState : JSON.stringify(newState);
+            const stateString = typeof stateToSave === 'string' ? stateToSave : JSON.stringify(stateToSave);
             if (stateString === lastSavedStateHash.current) return;
             lastSavedStateHash.current = stateString;
 
@@ -139,13 +139,17 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
             const currentContent = await bridge.fs.readFile?.(activeApp.path);
             if (!currentContent) return;
 
-            const updated = updateCntxtAppState(currentContent, newState);
+            const updated = updateCntxtAppState(currentContent, stateToSave);
             await bridge.fs.saveFile(activeApp.path, updated);
           } catch (err) {
             console.error('[AppPanelPlaceholder] Error saving app state to file:', err);
           } finally {
             isInternalWriting.current = false;
           }
+        };
+
+        saveDebounceTimer.current = setTimeout(() => {
+          executeSave(newState);
         }, 300);
         return;
       }
@@ -198,6 +202,20 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
       window.removeEventListener('message', handleMessage);
       if (saveDebounceTimer.current) {
         clearTimeout(saveDebounceTimer.current);
+        // Flush pending state to disk immediately on unmount
+        if (fileStateRef.current !== null && fileStateRef.current !== undefined && activeApp?.path) {
+          const currentContentPromise = bridge.fs.readFile?.(activeApp.path);
+          if (currentContentPromise) {
+            currentContentPromise.then((currentContent) => {
+              if (currentContent) {
+                const updated = updateCntxtAppState(currentContent, fileStateRef.current);
+                bridge.fs.saveFile(activeApp.path, updated).catch((err) => {
+                  console.warn('[AppPanelPlaceholder] Failed to flush final state on unmount:', err);
+                });
+              }
+            });
+          }
+        }
       }
     };
   }, [activeApp?.id, activeApp?.path, bridge.storage, bridge.fs]);
@@ -409,19 +427,7 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
       fullDoc = `<!doctype html><html><head>${injectedMetaAndShim}\n${injectedTheme}</head><body>${rawHtml}</body></html>`;
     }
 
-    // Convert inline <script>...</script> tags to data: URIs so they execute safely under strict CSP
-    // (script-src 'self' blob: data:) without violating 'unsafe-inline' restrictions in WebView2
-    return fullDoc.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (match, attrs, code) => {
-      if (/\bsrc\s*=/i.test(attrs)) {
-        return match;
-      }
-      try {
-        const base64 = btoa(unescape(encodeURIComponent(code)));
-        return `<script${attrs} src="data:text/javascript;base64,${base64}"></script>`;
-      } catch {
-        return match;
-      }
-    });
+    return fullDoc;
   }, [rawHtml, manifest, activeApp]);
 
   // Sync prepared HTML into central keep-alive cache

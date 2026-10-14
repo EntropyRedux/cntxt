@@ -51,16 +51,31 @@ export const BlueprintSourceView: React.FC<BlueprintSourceViewProps> = ({
   const [parseError, setParseError] = useState<string | null>(null);
   const [promptTabId, setPromptTabId] = useState<string | null>(null);
 
-  // Editable answers state initialized from active template
-  const [answers, setAnswers] = useState<BlueprintAnswers>(
-    selectedTemplate?.answers || BUILTIN_TEMPLATES[0].answers
-  );
+  // Multi-archetype answers map preserving user inputs when switching templates
+  const [answersMap, setAnswersMap] = useState<Record<string, BlueprintAnswers>>(() => {
+    const map: Record<string, BlueprintAnswers> = {};
+    BUILTIN_TEMPLATES.forEach((tmpl) => {
+      map[tmpl.id] = { ...tmpl.answers };
+    });
+    return map;
+  });
+
+  const answers = selectedTemplate ? answersMap[selectedTemplate.id] || selectedTemplate.answers : BUILTIN_TEMPLATES[0].answers;
+
+  const setAnswers = (newAnswers: BlueprintAnswers) => {
+    if (!selectedTemplate) return;
+    setAnswersMap((prev) => ({
+      ...prev,
+      [selectedTemplate.id]: newAnswers,
+    }));
+  };
 
   const generatedPrompt = useMemo(() => buildArchetypePrompt(answers), [answers]);
   const activePrompt = isPromptEdited ? customPrompt : generatedPrompt;
 
+  // Strict tab binding: only matches the exact tab opened by this builder session
   const openPromptTab = useMemo(
-    () => tabs.find((t) => (promptTabId && t.id === promptTabId) || t.title.startsWith('[Prompt]')),
+    () => tabs.find((t) => Boolean(promptTabId && t.id === promptTabId)),
     [tabs, promptTabId]
   );
   const isTabOpen = Boolean(openPromptTab);
@@ -73,7 +88,6 @@ export const BlueprintSourceView: React.FC<BlueprintSourceViewProps> = ({
 
   const handleSelectTemplate = (template: BlueprintTemplate) => {
     setSelectedTemplate(template);
-    setAnswers(template.answers);
     setIsPromptEdited(false);
     setCustomPrompt('');
     setParseError(null);
@@ -100,9 +114,9 @@ export const BlueprintSourceView: React.FC<BlueprintSourceViewProps> = ({
     const archetypeLabel = selectedTemplate?.name || 'Blueprint';
     const tabTitle = `[Prompt] ${archetypeLabel} - ${answers.appName || 'Draft'}.md`;
 
-    // 1. If we have a tracked tab ID or any tab titled with [Prompt], reuse and focus it
+    // 1. If we have a tracked tab ID, reuse and focus it
     const existingPromptTab = tabs.find(
-      (t) => t.id === promptTabId || t.title.startsWith('[Prompt]')
+      (t) => Boolean(promptTabId && t.id === promptTabId)
     );
 
     if (existingPromptTab) {

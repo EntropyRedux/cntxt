@@ -55,6 +55,7 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
         ]),
         openFile: vi.fn(),
         saveFileAs: vi.fn(),
+        getDefaultAppsDir: vi.fn(async () => 'C:/AppData/Panel Apps'),
         exportWorkspace: vi.fn(async () => '{}'),
         importWorkspace: vi.fn(async () => true),
       },
@@ -503,20 +504,64 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
     });
   });
 
-  describe('Client SDK Polyfill Generation', () => {
-    it('generates the client SDK script containing all domain APIs', () => {
+  describe('Client SDK Polyfill Generation & Resilience', () => {
+    it('generates the client SDK script containing all domain APIs and convenience aliases', () => {
       const sdkCode = buildClientSdkInjection('my-custom-app-123');
       expect(sdkCode).toContain("appId: 'my-custom-app-123'");
       expect(sdkCode).toContain('window.CNTXT.call = callHost;');
       expect(sdkCode).toContain('window.CNTXT.editor');
+      expect(sdkCode).toContain('insertText: function');
       expect(sdkCode).toContain('window.CNTXT.tabs');
+      expect(sdkCode).toContain('openFile: function');
       expect(sdkCode).toContain('window.CNTXT.workspace');
       expect(sdkCode).toContain('window.CNTXT.templates');
       expect(sdkCode).toContain('window.CNTXT.actions');
       expect(sdkCode).toContain('window.CNTXT.notify');
+      expect(sdkCode).toContain('window.CNTXT.ui');
+      expect(sdkCode).toContain('showToast: function');
       expect(sdkCode).toContain('window.CNTXT.terminal');
       expect(sdkCode).toContain('window.CNTXT.state');
       expect(sdkCode).toContain('window.CNTXT.ready');
+    });
+
+    it('filters listFiles by subfolder when folder is passed', async () => {
+      mockStorageData.set('contextpad_workspace_path', 'C:/TestWorkspace');
+      mockBridge.fs.readDirectory = vi.fn(async () => [
+        { id: '1', name: 'c1.md', path: 'C:/TestWorkspace/notes/cards/c1.md', type: 'file' as const },
+        { id: '2', name: 'c2.md', path: 'C:/TestWorkspace/notes/cards/c2.md', type: 'file' as const },
+        { id: '3', name: 'doc.md', path: 'C:/TestWorkspace/other/doc.md', type: 'file' as const },
+      ]);
+
+      const response = await bus.handleRequest({
+        id: 'r_list_filter',
+        domain: 'workspace',
+        action: 'listFiles',
+        appId: 'app-1',
+        payload: { folder: 'notes/cards' },
+      });
+
+      expect(response.success).toBe(true);
+      const files = response.data as string[];
+      expect(files).toContain('notes/cards/c1.md');
+      expect(files).toContain('notes/cards/c2.md');
+      expect(files).not.toContain('other/doc.md');
+    });
+
+    it('falls back to getDefaultAppsDir when contextpad_workspace_path is empty', async () => {
+      mockStorageData.delete('contextpad_workspace_path');
+      mockFiles.set('C:/AppData/Panel Apps/saved_note.md', 'Fallback content');
+
+      const readRes = await bus.handleRequest({
+        id: 'r_fallback_read',
+        domain: 'workspace',
+        action: 'readFile',
+        appId: 'app-1',
+        payload: { relativePath: 'saved_note.md' },
+      });
+
+      expect(readRes.success).toBe(true);
+      const { content } = readRes.data as { content: string };
+      expect(content).toBe('Fallback content');
     });
   });
 });

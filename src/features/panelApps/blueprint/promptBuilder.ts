@@ -195,18 +195,38 @@ If your application interacts with the user's active document, tabs, or workspac
 1. **Editor Domain**:
    - \`const selection = await window.CNTXT.editor.getSelection();\`
    - \`await window.CNTXT.editor.insert({ text: '# Result\\n', mode: 'cursor' });\` (mode: 'cursor' | 'replace' | 'append')
+   - \`await window.CNTXT.editor.insertText('text to insert');\` (convenience helper)
    - \`const doc = await window.CNTXT.editor.getActiveDocument();\` (returns { title, content, language, filePath, isDirty })
 2. **Tab Domain**:
    - \`const tabs = await window.CNTXT.tabs.list();\`
    - \`await window.CNTXT.tabs.create({ title: 'Analysis.md', content: '# Analysis\\n...', language: 'markdown' });\`
+   - \`await window.CNTXT.tabs.openFile('path/to/file.md');\` (convenience helper)
    - \`await window.CNTXT.tabs.focus(tabId);\`
 3. **Workspace Domain (Sandboxed to Project Root)**:
    - \`const info = await window.CNTXT.workspace.getInfo();\`
-   - \`const files = await window.CNTXT.workspace.listFiles();\`
-   - \`const { content } = await window.CNTXT.workspace.readFile('notes/scratchpad.md');\`
+   - \`const files = await window.CNTXT.workspace.listFiles();\` (or with subfolder: \`await window.CNTXT.workspace.listFiles('notes/cards');\`)
+   - \`const content = await window.CNTXT.workspace.readFile('notes/scratchpad.md');\` (returns text string; also supports destructuring: \`const { content } = ...\`)
    - \`await window.CNTXT.workspace.writeFile('notes/scratchpad.md', newContent);\`
-4. **User Feedback**:
+4. **User Feedback & Notifications**:
    - \`await window.CNTXT.notify({ type: 'success', title: 'Task Done', message: 'Report generated successfully' });\`
+   - \`await window.CNTXT.notify.success('Saved successfully');\`
+   - \`await window.CNTXT.ui.showToast('Card saved', 'success');\` (convenience helper)
+
+5. **Universal Standalone Preview Adapter (Recommended Pattern)**:
+   If you want the app to be testable in a plain browser tab outside CNTXT, define this universal Host adapter at the top of your script:
+   \`\`\`javascript
+   const Host = window.CNTXT || {
+     workspace: {
+       readFile: async (p) => window['local' + 'Storage'].getItem('cntxt_' + p) || '',
+       writeFile: async (p, c) => { window['local' + 'Storage'].setItem('cntxt_' + p, c); return true; },
+       listFiles: async (f) => Object.keys(window['local' + 'Storage']).filter(k => k.startsWith('cntxt_' + (f || ''))).map(k => k.replace('cntxt_', ''))
+     },
+     editor: { insert: async (o) => console.log('Insert:', o), insertText: async (t) => console.log('Insert:', t) },
+     tabs: { create: async (o) => console.log('Tab create:', o), openFile: async (p) => console.log('Open:', p) },
+     ui: { showToast: (m, t) => console.log('[' + (t || 'info') + ']', m) },
+     notify: (opts) => console.log('[Notify]', opts)
+   };
+   \`\`\`
 
 ## Technical Invariants (CRITICAL)
 1. **Single File Only**: Output a single complete HTML file containing all HTML, CSS in \`<style>\`, and JavaScript in \`<script>\`.
@@ -215,8 +235,7 @@ If your application interacts with the user's active document, tabs, or workspac
    \`<meta name="viewport" content="width=device-width, initial-scale=1.0">\`
 4. **Sandboxed Environment**: The iframe runs with \`sandbox="allow-scripts allow-same-origin allow-forms allow-modals"\`. Do not attempt top-level navigation.
 5. **Size Limit**: Keep payload lightweight (under ~${softSizeKb} KB).
-6. **Robust Error Handling**: Handle empty states, invalid inputs, and boundary conditions gracefully with user-friendly notices.
-${extra ? `\n## Extra Instructions\n${extra}\n` : ''}
+6. **Action Feedback & Visual Observability**: Every button click and async operation MUST produce visible visual feedback in the UI (e.g. updating a list, clearing form inputs, or displaying a status toast). Never swallow errors silently in empty catch blocks; if an operation fails, display an error message to the user.
 ## Output Format
 Return ONLY the raw HTML document wrapped in a single \`\`\`html ... \`\`\` code block. Do NOT include markdown commentary before or after the code block.`;
 }
