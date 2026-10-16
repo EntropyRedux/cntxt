@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.38
-Last Updated: 2026-10-16
-Last Updated By: Prod Agent (Pop-out Window Independence, Compact Widget Scaling, Toolbar Optimization & v0.5.12 Release)
+Version: v2.39
+Last Updated: 2026-10-17
+Last Updated By: Prod Agent (Audit Reconciliation, CSP Hardening, AST Preflight & v0.5.13 Release)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -15,10 +15,10 @@ Active Stage:
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
     [x] Testing (Vitest 631/631 Live across 59 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 9/9 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.12 Authenticode Signed Portable Executable & Native Installers Built)
+  [x] Packaging & Release (v0.5.13 Authenticode Signed Portable Executable & Native Installers Built)
 
-Current Feature Group: Pop-out Window Independence, Compact Widget Scaling & v0.5.12 Release
-Status: [x] complete & verified (sidebar-independent pop-out windows, 220x160 compact scaling, FAB removal, responsive small-size mode AI prompt rules, markdown toolbar layout optimization, signed binaries built)
+Current Feature Group: Audit Reconciliation, CSP Hardening & v0.5.13 Release
+Status: [x] complete & verified (CSP hardened, AST preflight syntax checking, presenter purity decoupled, FAB dead code removed with migration, signed binaries built)
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus && enableOmniTerminal; disabled by default)
 Unit Tests: written [x] passing [x] (631/631 unit tests passing across 59 suites in CNTXT, 9 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/plans/feature_group_FG18_omni_terminal_file_driven_redesign_2026-10-12.md

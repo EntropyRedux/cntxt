@@ -5,6 +5,28 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.13] — 2026-10-17
+
+### Hardened CSP, Pure Presenter Host Architecture & Static AST Preflight
+- **Content Security Policy Hardening (`index.html`, `src-tauri/tauri.conf.json`)**:
+  - Removed broad remote `http:` origins from `script-src`, `worker-src`, `frame-src`, `style-src`, `font-src`, and `img-src` to prevent MITM code injection. Retained loopback endpoints for local IPC (`http://localhost:* http://127.0.0.1:* http://ipc.localhost ipc:`).
+- **Zero Dynamic Evaluation in Preflight (`src/features/panelApps/preflight/scan.ts`)**:
+  - Replaced `new Function` and `err: any` with static JavaScript AST parsing using `@codemirror/lang-javascript` (`javascriptLanguage.parser.parse`), enforcing the strict zero-eval and strict typing invariants.
+- **Presenter Purity & Listener Churn Elimination (`AppFrameHost.tsx`, `Sidebar.tsx`)**:
+  - Decoupled `AppFrameHost` from direct Zustand store reads and mutations; converted to a pure, prop-driven presenter receiving `apps`, `onSetFloatingPosition`, and `onSetPresentation` from `Sidebar.tsx`.
+  - Decoupled drag and resize event listeners from component state using mutable position refs, eliminating teardown and reattachment churn during mouse movement.
+- **iframe Sandbox Hardening (`AppFrameHost.tsx`)**:
+  - Removed `allow-downloads` and `allow-popups` from the sandbox attribute, restoring strict adherence to `sandbox="allow-scripts allow-same-origin allow-forms allow-modals"`.
+- **Dead Code Removal & Contract Evolution (`AppPanelPlaceholder.tsx`, `boundarySchemas.ts`, `data_shapes.ts`)**:
+  - Removed unused `Minimize2` import from `AppPanelPlaceholder.tsx`.
+  - Removed dead `'fab'` presentation mode from canonical and local `PanelAppPresentationMode` contracts (`'docked' | 'floating'`).
+  - Added a backward-compatible preprocessor migration in `PanelAppRecordSchema` mapping legacy persisted `'fab'` values to `'docked'`.
+- **Verification Gates & Release Packages**:
+  - Synchronized version `0.5.13` across `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`.
+  - All 59 Vitest test suites (631 tests) passing; 0 platform leaks across 186 files; contracts 100% synchronized.
+  - Recompiled production web bundle (`dist/`).
+  - Built and Authenticode-signed Windows installer (`CNTXT_0.5.13_x64-setup.exe`), MSI (`CNTXT_0.5.13_x64_en-US.msi`), and standalone binary (`CNTXT_0.5.13_portable.exe`).
+
 ## [0.5.12] — 2026-10-16
 
 ### Floating Pop-out Window Independence, Compact Widget Scaling & Toolbar Optimization

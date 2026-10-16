@@ -546,7 +546,7 @@ dependencies = [
 
 [[package]]
 name = "cntxt"
-version = "0.5.12"
+version = "0.5.13"
 dependencies = [
  "arboard",
  "jni",
