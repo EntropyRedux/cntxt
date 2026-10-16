@@ -248,4 +248,64 @@ describe('Panel Apps: Keep-Alive Host & LRU Lifecycle (Reset Fix)', () => {
     expect(usePanelAppsStore.getState().mounted).toEqual(['app-1']);
     expect(usePanelAppsStore.getState().activeId).toBeNull();
   });
+
+  it('toggleKeepAlive toggles keepAlive and keeps app mounted', () => {
+    const testApp = {
+      id: 'app-pomodoro',
+      name: 'Pomodoro',
+      path: '/apps/pomodoro.cntxt',
+      icon: 'Timer',
+    };
+    usePanelAppsStore.getState().add(testApp);
+    expect(usePanelAppsStore.getState().apps.find((a) => a.id === 'app-pomodoro')?.keepAlive).toBeUndefined();
+
+    usePanelAppsStore.getState().toggleKeepAlive('app-pomodoro');
+    expect(usePanelAppsStore.getState().apps.find((a) => a.id === 'app-pomodoro')?.keepAlive).toBe(true);
+    expect(usePanelAppsStore.getState().mounted).toContain('app-pomodoro');
+
+    usePanelAppsStore.getState().toggleKeepAlive('app-pomodoro');
+    expect(usePanelAppsStore.getState().apps.find((a) => a.id === 'app-pomodoro')?.keepAlive).toBe(false);
+  });
+
+  it('enforces strictly one floating window at a time', () => {
+    const appA = { id: 'app-a', name: 'App A', path: '/a.cntxt', icon: 'Box' };
+    const appB = { id: 'app-b', name: 'App B', path: '/b.cntxt', icon: 'Box' };
+    usePanelAppsStore.getState().add(appA);
+    usePanelAppsStore.getState().add(appB);
+
+    usePanelAppsStore.getState().setPresentation('app-a', 'floating');
+    expect(usePanelAppsStore.getState().apps.find((a) => a.id === 'app-a')?.presentation).toBe('floating');
+    expect(usePanelAppsStore.getState().mounted).toContain('app-a');
+
+    // Setting app-b to floating must automatically revert app-a to docked
+    usePanelAppsStore.getState().setPresentation('app-b', 'floating');
+    expect(usePanelAppsStore.getState().apps.find((a) => a.id === 'app-a')?.presentation).toBe('docked');
+    expect(usePanelAppsStore.getState().apps.find((a) => a.id === 'app-b')?.presentation).toBe('floating');
+    expect(usePanelAppsStore.getState().mounted).toContain('app-b');
+  });
+
+  it('protects keepAlive and floating apps from LRU eviction', () => {
+    // Add app-pinned with keepAlive = true
+    const pinnedApp = { id: 'app-pinned', name: 'Pinned', path: '/p.cntxt', icon: 'Pin', keepAlive: true };
+    usePanelAppsStore.getState().add(pinnedApp);
+    usePanelAppsStore.getState().open('app-pinned');
+
+    // Open 5 other apps to exceed MAX_LIVE_APPS (5)
+    ['app-x1', 'app-x2', 'app-x3', 'app-x4', 'app-x5'].forEach((id) => {
+      usePanelAppsStore.getState().open(id);
+    });
+
+    const state = usePanelAppsStore.getState();
+    // app-pinned must NOT be evicted because keepAlive is true
+    expect(state.mounted).toContain('app-pinned');
+  });
+
+  it('updates floatingPosition via setFloatingPosition', () => {
+    const app = { id: 'app-pos', name: 'Pos App', path: '/pos.cntxt', icon: 'Move' };
+    usePanelAppsStore.getState().add(app);
+    const newPos = { x: 120, y: 80, width: 500, height: 600 };
+    usePanelAppsStore.getState().setFloatingPosition('app-pos', newPos);
+
+    expect(usePanelAppsStore.getState().apps.find((a) => a.id === 'app-pos')?.floatingPosition).toEqual(newPos);
+  });
 });

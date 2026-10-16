@@ -1,6 +1,7 @@
 import { PanelAppManifest, PanelAppRecord } from '../../../contracts/data_shapes';
 import { PanelAppManifestSchema } from '../../../contracts/boundarySchemas';
 import { buildCntxtApp, parseCntxtApp } from '../format/cntxtApp';
+import { autoHealHtml } from '../format/autoHeal';
 import { scanHtml } from '../preflight/scan';
 import { IRuntimeBridge } from '../../../ui-contract/bridgeContract';
 import { usePanelAppsStore } from '../state/panelAppsStore';
@@ -37,8 +38,9 @@ export async function createPanelApp(
   bridge: IRuntimeBridge,
   workspacePath?: string | null
 ): Promise<CreatePanelAppResult> {
-  // 1) Re-verify preflight guards
-  const preflight = scanHtml(input.html);
+  // 1) Auto-heal pervasive LLM syntax typos and verify preflight guards
+  const healedHtml = autoHealHtml(input.html);
+  const preflight = scanHtml(healedHtml);
   if (preflight.blocked) {
     throw new Error('Panel App exceeds the hard 2MB size limit');
   }
@@ -60,13 +62,13 @@ export async function createPanelApp(
   const manifest = PanelAppManifestSchema.parse(manifestData);
 
   // 3) Build .cntxt format and execute safety round-trip verification
-  const cntxtContent = buildCntxtApp(manifest, input.html);
+  const cntxtContent = buildCntxtApp(manifest, healedHtml);
   const roundTrip = parseCntxtApp(cntxtContent);
   if (!roundTrip.ok) {
     const errMsg = 'error' in roundTrip ? roundTrip.error : 'Validation failed';
     throw new Error(`Generated .cntxt document verification failed: ${errMsg}`);
   }
-  if (roundTrip.html.trimEnd() !== input.html.trimEnd()) {
+  if (roundTrip.html.trimEnd() !== healedHtml.trimEnd()) {
     throw new Error('Integrity check failed: parsed HTML diverged from original source');
   }
 

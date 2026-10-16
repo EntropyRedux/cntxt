@@ -5,6 +5,27 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.12] — 2026-10-16
+
+### Floating Pop-out Window Independence, Compact Widget Scaling & Toolbar Optimization
+- **Floating Pop-out Window Lifecycle & Sidebar Independence (`Sidebar.tsx`)**:
+  - Decoupled pop-out panel apps from the right sidebar container lifecycle. Closing or collapsing the right sidebar closes docked apps while keeping all floating pop-up windows active, interactive, and rendered independently.
+- **Pop-out Windowing & Compact Scaling (`AppFrameHost.tsx`, `AppPanelPlaceholder.tsx`, `panelAppsStore.ts`)**:
+  - Removed "Minimize to FAB" buttons across floating window chrome and the panel apps store in favor of clean window controls (pop-in dock, maximize, close).
+  - Reduced minimum window resize bounds from `300px × 220px` down to `220px × 160px`, allowing floating apps to be scaled down into ultra-compact desktop widgets (e.g., sticky mini timers, counters, quick note pads).
+- **AI App Builder Blueprint Prompt Hardening for Small-Size Modes (`promptBuilder.ts`)**:
+  - Updated `buildPanelAppPrompt` and `buildAdaptPrompt` with mandatory rules for responsive small-size modes (`@media (max-width: 320px), (max-height: 360px)`).
+  - Mandated compact font sizes, reduced padding, icon-only or stacked buttons, and automatic hiding of secondary decorative elements when apps are resized into small pop-up widgets.
+- **Markdown Quick Formatting Toolbar Efficiency (`MobileAccessoryBar.tsx`)**:
+  - Redesigned the markdown accessory toolbar layout to maximize horizontal space: consolidated the collapse toggle into a single row and positioned accessory settings below the formatting controls, giving primary formatting buttons maximum breathing room.
+- **Panel App State Preservation & Keep-Alive Hardening**:
+  - Preserved active running state (such as timers and counters) across panel navigation and prevented disruptive session resets when returning to mounted apps.
+- **Verification Gates & Signed Release Packages**:
+  - Synchronized version `0.5.12` across `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`.
+  - All 59 Vitest suites (631 tests) passing; zero platform leaks across 186 files; 100% canonical contract parity.
+  - Production web distribution built to `dist/`.
+  - Authenticode-signed Windows setup installer (`CNTXT_0.5.12_x64-setup.exe`), enterprise MSI (`CNTXT_0.5.12_x64_en-US.msi`), and standalone portable binary (`CNTXT_0.5.12_portable.exe`).
+
 ## [0.5.11] — 2026-10-14
 
 ### HTML Panel Apps Platform Resilience & Sandbox Friction Resolution

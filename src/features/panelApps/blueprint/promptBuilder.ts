@@ -142,8 +142,9 @@ This app is stateless across sessions (resets cleanly on re-open).`;
       ? 'Fluid layout suited to dynamic canvas or dashboard widgets.'
       : 'Clean single-column vertical flow with comfortable padding (10px to 14px).';
 
-  const viewportLayoutRules = `## Viewport Layout & Anti-Clipping Rules (CRITICAL)
-This app runs inside a fixed-height sidebar panel. To ensure elements (especially bottom keypads, action buttons, or status bars) are NEVER clipped:
+  const viewportLayoutRules = `## Viewport Layout, Responsive Small Size Mode & Anti-Clipping Rules (CRITICAL)
+This app runs inside CNTXT both as a docked side-panel (320px–480px width, 100vh) and as a **freely resizable floating pop-up window** (which users can scale down to a compact utility widget, e.g. 260px × 180px, or expand up to full workspace sizes).
+To ensure elements are NEVER clipped and the app looks stunning at ANY size:
 1. Root container MUST fit the viewport:
    \`\`\`css
    * { box-sizing: border-box; }
@@ -151,7 +152,7 @@ This app runs inside a fixed-height sidebar panel. To ensure elements (especiall
      height: 100vh;
      max-height: 100vh;
      margin: 0;
-     padding: 10px;
+     padding: 8px;
      display: flex;
      flex-direction: column;
      overflow: hidden;
@@ -159,7 +160,7 @@ This app runs inside a fixed-height sidebar panel. To ensure elements (especiall
      color: var(--text-primary);
    }
    \`\`\`
-2. Any middle content (tape records, lists, notes, output log) MUST be scrollable:
+2. Any middle content (tape records, lists, notes, output log, cards) MUST be scrollable:
    \`\`\`css
    .scrollable-body {
      flex: 1;
@@ -172,7 +173,32 @@ This app runs inside a fixed-height sidebar panel. To ensure elements (especiall
    .bottom-controls {
      flex-shrink: 0; /* REQUIRED: prevents keypad or toolbar from being clipped at the bottom */
    }
-   \`\`\``;
+   \`\`\`
+4. **Small Size Mode (Compact Pop-Up Scaling)**:
+   Users frequently pop this app out into a small floating widget on their screen. You MUST provide responsive styling so it degrades gracefully into a compact mini-mode when resized small:
+   \`\`\`css
+   /* Compact / Mini-Widget Mode for small pop-up windows */
+   @media (max-width: 320px), (max-height: 360px) {
+     html, body {
+       padding: 6px;
+       font-size: 12px;
+     }
+     h1, h2, .app-title {
+       font-size: 13px !important;
+     }
+     .timer-display, .metric-value, .hero-display {
+       font-size: 1.8rem !important; /* Scale down large hero text */
+     }
+     .button-group, .keypad, .toolbar {
+       gap: 4px !important;
+     }
+     button, input, select {
+       padding: 4px 6px !important;
+       font-size: 11px !important;
+     }
+   }
+   \`\`\`
+   Ensure the core action (e.g. start/pause timer, quick add, calculate, copy) remains front-and-center even in the smallest pop-up dimensions.`;
 
   return `# PROMPT: Create Monolithic Panel App "${appName}"
 
@@ -314,10 +340,11 @@ ${htmlPayload}
      - Accents & Buttons: \`var(--accent-primary)\`, \`var(--accent-hover)\`
      - Borders: \`var(--border-primary)\`, \`var(--border-subtle)\`
    - Add \`color-scheme: dark light;\` to \`:root\`.
-3. **Viewport & Anti-Clipping Layout**:
-   - Root \`html, body\` must have \`height: 100vh; overflow: hidden; margin: 0; padding: 10px;\`.
+3. **Viewport, Small Size Mode & Anti-Clipping Layout**:
+   - Root \`html, body\` must have \`height: 100vh; overflow: hidden; margin: 0; padding: 8px;\`.
    - Scrollable body content must have \`flex: 1; min-height: 0; overflow-y: auto;\`.
    - Bottom controls, toolbars, and inputs must have \`flex-shrink: 0;\` to prevent clipping in a 100vh sidebar.
+   - **Small Size Mode**: Provide media queries (\`@media (max-width: 320px), (max-height: 360px)\`) so the app can be used as a compact floating pop-up window without breaking layout.
 4. **CNTXT State Persistence & window.CNTXT SDK**:
    - Replace any browser storage (or in-memory-only state) with the pre-injected \`window.CNTXT\` SDK:
      - On init: \`window.CNTXT.ready()\` (or postMessage \`{ type: 'CNTXT_APP_READY' }\`) and listen for restored state via \`window.CNTXT.state.onInit((state) => applyState(state))\` (or fallback \`message\` event with \`CNTXT_STATE_INIT\`).

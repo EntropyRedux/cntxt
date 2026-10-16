@@ -38,7 +38,11 @@ import { OmniTerminalView } from '../OmniTerminal/OmniTerminalView';
 const STORAGE_KEY = 'contextpad_sidepanel_width';
 const DEFAULT_DESKTOP_WIDTH = 340;
 
-export const Sidebar: React.FC = () => {
+export interface SidebarProps {
+  isClosed?: boolean;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isClosed = false }) => {
   const bridge = useRuntimeBridge();
   const { settings, toggleSidebar, updateSettings } = useSettingsStore();
   const { width: windowWidth } = useWindowDimensions();
@@ -258,10 +262,6 @@ export const Sidebar: React.FC = () => {
     };
   }, [bridge.storage, windowWidth]);
 
-  if (!settings.showSidebar) {
-    return null;
-  }
-
   const getTabInfo = () => {
     switch (settings.activeSidebarTab) {
       case 'explorer':
@@ -354,43 +354,54 @@ export const Sidebar: React.FC = () => {
   return (
     <aside
       ref={panelRef}
-      style={{ width: `${width}px`, maxWidth: isOverlay ? 'calc(100% - 24px)' : '100%' }}
+      style={{
+        width: isClosed ? 0 : `${width}px`,
+        maxWidth: isOverlay ? 'calc(100% - 24px)' : '100%',
+        borderLeft: isClosed ? 'none' : undefined,
+        overflow: isClosed ? 'visible' : undefined,
+      }}
       aria-label={tabInfo.title}
-      className={`theme-sidebar h-full flex flex-col select-none transition-none border-l border-[var(--border-primary)] bg-[var(--sidebar-bg)] ${
-        isOverlay 
-          ? 'absolute right-0 top-0 bottom-0 z-30 shadow-2xl backdrop-blur-md' 
-          : 'relative shrink-0 z-10 shadow-xs'
+      className={`theme-sidebar h-full flex flex-col select-none transition-none ${
+        isClosed
+          ? 'border-none bg-transparent overflow-visible'
+          : `border-l border-[var(--border-primary)] bg-[var(--sidebar-bg)] ${
+              isOverlay 
+                ? 'absolute right-0 top-0 bottom-0 z-30 shadow-2xl backdrop-blur-md' 
+                : 'relative shrink-0 z-10 shadow-xs'
+            }`
       }`}
     >
       {/* Left-edge Draggable Resizer Handle */}
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize side panel"
-        title="Drag to resize"
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        className={`absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize z-30 group flex items-center justify-center select-none touch-none ${
-          isResizing ? 'cursor-col-resize' : ''
-        }`}
-      >
-        {/* Continuous border highlight line */}
+      {!isClosed && (
         <div
-          className={`w-0.5 h-full transition-colors ${
-            isResizing
-              ? 'bg-[var(--accent-primary)]'
-              : 'bg-transparent group-hover:bg-[var(--accent-primary)]/60'
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize side panel"
+          title="Drag to resize"
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          className={`absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize z-30 group flex items-center justify-center select-none touch-none ${
+            isResizing ? 'cursor-col-resize' : ''
           }`}
-        />
-        {/* Subtle center grip pill */}
-        <div
-          className={`absolute w-1 h-8 rounded-full transition-all pointer-events-none ${
-            isResizing
-              ? 'bg-[var(--accent-primary)] opacity-100 scale-110 shadow-xs'
-              : 'bg-[var(--text-muted)] opacity-0 group-hover:opacity-60'
-          }`}
-        />
-      </div>
+        >
+          {/* Continuous border highlight line */}
+          <div
+            className={`w-0.5 h-full transition-colors ${
+              isResizing
+                ? 'bg-[var(--accent-primary)]'
+                : 'bg-transparent group-hover:bg-[var(--accent-primary)]/60'
+            }`}
+          />
+          {/* Subtle center grip pill */}
+          <div
+            className={`absolute w-1 h-8 rounded-full transition-all pointer-events-none ${
+              isResizing
+                ? 'bg-[var(--accent-primary)] opacity-100 scale-110 shadow-xs'
+                : 'bg-[var(--text-muted)] opacity-0 group-hover:opacity-60'
+            }`}
+          />
+        </div>
+      )}
 
       {/* Full-viewport transparent overlay shield active during drag */}
       {isResizing && (
@@ -400,8 +411,8 @@ export const Sidebar: React.FC = () => {
         />
       )}
 
-      {/* Side Panel Header (hidden for self-contained panel app and builder) */}
-      {settings.activeSidebarTab !== 'app-builder' && settings.activeSidebarTab !== 'panel-app' && (
+      {/* Side Panel Header (hidden when closed, or for self-contained panel app and builder) */}
+      {!isClosed && settings.activeSidebarTab !== 'app-builder' && settings.activeSidebarTab !== 'panel-app' && (
       <div className="flex items-center justify-between h-9 px-3 border-b border-[var(--border-primary)] bg-[var(--sidebar-header-bg)]/80 backdrop-blur-xs shrink-0 text-xs select-none">
         <div className="flex items-center gap-2 min-w-0">
           <TabIcon className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
@@ -497,12 +508,15 @@ export const Sidebar: React.FC = () => {
       )}
 
       {/* Tab Panel View Content */}
-      <div className="flex-1 h-full overflow-hidden relative">
-        {/* Stable Keep-Alive App Host: keeps mounted panel app iframes alive in the DOM across panel switches */}
+      <div
+        className="flex-1 h-full overflow-hidden relative"
+        style={isClosed ? { overflow: 'visible' } : undefined}
+      >
+        {/* Stable Keep-Alive App Host: keeps mounted panel app iframes alive in the DOM across panel switches and sidebar close */}
         <AppFrameHost
           mountedIds={mountedPanelAppIds}
-          activeId={settings.activeSidebarTab === 'panel-app' ? activePanelAppId : null}
-          visible={settings.activeSidebarTab === 'panel-app'}
+          activeId={!isClosed && settings.activeSidebarTab === 'panel-app' ? activePanelAppId : null}
+          visible={!isClosed && settings.activeSidebarTab === 'panel-app'}
           reloadNonce={panelAppsReloadNonce}
           getUrl={() => 'about:blank'}
           getSrcDoc={(id) => panelAppsHtmlCache[id] || ''}
@@ -512,14 +526,14 @@ export const Sidebar: React.FC = () => {
         />
 
         {/* When active tab is NOT panel-app, render that panel above */}
-        {settings.activeSidebarTab !== 'panel-app' && (
+        {!isClosed && settings.activeSidebarTab !== 'panel-app' && (
           <div className="absolute inset-0 z-10 bg-[var(--sidebar-bg)] overflow-hidden">
             {renderContent()}
           </div>
         )}
 
         {/* When active tab IS panel-app, render AppPanelPlaceholder overlay controls */}
-        {settings.activeSidebarTab === 'panel-app' && (
+        {!isClosed && settings.activeSidebarTab === 'panel-app' && (
           <div className="absolute inset-x-0 top-0 z-10 pointer-events-none h-full">
             <AppPanelPlaceholder onClose={() => toggleSidebar()} />
           </div>

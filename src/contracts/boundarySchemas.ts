@@ -300,6 +300,15 @@ export const PanelAppManifestSchema: z.ZodType<PanelAppManifest> = z.object({
   createdFrom: z.enum(['file', 'tab', 'prompt']),
 });
 
+export const PanelAppPresentationModeSchema = z.enum(['docked', 'floating', 'fab']);
+
+export const PanelAppFloatingPositionSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+});
+
 export const PanelAppRecordSchema: z.ZodType<PanelAppRecord> = z.object({
   id: z.string().regex(/^[a-z][a-z0-9]{11,31}$/),
   path: z.string().min(1),
@@ -307,6 +316,9 @@ export const PanelAppRecordSchema: z.ZodType<PanelAppRecord> = z.object({
   icon: z.string().min(1),
   network: z.enum(['offline', 'cdn']).optional(),
   panelWidth: z.number().optional(),
+  keepAlive: z.boolean().optional(),
+  presentation: PanelAppPresentationModeSchema.optional(),
+  floatingPosition: PanelAppFloatingPositionSchema.optional(),
 });
 
 export function validatePanelAppManifest(data: unknown) {

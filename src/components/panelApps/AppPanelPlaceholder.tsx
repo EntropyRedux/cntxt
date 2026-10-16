@@ -5,6 +5,7 @@ import { useNotificationStore } from '../../store/notificationStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useRuntimeBridge } from '../../adapters';
 import { parseCntxtApp, updateCntxtAppState } from '../../features/panelApps/format/cntxtApp';
+import { autoHealHtml } from '../../features/panelApps/format/autoHeal';
 import { buildThemeInjection } from '../../features/panelApps/theme/themeSync';
 import { PanelAppManifest } from '../../contracts/data_shapes';
 import { safePersist } from '../../services/storageHelper';
@@ -23,7 +24,9 @@ import {
   Loader2,
   Sliders,
   ExternalLink,
-  FolderOpen
+  FolderOpen,
+  Pin,
+  Minimize2
 } from 'lucide-react';
 
 export interface AppPanelPlaceholderProps {
@@ -329,11 +332,8 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
   const preparedHtml = useMemo(() => {
     if (!rawHtml || !activeApp) return '';
 
-    // Auto-heal pervasive LLM markdown checklist regex typo:
-    // e.g. lines[lineIndex].replace(/^([\s]*-\s*[)[ xX](])/, ...)
-    let cleanedHtml = rawHtml
-      .replace(/(\^?\(\[\\s\]\*-\\s\*)\[\)\s*\[\s*xX\s*\]\s*\(\]/g, '$1\\[([ xX])\\]')
-      .replace(/\[\)\s*\[\s*xX\s*\]\s*\(\]/g, '\\[([ xX])\\]');
+    // Auto-heal pervasive LLM syntax traps (markdown checklist regexes, template backticks, etc.)
+    const cleanedHtml = autoHealHtml(rawHtml);
 
     const isOffline = (manifest?.network ?? activeApp.network) === 'offline';
     const cspMeta = isOffline
@@ -493,12 +493,15 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
     }
 
     return fullDoc;
-  }, [rawHtml, manifest, activeApp, storageData]);
+  }, [rawHtml, manifest?.network, activeApp?.id, activeApp?.network]);
 
-  // Sync prepared HTML into central keep-alive cache
+  // Sync prepared HTML into central keep-alive cache only when content actually changes
   useEffect(() => {
     if (activeApp && preparedHtml) {
-      usePanelAppsStore.getState().setHtmlCache(activeApp.id, preparedHtml);
+      const cur = usePanelAppsStore.getState().htmlCache[activeApp.id];
+      if (cur !== preparedHtml) {
+        usePanelAppsStore.getState().setHtmlCache(activeApp.id, preparedHtml);
+      }
     }
   }, [activeApp?.id, preparedHtml]);
 
@@ -642,17 +645,62 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
     <div className={`flex flex-col ${isOverlayActive ? 'h-full' : 'h-10'} w-full bg-transparent select-none overflow-hidden`}>
       {/* Top Header Bar */}
       <div className="h-10 px-3 border-b border-[var(--border-primary)] bg-[var(--sidebar-header-bg)] flex items-center justify-between shrink-0 pointer-events-auto">
-        <div className="flex items-center gap-2 truncate pr-2">
-          <div className="w-6 h-6 rounded-md bg-[var(--accent-container)] text-[var(--accent-primary)] flex items-center justify-center shrink-0 border border-[var(--border-subtle)] shadow-2xs">
+        <div className="flex items-center gap-1.5 shrink-0 pr-1">
+          <div
+            className="w-6 h-6 rounded-md bg-[var(--accent-container)] text-[var(--accent-primary)] flex items-center justify-center shrink-0 border border-[var(--border-subtle)] shadow-2xs"
+            title={activeApp.name}
+          >
             <AppIcon name={activeApp.icon} size={14} />
           </div>
-          <div className="truncate">
-            <span className="font-semibold text-xs text-[var(--text-primary)] truncate">{activeApp.name}</span>
-          </div>
           <NetworkBadge offlineReady={(manifest?.network ?? activeApp.network) === 'offline'} className="scale-90 shrink-0" />
+
+          {/* CNTXT-Owned Mini-App Controls: Keep-Alive, Floating Window, FAB */}
+          <div className="flex items-center gap-0.5 ml-0.5 border-l border-[var(--border-subtle)] pl-1">
+            {/* Keep-Alive Toggle */}
+            <button
+              type="button"
+              onClick={() => usePanelAppsStore.getState().toggleKeepAlive(activeApp.id, bridge.storage)}
+              title={
+                activeApp.keepAlive
+                  ? "Keep Alive Active: Running continuously in background across tabs"
+                  : "Enable Keep Alive: Prevent timers/state from stopping when switching tabs"
+              }
+              aria-label="Toggle Keep Alive"
+              className={`p-1 rounded-md transition-colors cursor-pointer ${
+                activeApp.keepAlive
+                  ? 'text-[var(--accent-primary)] bg-[var(--accent-container)] shadow-2xs font-semibold'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+              }`}
+            >
+              <Pin className={`w-3.5 h-3.5 ${activeApp.keepAlive ? 'rotate-45 text-[var(--accent-primary)]' : ''}`} />
+            </button>
+
+            {/* Pop-out Floating Window Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextMode = activeApp.presentation === 'floating' ? 'docked' : 'floating';
+                usePanelAppsStore.getState().setPresentation(activeApp.id, nextMode, bridge.storage);
+              }}
+              title={
+                activeApp.presentation === 'floating'
+                  ? "Dock App back into Sidebar"
+                  : "Pop Out into Resizable Floating Window"
+              }
+              aria-label="Toggle Floating Window"
+              className={`p-1 rounded-md transition-colors cursor-pointer ${
+                activeApp.presentation === 'floating'
+                  ? 'text-[var(--accent-primary)] bg-[var(--accent-container)] shadow-2xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+              }`}
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
           {runtimeError && (
             <div
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] truncate max-w-[150px]"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] truncate max-w-[120px]"
               title={`App Warning: ${runtimeError}`}
             >
               <Info className="w-3 h-3 text-amber-400 shrink-0" />

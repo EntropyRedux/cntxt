@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { PanelAppRecord } from '../../../contracts/data_shapes';
+import { PanelAppFloatingPosition, PanelAppPresentationMode, PanelAppRecord } from '../../../contracts/data_shapes';
 import { validatePanelAppRecords } from '../../../contracts/boundarySchemas';
 import { IStorageBridge } from '../../../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../../../adapters/storageKeys';
@@ -20,6 +20,9 @@ interface PanelAppsState {
   reload: (id: string) => void;
   close: (id: string) => void;
   setHtmlCache: (id: string, html: string) => void;
+  toggleKeepAlive: (id: string, storage?: IStorageBridge) => void;
+  setPresentation: (id: string, mode: PanelAppPresentationMode, storage?: IStorageBridge) => void;
+  setFloatingPosition: (id: string, pos: PanelAppFloatingPosition, storage?: IStorageBridge) => void;
   hydrate: (apps: PanelAppRecord[]) => void;
   initialize: (storage: IStorageBridge) => Promise<void>;
 }
@@ -62,8 +65,23 @@ export const usePanelAppsStore = create<PanelAppsState>((set, get) => ({
 
   open: (id) => set((s) => {
     if (!id) return { activeId: null };
-    const mounted = [...s.mounted.filter((m) => m !== id), id].slice(-MAX_LIVE_APPS);
-    return { activeId: id, mounted };
+    // If already mounted, keep mounted array completely untouched to avoid DOM re-insertion
+    if (s.mounted.includes(id)) {
+      return { activeId: id };
+    }
+    const protectedIds = new Set(
+      s.apps
+        .filter((a) => a.keepAlive || a.presentation === 'floating')
+        .map((a) => a.id)
+    );
+    const candidateList = [...s.mounted, id];
+    if (candidateList.length <= MAX_LIVE_APPS) {
+      return { activeId: id, mounted: candidateList };
+    }
+    // Evict oldest un-protected app
+    const evictIdx = candidateList.findIndex((m) => m !== id && !protectedIds.has(m));
+    const nextMounted = evictIdx >= 0 ? candidateList.filter((_, idx) => idx !== evictIdx) : candidateList;
+    return { activeId: id, mounted: nextMounted };
   }),
 
   reload: (id) => set((s) => ({
@@ -73,11 +91,52 @@ export const usePanelAppsStore = create<PanelAppsState>((set, get) => ({
   close: (id) => set((s) => ({
     mounted: s.mounted.filter((m) => m !== id),
     activeId: s.activeId === id ? null : s.activeId,
+    apps: s.apps.map((a) => (a.id === id ? { ...a, presentation: 'docked' as PanelAppPresentationMode } : a)),
   })),
 
   setHtmlCache: (id, html) => set((s) => ({
     htmlCache: { ...s.htmlCache, [id]: html }
   })),
+
+  toggleKeepAlive: (id, storage) => {
+    const app = get().apps.find((a) => a.id === id);
+    if (!app) return;
+    const newKeepAlive = !app.keepAlive;
+    const updated = get().apps.map((a) => (a.id === id ? { ...a, keepAlive: newKeepAlive } : a));
+    const mounted = newKeepAlive && !get().mounted.includes(id) ? [...get().mounted, id] : get().mounted;
+    set({ apps: updated, mounted });
+    if (storage) {
+      safePersist(storage, STORAGE_KEYS.PANEL_APPS_INDEX, JSON.stringify(updated), 'Panel Apps Registry');
+    }
+  },
+
+  setPresentation: (id, mode, storage) => {
+    const updated = get().apps.map((a) => {
+      if (a.id === id) {
+        return { ...a, presentation: mode };
+      }
+      // Floating windows strictly one at a time for now: revert any other floating app to docked
+      if (mode === 'floating' && a.presentation === 'floating') {
+        return { ...a, presentation: 'docked' as PanelAppPresentationMode };
+      }
+      return a;
+    });
+    const mounted = mode === 'floating' && !get().mounted.includes(id)
+      ? [...get().mounted, id]
+      : get().mounted;
+    set({ apps: updated, mounted });
+    if (storage) {
+      safePersist(storage, STORAGE_KEYS.PANEL_APPS_INDEX, JSON.stringify(updated), 'Panel Apps Registry');
+    }
+  },
+
+  setFloatingPosition: (id, pos, storage) => {
+    const updated = get().apps.map((a) => (a.id === id ? { ...a, floatingPosition: pos } : a));
+    set({ apps: updated });
+    if (storage) {
+      safePersist(storage, STORAGE_KEYS.PANEL_APPS_INDEX, JSON.stringify(updated), 'Panel Apps Registry');
+    }
+  },
 
   hydrate: (apps) => set({ apps }),
 
@@ -88,7 +147,11 @@ export const usePanelAppsStore = create<PanelAppsState>((set, get) => ({
       const parsed = JSON.parse(raw);
       const validated = validatePanelAppRecords(parsed);
       if (validated.success) {
-        set({ apps: validated.data });
+        const apps = validated.data;
+        const initialMounted = apps
+          .filter((a) => a.keepAlive || a.presentation === 'floating')
+          .map((a) => a.id);
+        set({ apps, mounted: Array.from(new Set([...get().mounted, ...initialMounted])) });
       }
     } catch (e) {
       console.warn('[panelAppsStore] Failed to initialize panel apps index:', e);

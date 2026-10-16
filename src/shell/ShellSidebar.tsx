@@ -5,7 +5,5 @@ import { useSettingsStore } from '../store/settingsStore';
 export const ShellSidebar: React.FC = () => {
   const { settings } = useSettingsStore();
 
-  if (!settings.showSidebar) return null;
-
-  return <Sidebar />;
+  return <Sidebar isClosed={!settings.showSidebar} />;
 };

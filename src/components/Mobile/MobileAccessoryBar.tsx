@@ -3,7 +3,8 @@ import {
   ChevronUp,
   ChevronDown,
   SlidersHorizontal,
-  Plus
+  Plus,
+  X
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -266,54 +267,134 @@ export const MobileAccessoryBar: React.FC = () => {
 
   return (
     <div className="z-20 border-t border-[var(--border-primary)] bg-[var(--titlebar-bg)]/95 backdrop-blur-md shrink-0 select-none shadow-md">
-      <div className="flex items-start justify-between w-full relative">
-        {/* Pinned Left Section: Toolbar collapse */}
-        <div className={`flex items-center ${sizeStyles.containerPad} shrink-0 self-start`}>
-          {/* Toggle chevron button: hides the entire bar */}
-          <button
-            type="button"
-            id="markdown-formatting-collapse-btn"
-            onClick={() => handleToggleExpanded(false)}
-            title="Hide Markdown Formatting quick buttons"
-            aria-label="Hide Markdown Formatting quick buttons"
-            aria-expanded={true}
-            className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-[var(--border-primary)] active:scale-95 shadow-2xs cursor-pointer`}
-          >
-            <ChevronDown className={`${sizeStyles.accessoryIcon} stroke-[2.2]`} />
-          </button>
-        </div>
+      {isMultiRowExpanded ? (
+        <div className="flex flex-col w-full">
+          {/* Option 2: Slim Top Control Shelf for Multi-Row Mode */}
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--border-subtle)] bg-[var(--titlebar-bg)] text-xs">
+            <div className="flex items-center gap-2 text-[var(--text-muted)] font-medium">
+              <span className="text-[11px] font-semibold text-[var(--text-primary)]">
+                Markdown Formatting
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent-container)] text-[var(--accent-primary)] font-mono">
+                {activeButtons.length}
+              </span>
+            </div>
 
-        {/* Center Section: Dynamic Markdown Formatting Buttons (Single-row scrollable OR Multi-row wrapped) */}
-        <div className="relative flex-1 min-w-0 flex items-center">
-          {/* Subtle Left Scroll Indicator: appears when scrolled right */}
-          {!isMultiRowExpanded && canScrollLeft && (
-            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[var(--titlebar-bg)] to-transparent pointer-events-none z-10" />
-          )}
+            <div className="flex items-center gap-1.5">
+              {/* Collapse to single row */}
+              <button
+                type="button"
+                onClick={toggleExpandMultiRow}
+                title="Collapse toolbar to single row"
+                aria-label="Collapse toolbar to single row"
+                className="h-6 px-2 rounded-md flex items-center gap-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer border border-[var(--border-primary)] shadow-2xs"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+                <span>Single Row</span>
+              </button>
 
-          <div 
+              {/* Settings / Customize button */}
+              <button
+                type="button"
+                onClick={openCustomizer}
+                title="Customize Markdown Formatting Buttons"
+                aria-label="Customize Markdown Formatting Buttons"
+                className="h-6 w-6 rounded-md flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer border border-[var(--border-primary)] shadow-2xs"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Hide entire toolbar button */}
+              <button
+                type="button"
+                id="markdown-formatting-collapse-btn"
+                onClick={() => handleToggleExpanded(false)}
+                title="Hide formatting toolbar"
+                aria-label="Hide formatting toolbar"
+                className="h-6 w-6 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-red-400 hover:bg-[var(--card-hover-bg)] transition-colors cursor-pointer border border-[var(--border-primary)] shadow-2xs"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* 100% Full-Width Button Grid */}
+          <div
             ref={scrollContainerRef}
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onClickCapture={handleClickCapture}
-            onWheel={handleWheel}
-            onScroll={checkOverflowAndScroll}
-            onDragStart={(e) => e.preventDefault()}
-            className={`flex-1 min-w-0 ${
-              isMultiRowExpanded 
-                ? `flex flex-wrap items-center ${sizeStyles.gap} ${sizeStyles.containerPad} max-h-56 overflow-y-auto no-scrollbar touch-pan-y` 
-                : `flex items-center ${sizeStyles.gap} py-1.5 px-1 overflow-x-auto no-scrollbar touch-pan-x ${
-                    isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
-                  }`
-            }`}
-            style={{
-              WebkitOverflowScrolling: 'touch',
-              overscrollBehaviorX: 'contain'
-            }}
+            className={`w-full flex flex-wrap items-center ${sizeStyles.gap} ${sizeStyles.containerPad} max-h-56 overflow-y-auto no-scrollbar touch-pan-y`}
           >
-            {activeButtons.map((btn) => {
-              return (
+            {activeButtons.map((btn) => (
+              <button
+                key={btn.id}
+                type="button"
+                draggable={false}
+                onClick={() => executeFormatting(btn, activeTabId || undefined)}
+                title={btn.title || btn.label}
+                aria-label={btn.title || btn.label}
+                className={`${sizeStyles.btn} flex items-center justify-center font-bold transition-all shrink-0 active:scale-95 shadow-2xs border select-none cursor-pointer ${
+                  btn.isAccent
+                    ? 'bg-[var(--accent-container)] text-[var(--on-accent-container)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-container)]/80'
+                    : 'bg-[var(--card-bg)] text-[var(--text-primary)] border-[var(--border-primary)] hover:bg-[var(--card-hover-bg)] hover:border-[var(--text-secondary)] hover:text-[var(--accent-primary)]'
+                }`}
+              >
+                <RibbonIcon name={btn.icon} className={`${sizeStyles.icon} shrink-0 pointer-events-none stroke-[2.2]`} strokeWidth={2.2} />
+              </button>
+            ))}
+
+            {activeButtons.length === 0 && (
+              <button
+                type="button"
+                onClick={openCustomizer}
+                className={`${sizeStyles.addBtn} flex items-center text-[var(--text-muted)] hover:text-[var(--accent-primary)] bg-[var(--card-bg)] border border-dashed border-[var(--border-primary)] hover:border-[var(--accent-primary)] transition-all shrink-0`}
+              >
+                <Plus className={`${sizeStyles.addIcon} text-[var(--accent-primary)] pointer-events-none`} />
+                <span>Add Markdown Buttons</span>
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between w-full relative">
+          {/* Pinned Left Section: Toolbar collapse */}
+          <div className={`flex items-center ${sizeStyles.containerPad} shrink-0 self-start`}>
+            <button
+              type="button"
+              id="markdown-formatting-collapse-btn"
+              onClick={() => handleToggleExpanded(false)}
+              title="Hide Markdown Formatting quick buttons"
+              aria-label="Hide Markdown Formatting quick buttons"
+              aria-expanded={true}
+              className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-[var(--border-primary)] active:scale-95 shadow-2xs cursor-pointer`}
+            >
+              <ChevronDown className={`${sizeStyles.accessoryIcon} stroke-[2.2]`} />
+            </button>
+          </div>
+
+          {/* Center Section: Single-row scrollable strip */}
+          <div className="relative flex-1 min-w-0 flex items-center">
+            {canScrollLeft && (
+              <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[var(--titlebar-bg)] to-transparent pointer-events-none z-10" />
+            )}
+
+            <div 
+              ref={scrollContainerRef}
+              onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onClickCapture={handleClickCapture}
+              onWheel={handleWheel}
+              onScroll={checkOverflowAndScroll}
+              onDragStart={(e) => e.preventDefault()}
+              className={`flex-1 min-w-0 flex items-center ${sizeStyles.gap} py-1.5 px-1 overflow-x-auto no-scrollbar touch-pan-x ${
+                isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
+              }`}
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehaviorX: 'contain'
+              }}
+            >
+              {activeButtons.map((btn) => (
                 <button
                   key={btn.id}
                   type="button"
@@ -329,72 +410,52 @@ export const MobileAccessoryBar: React.FC = () => {
                 >
                   <RibbonIcon name={btn.icon} className={`${sizeStyles.icon} shrink-0 pointer-events-none stroke-[2.2]`} strokeWidth={2.2} />
                 </button>
-              );
-            })}
+              ))}
 
-            {/* If no buttons are enabled, show an invitation button */}
-            {activeButtons.length === 0 && (
-              <button
-                type="button"
-                onClick={openCustomizer}
-                className={`${sizeStyles.addBtn} flex items-center text-[var(--text-muted)] hover:text-[var(--accent-primary)] bg-[var(--card-bg)] border border-dashed border-[var(--border-primary)] hover:border-[var(--accent-primary)] transition-all shrink-0`}
-              >
-                <Plus className={`${sizeStyles.addIcon} text-[var(--accent-primary)] pointer-events-none`} />
-                <span>Add Markdown Buttons</span>
-              </button>
+              {activeButtons.length === 0 && (
+                <button
+                  type="button"
+                  onClick={openCustomizer}
+                  className={`${sizeStyles.addBtn} flex items-center text-[var(--text-muted)] hover:text-[var(--accent-primary)] bg-[var(--card-bg)] border border-dashed border-[var(--border-primary)] hover:border-[var(--accent-primary)] transition-all shrink-0`}
+                >
+                  <Plus className={`${sizeStyles.addIcon} text-[var(--accent-primary)] pointer-events-none`} />
+                  <span>Add Markdown Buttons</span>
+                </button>
+              )}
+            </div>
+
+            {canScrollRight && (
+              <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--titlebar-bg)] to-transparent pointer-events-none z-10" />
             )}
           </div>
 
-          {/* Subtle Right Scroll Indicator: appears when there are hidden buttons to the right */}
-          {!isMultiRowExpanded && canScrollRight && (
-            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--titlebar-bg)] to-transparent pointer-events-none z-10" />
-          )}
-        </div>
+          {/* Right Section: Expand & Settings */}
+          <div className={`flex items-center ${sizeStyles.gap} ${sizeStyles.containerPad} shrink-0 border-l border-[var(--border-subtle)] bg-[var(--titlebar-bg)]/95 backdrop-blur-md shadow-[-6px_0_12px_-3px_rgba(0,0,0,0.08)] self-start z-10`}>
+            {shouldShowExpandButton && (
+              <button
+                type="button"
+                onClick={toggleExpandMultiRow}
+                title="Expand toolbar to show all hidden formatting buttons"
+                aria-label="Expand toolbar to show all hidden formatting buttons"
+                aria-expanded={false}
+                className={`${sizeStyles.accessoryBtn} flex items-center justify-center shrink-0 transition-all active:scale-95 shadow-2xs border cursor-pointer bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border-[var(--border-primary)]`}
+              >
+                <ChevronUp className={`${sizeStyles.accessoryIcon} stroke-[2.2]`} />
+              </button>
+            )}
 
-        {/* Persistent Pinned Right Section: Up/Down Expand/Collapse & Settings Button */}
-        <div className={`flex items-center ${sizeStyles.gap} ${sizeStyles.containerPad} shrink-0 border-l border-[var(--border-subtle)] bg-[var(--titlebar-bg)]/95 backdrop-blur-md shadow-[-6px_0_12px_-3px_rgba(0,0,0,0.08)] self-start z-10`}>
-          {/* Up/Down Button: Appears beside the config button to view hidden buttons / expand toolbar */}
-          {shouldShowExpandButton && (
             <button
               type="button"
-              onClick={toggleExpandMultiRow}
-              title={
-                isMultiRowExpanded 
-                  ? "Collapse toolbar to single row" 
-                  : "Expand toolbar to show all hidden formatting buttons"
-              }
-              aria-label={
-                isMultiRowExpanded 
-                  ? "Collapse toolbar to single row" 
-                  : "Expand toolbar to show all hidden formatting buttons"
-              }
-              aria-expanded={isMultiRowExpanded}
-              className={`${sizeStyles.accessoryBtn} flex items-center justify-center shrink-0 transition-all active:scale-95 shadow-2xs border cursor-pointer ${
-                isMultiRowExpanded
-                  ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] border-[var(--accent-primary)]/40 font-semibold'
-                  : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border-[var(--border-primary)]'
-              }`}
+              onClick={openCustomizer}
+              title="Customize Markdown Formatting Buttons (Add, Remove, Reorder, Layout, Size)"
+              aria-label="Customize Markdown Formatting Buttons"
+              className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-dashed border-[var(--border-primary)] active:scale-95 shadow-2xs group cursor-pointer`}
             >
-              {isMultiRowExpanded ? (
-                <ChevronDown className={`${sizeStyles.accessoryIcon} stroke-[2.2]`} />
-              ) : (
-                <ChevronUp className={`${sizeStyles.accessoryIcon} stroke-[2.2]`} />
-              )}
+              <SlidersHorizontal className={`${sizeStyles.accessoryIcon} stroke-[2.2] transition-transform group-hover:rotate-45`} />
             </button>
-          )}
-
-          {/* Settings / Config Button: Persistent at the rightmost location */}
-          <button
-            type="button"
-            onClick={openCustomizer}
-            title="Customize Markdown Formatting Buttons (Add, Remove, Reorder, Layout, Size)"
-            aria-label="Customize Markdown Formatting Buttons"
-            className={`${sizeStyles.accessoryBtn} flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:bg-[var(--card-hover-bg)] shrink-0 transition-colors border border-dashed border-[var(--border-primary)] active:scale-95 shadow-2xs group cursor-pointer`}
-          >
-            <SlidersHorizontal className={`${sizeStyles.accessoryIcon} stroke-[2.2] transition-transform group-hover:rotate-45`} />
-          </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.37
-Last Updated: 2026-10-14
-Last Updated By: Prod Agent (App Builder & Sandboxed Panel App Runtime Remediation & v0.5.10 Release)
+Version: v2.38
+Last Updated: 2026-10-16
+Last Updated By: Prod Agent (Pop-out Window Independence, Compact Widget Scaling, Toolbar Optimization & v0.5.12 Release)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,16 +13,23 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-18 Complete & Verified; Tri-Platform Suite Live)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 623/623 Live across 58 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 9/9 Live)
+    [x] Testing (Vitest 631/631 Live across 59 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 9/9 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.10 Authenticode Signed Portable Executable & Native Installers Built)
+  [x] Packaging & Release (v0.5.12 Authenticode Signed Portable Executable & Native Installers Built)
 
-Current Feature Group: Panel Apps Platform Resilience & v0.5.10 Release
-Status: [x] complete & verified (safe workspace fallback, polymorphic readFile string wrapper, SDK convenience aliases, prompt invariants, signed binaries built)
+Current Feature Group: Pop-out Window Independence, Compact Widget Scaling & v0.5.12 Release
+Status: [x] complete & verified (sidebar-independent pop-out windows, 220x160 compact scaling, FAB removal, responsive small-size mode AI prompt rules, markdown toolbar layout optimization, signed binaries built)
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus && enableOmniTerminal; disabled by default)
-Unit Tests: written [x] passing [x] (623/623 unit tests passing across 58 suites in CNTXT, 9 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
+Unit Tests: written [x] passing [x] (631/631 unit tests passing across 59 suites in CNTXT, 9 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/plans/feature_group_FG18_omni_terminal_file_driven_redesign_2026-10-12.md
 Notes:
+- Task 56: Pop-out Window Independence, Compact Scaling & v0.5.12 Release (2026-10-16):
+  - Sidebar-Independent Pop-out Windowing: Decoupled floating pop-out panel apps from right sidebar closure in `Sidebar.tsx`. Closing the right sidebar unmounts docked apps while keeping all floating pop-ups fully active and rendered independently.
+  - Floating Pop-up Window Controls & Compact Resizing: Removed FAB minimization controls across `AppPanelPlaceholder.tsx`, `AppFrameHost.tsx`, and `panelAppsStore.ts` in favor of windowing controls. Reduced minimum window resize bounds to 220px × 160px in `AppFrameHost.tsx` for compact desktop widget usage.
+  - AI App Builder Small-Size Mode Prompt Invariants: Updated `promptBuilder.ts` to instruct LLMs to include responsive styles (`@media (max-width: 320px), (max-height: 360px)`) ensuring apps render cleanly when scaled down to mini pop-up widgets.
+  - Markdown Quick Formatting Toolbar Efficiency: Implemented Option 2 spatial optimization in `MobileAccessoryBar.tsx`, consolidating the collapse toggle into a single row and placing settings buttons below to provide maximum space for formatting tools.
+  - Panel App Keep-Alive Hardening: Ensured timer and state continuity across panel navigation, preventing session resets from interrupting running app routines.
+  - Packaging & Signing: Version bumped to 0.5.12 across `package.json`, `tauri.conf.json`, and `Cargo.toml`. 631/631 Vitest unit tests pass across 59 suites. Built web bundle (`dist/`) and signed native Windows packages (`CNTXT_0.5.12_x64-setup.exe`, `CNTXT_0.5.12_x64_en-US.msi`, `CNTXT_0.5.12_portable.exe`).
 - Task 55: App Builder & Sandboxed Panel App Runtime Remediation (2026-10-14):
   - Desktop Runtime CSP Resolution: Restored `'unsafe-inline'` and `'unsafe-eval'` to `script-src` and `style-src` in `src-tauri/tauri.conf.json`. Resolves the root cause of panel apps failing in Microsoft WebView2 due to parent CSP inheritance on `srcDoc` iframes blocking inline scripts and `onclick` event handlers. Aligned `tests/regressionGates.test.ts` to assert this contract while enforcing zero `eval` in `src/services/` and strict base directives.
   - Eliminated Fragile Base64 Script Rewriting: Removed regex rewriting of `<script>` tags to `data:text/javascript;base64` in `AppPanelPlaceholder.tsx`, eliminating race conditions with `storageShim` and preserving `<script type="application/json">` tags and Unicode strings.

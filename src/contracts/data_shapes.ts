@@ -661,6 +661,15 @@ export interface PanelAppManifest {
   createdFrom: PanelAppCreatedFrom;
 }
 
+export type PanelAppPresentationMode = 'docked' | 'floating' | 'fab';
+
+export interface PanelAppFloatingPosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface PanelAppRecord {
   id: string;
   path: string; // location of the .cntxt file
@@ -668,6 +677,9 @@ export interface PanelAppRecord {
   icon: string;
   network?: PanelAppNetworkMode;
   panelWidth?: number;
+  keepAlive?: boolean;
+  presentation?: PanelAppPresentationMode;
+  floatingPosition?: PanelAppFloatingPosition;
 }
 
 // ==========================================

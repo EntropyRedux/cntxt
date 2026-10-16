@@ -102,6 +102,23 @@ export function scanHtml(html: string): PreflightResult {
     findings.push({ id: 'parent', severity: 'warn', message: 'Uses window.parent or top, which are restricted in sandboxed panel views' });
   }
 
+  // Check inline scripts for fatal JavaScript syntax errors
+  doc.querySelectorAll('script:not([src])').forEach((el, i) => {
+    const type = el.getAttribute('type');
+    if (!type || /javascript|ecmascript/i.test(type)) {
+      const code = el.textContent ?? '';
+      try {
+        new Function(code);
+      } catch (err: any) {
+        findings.push({
+          id: `script-syntax-${i + 1}`,
+          severity: 'warn',
+          message: `Inline script #${i + 1} has a syntax error (${err.message}). Buttons and events will not function until resolved.`,
+        });
+      }
+    }
+  });
+
   return {
     bytes: total,
     externalRefs: [...refs],
