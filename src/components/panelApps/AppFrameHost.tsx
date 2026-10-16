@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { getActiveThemeTokens, isDarkTheme } from '../../features/panelApps/theme/themeSync';
-import { usePanelAppsStore } from '../../features/panelApps/state/panelAppsStore';
+import { PanelAppRecord, PanelAppPresentationMode } from '../../contracts/data_shapes';
 import { AppIcon } from '../Common/AppIcon';
 import { X, ExternalLink } from 'lucide-react';
 
@@ -14,6 +14,9 @@ export interface AppFrameHostProps {
   titleOf: (id: string) => string;
   topOffset?: string;
   theme?: string;
+  apps?: PanelAppRecord[];
+  onSetFloatingPosition?: (id: string, pos: WindowRect) => void;
+  onSetPresentation?: (id: string, mode: PanelAppPresentationMode) => void;
 }
 
 interface WindowRect {
@@ -33,11 +36,15 @@ export const AppFrameHost: React.FC<AppFrameHostProps> = ({
   titleOf,
   topOffset = '0px',
   theme,
+  apps = [],
+  onSetFloatingPosition,
+  onSetPresentation,
 }) => {
   const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({});
-  const panelApps = usePanelAppsStore((s) => s.apps);
+  const panelApps = apps;
 
   const [positions, setPositions] = useState<Record<string, WindowRect>>({});
+  const latestPositionsRef = useRef<Record<string, WindowRect>>({});
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeResizeId, setActiveResizeId] = useState<string | null>(null);
 
@@ -144,18 +151,22 @@ export const AppFrameHost: React.FC<AppFrameHostProps> = ({
         const deltaY = e.clientY - startY;
         const newX = Math.max(0, Math.min(winW - origW, origX + deltaX));
         const newY = Math.max(30, Math.min(winH - 50, origY + deltaY));
+        const nextRect = { x: newX, y: newY, width: origW, height: origH };
+        latestPositionsRef.current[id] = nextRect;
         setPositions((prev) => ({
           ...prev,
-          [id]: { x: newX, y: newY, width: origW, height: origH },
+          [id]: nextRect,
         }));
       } else if (activeResizeId === id) {
         const deltaX = e.clientX - startX;
         const deltaY = e.clientY - startY;
         const newW = Math.max(220, Math.min(winW - origX - 10, origW + deltaX));
         const newH = Math.max(160, Math.min(winH - origY - 10, origH + deltaY));
+        const nextRect = { x: origX, y: origY, width: newW, height: newH };
+        latestPositionsRef.current[id] = nextRect;
         setPositions((prev) => ({
           ...prev,
-          [id]: { x: origX, y: origY, width: newW, height: newH },
+          [id]: nextRect,
         }));
       }
     };
@@ -163,9 +174,9 @@ export const AppFrameHost: React.FC<AppFrameHostProps> = ({
     const handleMouseUp = () => {
       if (dragMeta.current) {
         const { id } = dragMeta.current;
-        const finalPos = positions[id];
-        if (finalPos) {
-          usePanelAppsStore.getState().setFloatingPosition(id, finalPos);
+        const finalPos = latestPositionsRef.current[id];
+        if (finalPos && onSetFloatingPosition) {
+          onSetFloatingPosition(id, finalPos);
         }
       }
       dragMeta.current = null;
@@ -179,7 +190,7 @@ export const AppFrameHost: React.FC<AppFrameHostProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [activeDragId, activeResizeId, positions]);
+  }, [activeDragId, activeResizeId, onSetFloatingPosition]);
 
   return (
     <>
@@ -265,7 +276,7 @@ export const AppFrameHost: React.FC<AppFrameHostProps> = ({
                     {/* Dock back to Sidebar */}
                     <button
                       type="button"
-                      onClick={() => usePanelAppsStore.getState().setPresentation(id, 'docked')}
+                      onClick={() => onSetPresentation?.(id, 'docked')}
                       title="Dock back into Sidebar"
                       aria-label="Dock back to Sidebar"
                       className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] cursor-pointer"
@@ -276,7 +287,7 @@ export const AppFrameHost: React.FC<AppFrameHostProps> = ({
                     {/* Close Floating Window */}
                     <button
                       type="button"
-                      onClick={() => usePanelAppsStore.getState().setPresentation(id, 'docked')}
+                      onClick={() => onSetPresentation?.(id, 'docked')}
                       title="Close Floating Window"
                       aria-label="Close Floating Window"
                       className="p-1 rounded text-[var(--text-muted)] hover:text-red-400 hover:bg-[var(--card-hover-bg)] cursor-pointer"
@@ -298,7 +309,7 @@ export const AppFrameHost: React.FC<AppFrameHostProps> = ({
                   title={titleOf(id)}
                   data-active={isActive ? 'true' : 'false'}
                   className="absolute inset-0 w-full h-full border-0 bg-transparent"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-downloads allow-popups"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
                 />
 
                 {/* Transparent Mouse Shield during drag or resize */}

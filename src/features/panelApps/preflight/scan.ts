@@ -1,3 +1,4 @@
+import { javascriptLanguage } from '@codemirror/lang-javascript';
 import { SIZE_SOFT_BYTES, SIZE_HARD_BYTES } from './limits';
 
 export type FindingSeverity = 'info' | 'warn' | 'block';
@@ -102,18 +103,36 @@ export function scanHtml(html: string): PreflightResult {
     findings.push({ id: 'parent', severity: 'warn', message: 'Uses window.parent or top, which are restricted in sandboxed panel views' });
   }
 
-  // Check inline scripts for fatal JavaScript syntax errors
+  // Check inline scripts for fatal JavaScript syntax errors using static AST parser (zero eval / new Function)
   doc.querySelectorAll('script:not([src])').forEach((el, i) => {
     const type = el.getAttribute('type');
     if (!type || /javascript|ecmascript/i.test(type)) {
       const code = el.textContent ?? '';
+      if (!code.trim()) return;
       try {
-        new Function(code);
-      } catch (err: any) {
+        const tree = javascriptLanguage.parser.parse(code);
+        let syntaxErrorPos: number | null = null;
+        tree.iterate({
+          enter(node) {
+            if (node.type.isError) {
+              syntaxErrorPos = node.from;
+              return false;
+            }
+          },
+        });
+        if (syntaxErrorPos !== null) {
+          findings.push({
+            id: `script-syntax-${i + 1}`,
+            severity: 'warn',
+            message: `Inline script #${i + 1} has a syntax error near character ${syntaxErrorPos}. Buttons and events will not function until resolved.`,
+          });
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
         findings.push({
           id: `script-syntax-${i + 1}`,
           severity: 'warn',
-          message: `Inline script #${i + 1} has a syntax error (${err.message}). Buttons and events will not function until resolved.`,
+          message: `Inline script #${i + 1} could not be parsed (${message}).`,
         });
       }
     }

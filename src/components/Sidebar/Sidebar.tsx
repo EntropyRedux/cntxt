@@ -152,6 +152,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isClosed = false }) => {
   const mountedPanelAppIds = usePanelAppsStore(state => state.mounted);
   const panelAppsReloadNonce = usePanelAppsStore(state => state.reloadNonce);
   const panelAppsHtmlCache = usePanelAppsStore(state => state.htmlCache);
+  const setPresentation = usePanelAppsStore(state => state.setPresentation);
+  const setFloatingPosition = usePanelAppsStore(state => state.setFloatingPosition);
 
   useEffect(() => {
     if (settings.activeSidebarTab === 'panel-app') {
@@ -523,6 +525,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isClosed = false }) => {
           titleOf={(id) => panelApps.find((a) => a.id === id)?.name ?? id}
           topOffset="40px"
           theme={settings.theme}
+          apps={panelApps}
+          onSetFloatingPosition={(id, pos) => setFloatingPosition(id, pos, bridge.storage)}
+          onSetPresentation={(id, mode) => setPresentation(id, mode, bridge.storage)}
         />
 
         {/* When active tab is NOT panel-app, render that panel above */}

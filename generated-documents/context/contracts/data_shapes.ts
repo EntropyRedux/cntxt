@@ -661,7 +661,7 @@ export interface PanelAppManifest {
   createdFrom: PanelAppCreatedFrom;
 }
 
-export type PanelAppPresentationMode = 'docked' | 'floating' | 'fab';
+export type PanelAppPresentationMode = 'docked' | 'floating';
 
 export interface PanelAppFloatingPosition {
   x: number;

@@ -25,8 +25,7 @@ import {
   Sliders,
   ExternalLink,
   FolderOpen,
-  Pin,
-  Minimize2
+  Pin
 } from 'lucide-react';
 
 export interface AppPanelPlaceholderProps {

@@ -30,7 +30,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: blob: data:; style-src 'self' 'unsafe-inline' https: http: data:; img-src 'self' data: blob: asset: https: http:; font-src 'self' data: https: http: blob:; connect-src 'self' ipc: http://ipc.localhost http://localhost:* ws://localhost:* https: http: wss: ws:; frame-src 'self' data: blob: about: https: http:; worker-src 'self' blob: data: https: http:; object-src 'none'; base-uri 'self'; form-action 'self'",
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: data:; style-src 'self' 'unsafe-inline' https: data:; img-src 'self' data: blob: asset: https:; font-src 'self' data: https: blob:; connect-src 'self' ipc: http://ipc.localhost http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https: wss:; frame-src 'self' data: blob: about: https:; worker-src 'self' blob: data: https:; object-src 'none'; base-uri 'self'; form-action 'self'",
       "dangerousDisableAssetCspModification": true
     }
 

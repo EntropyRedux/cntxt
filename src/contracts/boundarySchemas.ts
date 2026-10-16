@@ -300,7 +300,7 @@ export const PanelAppManifestSchema: z.ZodType<PanelAppManifest> = z.object({
   createdFrom: z.enum(['file', 'tab', 'prompt']),
 });
 
-export const PanelAppPresentationModeSchema = z.enum(['docked', 'floating', 'fab']);
+export const PanelAppPresentationModeSchema = z.enum(['docked', 'floating']);
 
 export const PanelAppFloatingPositionSchema = z.object({
   x: z.number(),
@@ -317,7 +317,7 @@ export const PanelAppRecordSchema: z.ZodType<PanelAppRecord> = z.object({
   network: z.enum(['offline', 'cdn']).optional(),
   panelWidth: z.number().optional(),
   keepAlive: z.boolean().optional(),
-  presentation: PanelAppPresentationModeSchema.optional(),
+  presentation: z.preprocess((val) => (val === 'fab' ? 'docked' : val), PanelAppPresentationModeSchema).optional(),
   floatingPosition: PanelAppFloatingPositionSchema.optional(),
 });
 
