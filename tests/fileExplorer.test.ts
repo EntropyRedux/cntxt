@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import { 
   validateFilename, 
   computeRelativePath, 
@@ -96,6 +96,10 @@ describe('FileExplorer Utilities', () => {
     it('returns full targetPath if target is outside workspace', () => {
       expect(computeRelativePath('D:/other/file.md', 'C:/projects/CNTXT')).toBe('D:/other/file.md');
     });
+
+    it('handles case-insensitivity on Windows paths gracefully', () => {
+      expect(computeRelativePath('c:/projects/CNTXT/src/file.ts', 'C:/projects/CNTXT')).toBe('src/file.ts');
+    });
   });
 
   describe('findFileInTree & findFolderInTree', () => {
@@ -172,3 +176,4 @@ describe('FileExplorer Utilities', () => {
     });
   });
 });
+

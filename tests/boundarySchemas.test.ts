@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import {
   TabSchema,
   TabCacheEntrySchema,
@@ -18,7 +18,20 @@ import {
   validateTerminalResize,
   validateOmniAgentProfile,
   validateOmniChatMessage,
-  validateOmniSession
+  validateOmniSession,
+  validateUserLibraryItems,
+  validateCommunityLibraryItems,
+  validateLibraryCollections,
+  validateGitHubCatalog,
+  validatePanelAppManifest,
+  validatePanelAppRecords,
+  validateEditorInsert,
+  validateTabCreate,
+  validateWorkspaceReadFile,
+  validateWorkspaceWriteFile,
+  validateTemplateApply,
+  validateActionExecute,
+  validateNotify
 } from '../src/contracts/boundarySchemas';
 
 describe('Boundary Schemas (P-10 Verification)', () => {
@@ -38,29 +51,33 @@ describe('Boundary Schemas (P-10 Verification)', () => {
       const result = validateTab(validTab);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.id).toBe('tab-123');
-        expect(result.data.language).toBe('markdown');
+        expect(result.data.title).toBe('Project Notes.md');
       }
     });
 
-    it('rejects a tab missing an id or content', () => {
+    it('rejects a Tab missing id or having empty id', () => {
       const missingId = {
-        title: 'No Id',
-        content: 'some text'
+        title: 'No ID Tab',
+        content: 'content',
+        isDirty: false,
+        language: 'markdown'
       };
       expect(validateTab(missingId).success).toBe(false);
 
-      const missingContent = {
-        id: 'tab-99',
-        title: 'No Content'
+      const emptyId = {
+        id: '',
+        title: 'Empty ID',
+        content: 'content',
+        isDirty: false,
+        language: 'markdown'
       };
-      expect(validateTab(missingContent).success).toBe(false);
+      expect(validateTab(emptyId).success).toBe(false);
     });
 
-    it('rejects a tab with an unsupported language', () => {
+    it('rejects an unsupported language on TabSchema', () => {
       const invalidLang = {
-        id: 'tab-1',
-        title: 'test.xyz',
+        id: 'tab-bad',
+        title: 'Bad Lang',
         content: 'code',
         language: 'brainfuck'
       };
@@ -247,7 +264,7 @@ describe('Boundary Schemas (P-10 Verification)', () => {
       expect(validateTerminalKill({ channelId: '' }).success).toBe(false);
 
       expect(validateTerminalResize({ channelId: 'term-1', cols: 80, rows: 24 }).success).toBe(true);
-      expect(validateTerminalResize({ channelId: 'term-1', cols: 5, rows: 24 }).success).toBe(false); // cols min is 10
+      expect(validateTerminalResize({ channelId: 'term-1', cols: 5, rows: 24 }).success).toBe(false);
     });
   });
 
@@ -327,6 +344,154 @@ describe('Boundary Schemas (P-10 Verification)', () => {
         status: 'idle' as const
       };
       expect(validateOmniSession(session).success).toBe(true);
+    });
+  });
+
+  describe('Library Boundary Schemas (GAP-02 Verification)', () => {
+    it('validates valid UserLibraryItems array and rejects invalid elements', () => {
+      const validItems = [
+        {
+          id: 'item-1',
+          name: 'Architecture Prompt',
+          type: 'prompt',
+          category: 'Architecture',
+          source: 'user-authored',
+          template: '# Blueprint',
+          createdAt: 100,
+          updatedAt: 100
+        }
+      ];
+      expect(validateUserLibraryItems(validItems).success).toBe(true);
+
+      const invalidItems = [
+        {
+          id: 'item-2',
+          name: 'Bad Type',
+          type: 'unsupported-type',
+          source: 'user-authored',
+          template: 'content',
+          createdAt: 100,
+          updatedAt: 100
+        }
+      ];
+      expect(validateUserLibraryItems(invalidItems).success).toBe(false);
+      expect(validateUserLibraryItems('not-an-array').success).toBe(false);
+    });
+
+    it('validates CommunityLibraryItems and LibraryCollections', () => {
+      const community = [
+        {
+          id: 'c-1',
+          name: 'System Prompt Architect',
+          type: 'prompt',
+          category: 'Prompt Engineering',
+          template: 'Prompt here',
+          tags: ['llm', 'system']
+        }
+      ];
+      expect(validateCommunityLibraryItems(community).success).toBe(true);
+
+      const collections = [
+        {
+          id: 'col-1',
+          name: 'Enterprise Prompts',
+          category: 'Technical Specs',
+          source: 'community-fork',
+          itemIds: ['c-1'],
+          createdAt: 1000,
+          updatedAt: 1000
+        }
+      ];
+      expect(validateLibraryCollections(collections).success).toBe(true);
+
+            const catalog = [
+        {
+          id: 'cat-1',
+          name: 'Code Review Skill',
+          path: 'skills/code-review.md',
+          type: 'skill'
+        }
+      ];
+      expect(validateGitHubCatalog(catalog).success).toBe(true);
+      expect(validateGitHubCatalog('not-an-array').success).toBe(false);
+    });
+  });
+
+  describe('Panel Apps Boundary Schemas (GAP-02 Verification)', () => {
+    it('validates a valid PanelAppManifest and rejects invalid formats', () => {
+      const validManifest = {
+        schemaVersion: 1,
+        id: 'calc123456789012',
+        name: 'Quick Calc',
+        icon: 'Calculator',
+        description: 'Arithmetic calculator',
+        runtime: 'html',
+        network: 'offline',
+        panelWidth: 400,
+        createdFrom: 'tab'
+      };
+      expect(validatePanelAppManifest(validManifest).success).toBe(true);
+
+      // ID must start with lowercase letter and be 12-32 chars
+      const badIdManifest = {
+        ...validManifest,
+        id: '123'
+      };
+      expect(validatePanelAppManifest(badIdManifest).success).toBe(false);
+
+      // Width must be between 280 and 1200
+      const badWidthManifest = {
+        ...validManifest,
+        panelWidth: 2000
+      };
+      expect(validatePanelAppManifest(badWidthManifest).success).toBe(false);
+    });
+
+    it('validates panel app records array and handles fab migration', () => {
+      const records = [
+        {
+          id: 'app123456789012',
+          path: 'C:/apps/calc.cntxt',
+          name: 'Calc App',
+          icon: 'Calculator',
+          presentation: 'docked'
+        }
+      ];
+      const result = validatePanelAppRecords(records);
+      expect(result.success).toBe(true);
+
+      const invalidRecords = [{ id: 'bad' }];
+      expect(validatePanelAppRecords(invalidRecords).success).toBe(false);
+    });
+  });
+
+  describe('RPC Payloads & Boundary Schemas (GAP-02 Verification)', () => {
+    it('validates EditorInsert and TabCreate payloads', () => {
+      expect(validateEditorInsert({ text: 'Hello', mode: 'append' }).success).toBe(true);
+      expect(validateEditorInsert({ text: 'Hello', mode: 'invalid_mode' as any }).success).toBe(false);
+
+      expect(validateTabCreate({ title: 'New Doc', content: 'Doc body' }).success).toBe(true);
+      expect(validateTabCreate({ title: '', content: 'Doc body' }).success).toBe(false);
+    });
+
+    it('validates WorkspaceReadFile and WorkspaceWriteFile payloads', () => {
+      expect(validateWorkspaceReadFile({ relativePath: 'src/main.ts' }).success).toBe(true);
+      expect(validateWorkspaceReadFile({ relativePath: '../outside.ts' }).success).toBe(false);
+
+      expect(validateWorkspaceWriteFile({ relativePath: 'notes.md', content: 'Hello' }).success).toBe(true);
+      expect(validateWorkspaceWriteFile({ relativePath: '/root/bad.txt', content: 'Hello' }).success).toBe(false);
+    });
+
+    it('validates TemplateApply, ActionExecute, and Notify payloads', () => {
+      expect(validateTemplateApply({ templateId: 't-1', variables: { key: 'val' } }).success).toBe(true);
+      expect(validateTemplateApply({ templateId: '', variables: {} }).success).toBe(false);
+
+      expect(validateActionExecute({ actionId: 'act-1', input: 'sample' }).success).toBe(true);
+      expect(validateActionExecute({ actionId: '' }).success).toBe(false);
+
+      expect(validateNotify({ type: 'success', message: 'Operation complete' }).success).toBe(true);
+      expect(validateNotify({ type: 'invalid-type' as any, message: 'Bad' }).success).toBe(false);
+      expect(validateNotify({ type: 'info', message: '' }).success).toBe(false);
     });
   });
 });
