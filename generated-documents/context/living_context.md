@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.39
-Last Updated: 2026-10-17
-Last Updated By: Prod Agent (Audit Reconciliation, CSP Hardening, AST Preflight & v0.5.13 Release)
+Version: v2.40
+Last Updated: 2026-10-19
+Last Updated By: Prod Agent (Android Signed APK Build Pipeline, Adaptive Branding & v0.5.14 Release)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -15,14 +15,21 @@ Active Stage:
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
     [x] Testing (Vitest 631/631 Live across 59 suites, Playwright E2E 24/24 Live on Cold Server, Rust Security Test Suite 9/9 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.5.13 Authenticode Signed Portable Executable & Native Installers Built)
+  [x] Packaging & Release (v0.5.14 Android Signed APK & Cross-Platform Release Pipeline Live)
 
-Current Feature Group: Audit Reconciliation, CSP Hardening & v0.5.13 Release
-Status: [x] complete & verified (CSP hardened, AST preflight syntax checking, presenter purity decoupled, FAB dead code removed with migration, signed binaries built)
+Current Feature Group: Android Signed APK Build Pipeline, Adaptive Branding & v0.5.14 Release
+Status: [x] complete & verified (Automated cross-platform build script, 2048-bit release keystore, v2/v3 APK signing, adaptive branding icons synced, deployed & verified on physical test device)
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus && enableOmniTerminal; disabled by default)
 Unit Tests: written [x] passing [x] (631/631 unit tests passing across 59 suites in CNTXT, 9 Rust security tests clean, 24/24 Playwright E2E clean on cold server)
 Active Plan: /generated-documents/plans/feature_group_FG18_omni_terminal_file_driven_redesign_2026-10-12.md
 Notes:
+- Task 58: Android Signed APK Build Pipeline, Adaptive Branding & v0.5.14 Release (2026-10-19):
+  - Cross-Platform Android Build Script (`scripts/build-android.mjs`): Created zero-dependency Node.js build runner supporting `--target arm64` and `--target universal`. Automates frontend compilation, Rust NDK `cdylib` cross-compilation (`libcntxt_lib.so`), JNI staging, and Gradle release packaging.
+  - Release Keystore & v2/v3 Signing: Generated 2048-bit RSA release keystore (`release.keystore`) and configured `signingConfigs` in `src-tauri/gen/android/app/build.gradle.kts` for automatic v2/v3 signing.
+  - AGP Environment Resolution: Fixed AGP initialization exception by unsetting `ANDROID_PREFS_ROOT` and standardizing on `ANDROID_USER_HOME`.
+  - Launcher Branding Synchronization: Synced all CNTXT adaptive launcher icon densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`, `anydpi-v26`) and background color `#141417` to `src-tauri/gen/android/app/src/main/res/`. Pruned stale default bugdroid vector drawables.
+  - Live Wireless Device Deployment: Connected via ADB to `192.168.1.35:43327`, installed `cntxt-0.5.14-arm64-release-signed.apk` (`18 MB`), launched `com.cntxt.desktop/.MainActivity` (PID `21177`), and verified full UI execution.
+  - Git Safety: Updated `.gitignore` to explicitly ignore `*.keystore`, `*.jks`, `.idea/`, `dist-android/`, and `scratch/` to prevent sensitive credentials or local artifacts from being pushed to GitHub.
 - Task 57: Audit Reconciliation for v0.5.12 Release (2026-10-17):
   - CSP Security Hardening (Pillar 8 / FIND-01): Tightened Content Security Policy in `index.html` and `src-tauri/tauri.conf.json`, removing broad remote plaintext `http:` schemes from `script-src`, `worker-src`, `frame-src`, `style-src`, `font-src`, and `img-src` to eliminate MITM injection vectors while preserving local loopback IPC endpoints (`http://localhost:* http://127.0.0.1:* http://ipc.localhost ipc:`).
   - Zero Dynamic Evaluation in Preflight (Pillar 8 & 3 / FIND-02 & FIND-03): Replaced `new Function(code)` and `catch (err: any)` in `src/features/panelApps/preflight/scan.ts` with static AST parsing via `@codemirror/lang-javascript` (`javascriptLanguage.parser.parse`), enforcing the strict zero-eval and strict typing invariants.

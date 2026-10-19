@@ -2,6 +2,7 @@ node_modules/
 .vite/
 .vitest/
 .cache/
+.idea/
 build/
 dist/
 dist-portable/
@@ -16,9 +17,12 @@ coverage/
 *.sqlite
 *.db
 *.bak
+*.keystore
+*.jks
 .env*
 *secret*
 6cret.md
+scratch/
 
 # Tauri / Rust build artifacts
 src-tauri/target/

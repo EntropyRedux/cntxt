@@ -2,21 +2,21 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.5.13) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Host Command Bus & RPC Bridge (`window.CNTXT` via `postMessage`), Sandboxed Mini Panel Apps co-processor engine with path traversal guards & dirty tab mediation, Floating Pop-out Panel Apps with independent window lifecycle & compact widget resizing (down to 220x160), Hardened CSP Security Architecture, Pure Presenter Host Architecture, App Builder resilient SDK with fallback persistence, Blueprint Prompt Archetypes (`build`, `brainstorm`, `adapt`) with 2-way editor tab sync & responsive small-size modes, 14-token universal theme sync, Compact Markdown Accessory Toolbar, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.5.14) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Automated Cross-Platform Android Signed APK Build Pipeline, Adaptive Launcher Icon Branding (`#141417` background), Host Command Bus & RPC Bridge (`window.CNTXT` via `postMessage`), Sandboxed Mini Panel Apps co-processor engine with path traversal guards & dirty tab mediation, Floating Pop-out Panel Apps with independent window lifecycle & compact widget resizing (down to 220x160), Hardened CSP Security Architecture, Pure Presenter Host Architecture, App Builder resilient SDK with fallback persistence, Blueprint Prompt Archetypes (`build`, `brainstorm`, `adapt`) with 2-way editor tab sync & responsive small-size modes, 14-token universal theme sync, Compact Markdown Accessory Toolbar, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.5.13)
+## Downloads (v0.5.14)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.13_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.13/CNTXT_0.5.13_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.13_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.13/CNTXT_0.5.13_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.13_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.13/CNTXT_0.5.13_portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.14_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.14/CNTXT_0.5.14_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.14_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.14/CNTXT_0.5.14_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.14_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.14/CNTXT_0.5.14_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download app-arm64-release.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.2/app-arm64-release.apk) | Signed with Release Keystore / Installable via ADB |
+| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download cntxt-0.5.14-arm64-release-signed.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.14/cntxt-0.5.14-arm64-release-signed.apk) | Signed with Release Keystore / Installable via ADB |
 
 ### Linux
 | Package | Format | Architecture | Download Link | Verification |

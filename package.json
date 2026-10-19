@@ -1,7 +1,7 @@
 {
   "name": "cntxt",
   "private": true,
-  "version": "0.5.13",
+  "version": "0.5.14",
   "type": "module",
   "scripts": {
     "dev": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js",
@@ -16,8 +16,8 @@
     "tauri:build": "node scripts/build-portable.mjs",
     "build:portable": "node scripts/build-portable.mjs",
     "package:sign": "powershell -ExecutionPolicy Bypass -File scripts/sign-installers.ps1",
-    "package:android": "powershell -ExecutionPolicy Bypass -File scripts/build-android.ps1 -Target arm64",
-    "package:android:universal": "powershell -ExecutionPolicy Bypass -File scripts/build-android.ps1 -Target universal",
+    "package:android": "node scripts/build-android.mjs --target arm64",
+    "package:android:universal": "node scripts/build-android.mjs --target universal",
     "tauri:cli": "cargo install tauri-cli --locked"
   },
   "dependencies": {

@@ -5,6 +5,26 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.14] — 2026-10-19
+
+### Android Signed APK Build Pipeline, Adaptive Branding & Wireless Device Deployment
+- **Automated Cross-Platform Android Build Pipeline (`scripts/build-android.mjs`)**:
+  - Implemented a zero-dependency Node.js cross-platform build runner `scripts/build-android.mjs` supporting both `--target arm64` and `--target universal`.
+  - Configured NDK Clang toolchain environment variables (`CARGO_TARGET_*_LINKER`) for Rust `cdylib` cross-compilation (`libcntxt_lib.so`).
+  - Resolved Android Gradle Plugin environment variable collision by unsetting `ANDROID_PREFS_ROOT` and standardizing on `ANDROID_USER_HOME`.
+- **Release Keystore & Automated APK Signing (`release.keystore`, `build.gradle.kts`)**:
+  - Generated 2048-bit RSA release keystore (`src-tauri/gen/android/app/release.keystore`) valid for 10,000 days.
+  - Configured Gradle `signingConfigs` block in `src-tauri/gen/android/app/build.gradle.kts` for automatic v2/v3 signing during Gradle assembly.
+- **Android App Branding & Adaptive Launcher Icons (`src-tauri/gen/android/app/src/main/res/`)**:
+  - Synchronized all CNTXT adaptive launcher icon densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`, `anydpi-v26`) and background color `#141417` to Android app resource directories.
+  - Pruned conflicting default Android Studio bugdroid vector drawables (`drawable/ic_launcher_background.xml` & `drawable-v24/ic_launcher_foreground.xml`).
+  - Added `android:roundIcon="@mipmap/ic_launcher_round"` to `AndroidManifest.xml`.
+- **Cross-Platform npm Package Scripting (`package.json`)**:
+  - Replaced Windows-only PowerShell commands in `package.json` for `"package:android"` and `"package:android:universal"` with cross-platform `node scripts/build-android.mjs`.
+- **Target Device Deployment & Verification**:
+  - Deployed signed release APK `cntxt-0.5.14-arm64-release-signed.apk` directly to wireless Android test device `192.168.1.35:43327`.
+  - Verified `com.cntxt.desktop/.MainActivity` process execution (PID `21177`) and full UI rendering on device.
+
 ## [0.5.13] — 2026-10-17
 
 ### Hardened CSP, Pure Presenter Host Architecture & Static AST Preflight
