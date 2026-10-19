@@ -104,6 +104,7 @@ export function findMathBlocks(
 ): Map<number, MathBlockInfo> {
   const mathBlocks = new Map<number, MathBlockInfo>();
   let currentStartLine = -1;
+  let delimiterType: 'dollar' | 'bracket' = 'dollar';
   let lines: string[] = [];
 
   for (let lineNum = 1; lineNum <= doc.lines; lineNum++) {
@@ -112,23 +113,43 @@ export function findMathBlocks(
     const line = doc.line(lineNum);
     const trimmed = line.text.trim();
 
-    // Single-line display math: $$ formula $$
-    if (currentStartLine === -1 && trimmed.startsWith('$$') && trimmed.endsWith('$$') && trimmed.length >= 4) {
+    // Single-line display math: $ formula $
+    if (currentStartLine === -1 && trimmed.startsWith('$') && trimmed.endsWith('$') && trimmed.length >= 4) {
       const latex = trimmed.slice(2, -2).trim();
       const info: MathBlockInfo = { startLine: lineNum, endLine: lineNum, latex };
       mathBlocks.set(lineNum, info);
       continue;
     }
 
-    // Multi-line display math starting with $$
+    // Single-line display math: \[ formula \]
+    if (currentStartLine === -1 && trimmed.startsWith('\\[') && trimmed.endsWith('\\]') && trimmed.length >= 4) {
+      const latex = trimmed.slice(2, -2).trim();
+      const info: MathBlockInfo = { startLine: lineNum, endLine: lineNum, latex };
+      mathBlocks.set(lineNum, info);
+      continue;
+    }
+
+    // Multi-line display math starting with $ or \[
     if (currentStartLine === -1) {
-      if (trimmed.startsWith('$$')) {
+      if (trimmed.startsWith('$')) {
         currentStartLine = lineNum;
+        delimiterType = 'dollar';
         lines = [trimmed.replace(/^\$\$/, '')];
+      } else if (trimmed.startsWith('\\[')) {
+        currentStartLine = lineNum;
+        delimiterType = 'bracket';
+        lines = [trimmed.replace(/^\\\[/, '')];
       }
     } else {
-      if (trimmed.endsWith('$$') || trimmed === '$$') {
-        lines.push(trimmed.replace(/\$\$$/, ''));
+      const isEnd = delimiterType === 'dollar'
+        ? (trimmed.endsWith('$') || trimmed === '$')
+        : (trimmed.endsWith('\\]') || trimmed === '\\]');
+
+      if (isEnd) {
+        const cleaned = delimiterType === 'dollar'
+          ? trimmed.replace(/\$\$/, '')
+          : trimmed.replace(/\\\]$/, '');
+        lines.push(cleaned);
         const info: MathBlockInfo = {
           startLine: currentStartLine,
           endLine: lineNum,

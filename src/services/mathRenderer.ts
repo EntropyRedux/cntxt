@@ -51,7 +51,8 @@ export function renderLatex(latex: string, displayMode: boolean = false): MathRe
       strict: false,
       trust: false
     });
-    return { html, isError: false };
+    const taggedHtml = html.replace(/^(<(?:span|div)\s+class="[^"]*katex[^"]*")/i, '$1 data-cntxt-math="true"');
+    return { html: taggedHtml, isError: false };
   } catch (err: unknown) {
     const msg = (err as Error)?.message || 'Invalid formula';
     return {

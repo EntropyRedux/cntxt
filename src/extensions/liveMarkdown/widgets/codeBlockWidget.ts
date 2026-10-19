@@ -3,6 +3,7 @@ import { createElement, copyText } from '../../../adapters';
 import { useNotificationStore } from '../../../store/notificationStore';
 import { getLanguageMeta } from '../languageMeta';
 import { getActiveBridge } from '../bridgeState';
+import { toggleCodeBlockCollapseEffect } from '../collapseState';
 
 export class CodeBlockHeaderWidget extends WidgetType {
   constructor(
@@ -10,7 +11,9 @@ export class CodeBlockHeaderWidget extends WidgetType {
     readonly codeContent: string,
     readonly linePos: number,
     readonly startLine?: number,
-    readonly endLine?: number
+    readonly endLine?: number,
+    readonly isCollapsed: boolean = false,
+    readonly lineCount: number = 0
   ) {
     super();
   }
@@ -21,7 +24,9 @@ export class CodeBlockHeaderWidget extends WidgetType {
       this.codeContent === other.codeContent &&
       this.linePos === other.linePos &&
       this.startLine === other.startLine &&
-      this.endLine === other.endLine
+      this.endLine === other.endLine &&
+      this.isCollapsed === other.isCollapsed &&
+      this.lineCount === other.lineCount
     );
   }
 
@@ -33,14 +38,23 @@ export class CodeBlockHeaderWidget extends WidgetType {
     const extraParam = rawParts.length > 1 ? rawParts.slice(1).join('|').trim() : '';
 
     const header = createElement('div', {
-      className: 'cm-live-codeblock-header select-none flex items-center justify-between px-3 py-1.5 border-b border-[var(--codeblock-header-border)] bg-[var(--codeblock-header-bg)] text-[var(--text-secondary)] rounded-t-[7px] w-full cursor-pointer'
+      className: `cm-live-codeblock-header select-none flex items-center justify-between px-3 py-1.5 border-b border-[var(--codeblock-header-border)] bg-[var(--codeblock-header-bg)] text-[var(--text-secondary)] ${
+        this.isCollapsed ? 'rounded-[7px] border-b-transparent shadow-sm' : 'rounded-t-[7px]'
+      } w-full cursor-pointer`
     });
 
     header.addEventListener('click', (e) => {
       if (
         !(e.target as HTMLElement)?.closest('.cm-live-copy-code-btn') &&
-        !(e.target as HTMLElement)?.closest('.cm-live-clear-code-btn')
+        !(e.target as HTMLElement)?.closest('.cm-live-clear-code-btn') &&
+        !(e.target as HTMLElement)?.closest('.cm-live-collapse-btn')
       ) {
+        if (this.isCollapsed && this.startLine !== undefined) {
+          view.dispatch({
+            effects: toggleCodeBlockCollapseEffect.of(this.startLine)
+          });
+          return;
+        }
         view.dispatch({
           selection: { anchor: this.linePos }
         });
@@ -51,6 +65,32 @@ export class CodeBlockHeaderWidget extends WidgetType {
     const left = createElement('div', {
       className: 'flex items-center gap-2 overflow-hidden'
     });
+
+    // Collapse toggle button
+    const collapseBtn = createElement('button', {
+      type: 'button',
+      className: 'cm-live-collapse-btn p-1 -ml-1 rounded hover:bg-[var(--card-hover-bg)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all cursor-pointer flex items-center justify-center shrink-0',
+      title: this.isCollapsed ? 'Expand code block' : 'Collapse code block',
+      'aria-label': this.isCollapsed ? 'Expand code block' : 'Collapse code block'
+    });
+    collapseBtn.innerHTML = this.isCollapsed
+      ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>'
+      : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+
+    collapseBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    collapseBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (this.startLine !== undefined) {
+        view.dispatch({
+          effects: toggleCodeBlockCollapseEffect.of(this.startLine)
+        });
+      }
+    });
+    left.appendChild(collapseBtn);
 
     const dot = createElement('span', {
       className: 'w-2 h-2 rounded-full inline-block shrink-0'
@@ -65,6 +105,14 @@ export class CodeBlockHeaderWidget extends WidgetType {
     badge.style.backgroundColor = meta.bg;
     badge.textContent = meta.name;
     left.appendChild(badge);
+
+    if (this.isCollapsed && this.lineCount > 0) {
+      const lineCountBadge = createElement('span', {
+        className: 'px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-[var(--text-muted)] bg-[var(--card-secondary-bg)] border border-[var(--border-subtle)] shrink-0',
+        textContent: `${this.lineCount} ${this.lineCount === 1 ? 'line' : 'lines'}`
+      });
+      left.appendChild(lineCountBadge);
+    }
 
     if (extraParam) {
       const paramBadge = createElement('span', {

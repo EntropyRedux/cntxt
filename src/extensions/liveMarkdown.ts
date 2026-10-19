@@ -3,6 +3,18 @@ import { EditorView, Decoration, DecorationSet } from '@codemirror/view';
 import { isDarkTheme, getDocumentTheme } from '../adapters';
 import { IRuntimeBridge } from '../ui-contract/bridgeContract';
 import { useActionStore } from '../store/actionStore';
+import {
+  codeBlockCollapseField,
+  toggleCodeBlockCollapseEffect,
+  setCodeBlockCollapseEffect,
+  clearAllCodeBlockCollapseEffect
+} from './liveMarkdown/collapseState';
+export {
+  codeBlockCollapseField,
+  toggleCodeBlockCollapseEffect,
+  setCodeBlockCollapseEffect,
+  clearAllCodeBlockCollapseEffect
+} from './liveMarkdown/collapseState';
 
 export const refreshLiveMarkdownEffect = StateEffect.define<void>();
 
@@ -53,6 +65,8 @@ function buildDecorations(state: EditorState): DecorationSet {
     const facetTheme = state.facet(liveThemeFacet);
     const currentTheme = facetTheme || getDocumentTheme();
     const isDark = currentTheme === 'google-material-3' || currentTheme === 'parchment' || currentTheme === 'github-light' ? false : isDarkTheme();
+
+    const collapsedBlocks = state.field(codeBlockCollapseField, false) || new Set<number>();
 
     // 1. Scan document structures
     const codeBlocksByLine = findCodeBlocks(doc);
@@ -125,7 +139,8 @@ function buildDecorations(state: EditorState): DecorationSet {
         }
 
         // --- LaTeX Math Code Block Full Replacement Widget ---
-        if ((lang === 'latex' || lang === 'math' || lang === 'katex') && !isBlockActive && block.isClosed) {
+        const MATH_LANGS = new Set(['latex', 'math', 'katex', 'mathjax', 'tex', 'amsmath']);
+        if (MATH_LANGS.has(lang) && !isBlockActive && block.isClosed) {
           if (line.number === block.startLine) {
             const startLineObj = doc.line(block.startLine);
             const endLineObj = doc.line(block.endLine);
@@ -156,6 +171,42 @@ function buildDecorations(state: EditorState): DecorationSet {
           continue;
         }
 
+        const isCollapsed = collapsedBlocks.has(block.startLine);
+        const innerLineCount = Math.max(0, block.endLine - block.startLine - 1);
+
+        if (isCollapsed && !isBlockActive) {
+          builder.add(
+            line.from,
+            line.from,
+            Decoration.line({ class: 'cm-live-codeblock-start cm-live-codeblock-collapsed' })
+          );
+          builder.add(
+            line.from,
+            line.to,
+            Decoration.replace({
+              widget: new CodeBlockHeaderWidget(
+                block.language,
+                block.codeContent,
+                line.from,
+                block.startLine,
+                block.endLine,
+                true,
+                innerLineCount
+              )
+            })
+          );
+          if (block.endLine > block.startLine) {
+            const endLineObj = doc.line(block.endLine);
+            builder.add(
+              line.to,
+              endLineObj.to,
+              Decoration.replace({ block: true })
+            );
+          }
+          pos = doc.line(block.endLine).to + 1;
+          continue;
+        }
+
         if (role === 'start') {
           builder.add(
             line.from,
@@ -166,7 +217,15 @@ function buildDecorations(state: EditorState): DecorationSet {
             line.from,
             line.to,
             Decoration.replace({
-              widget: new CodeBlockHeaderWidget(block.language, block.codeContent, line.from, block.startLine, block.endLine)
+              widget: new CodeBlockHeaderWidget(
+                block.language,
+                block.codeContent,
+                line.from,
+                block.startLine,
+                block.endLine,
+                false,
+                innerLineCount
+              )
             })
           );
         } else if (role === 'mid') {
@@ -392,9 +451,23 @@ function buildDecorations(state: EditorState): DecorationSet {
       if (!hrMatch) {
         let match: RegExpExecArray | null;
 
-        // Inline LaTeX Math: $formula$ (must not be $$)
+        // Inline LaTeX Math: $formula$ (must not be $)
         const inlineMathRegex = /(?<!\$)\$(?!\$)([^\$\n]+?)(?<!\$)\$(?!\$)/g;
         while ((match = inlineMathRegex.exec(lineText)) !== null) {
+          const start = line.from + match.index;
+          const end = start + match[0].length;
+          rangeDecos.push({
+            from: start,
+            to: end,
+            deco: Decoration.replace({
+              widget: new InlineMathWidget(match[1])
+            })
+          });
+        }
+
+        // Inline LaTeX Math: \( formula \)
+        const latexParenRegex = /\\\((.+?)\\\)/g;
+        while ((match = latexParenRegex.exec(lineText)) !== null) {
           const start = line.from + match.index;
           const end = start + match[0].length;
           rangeDecos.push({
@@ -789,7 +862,16 @@ export const liveMarkdownField = StateField.define<DecorationSet>({
     const prevTheme = tr.startState.facet(liveThemeFacet);
     const nextTheme = tr.state.facet(liveThemeFacet);
 
-    if (tr.docChanged || prevTheme !== nextTheme || tr.effects.some(e => e.is(refreshLiveMarkdownEffect))) {
+    if (
+      tr.docChanged || 
+      prevTheme !== nextTheme || 
+      tr.effects.some(e => 
+        e.is(refreshLiveMarkdownEffect) || 
+        e.is(toggleCodeBlockCollapseEffect) || 
+        e.is(setCodeBlockCollapseEffect) || 
+        e.is(clearAllCodeBlockCollapseEffect)
+      )
+    ) {
       return buildDecorations(tr.state);
     }
 
@@ -821,5 +903,5 @@ export function liveMarkdownExtension(
     setLiveMarkdownBridge(bridge);
   }
   if (!enabled) return [];
-  return [liveThemeFacet.of(themeName), liveMarkdownField];
+  return [liveThemeFacet.of(themeName), codeBlockCollapseField, liveMarkdownField];
 }

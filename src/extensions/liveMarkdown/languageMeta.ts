@@ -42,6 +42,9 @@ export function getLanguageMeta(rawLang: string): LanguageMeta {
     case 'latex':
     case 'math':
     case 'katex':
+    case 'mathjax':
+    case 'tex':
+    case 'amsmath':
       return { name: 'LaTeX Math', color: '#6366F1', bg: 'rgba(99, 102, 241, 0.15)' };
     case 'rs':
     case 'rust':

@@ -1435,6 +1435,14 @@ body {
   height: 6px;
 }
 
+.cm-live-codeblock-start.cm-live-codeblock-collapsed {
+  margin-bottom: 8px !important;
+}
+
+.cm-live-collapse-btn {
+  user-select: none;
+}
+
 /* =========================================================
    Syntax Highlighting Granularity Modes (from AI Studio Spec)
    ========================================================= */

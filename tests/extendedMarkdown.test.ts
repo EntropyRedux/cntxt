@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { EditorState } from '@codemirror/state';
-import { liveMarkdownField } from '../src/extensions/liveMarkdown';
+import { 
+  liveMarkdownField, 
+  codeBlockCollapseField, 
+  toggleCodeBlockCollapseEffect 
+} from '../src/extensions/liveMarkdown';
 
 describe('Extended Markdown Inline Formatting', () => {
   it('decorates ***bold+italic*** with cm-live-bold-italic', () => {
@@ -86,5 +90,82 @@ describe('Extended Markdown Inline Formatting', () => {
       }
     });
     expect(italicText.replace(/\*/g, '')).toBe('Target');
+  });
+
+  it('renders LaTeX inline math using \\( formula \\) delimiters', () => {
+    const doc = 'Given mass \\( m \\) and velocity \\( v \\), energy is conserved.';
+    const state = EditorState.create({
+      doc,
+      selection: { anchor: doc.length },
+      extensions: [codeBlockCollapseField, liveMarkdownField]
+    });
+
+    const decos = state.field(liveMarkdownField);
+    let inlineMathCount = 0;
+    decos.between(0, doc.length, (_from, _to, value) => {
+      if (value.spec.widget && value.spec.widget.constructor.name === 'InlineMathWidget') {
+        inlineMathCount++;
+      }
+    });
+    expect(inlineMathCount).toBe(2);
+  });
+
+  it('renders display math for mathjax, tex, and amsmath code block languages', () => {
+    const doc = '```mathjax\n\\int_{0}^{\\infty} e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}\n```\n';
+    const state = EditorState.create({
+      doc,
+      selection: { anchor: doc.length },
+      extensions: [codeBlockCollapseField, liveMarkdownField]
+    });
+
+    const decos = state.field(liveMarkdownField);
+    let hasDisplayMathWidget = false;
+    decos.between(0, doc.length, (_from, _to, value) => {
+      if (value.spec.widget && value.spec.widget.constructor.name === 'DisplayMathWidget') {
+        hasDisplayMathWidget = true;
+      }
+    });
+    expect(hasDisplayMathWidget).toBe(true);
+  });
+
+  it('collapses code block into header and hides body lines when toggleCodeBlockCollapseEffect is dispatched', () => {
+    const doc = '```python\ndef calculate():\n    x = 10\n    y = 20\n    return x + y\n```\n';
+    let state = EditorState.create({
+      doc,
+      selection: { anchor: doc.length },
+      extensions: [codeBlockCollapseField, liveMarkdownField]
+    });
+
+    // Initially expanded
+    let collapsedSet = state.field(codeBlockCollapseField);
+    expect(collapsedSet.has(1)).toBe(false);
+
+    // Toggle collapse on line 1
+    const tr = state.update({
+      effects: [toggleCodeBlockCollapseEffect.of(1)]
+    });
+    state = tr.state;
+
+    collapsedSet = state.field(codeBlockCollapseField);
+    expect(collapsedSet.has(1)).toBe(true);
+
+    const decos = state.field(liveMarkdownField);
+    let hasCollapsedHeader = false;
+    decos.between(0, doc.length, (_from, _to, value) => {
+      if (value.spec.widget && value.spec.widget.constructor.name === 'CodeBlockHeaderWidget') {
+        if ((value.spec.widget as any).isCollapsed === true) {
+          hasCollapsedHeader = true;
+          expect((value.spec.widget as any).lineCount).toBe(4);
+        }
+      }
+    });
+    expect(hasCollapsedHeader).toBe(true);
+
+    // Toggle expand on line 1
+    const trExpand = state.update({
+      effects: [toggleCodeBlockCollapseEffect.of(1)]
+    });
+    const expandedState = trExpand.state;
+    expect(expandedState.field(codeBlockCollapseField).has(1)).toBe(false);
   });
 });

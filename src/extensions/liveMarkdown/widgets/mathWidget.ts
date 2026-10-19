@@ -18,6 +18,7 @@ export class DisplayMathWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const container = createElement('div', {
       className: 'cm-live-math-block select-none cursor-pointer group',
+      'data-cntxt-math': 'true',
       title: 'Click to edit formula'
     });
 
@@ -75,7 +76,7 @@ export class InlineMathWidget extends WidgetType {
   }
 
   toDOM(view: EditorView): HTMLElement {
-    const span = createElement('span', { className: 'cm-live-math-inline' });
+    const span = createElement('span', { className: 'cm-live-math-inline', 'data-cntxt-math': 'true' });
     const rendered = renderLatex(this.latex, false);
     span.innerHTML = sanitizePreviewHtml(rendered.html);
 

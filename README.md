@@ -2,16 +2,16 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.5.14) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Automated Cross-Platform Android Signed APK Build Pipeline, Adaptive Launcher Icon Branding (`#141417` background), Host Command Bus & RPC Bridge (`window.CNTXT` via `postMessage`), Sandboxed Mini Panel Apps co-processor engine with path traversal guards & dirty tab mediation, Floating Pop-out Panel Apps with independent window lifecycle & compact widget resizing (down to 220x160), Hardened CSP Security Architecture, Pure Presenter Host Architecture, App Builder resilient SDK with fallback persistence, Blueprint Prompt Archetypes (`build`, `brainstorm`, `adapt`) with 2-way editor tab sync & responsive small-size modes, 14-token universal theme sync, Compact Markdown Accessory Toolbar, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.5.15) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Automated Cross-Platform Android Signed APK Build Pipeline, Adaptive Launcher Icon Branding (`#141417` background), Host Command Bus & RPC Bridge (`window.CNTXT` via `postMessage`), Sandboxed Mini Panel Apps co-processor engine with path traversal guards & dirty tab mediation, Floating Pop-out Panel Apps with independent window lifecycle & compact widget resizing (down to 220x160), Hardened CSP Security Architecture, Pure Presenter Host Architecture, App Builder resilient SDK with fallback persistence, Blueprint Prompt Archetypes (`build`, `brainstorm`, `adapt`) with 2-way editor tab sync & responsive small-size modes, 14-token universal theme sync, Compact Markdown Accessory Toolbar, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.5.14)
+## Downloads (v0.5.15)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.14_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.14/CNTXT_0.5.14_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.14_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.14/CNTXT_0.5.14_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.14_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.14/CNTXT_0.5.14_portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.5.15_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.15/CNTXT_0.5.15_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.5.15_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.15/CNTXT_0.5.15_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.5.15_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.15/CNTXT_0.5.15_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
@@ -21,101 +21,34 @@
 ### Linux
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Debian Package** | `.deb` | amd64 | [Download CNTXT_0.5.1_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.2/CNTXT_0.5.1_amd64.deb) | Verified Debian package bundle |
-| **Standalone Portable** | Binary | x64 | [Download cntxt-portable](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.2/cntxt-portable) | Standalone binary |
-
-## What It Is
-
-CNTXT builds on the ContextPad concept with a clean, portable frontend architecture:
-
-- **Panel Apps Engine** — turn any standalone HTML document into a persistent, sandboxed mini-app within CNTXT. Includes a 3-step creation wizard (`AppBuilderPanel`), dynamic app rail (`AppRail`), offline-readiness preflight scanner, dedicated data partitions, and full lifecycle management (reload, reset state, reveal, edit, remove, and delete).
-- **Portability-first** — a typed `IRuntimeBridge` contract (`src/ui-contract/bridgeContract.ts`) is the *only* boundary between the UI and the platform (Tauri desktop, Android mobile, web, or mock). No component, store, or service touches `window`, `navigator`, `localStorage`, or `indexedDB` directly; all platform access lives in `src/adapters/`.
-- **Modular shell architecture** — Classic / Prototype / Workbench shell modes with a typed design system (`src/design/`), primitive component library (`src/primitives/`), and touch-friendly mobile accessory toolbar (`MobileAccessoryBar`).
-- **Tauri v2 runtime** — native Rust commands for file operations (`rfd` dialogs on desktop, Scoped Storage plugins on mobile), window management, sandboxed keyring/storage secrets, and client-side LivePreview with synchronized scrolling and markdown decoration rendering.
-- **Native Android APK** — compiled with Rust JNI cdylib (`libcntxt_lib.so`), Kotlin `MainActivity` with edge-to-edge safe area handling, and native Android back-button handshake for priority overlay dismissal.
-
-## Repository Layout
-
-```text
-CNTXT/
-├── src/                    # Frontend (React 19 + TypeScript + Tailwind 4 + Zustand)
-│   ├── adapters/           # Runtime bridge adapters (browser, mock, Tauri)
-│   ├── ui-contract/        # Pure TypeScript contracts (zero native imports)
-│   ├── design/             # Design system tokens (colors, spacing, typography)
-│   ├── primitives/         # Atomic UI components (Button, Panel, Card, ...)
-│   ├── shell/              # Shell frames (ShellFrame, Classic/Prototype/Workbench)
-│   ├── components/         # Domain components (Editor, Sidebar, Modals, ...)
-│   ├── store/              # Zustand state stores
-│   ├── services/           # Business logic (formula parser, token estimator, sandbox)
-│   └── extensions/         # CodeMirror 6 extensions
-├── src-tauri/              # Rust backend (Tauri v2)
-│   ├── capabilities/       # Tauri permission capabilities
-│   └── src/commands/       # Native IPC commands (file, window, secrets)
-├── index.html
-├── package.json
-├── vite.config.ts
-└── tsconfig.json
-```
-
-## Getting Started
-
-### Prerequisites
-- Node.js 18+
-- npm 9+
-- Rust toolchain (for desktop builds)
-- Linux libraries (Debian/Ubuntu/Mint):
-  ```bash
-  sudo apt install -y libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libdbus-1-dev libx11-dev
-  ```
-
-### Frontend (web)
-```bash
-npm install
-npm run dev        # Vite dev server
-npm run build      # Production build
-npm run preview    # Preview production bundle
-npm run lint       # TypeScript typecheck + platform-leak scan
-```
-
-### Desktop (Tauri)
-```bash
-npm run tauri:dev      # Run with Tauri desktop shell
-npm run tauri:build    # Production build + platform bundles
-```
-
-## Architecture Rules
-
-The codebase enforces a strict platform boundary. A regression guard
-(`scripts/check-platform-leaks.mjs`) runs as part of `npm run lint` and scans
-`src/` (excluding `src/adapters/`) for forbidden tokens (`localStorage`,
-`navigator.`, `window.open`, `document.`, `indexedDB`), failing the build if any
-are found.
-
-- Only `src/adapters/` may import platform APIs.
-- `src/ui-contract/` and `src/design/` are pure type/value modules — no runtime imports.
-- Stores are persistence-agnostic; all persistence flows through `bridge.storage`.
-- Components use `bridge.clipboard` / `bridge.window` — never `navigator.clipboard` or `window.open` directly.
-
-## Current Status & Verification
- 
-- **Production Release (v0.5.10)**:
-  - **Panel Apps & App Builder Platform Resilience**: Standalone HTML apps converted to CNTXT panel apps run seamlessly with safe workspace fallback (`bridge.fs.getDefaultAppsDir()`), preventing `PERMISSION_DENIED` errors when no project folder is open. Added polymorphic RPC return wrapper (`new String(content)` with `.content` property) supporting both destructuring and direct string access without type errors.
-  - **Injected SDK Convenience Bridge**: Native support for `window.CNTXT.ui.showToast`, `window.CNTXT.editor.insertText`, `window.CNTXT.tabs.openFile`, `window.CNTXT.notify.info/success/warn/error`, leading slash normalization, and recursive folder filtering in `listFiles`.
-  - **Tri-Platform Suite Alignment**: Full production parity across Web SaaS (Vercel + Supabase), Native Desktop (Windows / macOS / Linux via Tauri v2), and Mobile (Android via Tauri Mobile cdylib runtime).
-  - **Experimental Omni Terminal Mission Control (Tri-Toggle Gated)**: Multi-agent mission control & terminal shells gated strictly behind three settings toggles (`enableExperimentalSettings`, `enableTerminalBus`, and `enableOmniTerminal`) under Settings -> Experimental. Defaults to disabled out of the box for clean UI and web parity.
-  - **Signed Windows Installer Packages**: Official Windows NSIS setup (`dist-installer/CNTXT_0.5.10_x64-setup.exe`), WiX MSI (`dist-installer/CNTXT_0.5.10_x64_en-US.msi`), and standalone zero-install executable (`dist-portable/CNTXT_0.5.10_portable.exe`), digitally signed with Authenticode SHA256 and RFC 3161 timestamps via `npm run package:sign`.
-  - **Automated Test Coverage**: 623 unit tests passing across 58 suites via Vitest (`npm test`); 24 Playwright E2E tests green on cold server; 9 Rust security tests passing (`cargo test`).
-  - **Platform Purity**: `npm run lint` scans 185 files with zero platform leaks outside authorized adapters and 100% canonical contract parity.
-- **Living Context & Roadmap**:
-  - Full living context and architecture logs: `generated-documents/context/living_context.md`.
-  - Release history and change notes: [CHANGELOG.md](CHANGELOG.md).
-
-## Related
-
-- Original baseline: [ContextPad](https://github.com/EntropyRedux) (v1.11.x)
-- [CHANGELOG.md](CHANGELOG.md) — release history and build tracking
+| **Debian / Ubuntu** | `.deb` | Linux x64 | [Download cntxt_0.5.13_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.13/cntxt_0.5.13_amd64.deb) | Desktop entry + icons included |
+| **AppImage** | `.AppImage` | Linux x64 | [Download cntxt_0.5.13_amd64.AppImage](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.13/cntxt_0.5.13_amd64.AppImage) | Universal Linux portable |
 
 ---
 
-**License:** GPL-3.0  
-**Author:** entropy_redux
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run frontend dev server
+npm run dev
+
+# Run Tauri desktop app in development
+npm run tauri:dev
+
+# Build standalone portable Windows executable
+npm run build:portable
+
+# Run tests
+npm test
+
+# Run linter
+npm run lint
+```
+
+## Architecture & Documentation
+
+- [Living Context Document](generated-documents/context/living_context.md) — Current sprint goals, verified architecture invariants, and component boundaries.
+- [Changelog](CHANGELOG.md) — Comprehensive release history across all versions.

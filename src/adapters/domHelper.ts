@@ -286,7 +286,8 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
 
   if (typeof DOMParser === 'undefined') {
     // Regex fallback for non-DOM / headless testing environments
-    return dirtyHtml
+    const isMath = dirtyHtml.includes('katex') || dirtyHtml.includes('data-cntxt-math');
+    let res = dirtyHtml
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
@@ -295,8 +296,18 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
       .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '')
       .replace(/\s+on[a-zA-Z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s&]+)/gi, '')
       .replace(/(?:href|xlink:href|formaction)\s*=\s*["']?\s*(?:javascript|file|vbscript|data):[^"'>\s]*/gi, 'href="#"')
-      .replace(/(?:src|srcset)\s*=\s*["']?\s*(?:javascript|file|vbscript|data):[^"'>\s]*/gi, '')
-      .replace(/\bstyle\s*=\s*["'][^"']*(?:position|z-index|top|bottom|left|right)[^"']*["']/gi, '');
+      .replace(/(?:src|srcset)\s*=\s*["']?\s*(?:javascript|file|vbscript|data):[^"'>\s]*/gi, '');
+    if (!isMath) {
+      res = res.replace(/\bstyle\s*=\s*["'][^"']*(?:position|z-index|top|bottom|left|right)[^"']*["']/gi, '');
+    } else {
+      res = res.replace(/\bstyle\s*=\s*["']([^"']*)["']/gi, (_m, s) => {
+        const cleaned = s
+          .replace(/(?:^|;)\s*(?:position\s*:\s*(?:fixed|sticky)[^;]*|z-index\s*:[^;]*)/gi, '')
+          .trim().replace(/^;+/, '');
+        return cleaned ? `style="${cleaned}"` : '';
+      });
+    }
+    return res;
   }
 
   try {
@@ -357,17 +368,21 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
       if (el.hasAttribute('style')) {
         const style = el.getAttribute('style') || '';
 
-        // Only genuine inline math spans created by the parser can retain non-stacking layout styles
-        // Non-span elements (like arbitrary <div> with user class="katex") are NEVER KaTeX
+        // Genuine KaTeX / LaTeX math elements require vertical/relative positioning for superscripts/fractions/roots
         const isVerifiedMathSpan =
-          el.tagName.toLowerCase() === 'span' &&
-          (el.hasAttribute('data-cntxt-math') ||
+          (el.tagName.toLowerCase() === 'span' || el.tagName.toLowerCase() === 'div') &&
+          (el.classList.contains('katex') ||
+            el.classList.contains('katex-display') ||
+            el.classList.contains('katex-html') ||
+            el.closest('.katex') !== null ||
+            el.closest('.katex-display') !== null ||
+            el.hasAttribute('data-cntxt-math') ||
             el.closest('[data-cntxt-math]') !== null ||
             el.closest('span.cm-table-math') !== null);
 
         // ALWAYS unconditionally strip fixed/sticky positioning and z-index from ALL elements without exception
         let sanitizedStyle = style.replace(
-          /(?:^|;)\s*(?:position\s*:\s*fixed|position\s*:\s*sticky|z-index)\s*:[^;]*/gi,
+          /(?:^|;)\s*(?:position\s*:\s*(?:fixed|sticky)[^;]*|z-index\s*:[^;]*)/gi,
           ''
         );
 
@@ -391,6 +406,104 @@ export function sanitizePreviewHtml(dirtyHtml: string): string {
     return doc.body.innerHTML;
   } catch {
     return escapeHtml(dirtyHtml);
+  }
+}
+
+/**
+ * Sanitize an SVG string (e.g. from Mermaid diagram generator).
+ * Preserves SVG elements, geometry, definitions, and internal safe <style> blocks,
+ * while strictly stripping script tags, event handlers, and dangerous URL schemes.
+ */
+export function sanitizeSvgHtml(dirtySvg: string): string {
+  if (!dirtySvg) return '';
+
+  if (typeof DOMParser === 'undefined') {
+    return dirtySvg
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/<style\b[^<]*(?:@import|javascript:|expression\()[^<]*<\/style>/gi, '')
+      .replace(/\s+on[a-zA-Z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s&]+)/gi, '')
+      .replace(/(?:href|xlink:href)\s*=\s*["']?\s*(?:javascript|file|vbscript|data):[^"'>\s]*/gi, 'href="#"');
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(dirtySvg, 'image/svg+xml');
+
+    let svgEl: Element | null = null;
+    const parserError = doc.querySelector('parsererror');
+    if (!parserError && doc.documentElement && doc.documentElement.tagName.toLowerCase() === 'svg') {
+      svgEl = doc.documentElement;
+    } else {
+      // Fallback to text/html parsing if svg namespace parsing failed
+      const htmlDoc = parser.parseFromString(dirtySvg, 'text/html');
+      svgEl = htmlDoc.querySelector('svg');
+    }
+
+    if (!svgEl) return '';
+
+    // 1. Remove dangerous executable or embedding tags
+    const DISALLOWED_SVG_TAGS = ['script', 'iframe', 'object', 'embed', 'form', 'base'];
+    DISALLOWED_SVG_TAGS.forEach(tag => {
+      svgEl.querySelectorAll(tag).forEach(el => el.remove());
+    });
+
+    // 2. Sanitize <style> tags within SVG: preserve diagram CSS, but strip dangerous imports/schemes
+    svgEl.querySelectorAll('style').forEach(styleEl => {
+      const content = styleEl.textContent || '';
+      if (/javascript:|expression\(|@import/i.test(content)) {
+        styleEl.remove();
+      }
+    });
+
+    // 3. Sanitize attributes across all elements in the SVG
+    const allEls = svgEl.querySelectorAll('*');
+    allEls.forEach(el => {
+      // Strip on* event attributes
+      const attrsToRemove = [];
+      for (let i = 0; i < el.attributes.length; i++) {
+        const attrName = el.attributes[i].name;
+        if (attrName.toLowerCase().startsWith('on')) {
+          attrsToRemove.push(attrName);
+        }
+      }
+      attrsToRemove.forEach(a => el.removeAttribute(a));
+
+      // Sanitize href and xlink:href
+      ['href', 'xlink:href'].forEach(attr => {
+        if (el.hasAttribute(attr)) {
+          const val = (el.getAttribute(attr) || '').trim().toLowerCase();
+          if (
+            val.startsWith('javascript:') ||
+            val.startsWith('file:') ||
+            val.startsWith('vbscript:') ||
+            (val.startsWith('data:') && !val.startsWith('data:image/'))
+          ) {
+            el.setAttribute(attr, '#');
+          }
+        }
+      });
+
+      // Strip dangerous positioning and script injection from inline styles
+      if (el.hasAttribute('style')) {
+        let styleVal = el.getAttribute('style') || '';
+        styleVal = styleVal.replace(/(?:^|;)\s*(?:position\s*:\s*(?:fixed|sticky)[^;]*|z-index\s*:[^;]*)/gi, '');
+        if (/javascript:|expression\(/i.test(styleVal)) {
+          el.removeAttribute('style');
+        } else {
+          styleVal = styleVal.trim().replace(/^;+/, '');
+          if (styleVal) {
+            el.setAttribute('style', styleVal);
+          } else {
+            el.removeAttribute('style');
+          }
+        }
+      }
+    });
+
+    return svgEl.outerHTML;
+  } catch {
+    return '';
   }
 }
 
