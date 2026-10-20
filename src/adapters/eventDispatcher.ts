@@ -1,3 +1,4 @@
+import { spliceChunkIntoFullContent, detectExternalModification } from '../services/chunkBufferService';
 import { useTabStore } from '../store/tabStore';
 import { useTemplateStore } from '../store/templateStore';
 import { useActionStore } from '../store/actionStore';
@@ -116,23 +117,94 @@ export function createUiEventDispatcher(
     },
 
     onSaveFile: async () => {
-      const { tabs, activeTabId, saveCurrentTab } = useTabStore.getState();
+      const { tabs, activeTabId, saveCurrentTab, updateTabMetadata } = useTabStore.getState();
       const activeTab = tabs.find(t => t.id === activeTabId);
       if (!activeTab) return;
 
-      // Guard: Never allow direct file save from a truncated preview to prevent data loss
+      // If document is untitled, delegate to Save As dialog
+      if (!activeTab.filePath) {
+        await dispatcher.onSaveAs();
+        return;
+      }
+
+      // Check if this is a chunked/virtualized document tab
+      if (activeTab.chunkSession?.isChunked) {
+        // FIND-05: External modification collision detection
+        try {
+          const currentDiskContent = await bridge.fs.readFile(activeTab.filePath);
+          if (
+            currentDiskContent !== null &&
+            activeTab.chunkSession.originalChecksum &&
+            detectExternalModification(currentDiskContent, activeTab.chunkSession)
+          ) {
+            const conflictPath = `${activeTab.filePath}.edited-chunk-conflict-${Date.now()}.md`;
+            await bridge.fs.saveFile(conflictPath, activeTab.content);
+            useNotificationStore.getState().addNotification(
+              'File Conflict Detected',
+              `The master file was modified externally on disk. To prevent data loss, your edits were saved to: ${conflictPath}`,
+              'error'
+            );
+            return;
+          }
+        } catch (readErr: unknown) {
+          console.warn('Could not verify disk checksum before splicing:', readErr);
+        }
+
+        const spliceResult = spliceChunkIntoFullContent(
+          activeTab.chunkSession.originalFullContent,
+          activeTab.content,
+          activeTab.chunkSession
+        );
+
+        if (!spliceResult.success) {
+          // FIND-02: Real safety recovery backup file writing on splice failure
+          const recoveryPath = `${activeTab.filePath}.edited-chunk-recovery-${Date.now()}.md`;
+          try {
+            await bridge.fs.saveFile(recoveryPath, activeTab.content);
+          } catch (writeErr: unknown) {
+            console.error('Failed to write safety recovery file:', writeErr);
+          }
+          useNotificationStore.getState().addNotification(
+            'Splice Error',
+            `${spliceResult.error || 'Could not safely splice chunked sections into master file.'} Your edits were preserved in: ${recoveryPath}`,
+            'error'
+          );
+          return;
+        }
+
+        try {
+          const success = await bridge.fs.saveFile(activeTab.filePath, spliceResult.updatedFullContent);
+          if (success) {
+            updateTabMetadata(activeTab.id, {
+              chunkSession: spliceResult.updatedSession,
+              rawFullContent: spliceResult.updatedFullContent,
+              isDirty: false,
+              lastModifiedTime: Date.now()
+            });
+            await saveCurrentTab();
+            const sizeKb = Math.round(new Blob([spliceResult.updatedFullContent]).size / 1024);
+            useNotificationStore.getState().addNotification(
+              'Spliced & Saved',
+              `${activeTab.title} (${sizeKb} KB) — Master file updated without data loss.`,
+              'success'
+            );
+          } else {
+            useNotificationStore.getState().addNotification('Save Failed', `Could not write to ${activeTab.filePath}`, 'error');
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          useNotificationStore.getState().addNotification('Save Failed', msg, 'error');
+        }
+        return;
+      }
+
+      // Guard: Legacy truncated preview without chunk session
       if (activeTab.isTruncatedView) {
         useNotificationStore.getState().addNotification(
           'Direct Save Locked',
           'Cannot overwrite original file from a truncated preview. Use "Save As" to export these sections or click "Open Full Document" in the banner to edit.',
           'warning'
         );
-        return;
-      }
-
-      // If document is untitled, delegate to Save As dialog
-      if (!activeTab.filePath) {
-        await dispatcher.onSaveAs();
         return;
       }
 

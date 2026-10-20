@@ -1,3 +1,5 @@
+import { ChunkNoticeBanner } from '../components/Editor/ChunkNoticeBanner';
+import { useLargeDocModalStore } from '../store/largeDocModalStore';
 import React, { Suspense, lazy, useEffect } from 'react';
 import { TabBar } from '../components/TabBar/TabBar';
 import { ErrorBoundary } from '../components/Common/ErrorBoundary';
@@ -83,8 +85,29 @@ export const ShellEditorContainer: React.FC<ShellEditorContainerProps> = ({
               </ErrorBoundary>
             </div>
           ) : (
-            <div className="w-full h-full overflow-hidden min-h-0">
-              <div className="h-full overflow-hidden min-h-0 w-full">
+            <div className="w-full h-full overflow-hidden min-h-0 flex flex-col">
+              {(activeTab.chunkSession?.isChunked || activeTab.isTruncatedView) && (
+                <ChunkNoticeBanner
+                  isChunked={Boolean(activeTab.chunkSession?.isChunked || activeTab.isTruncatedView)}
+                  isTruncatedPreview={Boolean(!activeTab.chunkSession?.isChunked && activeTab.isTruncatedView)}
+                  sectionCount={activeTab.chunkSession?.sections.length || 1}
+                  totalSections={activeTab.chunkSession?.totalDocumentHeadings || activeTab.chunkSession?.sections.length || 1}
+                  fileSizeKb={Math.round((activeTab.chunkSession?.originalFullContent?.length || activeTab.totalOriginalBytes || activeTab.content.length) / 1024)}
+                  isDirty={activeTab.isDirty}
+                  onOpenFullDocument={() => {
+                    useTabStore.getState().restoreFullContent(activeTab.id);
+                  }}
+                  onReconfigureSections={() => {
+                    const fullContent = activeTab.chunkSession?.originalFullContent || activeTab.rawFullContent || activeTab.content;
+                    useLargeDocModalStore.getState().openLargeDocModal(
+                      activeTab.id,
+                      activeTab.title,
+                      fullContent
+                    );
+                  }}
+                />
+              )}
+              <div className="flex-1 overflow-hidden min-h-0 w-full">
                 <ErrorBoundary fallbackTitle="Editor Canvas Error">
                   <Suspense fallback={<EditorSkeleton />}>
                     <Editor

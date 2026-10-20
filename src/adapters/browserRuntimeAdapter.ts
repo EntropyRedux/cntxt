@@ -4,7 +4,9 @@
  */
 
 import { 
-  IRuntimeBridge, 
+  IRuntimeBridge,
+  IRestGatewayBridge,
+  IRestGatewayStatus, 
   IFileSystemBridge, 
   IWindowBridge, 
   IClipboardBridge, 
@@ -560,5 +562,20 @@ export class BrowserRuntimeAdapter implements IRuntimeBridge {
     listSessions: async (): Promise<string[]> => [],
     onData: (): (() => void) => () => {},
     onExit: (): (() => void) => () => {}
+  };
+  public gateway: IRestGatewayBridge = {
+    isAvailable: (): boolean => false,
+    start: async (): Promise<{ port: number; authToken: string }> => {
+      throw new Error('REST Gateway is only supported in native desktop builds');
+    },
+    stop: async (): Promise<void> => {},
+    getStatus: async (): Promise<IRestGatewayStatus> => ({
+      running: false,
+      port: 0,
+      authToken: '',
+    }),
+    regenerateToken: async (): Promise<string> => {
+      throw new Error('REST Gateway is only supported in native desktop builds');
+    }
   };
 }

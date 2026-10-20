@@ -159,6 +159,21 @@ export interface ITerminalBridge {
  * Unified Runtime Bridge Interface
  * The ONLY point of contact between UI components and the platform runtime.
  */
+
+export interface IRestGatewayStatus {
+  running: boolean;
+  port: number;
+  authToken: string;
+}
+
+export interface IRestGatewayBridge {
+  isAvailable: () => boolean;
+  start: (port?: number) => Promise<{ port: number; authToken: string }>;
+  stop: () => Promise<void>;
+  getStatus: () => Promise<IRestGatewayStatus>;
+  regenerateToken?: () => Promise<string>;
+}
+
 export interface IRuntimeBridge {
   fs: IFileSystemBridge;
   window: IWindowBridge;
@@ -167,6 +182,7 @@ export interface IRuntimeBridge {
   platform: IPlatformBridge;
   theme: IThemeBridge;
   terminal?: ITerminalBridge;
+  gateway?: IRestGatewayBridge;
   shareContent?: (text: string) => Promise<boolean>;
   getSessionToken?: () => Promise<string>;
   deleteFile?: (path: string) => Promise<boolean>;

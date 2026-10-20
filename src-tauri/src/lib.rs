@@ -234,6 +234,11 @@ pub fn run() {
             commands::pty::kill_pty,
             commands::pty::list_pty_sessions,
             commands::pty::spawn_external_terminal,
+            commands::gateway::start_rest_gateway,
+            commands::gateway::stop_rest_gateway,
+            commands::gateway::get_gateway_status,
+            commands::gateway::resolve_rpc_response,
+            commands::gateway::regenerate_gateway_token,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

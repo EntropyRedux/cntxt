@@ -1,3 +1,7 @@
+import { EditorSelection } from '@codemirror/state';
+import { foldCode, unfoldCode, foldAll, unfoldAll } from '@codemirror/language';
+import { setDiagnostics as cmSetDiagnostics, Diagnostic } from '@codemirror/lint';
+import { EditorSelectionRange, EditorDiagnosticItem } from '../../../contracts/data_shapes';
 import type { EditorView } from '@codemirror/view';
 import { processTemplateVariables } from './templateVariableService';
 import { editorStateCache } from './editorStateCache';
@@ -218,6 +222,105 @@ class EditorRegistry {
         scrollIntoView: true
       });
       view.focus();
+      return true;
+    }
+    return false;
+  }
+  setSelections(tabId: string, selections: EditorSelectionRange[], mainIndex = 0): boolean {
+    const view = this.views.get(tabId);
+    if (view && selections.length > 0) {
+      const docLength = view.state.doc.length;
+      const ranges = selections.map(s =>
+        EditorSelection.range(
+          Math.min(Math.max(0, s.anchor), docLength),
+          Math.min(Math.max(0, s.head), docLength)
+        )
+      );
+      const validMain = Math.min(Math.max(0, mainIndex), ranges.length - 1);
+      view.dispatch({
+        selection: EditorSelection.create(ranges, validMain),
+        scrollIntoView: true
+      });
+      view.focus();
+      return true;
+    }
+    return false;
+  }
+
+  getSelections(tabId: string): EditorSelectionRange[] {
+    const view = this.views.get(tabId);
+    if (view) {
+      return view.state.selection.ranges.map(r => ({
+        anchor: r.anchor,
+        head: r.head
+      }));
+    }
+    return [];
+  }
+
+  fold(tabId: string, options: { line?: number; all?: boolean; unfold?: boolean }): boolean {
+    const view = this.views.get(tabId);
+    if (!view) return false;
+
+    if (options.all) {
+      if (options.unfold) {
+        unfoldAll(view);
+      } else {
+        foldAll(view);
+      }
+      return true;
+    }
+
+    if (options.line !== undefined) {
+      const lineNum = Math.min(Math.max(1, options.line), view.state.doc.lines);
+      const line = view.state.doc.line(lineNum);
+      view.dispatch({ selection: { anchor: line.from } });
+      if (options.unfold) {
+        return unfoldCode(view);
+      } else {
+        return foldCode(view);
+      }
+    }
+
+    return false;
+  }
+
+  setDiagnostics(tabId: string, diagnostics: EditorDiagnosticItem[]): boolean {
+    const view = this.views.get(tabId);
+    if (view) {
+      const docLength = view.state.doc.length;
+      const cmDiagnostics: Diagnostic[] = diagnostics.map(d => ({
+        from: Math.min(Math.max(0, d.from), docLength),
+        to: Math.min(Math.max(0, d.to), docLength),
+        severity: d.severity,
+        message: d.message,
+        source: d.source || 'CNTXT-RPC',
+      }));
+      view.dispatch(cmSetDiagnostics(view.state, cmDiagnostics));
+      return true;
+    }
+    return false;
+  }
+
+  clearDiagnostics(tabId: string): boolean {
+    const view = this.views.get(tabId);
+    if (view) {
+      view.dispatch(cmSetDiagnostics(view.state, []));
+      return true;
+    }
+    return false;
+  }
+
+  replaceRange(tabId: string, from: number, to: number, insert: string): boolean {
+    const view = this.views.get(tabId);
+    if (view) {
+      const docLength = view.state.doc.length;
+      const clampedFrom = Math.min(Math.max(0, from), docLength);
+      const clampedTo = Math.min(Math.max(clampedFrom, to), docLength);
+      view.dispatch({
+        changes: { from: clampedFrom, to: clampedTo, insert },
+        scrollIntoView: true
+      });
       return true;
     }
     return false;

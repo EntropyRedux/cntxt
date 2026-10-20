@@ -33,7 +33,17 @@ import {
   OmniSessionStatus,
   OmniAgentProfile,
   OmniChatMessage,
-  OmniSession
+  OmniSession,
+  ChunkSectionRange,
+  ChunkSessionMetadata,
+  ChunkSpliceResult,
+  EditorSelectionRange,
+  EditorSetSelectionsPayload,
+  EditorFoldPayload,
+  EditorReplaceRangePayload,
+  EditorDiagnosticItem,
+  EditorSetDiagnosticsPayload,
+  RestGatewayConfig
 } from '../../contracts/data_shapes';
 
 export const SupportedLanguageSchema: z.ZodType<SupportedLanguage> = z.enum([
@@ -569,4 +579,112 @@ export function validateOmniChatMessage(data: unknown) {
 
 export function validateOmniSession(data: unknown) {
   return OmniSessionSchema.safeParse(data);
+}
+
+// ==========================================
+// 14. Large Document Virtualization & Chunk Coordinator (FG-19)
+// ==========================================
+
+export const ChunkSectionRangeSchema: z.ZodType<ChunkSectionRange> = z.object({
+  id: z.string().min(1),
+  headingText: z.string(),
+  level: z.number().int().min(1).max(6),
+  originalStartLine: z.number().int().nonnegative(),
+  originalEndLine: z.number().int().nonnegative(),
+  originalContent: z.string(),
+  contentHash: z.string(),
+});
+
+export const ChunkSessionMetadataSchema: z.ZodType<ChunkSessionMetadata> = z.object({
+  isChunked: z.boolean(),
+  originalFullContent: z.string(),
+  originalChecksum: z.string(),
+  sections: z.array(ChunkSectionRangeSchema),
+  headerNoticeLines: z.number().int().nonnegative(),
+});
+
+export const ChunkSplicePayloadSchema = z.object({
+  originalFullContent: z.string(),
+  editedChunkContent: z.string(),
+  session: ChunkSessionMetadataSchema,
+});
+
+export function validateChunkSectionRange(data: unknown) {
+  return ChunkSectionRangeSchema.safeParse(data);
+}
+
+export function validateChunkSessionMetadata(data: unknown) {
+  return ChunkSessionMetadataSchema.safeParse(data);
+}
+
+export function validateChunkSplicePayload(data: unknown) {
+  return ChunkSplicePayloadSchema.safeParse(data);
+}
+
+// ==========================================
+// 15. Host Command Bus Extended & REST Gateway (FG-20)
+// ==========================================
+
+export const EditorSelectionRangeSchema: z.ZodType<EditorSelectionRange> = z.object({
+  anchor: z.number().int().nonnegative(),
+  head: z.number().int().nonnegative(),
+});
+
+export const EditorSetSelectionsPayloadSchema: z.ZodType<EditorSetSelectionsPayload> = z.object({
+  selections: z.array(EditorSelectionRangeSchema).min(1),
+  mainIndex: z.number().int().nonnegative().optional(),
+});
+
+export const EditorFoldPayloadSchema: z.ZodType<EditorFoldPayload> = z.object({
+  line: z.number().int().nonnegative().optional(),
+  all: z.boolean().optional(),
+  unfold: z.boolean().optional(),
+});
+
+export const EditorDiagnosticItemSchema: z.ZodType<EditorDiagnosticItem> = z.object({
+  from: z.number().int().nonnegative(),
+  to: z.number().int().nonnegative(),
+  severity: z.enum(['error', 'warning', 'info', 'hint']),
+  message: z.string().min(1),
+  source: z.string().optional(),
+}).refine((d) => d.to >= d.from, {
+  message: 'Diagnostic `to` must be greater than or equal to `from`',
+}) as unknown as z.ZodType<EditorDiagnosticItem>;
+
+export const EditorSetDiagnosticsPayloadSchema: z.ZodType<EditorSetDiagnosticsPayload> = z.object({
+  diagnostics: z.array(EditorDiagnosticItemSchema),
+});
+
+export const EditorReplaceRangePayloadSchema: z.ZodType<EditorReplaceRangePayload> = z.object({
+  from: z.number().int().nonnegative(),
+  to: z.number().int().nonnegative(),
+  text: z.string(),
+}).refine((d) => d.to >= d.from, {
+  message: 'replaceRange `to` position must be >= `from`',
+}) as unknown as z.ZodType<EditorReplaceRangePayload>;
+
+export function validateEditorReplaceRange(data: unknown) {
+  return EditorReplaceRangePayloadSchema.safeParse(data);
+}
+
+export const RestGatewayConfigSchema: z.ZodType<RestGatewayConfig> = z.object({
+  enabled: z.boolean(),
+  port: z.number().int().min(1024).max(65535),
+  authToken: z.string().min(1),
+});
+
+export function validateEditorSetSelections(data: unknown) {
+  return EditorSetSelectionsPayloadSchema.safeParse(data);
+}
+
+export function validateEditorFold(data: unknown) {
+  return EditorFoldPayloadSchema.safeParse(data);
+}
+
+export function validateEditorSetDiagnostics(data: unknown) {
+  return EditorSetDiagnosticsPayloadSchema.safeParse(data);
+}
+
+export function validateRestGatewayConfig(data: unknown) {
+  return RestGatewayConfigSchema.safeParse(data);
 }

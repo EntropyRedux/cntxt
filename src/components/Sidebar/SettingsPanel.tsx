@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Check, 
   Download, 
@@ -36,6 +36,9 @@ import { validateWorkspaceBackup } from '../../contracts/boundarySchemas';
 import { PersonalGitHubLibraryConfig } from '../../contracts/data_shapes';
 import { GoogleIcon, GitHubIcon } from '../Auth/BrandIcons';
 import { PersonalGitHubLibraryModal } from './PersonalGitHubLibraryModal';
+import { RestGatewaySettingsCard } from './RestGatewaySettingsCard';
+import { ErrorBoundary } from '../Common/ErrorBoundary';
+import { IRestGatewayStatus } from '../../ui-contract/bridgeContract';
 
 export const SettingsPanel: React.FC = () => {
   const bridge = useRuntimeBridge();
@@ -44,6 +47,120 @@ export const SettingsPanel: React.FC = () => {
   const { showConfirm } = useConfirmStore();
   const { user, loginWithGoogle, loginWithGitHub, signOut, syncStatus, lastSyncTime, triggerSync } = useAuthStore();
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
+
+  // REST Gateway State
+  const [gatewayStatus, setGatewayStatus] = useState<IRestGatewayStatus>({
+    running: false,
+    port: settings.restGatewayPort ?? 9876,
+    authToken: '',
+  });
+  const [gatewayLoading, setGatewayLoading] = useState(false);
+  const [tokenCopied, setTokenCopied] = useState(false);
+  const [showToken, setShowToken] = useState(false);
+  const [gatewayError, setGatewayError] = useState<string | null>(null);
+
+  // Sync gateway state on mount or when settings change
+  useEffect(() => {
+    let isMounted = true;
+    if (!bridge.gateway?.isAvailable?.()) return;
+
+    const checkGateway = async () => {
+      try {
+        const isEnabled = Boolean(settings.enableExperimentalSettings && settings.enableRestGateway);
+        if (isEnabled) {
+          const res = await bridge.gateway?.start(settings.restGatewayPort ?? 9876);
+          if (isMounted && res) {
+            setGatewayStatus({
+              running: true,
+              port: res.port,
+              authToken: res.authToken,
+            });
+            setGatewayError(null);
+          }
+        } else {
+          try {
+            await bridge.gateway?.stop();
+          } catch {
+            // Ignore stop errors
+          }
+          const status = await bridge.gateway?.getStatus();
+          if (isMounted && status) {
+            setGatewayStatus(status);
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          setGatewayError(err instanceof Error ? err.message : 'Gateway error');
+        }
+      }
+    };
+
+    checkGateway();
+    return () => {
+      isMounted = false;
+    };
+  }, [bridge.gateway, settings.enableExperimentalSettings, settings.enableRestGateway, settings.restGatewayPort]);
+
+  const handleToggleRestGateway = async (enabled: boolean) => {
+    updateSettings({ enableRestGateway: enabled });
+    if (!bridge.gateway?.isAvailable?.()) return;
+
+    setGatewayLoading(true);
+    setGatewayError(null);
+    try {
+      if (enabled) {
+        const res = await bridge.gateway.start(settings.restGatewayPort ?? 9876);
+        setGatewayStatus({
+          running: true,
+          port: res.port,
+          authToken: res.authToken,
+        });
+        addNotification('REST Gateway Active', `Listening on port ${res.port}`, 'info');
+      } else {
+        await bridge.gateway.stop();
+        const status = await bridge.gateway.getStatus();
+        setGatewayStatus(status);
+        addNotification('REST Gateway Inactive', 'Localhost REST listener disabled', 'info');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update gateway';
+      setGatewayError(msg);
+      addNotification('REST Gateway Error', msg, 'error');
+    } finally {
+      setGatewayLoading(false);
+    }
+  };
+
+  const handlePortChange = (port: number) => {
+    updateSettings({ restGatewayPort: port });
+  };
+
+  const handleCopyToken = async () => {
+    if (!gatewayStatus.authToken) return;
+    try {
+      await bridge.clipboard.writeText(gatewayStatus.authToken);
+      setTokenCopied(true);
+      setTimeout(() => setTokenCopied(false), 2000);
+      addNotification('Token Copied', 'X-CNTXT-Token copied to clipboard', 'info');
+    } catch {
+      addNotification('Copy Failed', 'Unable to copy token', 'error');
+    }
+  };
+
+  const handleRegenerateToken = async () => {
+    if (!bridge.gateway?.regenerateToken) return;
+    setGatewayLoading(true);
+    try {
+      const newToken = await bridge.gateway.regenerateToken();
+      setGatewayStatus((prev) => ({ ...prev, authToken: newToken }));
+      addNotification('Token Regenerated', 'Generated new X-CNTXT-Token', 'info');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to regenerate token';
+      addNotification('Token Error', msg, 'error');
+    } finally {
+      setGatewayLoading(false);
+    }
+  };
 
   const gitHubConfig: PersonalGitHubLibraryConfig | null = (() => {
     try {
@@ -893,7 +1010,19 @@ export const SettingsPanel: React.FC = () => {
               type="checkbox"
               id="toggle-experimental-settings"
               checked={settings.enableExperimentalSettings ?? false}
-              onChange={(e) => updateSettings({ enableExperimentalSettings: e.target.checked })}
+              onChange={async (e) => {
+                const isChecked = e.target.checked;
+                updateSettings({ enableExperimentalSettings: isChecked });
+                if (!isChecked && bridge.gateway?.isAvailable?.()) {
+                  try {
+                    await bridge.gateway.stop();
+                    const status = await bridge.gateway.getStatus();
+                    setGatewayStatus(status);
+                  } catch {
+                    // Ignore
+                  }
+                }
+              }}
               className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
             />
           </label>
@@ -1027,6 +1156,27 @@ export const SettingsPanel: React.FC = () => {
                 className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer shrink-0 mt-0.5"
               />
             </div>
+
+            {/* 5. Localhost REST API Gateway */}
+            <ErrorBoundary fallbackTitle="REST Gateway Settings Error">
+              <RestGatewaySettingsCard
+                enabled={settings.enableRestGateway ?? false}
+                port={settings.restGatewayPort ?? 9876}
+                running={gatewayStatus.running}
+                boundPort={gatewayStatus.port}
+                authToken={gatewayStatus.authToken}
+                isAvailable={Boolean(bridge.gateway?.isAvailable?.())}
+                isLoading={gatewayLoading}
+                isCopied={tokenCopied}
+                showToken={showToken}
+                error={gatewayError}
+                onToggleEnabled={handleToggleRestGateway}
+                onPortChange={handlePortChange}
+                onToggleShowToken={() => setShowToken(!showToken)}
+                onCopyToken={handleCopyToken}
+                onRegenerateToken={handleRegenerateToken}
+              />
+            </ErrorBoundary>
           </div>
         )}
       </div>

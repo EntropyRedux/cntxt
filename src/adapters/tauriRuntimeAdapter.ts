@@ -20,8 +20,12 @@ import {
   ITerminalBridge,
   TerminalChunkEvent,
   TerminalExitEvent,
-  TerminalSpawnOptions
+  TerminalSpawnOptions,
+  IRestGatewayBridge,
+  IRestGatewayStatus
 } from '../ui-contract/bridgeContract';
+import { getHostCommandBus } from '../features/panelApps/rpc/hostCommandBus';
+import { CntxtRpcRequest } from '../contracts/data_shapes';
 import { STORAGE_KEYS } from './storageKeys';
 import { applyThemeTokensToElement } from '../../theme/index';
 import { ThemeName } from '../ui-contract/themeContract';
@@ -64,6 +68,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   constructor() {
     this.detectLanguage = this.detectLanguage.bind(this);
+    this.initRpcListener();
     if (typeof window !== 'undefined' && window.__CNTXT_SESSION_TOKEN__) {
       this.sessionToken = window.__CNTXT_SESSION_TOKEN__;
       cachedSessionToken = window.__CNTXT_SESSION_TOKEN__;
@@ -746,5 +751,55 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       };
     }
   };
-}
 
+  private initRpcListener(): void {
+    if (typeof window === 'undefined') return;
+    import('@tauri-apps/api/event').then(({ listen }) => {
+      listen<{ correlationId: string; request: CntxtRpcRequest }>('cntxt://rpc-request', async (event) => {
+        const { correlationId, request } = event.payload;
+        try {
+          const bus = getHostCommandBus(this);
+          const response = await bus.handleRequest(request);
+          await this.invokeTauriVoid('resolve_rpc_response', { correlationId, response });
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          const errResponse = {
+            id: request?.id || correlationId,
+            success: false,
+            error: { code: 'EXECUTION_ERROR', message: errMsg }
+          };
+          await this.invokeTauriVoid('resolve_rpc_response', { correlationId, response: errResponse });
+        }
+      }).catch((err: unknown) => {
+        console.error('Failed to listen to cntxt://rpc-request:', err);
+        useNotificationStore.getState().addNotification(
+          'RPC Bridge Warning',
+          'Failed to bind native RPC listener for external gateway.',
+          'warning'
+        );
+      });
+    }).catch((importErr: unknown) => {
+      console.error('Failed to import @tauri-apps/api/event for RPC bridge:', importErr);
+    });
+  }
+
+  public gateway: IRestGatewayBridge = {
+    isAvailable: (): boolean => true,
+    start: async (port?: number): Promise<{ port: number; authToken: string }> => {
+      const boundPort = await this.invokeTauri<number>('start_rest_gateway', { port });
+      const status = await this.invokeTauri<IRestGatewayStatus>('get_gateway_status');
+      return { port: boundPort ?? 9876, authToken: status?.authToken ?? '' };
+    },
+    stop: async (): Promise<void> => {
+      await this.invokeTauriVoid('stop_rest_gateway');
+    },
+    getStatus: async (): Promise<IRestGatewayStatus> => {
+      const status = await this.invokeTauri<IRestGatewayStatus>('get_gateway_status');
+      return status ?? { running: false, port: 0, authToken: '' };
+    },
+    regenerateToken: async (): Promise<string> => {
+      const token = await this.invokeTauri<string>('regenerate_gateway_token');
+      return token ?? '';
+    }
+  };
+}

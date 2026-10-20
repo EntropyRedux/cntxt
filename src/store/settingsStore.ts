@@ -91,6 +91,8 @@ const DEFAULT_SETTINGS: ViewSettings = {
   enableOmniTerminal: false,
   isOmniFloating: false,
   autosaveIntervalMs: 1000,
+  enableRestGateway: false,
+  restGatewayPort: 9876,
   enableLargeDocDetection: true,
   largeDocThresholdKb: 500,
   largeDocThresholdLines: 10000,
@@ -306,6 +308,18 @@ export function isOmniTerminalFeatureEnabled(settings: ViewSettings): boolean {
     settings.enableExperimentalSettings &&
     settings.enableTerminalBus &&
     settings.enableOmniTerminal
+  );
+}
+
+/**
+ * Gate helper: REST Gateway is active when both:
+ * 1. Experimental Settings master toggle is enabled
+ * 2. enableRestGateway toggle is enabled
+ */
+export function isRestGatewayFeatureEnabled(settings: ViewSettings): boolean {
+  return Boolean(
+    settings.enableExperimentalSettings &&
+    settings.enableRestGateway
   );
 }
 

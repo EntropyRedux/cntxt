@@ -24,7 +24,11 @@ import {
   validateNotify,
   validateTerminalSpawn,
   validateTerminalSendInput,
-  validateTerminalKill
+  validateTerminalKill,
+  validateEditorSetSelections,
+  validateEditorFold,
+  validateEditorReplaceRange,
+  validateEditorSetDiagnostics
 } from '../../../contracts/boundarySchemas';
 import { useTabStore } from '../../../store/tabStore';
 import { useTerminalStore } from '../../../store/terminalStore';
@@ -190,6 +194,102 @@ export class HostCommandBus {
           isDirty: tab.isDirty,
         };
         return result;
+      }
+
+      case 'setSelections': {
+        const validated = validateEditorSetSelections(payload);
+        if (!validated.success) {
+          throw { code: 'VALIDATION_ERROR', message: validated.error.message };
+        }
+        if (!activeTabId) {
+          throw { code: 'NOT_FOUND', message: 'No active editor tab' };
+        }
+        const ok = editorRegistry.setSelections(
+          activeTabId,
+          validated.data.selections,
+          validated.data.mainIndex
+        );
+        return { success: ok };
+      }
+
+      case 'getSelections': {
+        if (!activeTabId) return [];
+        return editorRegistry.getSelections(activeTabId);
+      }
+
+      case 'fold': {
+        const validated = validateEditorFold(payload || {});
+        if (!validated.success) {
+          throw { code: 'VALIDATION_ERROR', message: validated.error.message };
+        }
+        if (!activeTabId) {
+          throw { code: 'NOT_FOUND', message: 'No active editor tab' };
+        }
+        const ok = editorRegistry.fold(activeTabId, validated.data);
+        return { success: ok };
+      }
+
+      case 'foldRange': {
+        if (!activeTabId) throw { code: 'NOT_FOUND', message: 'No active editor tab' };
+        const p = (payload || {}) as { line?: number };
+        const ok = editorRegistry.fold(activeTabId, { line: p.line, unfold: false });
+        return { success: ok };
+      }
+
+      case 'unfoldRange': {
+        if (!activeTabId) throw { code: 'NOT_FOUND', message: 'No active editor tab' };
+        const p = (payload || {}) as { line?: number };
+        const ok = editorRegistry.fold(activeTabId, { line: p.line, unfold: true });
+        return { success: ok };
+      }
+
+      case 'foldAll': {
+        if (!activeTabId) throw { code: 'NOT_FOUND', message: 'No active editor tab' };
+        const ok = editorRegistry.fold(activeTabId, { all: true, unfold: false });
+        return { success: ok };
+      }
+
+      case 'unfoldAll': {
+        if (!activeTabId) throw { code: 'NOT_FOUND', message: 'No active editor tab' };
+        const ok = editorRegistry.fold(activeTabId, { all: true, unfold: true });
+        return { success: ok };
+      }
+
+      case 'setDiagnostics': {
+        const validated = validateEditorSetDiagnostics(payload);
+        if (!validated.success) {
+          throw { code: 'VALIDATION_ERROR', message: validated.error.message };
+        }
+        if (!activeTabId) {
+          throw { code: 'NOT_FOUND', message: 'No active editor tab' };
+        }
+        const ok = editorRegistry.setDiagnostics(activeTabId, validated.data.diagnostics);
+        return { success: ok };
+      }
+
+      case 'clearDiagnostics': {
+        if (!activeTabId) {
+          throw { code: 'NOT_FOUND', message: 'No active editor tab' };
+        }
+        const ok = editorRegistry.clearDiagnostics(activeTabId);
+        return { success: ok };
+      }
+
+      case 'replaceRange': {
+        const validated = validateEditorReplaceRange(payload);
+        if (!validated.success) {
+          throw { code: 'VALIDATION_ERROR', message: validated.error.message };
+        }
+        if (!activeTabId) {
+          throw { code: 'NOT_FOUND', message: 'No active editor tab' };
+        }
+        const ok = editorRegistry.replaceRange(
+          activeTabId,
+          validated.data.from,
+          validated.data.to,
+          validated.data.text
+        );
+        return { success: ok };
       }
 
       default:
@@ -640,3 +740,10 @@ export class HostCommandBus {
   }
 }
 
+let globalHostCommandBus: HostCommandBus | null = null;
+export function getHostCommandBus(bridge: IRuntimeBridge): HostCommandBus {
+  if (!globalHostCommandBus) {
+    globalHostCommandBus = new HostCommandBus(bridge);
+  }
+  return globalHostCommandBus;
+}

@@ -1,3 +1,5 @@
+import { initializeChunkSession } from '../../services/chunkBufferService';
+import { ErrorBoundary } from '../Common/ErrorBoundary';
 import React, { useState } from 'react';
 import { AlertTriangle, BookOpen, CheckSquare, Square, FileText, X } from 'lucide-react';
 import { useLargeDocModalStore } from '../../store/largeDocModalStore';
@@ -5,7 +7,7 @@ import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
 
-export const LargeDocModal: React.FC = () => {
+const LargeDocModalPresenter: React.FC = () => {
   const {
     isOpen,
     tabId,
@@ -46,32 +48,18 @@ export const LargeDocModal: React.FC = () => {
       return;
     }
 
-    const lines = rawContent.split('\n');
-    const sortedIndices = [...selectedIndices].sort((a, b) => a - b);
-    const extractedParts: string[] = [];
+    const { session, chunkContent } = initializeChunkSession(rawContent, selectedIndices, headings);
 
-    sortedIndices.forEach(idx => {
-      const heading = headings[idx];
-      const startLine = heading.lineNumber - 1;
-      let endLine = lines.length;
-
-      // Find where next heading starts
-      if (idx + 1 < headings.length) {
-        endLine = headings[idx + 1].lineNumber - 1;
-      }
-
-      const sectionContent = lines.slice(startLine, endLine).join('\n');
-      extractedParts.push(sectionContent.trim());
-    });
-
-    const truncatedResult = `# [Truncated View - Preview Mode] ${fileTitle}\n> ℹ️ PREVIEW MODE: Viewing ${selectedIndices.length} of ${headings.length} sections (${fileSizeKb} KB). Direct file save is locked to protect the full file on disk. Click "Open Full Document" in the editor banner to edit and save.\n\n` + extractedParts.join('\n\n---\n\n');
-
-    updateTabContent(tabId, truncatedResult, true);
+    updateTabContent(tabId, chunkContent, false);
     updateTabMetadata(tabId, {
-      isTruncatedView: true,
-      rawFullContent: rawContent
+      isTruncatedView: false,
+      chunkSession: session,
+      isLargeDoc: true,
+      rawFullContent: rawContent,
+      totalOriginalBytes: new Blob([rawContent]).size,
+      isDirty: false
     });
-    addNotification('Truncated Preview Loaded', `Loaded ${selectedIndices.length} section(s). Direct save is locked.`, 'info');
+    addNotification('Chunk Session Initialized', `Loaded ${selectedIndices.length} section(s). Non-destructive save enabled.`, 'info');
     closeLargeDocModal();
   };
 
@@ -80,7 +68,11 @@ export const LargeDocModal: React.FC = () => {
       updateTabContent(tabId, rawContent, true);
       updateTabMetadata(tabId, {
         isTruncatedView: false,
-        rawFullContent: undefined
+        chunkSession: undefined,
+        isLargeDoc: true,
+        rawFullContent: undefined,
+        totalOriginalBytes: new Blob([rawContent]).size,
+        isDirty: false
       });
       addNotification('Full Document Loaded', `${fileTitle} (${fileSizeKb} KB)`, 'info');
     }
@@ -216,3 +208,11 @@ export const LargeDocModal: React.FC = () => {
   );
 };
 
+
+export const LargeDocModal: React.FC = () => {
+  return (
+    <ErrorBoundary fallbackTitle="Large Document Dialog Error">
+      <LargeDocModalPresenter />
+    </ErrorBoundary>
+  );
+};

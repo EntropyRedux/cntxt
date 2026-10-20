@@ -122,6 +122,36 @@ export function buildClientSdkInjection(appId: string): string {
         },
         getActiveDocument: function() {
           return callHost('editor', 'getActiveDocument');
+        },
+        setSelections: function(selections, mainIndex) {
+          return callHost('editor', 'setSelections', { selections: selections, mainIndex: mainIndex });
+        },
+        getSelections: function() {
+          return callHost('editor', 'getSelections');
+        },
+        fold: function(options) {
+          return callHost('editor', 'fold', options || {});
+        },
+        foldRange: function(line) {
+          return callHost('editor', 'foldRange', { line: line });
+        },
+        unfoldRange: function(line) {
+          return callHost('editor', 'unfoldRange', { line: line });
+        },
+        foldAll: function() {
+          return callHost('editor', 'foldAll');
+        },
+        unfoldAll: function() {
+          return callHost('editor', 'unfoldAll');
+        },
+        setDiagnostics: function(diagnostics) {
+          return callHost('editor', 'setDiagnostics', { diagnostics: diagnostics });
+        },
+        clearDiagnostics: function() {
+          return callHost('editor', 'clearDiagnostics');
+        },
+        replaceRange: function(from, to, text) {
+          return callHost('editor', 'replaceRange', { from: from, to: to, text: text });
         }
       };
 

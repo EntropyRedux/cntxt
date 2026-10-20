@@ -5,6 +5,55 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-10-20
+
+### Large Document Virtualization & Headless Virtual Buffer Coordinator (FG-19)
+- **Virtual Buffer Coordinator (`chunkBufferService.ts`)**:
+  - Implemented non-destructive bottom-to-top master disk splicing for selective TOC-chunked document editing without loading multi-megabyte files into CodeMirror 6 DOM memory.
+  - Built triple-tier boundary fallback resolution: HTML comment anchors (`<!-- cntxt:section:id -->`) -> exact Markdown heading regex -> fuzzy Levenshtein distance (<= 3) -> single-section fallback -> automatic timestamped safety recovery file backup.
+  - Implemented 32-bit FNV-1a master file checksumming and external modification detection (`detectExternalModification`).
+- **Disk Splicing Integration (`eventDispatcher.ts`, `tabStore.ts`)**:
+  - Updated `onSaveFile` to seamlessly splice modified chunk buffers into the on-disk master file without overwriting unmodified sections.
+  - Added `restoreFullContent` in `tabStore.ts` to cleanly transition from chunked editing to full-document view on demand.
+- **Pure Presenter Notice Banner (`ChunkNoticeBanner.tsx`, `ShellEditorContainer.tsx`, `LargeDocModal.tsx`)**:
+  - Built `ChunkNoticeBanner.tsx` wrapped in `<ErrorBoundary>` showing active chunk range, section counts, and actions to switch sections or open full document.
+  - Updated `LargeDocModal.tsx` with unified chunk session initialization.
+- **Unit Testing**:
+  - Added 17 unit tests in `tests/chunkBufferService.test.ts` covering checksums, boundary anchors, fuzzy recovery, corrupt anchor handling, HTML anchor deletion fallback, section heading rename splicing, and external modification detection.
+
+### Host Command Bus & Localhost REST API Gateway Hardening (FG-20)
+- **Editor Domain RPC Extensions (`hostCommandBus.ts`, `editorRegistry.ts`, `clientSdk.ts`)**:
+  - Added advanced editor manipulation actions: `editor.setSelections` (multi-cursor), `editor.getSelections`, `editor.fold`, `editor.setDiagnostics`, `editor.clearDiagnostics`, `editor.replaceRange`, and fold/unfold range aliases.
+  - Added typed boundary schemas with Zod validation in `boundarySchemas.ts`: `EditorSetSelectionsPayloadSchema`, `EditorFoldPayloadSchema`, `EditorSetDiagnosticsPayloadSchema` (monotonic `to >= from` validation), `EditorReplaceRangePayloadSchema`, and `RestGatewayConfigSchema`.
+  - Extended `window.CNTXT.editor` SDK injection in `clientSdk.ts` for panel apps and external automation scripts.
+- **Native Localhost REST Gateway (`src-tauri/src/commands/gateway.rs`, `commands/mod.rs`, `lib.rs`)**:
+  - Implemented native Tokio TCP/HTTP server in Rust listening on configurable port (default: 9876) with 5-port auto-fallback on bind conflict.
+  - Hardened `GET /api/v1/health` minimal liveness endpoint to return strictly status and version, with zero path leaks.
+  - Implemented constant-time XOR verification for `X-CNTXT-Token` headers guarding sensitive workspace and editor endpoints (`/api/v1/workspace`, `/api/v1/rpc`, `/api/v1/editor/insert`, `/api/v1/tabs/open`).
+  - Implemented TCP stream chunk reading loop parsing `Content-Length` up to 10 MB for multi-segment HTTP bodies.
+  - Implemented loopback-only Host header validation (`127.0.0.1`, `localhost`, `[::1]`) guarding against DNS rebinding attacks, and restricted CORS headers to loopback origins.
+  - Implemented IPC request-response correlation via Tokio `oneshot::channel` and UUIDv4 `correlationId` with 15-second timeout and webview event dispatch (`cntxt://rpc-request` -> `resolve_rpc_response`).
+  - Added broadcast shutdown channel for instantaneous listener termination without port parking.
+  - Added `regenerate_gateway_token` command for instantaneous token invalidation and re-issuance without restarting TCP listener.
+- **Bridge & Settings Presenter Card (`bridgeContract.ts`, `tauriRuntimeAdapter.ts`, `settingsStore.ts`, `RestGatewaySettingsCard.tsx`, `SettingsPanel.tsx`)**:
+  - Added `IRestGatewayBridge` and status reporting to runtime bridge contracts.
+  - Created pure presenter `RestGatewaySettingsCard.tsx` under Universal Presenter Purity, featuring an active green pulse listening badge, port configuration with blur/enter commit, 1-click token copy, show/hide masking, and token regeneration.
+  - Quarantined card in `SettingsPanel.tsx` using `<ErrorBoundary fallbackTitle="REST Gateway Settings Error">` with explicit server shutdown on toggle off.
+- **Unit Testing**:
+  - Added 31 unit tests in `tests/hostCommandBus.test.ts` and 4 native Rust tests in `gateway.rs` verifying token security, constant-time verification, Host validation, and CORS resolution.
+
+### Dual-Agent Audit Reconciliation & Production Hardening (Pass 2 Prod Agent)
+- Reconciled all 15 audit findings from `generated-documents/audits/raw_findings_feature_v060_release_2026-10-19.md` in `generated-documents/audits/reconciled_audit_feature_v060_release_2026-10-20.md` (0 defects remaining).
+- **FIND-01 (CRITICAL)**: Connected `initializeChunkSession` in `LargeDocModal.tsx` to active tab state (`chunkSession`, `isChunked`, `isLargeDoc`), enabling non-destructive disk splicing.
+- **FIND-02 & FIND-05 (HIGH)**: Hardened against data loss by generating physical backup files: `${filePath}.edited-chunk-recovery-<timestamp>.md` on splice failure and `${filePath}.edited-chunk-conflict-<timestamp>.md` on external disk divergence.
+- **FIND-03 & FIND-15 (HIGH/LOW)**: Added explicit gateway stop on experimental toggle disable and added broadcast shutdown channel for instantaneous TCP listener cleanup.
+- **FIND-04 & FIND-13 (HIGH/MEDIUM)**: Added native Rust tests for gateway security and 3 chunk buffer edge-case recovery tests.
+- **FIND-08 & FIND-09 (MEDIUM)**: Handled multi-segment TCP streams up to 10 MB and enforced loopback Host checks against DNS rebinding.
+- **FIND-06 & FIND-07 (MEDIUM)**: Replaced `any` with strict `CntxtRpcRequest` and eliminated swallowed event errors.
+- **FIND-10 (MEDIUM)**: Added `isTruncatedPreview` support in `ChunkNoticeBanner.tsx` and `ShellEditorContainer.tsx` to distinguish read-only preview tabs from active splice chunk sessions.
+- **FIND-11 & FIND-12 (MEDIUM)**: Synchronized 32-bit FNV-1a checksum documentation in canonical contracts, added `foldRange`/`unfoldRange` aliases, and added `EditorReplaceRangePayloadSchema` with Zod boundary validation.
+- **FIND-14 (LOW)**: Removed dead parameters from `gateway.rs` and added test coverage for `validateRestGatewayConfig`.
+
 ## [0.5.15] — 2026-10-19
 
 ### KaTeX / LaTeX / MathJax Restoration, SVG-Aware Mermaid Rendering & Ephemeral Code Block Collapse

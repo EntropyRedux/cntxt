@@ -540,12 +540,15 @@ export const useTabStore = create<TabState>((set, get) => ({
   restoreFullContent: (tabId: string) => {
     const { tabs } = get();
     const tab = tabs.find(t => t.id === tabId);
-    if (!tab || !tab.rawFullContent) return;
+    if (!tab) return;
 
-    const fullContent = tab.rawFullContent;
+    const fullContent = tab.chunkSession?.originalFullContent || tab.rawFullContent;
+    if (!fullContent) return;
+
     get().updateTabContent(tabId, fullContent, true);
     get().updateTabMetadata(tabId, {
       isTruncatedView: false,
+      chunkSession: undefined,
       rawFullContent: undefined,
       isDirty: false
     });

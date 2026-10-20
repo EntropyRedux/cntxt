@@ -5,6 +5,7 @@ import {
   validateRpcRequest,
   validateWorkspaceReadFile,
   validateWorkspaceWriteFile,
+  validateRestGatewayConfig,
   pathIsAbsoluteOrSensitive,
 } from '../src/contracts/boundarySchemas';
 import { useTabStore } from '../src/store/tabStore';
@@ -220,6 +221,137 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
       expect(response.success).toBe(true);
       const tab = useTabStore.getState().tabs.find((t) => t.id === 'tab-1');
       expect(tab?.content).toContain('Extra note from app');
+    });
+
+    it('sets and retrieves multi-cursor selections', async () => {
+      // Invalid payload
+      const errRes = await bus.handleRequest({
+        id: 'r_sel_err',
+        domain: 'editor',
+        action: 'setSelections',
+        appId: 'app-1',
+        payload: { selections: [{ anchor: -1, head: -1 }] },
+      });
+      expect(errRes.success).toBe(false);
+      expect(errRes.error?.code).toBe('VALIDATION_ERROR');
+
+      // Valid payload
+      const okRes = await bus.handleRequest({
+        id: 'r_sel_ok',
+        domain: 'editor',
+        action: 'setSelections',
+        appId: 'app-1',
+        payload: {
+          selections: [
+            { anchor: 0, head: 5 },
+            { anchor: 10, head: 15 },
+          ],
+        },
+      });
+      expect(okRes.success).toBe(true);
+
+      const getRes = await bus.handleRequest({
+        id: 'r_sel_get',
+        domain: 'editor',
+        action: 'getSelections',
+        appId: 'app-1',
+      });
+      expect(getRes.success).toBe(true);
+      expect(Array.isArray(getRes.data)).toBe(true);
+    });
+
+    it('handles fold commands and validates options', async () => {
+      const errRes = await bus.handleRequest({
+        id: 'r_fold_err',
+        domain: 'editor',
+        action: 'fold',
+        appId: 'app-1',
+        payload: { line: -5 },
+      });
+      expect(errRes.success).toBe(false);
+      expect(errRes.error?.code).toBe('VALIDATION_ERROR');
+
+      const okRes = await bus.handleRequest({
+        id: 'r_fold_ok',
+        domain: 'editor',
+        action: 'fold',
+        appId: 'app-1',
+        payload: { all: true, unfold: false },
+      });
+      expect(okRes.success).toBe(true);
+
+      // Test fold aliases per FIND-12
+      const foldRangeRes = await bus.handleRequest({
+        id: 'r_fold_range',
+        domain: 'editor',
+        action: 'foldRange',
+        appId: 'app-1',
+        payload: { line: 1 },
+      });
+      expect(foldRangeRes.success).toBe(true);
+
+      const unfoldAllRes = await bus.handleRequest({
+        id: 'r_unfold_all',
+        domain: 'editor',
+        action: 'unfoldAll',
+        appId: 'app-1',
+      });
+      expect(unfoldAllRes.success).toBe(true);
+    });
+
+    it('sets and clears diagnostic markers with boundary validation', async () => {
+      const errRes = await bus.handleRequest({
+        id: 'r_diag_err',
+        domain: 'editor',
+        action: 'setDiagnostics',
+        appId: 'app-1',
+        payload: { diagnostics: [{ from: 10, to: 5, severity: 'error', message: 'Wrong order' }] },
+      });
+      expect(errRes.success).toBe(false);
+      expect(errRes.error?.code).toBe('VALIDATION_ERROR');
+
+      const okRes = await bus.handleRequest({
+        id: 'r_diag_ok',
+        domain: 'editor',
+        action: 'setDiagnostics',
+        appId: 'app-1',
+        payload: {
+          diagnostics: [
+            { from: 0, to: 5, severity: 'error', message: 'Syntax error' },
+            { from: 10, to: 15, severity: 'warning', message: 'Unused variable' },
+          ],
+        },
+      });
+      expect(okRes.success).toBe(true);
+
+      const clearRes = await bus.handleRequest({
+        id: 'r_diag_clear',
+        domain: 'editor',
+        action: 'clearDiagnostics',
+        appId: 'app-1',
+      });
+      expect(clearRes.success).toBe(true);
+    });
+
+    it('replaces range and validates required numeric bounds', async () => {
+      const errRes = await bus.handleRequest({
+        id: 'r_replace_err',
+        domain: 'editor',
+        action: 'replaceRange',
+        appId: 'app-1',
+        payload: { from: 'bad', to: 5, text: 'hello' },
+      });
+      expect(errRes.success).toBe(false);
+      expect(errRes.error?.code).toBe('VALIDATION_ERROR');
+
+      const okRes = await bus.handleRequest({
+        id: 'r_replace_ok',
+        domain: 'editor',
+        action: 'replaceRange',
+        appId: 'app-1',
+        payload: { from: 0, to: 5, text: 'Greetings' },
+      });
+      expect(okRes.success).toBe(true);
     });
   });
 
@@ -511,6 +643,20 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
       expect(sdkCode).toContain('window.CNTXT.call = callHost;');
       expect(sdkCode).toContain('window.CNTXT.editor');
       expect(sdkCode).toContain('insertText: function');
+      expect(sdkCode).toContain('setSelections: function');
+      expect(sdkCode).toContain('getSelections: function');
+      expect(sdkCode).toContain('fold: function');
+      expect(sdkCode).toContain('setDiagnostics: function');
+      expect(sdkCode).toContain('clearDiagnostics: function');
+      expect(sdkCode).toContain('replaceRange: function');
+      expect(sdkCode).toContain('foldRange: function');
+      expect(sdkCode).toContain('unfoldRange: function');
+      expect(sdkCode).toContain('foldAll: function');
+      expect(sdkCode).toContain('unfoldAll: function');
+
+      // Exercise validateRestGatewayConfig (FIND-14)
+      const validConfig = validateRestGatewayConfig({ enabled: true, port: 9876, authToken: 'tok_123' });
+      expect(validConfig.success).toBe(true);
       expect(sdkCode).toContain('window.CNTXT.tabs');
       expect(sdkCode).toContain('openFile: function');
       expect(sdkCode).toContain('window.CNTXT.workspace');

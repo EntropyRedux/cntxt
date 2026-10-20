@@ -53,6 +53,9 @@ export interface Tab {
   isPinned?: boolean;
   isTruncatedView?: boolean;
   rawFullContent?: string;
+  chunkSession?: ChunkSessionMetadata;
+  isLargeDoc?: boolean;
+  totalOriginalBytes?: number;
 }
 
 export interface PinnedTab {
@@ -171,6 +174,8 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   isOmniFloating?: boolean;
   omniFloatingPosition?: { x: number; y: number };
   autosaveIntervalMs?: number;
+  enableRestGateway?: boolean;
+  restGatewayPort?: number;
 
   autocompleteConfig: AutocompleteConfig;
   spellCheckConfig: SpellCheckConfig;
@@ -896,4 +901,79 @@ export interface OmniSession {
   pinnedAgents: OmniAgentProfile[];
   status: OmniSessionStatus;
   activeTurnId?: string;
+}
+
+// ==========================================
+// 14. Large Document Virtualization & Chunk Coordinator (FG-19)
+// ==========================================
+
+export interface ChunkSectionRange {
+  id: string;
+  headingText: string;
+  level: number;
+  originalStartLine: number; // 0-indexed line in original full file
+  originalEndLine: number;   // 0-indexed line where next section starts
+  originalContent: string;   // exact raw text of this section when loaded
+  contentHash: string;       // 32-bit FNV-1a hash of initial content for collision recovery
+}
+
+export interface ChunkSessionMetadata {
+  isChunked: boolean;
+  originalFullContent: string;
+  originalChecksum: string;   // 32-bit FNV-1a checksum of original full file
+  sections: ChunkSectionRange[];
+  headerNoticeLines: number;
+  totalDocumentHeadings?: number;
+}
+
+export interface ChunkSpliceResult {
+  success: boolean;
+  updatedFullContent: string;
+  updatedSession?: ChunkSessionMetadata;
+  fallbackFilePath?: string;
+  error?: string;
+}
+
+// ==========================================
+// 15. Host Command Bus Extended & REST Gateway (FG-20)
+// ==========================================
+
+export interface EditorSelectionRange {
+  anchor: number;
+  head: number;
+}
+
+export interface EditorSetSelectionsPayload {
+  selections: EditorSelectionRange[];
+  mainIndex?: number;
+}
+
+export interface EditorFoldPayload {
+  line?: number;
+  all?: boolean;
+  unfold?: boolean;
+}
+
+export interface EditorReplaceRangePayload {
+  from: number;
+  to: number;
+  text: string;
+}
+
+export interface EditorDiagnosticItem {
+  from: number;
+  to: number;
+  severity: 'error' | 'warning' | 'info' | 'hint';
+  message: string;
+  source?: string;
+}
+
+export interface EditorSetDiagnosticsPayload {
+  diagnostics: EditorDiagnosticItem[];
+}
+
+export interface RestGatewayConfig {
+  enabled: boolean;
+  port: number;
+  authToken: string;
 }
