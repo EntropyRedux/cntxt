@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.45
+Version: v2.46
 Last Updated: 2026-10-21
-Last Updated By: Prod Agent (v0.7.0 Release Packaging & Documentation Sync)
+Last Updated By: Prod Agent (v0.7.1 Release Packaging & Audit Remediation Sync)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -15,7 +15,7 @@ Active Stage:
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
     [x] Testing (Vitest 728/728 Live across 61 suites, Rust Security Test Suite 12/12 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.7.0 Authenticode Signed Portable Executable & Native Installers Built: CNTXT_0.7.0_portable.exe, CNTXT_0.7.0_x64-setup.exe, CNTXT_0.7.0_x64_en-US.msi; v0.5.14 Android Signed APK Pipeline Live)
+  [x] Packaging & Release (v0.7.1 Authenticode Signed Portable Executable & Native Installers Built: CNTXT_0.7.1_portable.exe, CNTXT_0.7.1_x64-setup.exe, CNTXT_0.7.1_x64_en-US.msi; v0.5.14 Android Signed APK Pipeline Live)
 
 Current Feature Group: Pass 2 Audit Reconciliation & Remediation (FG-21, FG-22, FG-23)
 Status: [x] Reconciled & Remediated (All 12 findings resolved)

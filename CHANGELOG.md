@@ -5,6 +5,31 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] — 2026-10-21
+
+### Security Hardening & Audit Remediation
+- **RPC `locked=user` Guardrail (`hostCommandBus.ts`)**:
+  - Bound `effectiveActor` enforcement directly to caller `appId`. External RPC callers (REST Gateway and MCP clients) are strictly locked to `actor: 'agent'`.
+  - Spoofed requests asserting `actor: 'user'` from external boundaries are unconditionally rejected with `PERMISSION_DENIED`, protecting user instruction blocks (`id=user-inbox`).
+- **Complete Legacy OmniTerminal Pruning**:
+  - Excised all leftover routes, schemas, and contract models for OmniTerminal across `Sidebar.tsx`, `settingsStore.ts`, `data_shapes.ts`, and `boundarySchemas.ts`.
+  - Pruned unused `Bot` import in `ActivityBar.tsx`.
+- **Dynamic Gateway Discovery Path (`gateway.rs`, `cntxt-mcp-server.mjs`)**:
+  - Replaced hardcoded host paths with dynamic platform-standard path resolution (`%APPDATA%\com.cntxt.desktop\gateway_runtime.json`).
+  - Added clean shutdown synchronization: writes `{ running: false, port: 0, token: "" }` when the gateway terminates.
+- **Blocks RPC Disk Error Transparency (`hostCommandBus.ts`)**:
+  - Eliminated silent swallows on disk writes in `blocks.upsert`, `blocks.updateParams`, and `blocks.remove`. Emitted `Disk Save Warning` toast alerts and structured `{ savedToDisk, diskError }` responses.
+- **Non-Destructive File Extension Promotion (`tabStore.ts`)**:
+  - Content edits to open `.md` files containing `|` blocks never silently alter the file path on disk. Promotion to `.cntxt` is reserved for untitled documents or explicit user action (`toggleActiveThread`).
+- **MCP Dynamic Tool Registry & Missing Tools (`cntxt-mcp-server.mjs`)**:
+  - Refactored server into a dynamic `Map` tool registry (`registerTool`).
+  - Implemented missing tools: `cntxt_clear_diagnostics`, `cntxt_apply_template`, and `cntxt_notify`.
+  - Removed undeclared raw passthrough `cntxt_rpc`.
+- **Tokenized Governance Styling (`index.css`, `codeBlockWidget.ts`)**:
+  - Replaced literal `#F59E0B` with `var(--status-warning, #F59E0B)` and created `.cm-cntxt-pill-user` and `.cm-cntxt-pill-agent` classes consuming CSS variables.
+- **FG-23 Authorization Plan**:
+  - Emitted canonical specification [`generated-documents/plans/feature_group_FG23_active_thread_and_user_inbox_2026-10-21.md`].
+
 ## [0.7.0] — 2026-10-21
 
 ### OmniTerminal Decommissioning & Zero-Dependency Native MCP Server (FG-21)

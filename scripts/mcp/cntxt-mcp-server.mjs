@@ -635,7 +635,7 @@ if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}`) {
         sendResponse(id, {
           protocolVersion: '2024-11-05',
           capabilities: { tools: {} },
-          serverInfo: { name: 'cntxt-mcp-server', version: '0.7.0' },
+          serverInfo: { name: 'cntxt-mcp-server', version: '0.7.1' },
         });
       } else if (method === 'notifications/initialized') {
         // No response required for notification
