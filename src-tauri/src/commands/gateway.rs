@@ -51,22 +51,74 @@ fn persist_gateway_token(token: &str) {
             let _ = entry.set_password(token);
         }
     }
-    sync_gateway_discovery_file(GATEWAY_PORT.load(Ordering::SeqCst), token);
+    sync_gateway_discovery_file(GATEWAY_PORT.load(Ordering::SeqCst), token, GATEWAY_RUNNING.load(Ordering::SeqCst));
 }
 
-fn sync_gateway_discovery_file(port: u16, token: &str) {
+fn get_gateway_runtime_path() -> std::path::PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(appdata) = std::env::var("APPDATA") {
+            let dir = std::path::PathBuf::from(appdata).join("com.cntxt.desktop");
+            return dir.join("gateway_runtime.json");
+        }
+        if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
+            let dir = std::path::PathBuf::from(localappdata).join("CNTXT");
+            return dir.join("gateway_runtime.json");
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(home) = std::env::var("HOME") {
+            let dir = std::path::PathBuf::from(home)
+                .join("Library")
+                .join("Application Support")
+                .join("com.cntxt.desktop");
+            return dir.join("gateway_runtime.json");
+        }
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        if let Ok(home) = std::env::var("HOME") {
+            let dir = std::path::PathBuf::from(home)
+                .join(".config")
+                .join("com.cntxt.desktop");
+            return dir.join("gateway_runtime.json");
+        }
+    }
+    std::path::PathBuf::from("gateway_runtime.json")
+}
+
+fn sync_gateway_discovery_file(port: u16, token: &str, running: bool) {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
-        let effective_port = if port > 0 { port } else { 9876 };
+        let effective_port = if running && port > 0 { port } else { 0 };
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
         let payload = json!({
-            "url": format!("http://127.0.0.1:{}", effective_port),
-            "token": token
+            "running": running,
+            "port": effective_port,
+            "url": if running { format!("http://127.0.0.1:{}", effective_port) } else { "".to_string() },
+            "token": if running { token } else { "" },
+            "updatedAt": now
         });
-        let discovery_path = std::path::Path::new("C:/Projects/LocalActive/.localactive/cntxt_gateway.json");
+
+        // 1. Write to standard platform app data dir
+        let discovery_path = get_gateway_runtime_path();
         if let Some(parent) = discovery_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(pretty) = serde_json::to_string_pretty(&payload) {
+            let _ = std::fs::write(&discovery_path, pretty);
+        }
+
+        // 2. Also sync local workspace .localactive/cntxt_gateway.json if directory exists
+        let local_path = std::path::Path::new(".localactive/cntxt_gateway.json");
+        if let Some(parent) = local_path.parent() {
             if parent.exists() {
                 if let Ok(pretty) = serde_json::to_string_pretty(&payload) {
-                    let _ = std::fs::write(discovery_path, pretty);
+                    let _ = std::fs::write(local_path, pretty);
                 }
             }
         }
@@ -194,7 +246,7 @@ pub async fn start_rest_gateway(
     GATEWAY_PORT.store(bound_port, Ordering::SeqCst);
     GATEWAY_RUNNING.store(true, Ordering::SeqCst);
     if let Some(tok) = current_gateway_token() {
-        sync_gateway_discovery_file(bound_port, &tok);
+        sync_gateway_discovery_file(bound_port, &tok, true);
     }
 
     let (shutdown_tx, mut shutdown_rx) = tokio::sync::broadcast::channel::<()>(1);
@@ -248,6 +300,7 @@ pub async fn stop_rest_gateway(
 
     GATEWAY_RUNNING.store(false, Ordering::SeqCst);
     GATEWAY_PORT.store(0, Ordering::SeqCst);
+    sync_gateway_discovery_file(0, "", false);
 
     if let Ok(lock) = SHUTDOWN_TX.read() {
         if let Some(ref tx) = *lock {

@@ -13,21 +13,64 @@
  */
 
 import fs from 'node:fs';
+import path from 'node:path';
 import readline from 'node:readline';
 
-const CONFIG_PATH = 'C:/Projects/LocalActive/.localactive/cntxt_gateway.json';
 const CANDIDATE_PORTS = [9876, 9877, 9878, 9879, 9880, 9881];
 
-function loadGatewayConfig() {
-  try {
-    if (fs.existsSync(CONFIG_PATH)) {
-      const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
-      return JSON.parse(raw);
-    }
-  } catch {
-    // Fallback to defaults
+/**
+ * Dynamically resolves candidate file paths for gateway_runtime.json across platforms.
+ */
+function getCandidateConfigPaths() {
+  const paths = [];
+
+  if (process.env.CNTXT_GATEWAY_CONFIG) {
+    paths.push(process.env.CNTXT_GATEWAY_CONFIG);
   }
-  return { url: 'http://127.0.0.1:9876', token: process.env.CNTXT_TOKEN || '' };
+
+  if (process.env.APPDATA) {
+    paths.push(path.join(process.env.APPDATA, 'com.cntxt.desktop', 'gateway_runtime.json'));
+  }
+  if (process.env.LOCALAPPDATA) {
+    paths.push(path.join(process.env.LOCALAPPDATA, 'CNTXT', 'gateway_runtime.json'));
+    paths.push(path.join(process.env.LOCALAPPDATA, 'com.cntxt.desktop', 'gateway_runtime.json'));
+  }
+
+  if (process.env.HOME) {
+    paths.push(
+      path.join(process.env.HOME, 'Library', 'Application Support', 'com.cntxt.desktop', 'gateway_runtime.json')
+    );
+    paths.push(path.join(process.env.HOME, '.config', 'com.cntxt.desktop', 'gateway_runtime.json'));
+  }
+
+  // Workspace-relative fallback for local development
+  paths.push(path.join(process.cwd(), '.localactive', 'cntxt_gateway.json'));
+  paths.push(path.join(process.cwd(), 'gateway_runtime.json'));
+
+  return paths;
+}
+
+function loadGatewayConfig() {
+  const candidatePaths = getCandidateConfigPaths();
+  for (const configPath of candidatePaths) {
+    try {
+      if (fs.existsSync(configPath)) {
+        const raw = fs.readFileSync(configPath, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            url: parsed.url || (parsed.port ? `http://127.0.0.1:${parsed.port}` : 'http://127.0.0.1:9876'),
+            token: process.env.CNTXT_TOKEN || parsed.token || '',
+            running: parsed.running !== false,
+          };
+        }
+      }
+    } catch (err) {
+      console.error(`[cntxt-mcp-server] Warning: Failed to parse gateway config at "${configPath}":`, err);
+    }
+  }
+
+  return { url: 'http://127.0.0.1:9876', token: process.env.CNTXT_TOKEN || '', running: true };
 }
 
 async function resolveGatewayEndpoint() {
@@ -35,7 +78,7 @@ async function resolveGatewayEndpoint() {
   const token = process.env.CNTXT_TOKEN || cfg.token || '';
 
   // 1. Try configured URL first
-  if (cfg.url) {
+  if (cfg.url && cfg.running !== false) {
     try {
       const res = await fetch(`${cfg.url}/api/v1/health`, { method: 'GET' });
       if (res.ok) return { baseUrl: cfg.url, token };
@@ -96,13 +139,13 @@ export function wrapDeliverableInCodeBlock(
   return `${fence}markdown | ${headerMeta}\n${trimmed}\n${fence}\n`;
 }
 
-async function callCntxtGateway(path, method = 'POST', bodyObj = null) {
+async function callCntxtGateway(pathName, method = 'POST', bodyObj = null) {
   const { baseUrl, token } = await resolveGatewayEndpoint();
   const headers = {
     'X-CNTXT-Token': token,
     'Content-Type': 'application/json; charset=utf-8',
   };
-  const res = await fetch(`${baseUrl}${path}`, {
+  const res = await fetch(`${baseUrl}${pathName}`, {
     method,
     headers,
     body: bodyObj ? JSON.stringify(bodyObj) : undefined,
@@ -115,9 +158,41 @@ async function callCntxtGateway(path, method = 'POST', bodyObj = null) {
   }
 }
 
-const TOOLS = [
+// ==========================================
+// Dynamic MCP Tool Registry (Pillar 4 Modularity)
+// ==========================================
+
+const toolRegistry = new Map();
+
+export function registerTool(name, definition, handler) {
+  toolRegistry.set(name, {
+    definition: {
+      name,
+      description: definition.description,
+      inputSchema: definition.inputSchema,
+    },
+    handler,
+  });
+}
+
+export function getToolDefinitions() {
+  return Array.from(toolRegistry.values()).map((t) => t.definition);
+}
+
+export async function handleToolCall(name, args = {}) {
+  const tool = toolRegistry.get(name);
+  if (!tool) {
+    throw new Error(`Unknown CNTXT MCP tool: ${name}`);
+  }
+  return await tool.handler(args);
+}
+
+// ------------------------------------------
+// Tool 1: cntxt_open_deliverable
+// ------------------------------------------
+registerTool(
+  'cntxt_open_deliverable',
   {
-    name: 'cntxt_open_deliverable',
     description:
       'Open or update a dedicated tab in the CNTXT desktop app displaying an AI plan, brief, audit report, or deliverable encapsulated inside a collapsible CNTXT Rich Container block (`~~~markdown | id=...`).',
     inputSchema: {
@@ -135,8 +210,42 @@ const TOOLS = [
       required: ['title', 'content'],
     },
   },
+  async (args) => {
+    const wrapped = wrapDeliverableInCodeBlock(
+      args.content,
+      args.title,
+      args.agentHandle || '@agy',
+      args.blockId || '',
+      args.status || 'ready',
+      args.tags || 'deliverable'
+    );
+    const res = await callCntxtGateway('/api/v1/tabs/open', 'POST', {
+      title: args.title,
+      content: wrapped,
+      language: 'markdown',
+      ...(args.filePath ? { filePath: args.filePath } : {}),
+    });
+    if (args.notify !== false) {
+      await callCntxtGateway('/api/v1/rpc', 'POST', {
+        domain: 'notify',
+        action: 'show',
+        payload: {
+          type: 'info',
+          title: args.title,
+          message: `Opened deliverable in CNTXT: ${args.title}`,
+        },
+      });
+    }
+    return res;
+  }
+);
+
+// ------------------------------------------
+// Tool 2: cntxt_append_deliverable
+// ------------------------------------------
+registerTool(
+  'cntxt_append_deliverable',
   {
-    name: 'cntxt_append_deliverable',
     description:
       'Append a CNTXT Rich Container deliverable turn into the currently active CNTXT tab.',
     inputSchema: {
@@ -152,8 +261,30 @@ const TOOLS = [
       required: ['title', 'content'],
     },
   },
+  async (args) => {
+    const wrapped =
+      '\n\n' +
+      wrapDeliverableInCodeBlock(
+        args.content,
+        args.title,
+        args.agentHandle || '@agy',
+        args.blockId || '',
+        args.status || 'ready',
+        args.tags || 'deliverable'
+      );
+    return await callCntxtGateway('/api/v1/editor/insert', 'POST', {
+      text: wrapped,
+      mode: 'append',
+    });
+  }
+);
+
+// ------------------------------------------
+// Tool 3: cntxt_list_blocks
+// ------------------------------------------
+registerTool(
+  'cntxt_list_blocks',
   {
-    name: 'cntxt_list_blocks',
     description:
       'List all CNTXT (`|`) blocks in the active (or specified) tab, optionally filtered by tag or status.',
     inputSchema: {
@@ -165,8 +296,25 @@ const TOOLS = [
       },
     },
   },
+  async (args) => {
+    return await callCntxtGateway('/api/v1/rpc', 'POST', {
+      domain: 'blocks',
+      action: 'list',
+      payload: {
+        ...(args.tabId ? { tabId: args.tabId } : {}),
+        ...(args.tag ? { tag: args.tag } : {}),
+        ...(args.status ? { status: args.status } : {}),
+      },
+    });
+  }
+);
+
+// ------------------------------------------
+// Tool 4: cntxt_get_block
+// ------------------------------------------
+registerTool(
+  'cntxt_get_block',
   {
-    name: 'cntxt_get_block',
     description:
       'Retrieve a single CNTXT (`|`) block by its `id=` governance parameter along with its forward `linksTo` and reverse `linkedFrom` edges.',
     inputSchema: {
@@ -178,8 +326,24 @@ const TOOLS = [
       required: ['id'],
     },
   },
+  async (args) => {
+    return await callCntxtGateway('/api/v1/rpc', 'POST', {
+      domain: 'blocks',
+      action: 'get',
+      payload: {
+        id: args.id,
+        ...(args.tabId ? { tabId: args.tabId } : {}),
+      },
+    });
+  }
+);
+
+// ------------------------------------------
+// Tool 5: cntxt_upsert_block
+// ------------------------------------------
+registerTool(
+  'cntxt_upsert_block',
   {
-    name: 'cntxt_upsert_block',
     description:
       'Surgically insert or update a CNTXT (`|`) block in place by its `id=` governance parameter (respects `locked=user` human guardrail).',
     inputSchema: {
@@ -198,8 +362,28 @@ const TOOLS = [
       required: ['id', 'content'],
     },
   },
+  async (args) => {
+    return await callCntxtGateway('/api/v1/rpc', 'POST', {
+      domain: 'blocks',
+      action: 'upsert',
+      payload: {
+        id: args.id,
+        type: args.type || 'markdown',
+        content: args.content,
+        params: args.params || {},
+        ...(args.afterBlockId ? { afterBlockId: args.afterBlockId } : {}),
+        ...(args.tabId ? { tabId: args.tabId } : {}),
+      },
+    });
+  }
+);
+
+// ------------------------------------------
+// Tool 6: cntxt_update_block_params
+// ------------------------------------------
+registerTool(
+  'cntxt_update_block_params',
   {
-    name: 'cntxt_update_block_params',
     description:
       'Surgically update the governance parameters (`status=`, `tags=`, `link=`, `source=`, `label`) of an existing CNTXT block by `id=`.',
     inputSchema: {
@@ -212,8 +396,25 @@ const TOOLS = [
       required: ['id', 'params'],
     },
   },
+  async (args) => {
+    return await callCntxtGateway('/api/v1/rpc', 'POST', {
+      domain: 'blocks',
+      action: 'updateParams',
+      payload: {
+        id: args.id,
+        params: args.params || {},
+        ...(args.tabId ? { tabId: args.tabId } : {}),
+      },
+    });
+  }
+);
+
+// ------------------------------------------
+// Tool 7: cntxt_get_active_context
+// ------------------------------------------
+registerTool(
+  'cntxt_get_active_context',
   {
-    name: 'cntxt_get_active_context',
     description:
       'Read the currently active document tab (title, content, filePath, isDirty) and currently highlighted text selection from CNTXT.',
     inputSchema: {
@@ -221,16 +422,53 @@ const TOOLS = [
       properties: {},
     },
   },
+  async () => {
+    const [docRes, selRes] = await Promise.all([
+      callCntxtGateway('/api/v1/rpc', 'POST', {
+        domain: 'editor',
+        action: 'getActiveDocument',
+        payload: {},
+      }),
+      callCntxtGateway('/api/v1/rpc', 'POST', {
+        domain: 'editor',
+        action: 'getSelection',
+        payload: {},
+      }),
+    ]);
+    return {
+      activeDocument: docRes?.data ?? null,
+      selectedText: selRes?.data ?? '',
+    };
+  }
+);
+
+// ------------------------------------------
+// Tool 8: cntxt_list_tabs
+// ------------------------------------------
+registerTool(
+  'cntxt_list_tabs',
   {
-    name: 'cntxt_list_tabs',
     description: 'List all currently open document tabs in CNTXT.',
     inputSchema: {
       type: 'object',
       properties: {},
     },
   },
+  async () => {
+    return await callCntxtGateway('/api/v1/rpc', 'POST', {
+      domain: 'tabs',
+      action: 'list',
+      payload: {},
+    });
+  }
+);
+
+// ------------------------------------------
+// Tool 9: cntxt_focus_tab
+// ------------------------------------------
+registerTool(
+  'cntxt_focus_tab',
   {
-    name: 'cntxt_focus_tab',
     description: 'Focus a specific open tab in CNTXT by its tabId.',
     inputSchema: {
       type: 'object',
@@ -240,8 +478,21 @@ const TOOLS = [
       required: ['tabId'],
     },
   },
+  async (args) => {
+    return await callCntxtGateway('/api/v1/rpc', 'POST', {
+      domain: 'tabs',
+      action: 'focus',
+      payload: { tabId: args.tabId },
+    });
+  }
+);
+
+// ------------------------------------------
+// Tool 10: cntxt_set_diagnostics
+// ------------------------------------------
+registerTool(
+  'cntxt_set_diagnostics',
   {
-    name: 'cntxt_set_diagnostics',
     description:
       'Render inline squiggly diagnostic underlines (error, warning, info, hint) in the active CNTXT editor tab.',
     inputSchema: {
@@ -264,178 +515,93 @@ const TOOLS = [
       required: ['diagnostics'],
     },
   },
+  async (args) => {
+    return await callCntxtGateway('/api/v1/rpc', 'POST', {
+      domain: 'editor',
+      action: 'setDiagnostics',
+      payload: { diagnostics: args.diagnostics || [] },
+    });
+  }
+);
+
+// ------------------------------------------
+// Tool 11: cntxt_clear_diagnostics (FG-21 Plan §1.3)
+// ------------------------------------------
+registerTool(
+  'cntxt_clear_diagnostics',
   {
-    name: 'cntxt_rpc',
-    description:
-      'Execute any raw Host Command Bus RPC action across CNTXT domains (editor, tabs, workspace, templates, actions, notify, terminal, blocks).',
+    description: 'Clear all active inline diagnostic squigglies from the active CNTXT editor tab.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  async () => {
+    return await callCntxtGateway('/api/v1/rpc', 'POST', {
+      domain: 'editor',
+      action: 'clearDiagnostics',
+      payload: {},
+    });
+  }
+);
+
+// ------------------------------------------
+// Tool 12: cntxt_apply_template (FG-21 Plan §1.3)
+// ------------------------------------------
+registerTool(
+  'cntxt_apply_template',
+  {
+    description: 'Apply and render a CNTXT template into the active or target editor tab.',
     inputSchema: {
       type: 'object',
       properties: {
-        domain: {
-          type: 'string',
-          enum: ['editor', 'tabs', 'workspace', 'templates', 'actions', 'notify', 'terminal', 'blocks'],
-        },
-        action: { type: 'string' },
-        payload: { type: 'object' },
+        templateId: { type: 'string', description: 'ID of the template to apply' },
+        tabId: { type: 'string', description: 'Optional target tabId' },
       },
-      required: ['domain', 'action'],
+      required: ['templateId'],
     },
   },
-];
-
-async function handleToolCall(name, args = {}) {
-  switch (name) {
-    case 'cntxt_open_deliverable': {
-      const wrapped = wrapDeliverableInCodeBlock(
-        args.content,
-        args.title,
-        args.agentHandle || '@agy',
-        args.blockId || '',
-        args.status || 'ready',
-        args.tags || 'deliverable'
-      );
-      const res = await callCntxtGateway('/api/v1/tabs/open', 'POST', {
-        title: args.title,
-        content: wrapped,
-        language: 'markdown',
-        ...(args.filePath ? { filePath: args.filePath } : {}),
-      });
-      if (args.notify !== false) {
-        await callCntxtGateway('/api/v1/rpc', 'POST', {
-          domain: 'notify',
-          action: 'show',
-          payload: {
-            type: 'info',
-            title: args.title,
-            message: `Opened deliverable in CNTXT: ${args.title}`,
-          },
-        });
-      }
-      return res;
-    }
-
-    case 'cntxt_append_deliverable': {
-      const wrapped =
-        '\n\n' +
-        wrapDeliverableInCodeBlock(
-          args.content,
-          args.title,
-          args.agentHandle || '@agy',
-          args.blockId || '',
-          args.status || 'ready',
-          args.tags || 'deliverable'
-        );
-      return await callCntxtGateway('/api/v1/editor/insert', 'POST', {
-        text: wrapped,
-        mode: 'append',
-      });
-    }
-
-    case 'cntxt_list_blocks': {
-      return await callCntxtGateway('/api/v1/rpc', 'POST', {
-        domain: 'blocks',
-        action: 'list',
-        payload: {
-          ...(args.tabId ? { tabId: args.tabId } : {}),
-          ...(args.tag ? { tag: args.tag } : {}),
-          ...(args.status ? { status: args.status } : {}),
-        },
-      });
-    }
-
-    case 'cntxt_get_block': {
-      return await callCntxtGateway('/api/v1/rpc', 'POST', {
-        domain: 'blocks',
-        action: 'get',
-        payload: {
-          id: args.id,
-          ...(args.tabId ? { tabId: args.tabId } : {}),
-        },
-      });
-    }
-
-    case 'cntxt_upsert_block': {
-      return await callCntxtGateway('/api/v1/rpc', 'POST', {
-        domain: 'blocks',
-        action: 'upsert',
-        payload: {
-          id: args.id,
-          type: args.type || 'markdown',
-          content: args.content,
-          params: args.params || {},
-          ...(args.afterBlockId ? { afterBlockId: args.afterBlockId } : {}),
-          ...(args.tabId ? { tabId: args.tabId } : {}),
-        },
-      });
-    }
-
-    case 'cntxt_update_block_params': {
-      return await callCntxtGateway('/api/v1/rpc', 'POST', {
-        domain: 'blocks',
-        action: 'updateParams',
-        payload: {
-          id: args.id,
-          params: args.params || {},
-          ...(args.tabId ? { tabId: args.tabId } : {}),
-        },
-      });
-    }
-
-    case 'cntxt_get_active_context': {
-      const [docRes, selRes] = await Promise.all([
-        callCntxtGateway('/api/v1/rpc', 'POST', {
-          domain: 'editor',
-          action: 'getActiveDocument',
-          payload: {},
-        }),
-        callCntxtGateway('/api/v1/rpc', 'POST', {
-          domain: 'editor',
-          action: 'getSelection',
-          payload: {},
-        }),
-      ]);
-      return {
-        activeDocument: docRes?.data ?? null,
-        selectedText: selRes?.data ?? '',
-      };
-    }
-
-    case 'cntxt_list_tabs': {
-      return await callCntxtGateway('/api/v1/rpc', 'POST', {
-        domain: 'tabs',
-        action: 'list',
-        payload: {},
-      });
-    }
-
-    case 'cntxt_focus_tab': {
-      return await callCntxtGateway('/api/v1/rpc', 'POST', {
-        domain: 'tabs',
-        action: 'focus',
-        payload: { tabId: args.tabId },
-      });
-    }
-
-    case 'cntxt_set_diagnostics': {
-      return await callCntxtGateway('/api/v1/rpc', 'POST', {
-        domain: 'editor',
-        action: 'setDiagnostics',
-        payload: { diagnostics: args.diagnostics || [] },
-      });
-    }
-
-    case 'cntxt_rpc': {
-      return await callCntxtGateway('/api/v1/rpc', 'POST', {
-        domain: args.domain,
-        action: args.action,
-        payload: args.payload || {},
-      });
-    }
-
-    default:
-      throw new Error(`Unknown CNTXT MCP tool: ${name}`);
+  async (args) => {
+    return await callCntxtGateway('/api/v1/rpc', 'POST', {
+      domain: 'templates',
+      action: 'apply',
+      payload: {
+        templateId: args.templateId,
+        ...(args.tabId ? { targetTabId: args.tabId } : {}),
+      },
+    });
   }
-}
+);
+
+// ------------------------------------------
+// Tool 13: cntxt_notify (FG-21 Plan §1.3)
+// ------------------------------------------
+registerTool(
+  'cntxt_notify',
+  {
+    description: 'Surface a user-facing toast notification inside the CNTXT application frame.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['info', 'success', 'warning', 'error'], description: 'Notification level' },
+        title: { type: 'string', description: 'Notification title' },
+        message: { type: 'string', description: 'Notification message body' },
+      },
+      required: ['title', 'message'],
+    },
+  },
+  async (args) => {
+    return await callCntxtGateway('/api/v1/rpc', 'POST', {
+      domain: 'notify',
+      action: 'show',
+      payload: {
+        type: args.type || 'info',
+        title: args.title,
+        message: args.message,
+      },
+    });
+  }
+);
 
 function sendResponse(id, result) {
   process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result }) + '\n');
@@ -456,7 +622,9 @@ if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}`) {
     let msg;
     try {
       msg = JSON.parse(trimmed);
-    } catch {
+    } catch (parseErr) {
+      console.error('[cntxt-mcp-server] Failed to parse JSON-RPC line:', parseErr);
+      sendError(null, -32700, 'Parse error: malformed JSON-RPC message');
       return;
     }
 
@@ -467,12 +635,12 @@ if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}`) {
         sendResponse(id, {
           protocolVersion: '2024-11-05',
           capabilities: { tools: {} },
-          serverInfo: { name: 'cntxt-mcp-server', version: '0.6.0' },
+          serverInfo: { name: 'cntxt-mcp-server', version: '0.7.0' },
         });
       } else if (method === 'notifications/initialized') {
         // No response required for notification
       } else if (method === 'tools/list') {
-        sendResponse(id, { tools: TOOLS });
+        sendResponse(id, { tools: getToolDefinitions() });
       } else if (method === 'tools/call') {
         const result = await handleToolCall(params?.name, params?.arguments);
         sendResponse(id, {

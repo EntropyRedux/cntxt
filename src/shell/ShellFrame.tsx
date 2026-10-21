@@ -124,8 +124,8 @@ export const ShellFrame: React.FC = () => {
         console.warn('[ShellFrame] Failed to auto-start REST gateway:', err);
       });
     } else {
-      bridge.gateway.stop().catch(() => {
-        // Ignore stop errors when already inactive
+      bridge.gateway.stop().catch((err: unknown) => {
+        console.warn('[ShellFrame] Notice while terminating REST gateway:', err);
       });
     }
   }, [bridge.gateway, settings.enableExperimentalSettings, settings.enableRestGateway, settings.restGatewayPort]);

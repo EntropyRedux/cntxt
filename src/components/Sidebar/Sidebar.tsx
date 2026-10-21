@@ -20,8 +20,7 @@ import {
   Upload,
   Download,
   FolderGit2,
-  Layers,
-  Bot
+  Layers
 } from 'lucide-react';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
@@ -281,8 +280,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isClosed = false }) => {
         return { title: 'Panel App Builder', icon: Layers };
       case 'panel-app':
         return { title: 'Panel App', icon: Sparkles };
-      case 'omni-terminal':
-        return { title: 'Omni Terminal', icon: Bot };
       default:
         return { title: 'Side Panel', icon: Sparkles };
     }

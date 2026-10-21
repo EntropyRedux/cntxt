@@ -298,7 +298,36 @@ describe('FG-22: CNTXT Block Parser, Rich Containers & Blocks RPC', () => {
       expect(upsertDenied.success).toBe(false);
       expect(upsertDenied.error?.code).toBe('PERMISSION_DENIED');
 
-      // 5. blocks.remove on locked=user is rejected with PERMISSION_DENIED!
+      // 4b. FIND-01 Security: External caller self-asserting actor='user' is STILL rejected!
+      const spoofDenied = await bus.handleRequest({
+        id: 'req-4b',
+        domain: 'blocks',
+        action: 'upsert',
+        appId: 'antigravity', // External caller!
+        payload: {
+          id: 'user-spec',
+          content: 'Attempted agent overwrite by spoofing actor=user',
+          actor: 'user',
+        },
+      });
+      expect(spoofDenied.success).toBe(false);
+      expect(spoofDenied.error?.code).toBe('PERMISSION_DENIED');
+
+      // 4c. FIND-01 Security: Internal caller with actor='user' is permitted to update user-locked block
+      const internalAllowed = await bus.handleRequest({
+        id: 'req-4c',
+        domain: 'blocks',
+        action: 'upsert',
+        appId: 'internal', // Trusted internal caller!
+        payload: {
+          id: 'user-spec',
+          content: 'Legitimate user update from internal UI',
+          actor: 'user',
+        },
+      });
+      expect(internalAllowed.success).toBe(true);
+
+      // 5. blocks.remove on locked=user by external caller is rejected with PERMISSION_DENIED!
       const removeDenied = await bus.handleRequest({
         id: 'req-5',
         domain: 'blocks',
@@ -306,6 +335,7 @@ describe('FG-22: CNTXT Block Parser, Rich Containers & Blocks RPC', () => {
         appId: 'antigravity',
         payload: {
           id: 'user-spec',
+          actor: 'user', // Spoof attempt rejected
         },
       });
       expect(removeDenied.success).toBe(false);
@@ -434,6 +464,30 @@ describe('FG-22: CNTXT Block Parser, Rich Containers & Blocks RPC', () => {
       const updatedTab = useTabStore.getState().tabs.find((t) => t.id === tabId);
       expect(updatedTab?.content).toContain('id=ag-plan');
       expect(updatedTab?.content).toContain('# Existing Thread Content');
+    });
+
+    it('does not silently mutate filePath of existing disk files when content contains cntxt blocks (FIND-05)', () => {
+      const tabStore = useTabStore.getState();
+      const tabId = tabStore.createTab(
+        'my-notes.md',
+        '# Initial Notes\n',
+        'markdown',
+        'C:/projects/docs/my-notes.md'
+      );
+
+      const tabBefore = useTabStore.getState().tabs.find((t) => t.id === tabId);
+      expect(tabBefore?.filePath).toBe('C:/projects/docs/my-notes.md');
+
+      // User types or pastes a CNTXT block
+      tabStore.updateTabContent(
+        tabId,
+        '# Initial Notes\n\n~~~markdown | id=sec-1\nSome block\n~~~\n',
+        false
+      );
+
+      const tabAfter = useTabStore.getState().tabs.find((t) => t.id === tabId);
+      // Invariant: filePath must remain the user original disk path
+      expect(tabAfter?.filePath).toBe('C:/projects/docs/my-notes.md');
     });
   });
 });

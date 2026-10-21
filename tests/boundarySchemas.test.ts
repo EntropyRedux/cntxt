@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   TabSchema,
   TabCacheEntrySchema,
@@ -16,9 +16,6 @@ import {
   validateTerminalSendInput,
   validateTerminalKill,
   validateTerminalResize,
-  validateOmniAgentProfile,
-  validateOmniChatMessage,
-  validateOmniSession,
   validateUserLibraryItems,
   validateCommunityLibraryItems,
   validateLibraryCollections,
@@ -265,85 +262,6 @@ describe('Boundary Schemas (P-10 Verification)', () => {
 
       expect(validateTerminalResize({ channelId: 'term-1', cols: 80, rows: 24 }).success).toBe(true);
       expect(validateTerminalResize({ channelId: 'term-1', cols: 5, rows: 24 }).success).toBe(false);
-    });
-  });
-
-  describe('Omni Terminal Schemas (FG-18 Verification)', () => {
-    it('validates a well-formed OmniAgentProfile', () => {
-      const agent = {
-        id: 'agent-agy',
-        name: 'Pass 1 Auditor',
-        handle: 'agy',
-        role: 'Auditor Agent' as const,
-        command: 'powershell.exe -NoLogo',
-        spawnMode: 'headless' as const,
-        systemDirectives: 'Strict line citations only.',
-        status: 'idle' as const,
-        color: '#3b82f6'
-      };
-      const result = validateOmniAgentProfile(agent);
-      expect(result.success).toBe(true);
-    });
-
-    it('rejects invalid OmniAgentProfile with bad handle or role', () => {
-      const invalidHandle = {
-        id: 'agent-1',
-        name: 'Bad Agent',
-        handle: 'agy with space',
-        role: 'Auditor Agent',
-        command: 'sh',
-        spawnMode: 'headless',
-        status: 'idle'
-      };
-      expect(validateOmniAgentProfile(invalidHandle).success).toBe(false);
-
-      const invalidRole = {
-        id: 'agent-2',
-        name: 'Bad Role',
-        handle: 'agent2',
-        role: 'Rogue Agent',
-        command: 'sh',
-        spawnMode: 'headless',
-        status: 'idle'
-      };
-      expect(validateOmniAgentProfile(invalidRole).success).toBe(false);
-    });
-
-    it('validates OmniChatMessage and OmniSession', () => {
-      const message = {
-        id: 'msg-1',
-        sessionId: 'session-101',
-        senderId: 'user',
-        senderName: 'User',
-        targetHandle: 'agy',
-        content: '@agy audit codebase',
-        timestamp: '2026-10-11T18:30:00Z',
-        isPinnedToOutput: false
-      };
-      expect(validateOmniChatMessage(message).success).toBe(true);
-
-      const session = {
-        id: 'session-101',
-        title: 'Audit & Implement',
-        targetFolder: 'C:/Projects/Active',
-        rawFilePath: 'C:/Projects/Active/session_raw.cntxt',
-        outputFilePath: 'C:/Projects/Active/session_output.cntxt',
-        createdAt: '2026-10-11T18:00:00Z',
-        updatedAt: '2026-10-11T18:30:00Z',
-        pinnedAgents: [
-          {
-            id: 'agent-agy',
-            name: 'Pass 1 Auditor',
-            handle: 'agy',
-            role: 'Auditor Agent' as const,
-            command: 'powershell.exe',
-            spawnMode: 'headless' as const,
-            status: 'idle' as const
-          }
-        ],
-        status: 'idle' as const
-      };
-      expect(validateOmniSession(session).success).toBe(true);
     });
   });
 

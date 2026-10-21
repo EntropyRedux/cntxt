@@ -132,7 +132,7 @@ export class HostCommandBus {
       case 'terminal':
         return this.handleTerminalDomain(action, payload);
       case 'blocks':
-        return this.handleBlocksDomain(action, payload);
+        return this.handleBlocksDomain(action, payload, request.appId);
       default:
         throw { code: 'NOT_FOUND', message: `Unknown domain: ${domain}` };
     }
@@ -353,8 +353,15 @@ export class HostCommandBus {
           if (activeThreadTab.filePath) {
             try {
               await this.bridge.fs.saveFile(activeThreadTab.filePath, prepended);
-            } catch {
-              // Non-fatal if virtual or mock
+            } catch (err: unknown) {
+              console.error(`Failed to save active thread deliverable to disk at "${activeThreadTab.filePath}":`, err);
+              useNotificationStore
+                .getState()
+                .addNotification(
+                  'Disk Save Warning',
+                  `Deliverable prepended in memory, but saving to "${activeThreadTab.filePath}" failed: ${String(err)}`,
+                  'warning'
+                );
             }
           }
           useNotificationStore
@@ -797,7 +804,7 @@ export class HostCommandBus {
   // Blocks Domain (FG-22 — CNTXT Pipe Block Orchestration)
   // ==========================================
 
-  private async handleBlocksDomain(action: string, payload: unknown): Promise<unknown> {
+  private async handleBlocksDomain(action: string, payload: unknown, appId?: string): Promise<unknown> {
     const tabStore = useTabStore.getState();
 
     const resolveTargetTab = (tabId?: string) => {
@@ -868,11 +875,15 @@ export class HostCommandBus {
           throw { code: 'VALIDATION_ERROR', message: validation.error.message };
         }
         const { id, type, content, params, afterBlockId, tabId, actor = 'agent' } = validation.data;
+        // Pillar 8 Security: External RPC callers cannot self-assert actor='user' to bypass locked=user.
+        // Only internal trusted callers (appId === 'internal') can act as 'user'.
+        const effectiveActor: 'user' | 'agent' = (appId === 'internal' && actor === 'user') ? 'user' : 'agent';
+
         const tab = resolveTargetTab(tabId);
         const parsed = parseCntxtDocument(tab.content);
         const existing = parsed.relationshipGraph.byId[id];
 
-        if (existing && existing.params.locked === 'user' && actor !== 'user') {
+        if (existing && existing.params.locked === 'user' && effectiveActor !== 'user') {
           throw {
             code: 'PERMISSION_DENIED',
             message: `Block "${id}" is locked by the user (locked=user) and cannot be overwritten by an agent.`,
@@ -896,11 +907,23 @@ export class HostCommandBus {
 
         tabStore.updateTabContent(tab.id, result.raw, true);
         editorRegistry.setContent(tab.id, result.raw);
+        let savedToDisk: boolean | undefined = undefined;
+        let diskError: string | undefined = undefined;
         if (tab.filePath) {
           try {
             await this.bridge.fs.saveFile(tab.filePath, result.raw);
-          } catch {
-            // Non-fatal if disk write fails in virtual/mock environment
+            savedToDisk = true;
+          } catch (err: unknown) {
+            savedToDisk = false;
+            diskError = String(err);
+            console.error(`Failed to save block upsert to disk at "${tab.filePath}":`, err);
+            useNotificationStore
+              .getState()
+              .addNotification(
+                'Disk Save Warning',
+                `Block "${id}" updated in memory, but saving to "${tab.filePath}" failed: ${diskError}`,
+                'warning'
+              );
           }
         }
 
@@ -908,6 +931,7 @@ export class HostCommandBus {
           tabId: tab.id,
           blockId: id,
           action: result.action,
+          ...(savedToDisk !== undefined ? { savedToDisk, ...(diskError ? { diskError } : {}) } : {}),
         };
       }
 
@@ -917,13 +941,15 @@ export class HostCommandBus {
           throw { code: 'VALIDATION_ERROR', message: validation.error.message };
         }
         const { id, params, tabId, actor = 'agent' } = validation.data;
+        const effectiveActor: 'user' | 'agent' = (appId === 'internal' && actor === 'user') ? 'user' : 'agent';
+
         const tab = resolveTargetTab(tabId);
         const parsed = parseCntxtDocument(tab.content);
         const existing = parsed.relationshipGraph.byId[id];
         if (!existing) {
           throw { code: 'NOT_FOUND', message: `CNTXT block with id="${id}" not found` };
         }
-        if (existing.params.locked === 'user' && actor !== 'user') {
+        if (existing.params.locked === 'user' && effectiveActor !== 'user') {
           throw {
             code: 'PERMISSION_DENIED',
             message: `Block "${id}" is locked by the user (locked=user) and cannot be modified by an agent.`,
@@ -933,11 +959,23 @@ export class HostCommandBus {
         const updatedRaw = updateBlockParams(parsed, id, params);
         tabStore.updateTabContent(tab.id, updatedRaw, true);
         editorRegistry.setContent(tab.id, updatedRaw);
+        let savedToDisk: boolean | undefined = undefined;
+        let diskError: string | undefined = undefined;
         if (tab.filePath) {
           try {
             await this.bridge.fs.saveFile(tab.filePath, updatedRaw);
-          } catch {
-            // Non-fatal
+            savedToDisk = true;
+          } catch (err: unknown) {
+            savedToDisk = false;
+            diskError = String(err);
+            console.error(`Failed to save updated block params to disk at "${tab.filePath}":`, err);
+            useNotificationStore
+              .getState()
+              .addNotification(
+                'Disk Save Warning',
+                `Block "${id}" params updated in memory, but saving to "${tab.filePath}" failed: ${diskError}`,
+                'warning'
+              );
           }
         }
 
@@ -945,6 +983,7 @@ export class HostCommandBus {
           tabId: tab.id,
           blockId: id,
           updated: true,
+          ...(savedToDisk !== undefined ? { savedToDisk, ...(diskError ? { diskError } : {}) } : {}),
         };
       }
 
@@ -954,13 +993,15 @@ export class HostCommandBus {
           throw { code: 'VALIDATION_ERROR', message: validation.error.message };
         }
         const { id, tabId, actor = 'agent' } = validation.data;
+        const effectiveActor: 'user' | 'agent' = (appId === 'internal' && actor === 'user') ? 'user' : 'agent';
+
         const tab = resolveTargetTab(tabId);
         const parsed = parseCntxtDocument(tab.content);
         const existing = parsed.relationshipGraph.byId[id];
         if (!existing) {
           throw { code: 'NOT_FOUND', message: `CNTXT block with id="${id}" not found` };
         }
-        if (existing.params.locked === 'user' && actor !== 'user') {
+        if (existing.params.locked === 'user' && effectiveActor !== 'user') {
           throw {
             code: 'PERMISSION_DENIED',
             message: `Block "${id}" is locked by the user (locked=user) and cannot be deleted by an agent.`,
@@ -970,11 +1011,23 @@ export class HostCommandBus {
         const updatedRaw = removeBlock(parsed, id);
         tabStore.updateTabContent(tab.id, updatedRaw, true);
         editorRegistry.setContent(tab.id, updatedRaw);
+        let savedToDisk: boolean | undefined = undefined;
+        let diskError: string | undefined = undefined;
         if (tab.filePath) {
           try {
             await this.bridge.fs.saveFile(tab.filePath, updatedRaw);
-          } catch {
-            // Non-fatal
+            savedToDisk = true;
+          } catch (err: unknown) {
+            savedToDisk = false;
+            diskError = String(err);
+            console.error(`Failed to save block removal to disk at "${tab.filePath}":`, err);
+            useNotificationStore
+              .getState()
+              .addNotification(
+                'Disk Save Warning',
+                `Block "${id}" removed in memory, but saving to "${tab.filePath}" failed: ${diskError}`,
+                'warning'
+              );
           }
         }
 
@@ -982,6 +1035,7 @@ export class HostCommandBus {
           tabId: tab.id,
           blockId: id,
           removed: true,
+          ...(savedToDisk !== undefined ? { savedToDisk, ...(diskError ? { diskError } : {}) } : {}),
         };
       }
 

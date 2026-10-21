@@ -150,7 +150,7 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   showSidebar: boolean;
   showRibbon?: boolean;
   showMenuBar?: boolean;
-  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'tokens' | 'settings' | 'app-builder' | 'panel-app' | 'omni-terminal';
+  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'tokens' | 'settings' | 'app-builder' | 'panel-app';
   showLivePreview: boolean;
   editorMode: 'raw' | 'rendered';
   enableMarkdownRendering: boolean;
@@ -170,10 +170,6 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   enableLiveDomSync: boolean;
   enableLiveMarkdownSync?: boolean;
   enableTerminalBus?: boolean;
-  enableOmniTerminal?: boolean;
-  omniStorageFolder?: string;
-  isOmniFloating?: boolean;
-  omniFloatingPosition?: { x: number; y: number };
   autosaveIntervalMs?: number;
   enableRestGateway?: boolean;
   restGatewayPort?: number;
@@ -853,58 +849,6 @@ export interface TerminalChannelSummaryResult {
   status: TerminalChannelStatus;
   exitCode?: number | null;
   cwd?: string;
-}
-
-// ==========================================
-// 13. Omni Terminal & Multi-Agent Mission Control (FG-18)
-// ==========================================
-
-export type OmniAgentRole = 'Auditor Agent' | 'Prod Agent' | 'Tester Agent' | 'Custom';
-export type OmniShellSpawnMode = 'headless' | 'external-window';
-export type OmniSessionStatus = 'idle' | 'running' | 'paused' | 'completed';
-
-export interface OmniAgentProfile {
-  id: string;
-  name: string;
-  handle: string;
-  role: OmniAgentRole;
-  command: string;
-  spawnMode: OmniShellSpawnMode;
-  systemDirectives?: string;
-  templateId?: string;
-  channelId?: string;
-  status: 'idle' | 'starting' | 'busy' | 'waiting_permission' | 'stopped' | 'error';
-  color?: string;
-}
-
-export interface OmniChatMessage {
-  id: string;
-  sessionId: string;
-  senderId: 'user' | string;
-  senderName: string;
-  targetHandle?: string;
-  content: string;
-  rawTerminalOutput?: string;
-  thought?: string;
-  annotatedOutput?: string;
-  timestamp: string;
-  isPinnedToOutput: boolean;
-  exitCode?: number;
-  color?: string;
-}
-
-export interface OmniSession {
-  id: string;
-  title: string;
-  targetFolder: string;
-  workspacePath?: string;
-  rawFilePath: string;
-  outputFilePath: string;
-  createdAt: string;
-  updatedAt: string;
-  pinnedAgents: OmniAgentProfile[];
-  status: OmniSessionStatus;
-  activeTurnId?: string;
 }
 
 // ==========================================

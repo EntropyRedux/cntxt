@@ -325,9 +325,9 @@ export class CodeBlockHeaderWidget extends WidgetType {
         type: 'button',
         className: `cm-cntxt-gov-pill cm-codeblock-action-btn flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium transition-all cursor-pointer shrink-0 border ${
           isUserLocked
-            ? 'text-amber-400 bg-amber-500/10 border-amber-500/35'
+            ? 'cm-cntxt-pill-user'
             : isAgentLocked
-              ? 'text-sky-400 bg-sky-500/10 border-sky-500/35'
+              ? 'cm-cntxt-pill-agent'
               : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--card-secondary-bg)] border-[var(--border-subtle)]'
         }`,
         title: isUserLocked
@@ -338,11 +338,11 @@ export class CodeBlockHeaderWidget extends WidgetType {
       });
 
       const lockIconBox = createElement('span', {
-        className: `w-4 h-4 rounded flex items-center justify-center shrink-0 ${
+        className: `cm-cntxt-pill-icon-box w-4 h-4 rounded flex items-center justify-center shrink-0 ${
           isUserLocked
-            ? 'bg-amber-500/25 text-amber-300'
+            ? ''
             : isAgentLocked
-              ? 'bg-sky-500/25 text-sky-300'
+              ? ''
               : 'bg-[var(--card-hover-bg)] text-[var(--text-muted)]'
         }`,
       });

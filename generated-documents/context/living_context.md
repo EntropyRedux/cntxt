@@ -17,12 +17,25 @@ Active Stage:
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.0 Authenticode Signed Portable Executable & Native Installers Built: CNTXT_0.7.0_portable.exe, CNTXT_0.7.0_x64-setup.exe, CNTXT_0.7.0_x64_en-US.msi; v0.5.14 Android Signed APK Pipeline Live)
 
-Current Feature Group: Active Thread `.cntxt` Orchestration, Inline Citation Reply Input (`id=user-inbox`), Automatic `.cntxt` Extension Promotion & Visual Refinements (FG-23)
-Status: [x] FG-23 complete & verified
-Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus && enableOmniTerminal; disabled by default)
-Unit Tests: written [x] passing [x] (728/728 unit tests passing across 61 suites in CNTXT, 12 native Rust security tests clean)
-Active Plan: /generated-documents/plans/feature_group_FG22_cntxt_block_parser_and_rich_containers_2026-10-21.md
+Current Feature Group: Pass 2 Audit Reconciliation & Remediation (FG-21, FG-22, FG-23)
+Status: [x] Reconciled & Remediated (All 12 findings resolved)
+Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
+Unit Tests: written [x] passing [x] (731/731 unit tests passing across 62 suites in CNTXT, 12 native Rust security tests clean)
+Active Plan: /generated-documents/plans/feature_group_FG23_active_thread_and_user_inbox_2026-10-21.md
 Notes:
+- Task 65: Pass 2 Prod Agent Audit Reconciliation (2026-10-21):
+  - Executed complete reconciliation and remediation of all 12 findings from Pass 1 Independent Blind Auditor report (`generated-documents/audits/raw_findings_feature_cntxt_fg21_fg22_2026-10-21.md`).
+  - FIND-01 (Pillar 8): Enforced `effectiveActor` guardrail in `hostCommandBus.ts` so external RPC callers cannot self-assert `actor: 'user'` on `locked=user` blocks. Only internal UI callers (`appId === 'internal'`) can mutate user-locked blocks.
+  - FIND-02 (Pillar 6): Completely excised legacy Omni Terminal remnants (`Sidebar.tsx`, `settingsStore.ts`, `data_shapes.ts`, `boundarySchemas.ts`, `ActivityBar.tsx`).
+  - FIND-03 (Pillar 8): Refactored `gateway.rs` and `cntxt-mcp-server.mjs` to dynamically resolve `%APPDATA%\com.cntxt.desktop\gateway_runtime.json` (and platform equivalents), sync `{ running: false, port: 0 }` on shutdown, and support candidate loopback ports.
+  - FIND-04 (Pillar 9): Eliminated silent error swallowing on disk writes in `hostCommandBus.ts`. Dispatched `Disk Save Warning` toast notifications and returned structured `{ savedToDisk, diskError }` telemetry.
+  - FIND-05 (Pillar 9): Preserved original disk `filePath` during ordinary content editing in `tabStore.ts`. Extension promotion to `.cntxt` is restricted to untitled tabs or explicit user commands (`toggleActiveThread`).
+  - FIND-06 (Pillar 6): Authored canonical plan document `generated-documents/plans/feature_group_FG23_active_thread_and_user_inbox_2026-10-21.md`.
+  - FIND-07 & FIND-08 (Pillars 6 & 4): Refactored `cntxt-mcp-server.mjs` to a unified dynamic tool registry (`Map`), added declared tools `cntxt_clear_diagnostics`, `cntxt_apply_template`, and `cntxt_notify`, and removed undeclared raw `cntxt_rpc` passthrough.
+  - FIND-09 (Pillar 2): Replaced hardcoded hex `#F59E0B` and Tailwind palette classes with CSS custom properties (`--status-warning`, `--status-info`) and tokenized classes (`cm-cntxt-pill-user`, `cm-cntxt-pill-agent`).
+  - FIND-10 (Pillar 9): Added structured diagnostic warning on gateway stop failures in `ShellFrame.tsx`.
+  - FIND-11 (Pillar 9): Surfaced JSON-RPC parse errors (`-32700`) and logged config parse warnings to stderr in `cntxt-mcp-server.mjs`.
+  - FIND-12 (Pillar 6): Pruned stale doc comments and reconciled living context state.
 - Task 64: Feature Group FG-23 — Active Thread `.cntxt` Orchestration, Inline Citation Reply Input & Visual Refinements (2026-10-21):
   - Visual Refinements:
     - Reduced continuous left accent rail thickness by 2px (from 3px down to 1px) and muted the line color to `color-mix(in srgb, var(--accent-primary, #6366F1) 42%, transparent)`.

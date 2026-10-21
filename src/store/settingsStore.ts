@@ -88,8 +88,6 @@ const DEFAULT_SETTINGS: ViewSettings = {
   enableLiveDomSync: true,
   enableLiveMarkdownSync: true,
   enableTerminalBus: false,
-  enableOmniTerminal: false,
-  isOmniFloating: false,
   autosaveIntervalMs: 1000,
   enableRestGateway: false,
   restGatewayPort: 9876,
@@ -302,20 +300,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
   }
 }));
-
-/**
- * Gate helper: Omni Terminal is only active when all three toggles are enabled:
- * 1. Experimental Settings master toggle
- * 2. Terminal Shells & Multi-Agent Bus toggle
- * 3. Omni Terminal Mission Control toggle
- */
-export function isOmniTerminalFeatureEnabled(settings: ViewSettings): boolean {
-  return Boolean(
-    settings.enableExperimentalSettings &&
-    settings.enableTerminalBus &&
-    settings.enableOmniTerminal
-  );
-}
 
 /**
  * Gate helper: REST Gateway is active when both:

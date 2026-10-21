@@ -191,8 +191,8 @@ export const useTabStore = create<TabState>((set, get) => ({
   createTab: (title = 'Untitled.md', content = '', language: SupportedLanguage = 'markdown', filePath = null, pinnedTabId?: string, tabType: TabType = 'document') => {
     const id = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     const isCntxtDoc = hasCntxtPipeBlock(content);
-    const resolvedTitle = isCntxtDoc ? promoteToCntxtExtension(title) : title;
-    const resolvedPath = isCntxtDoc && filePath ? promoteToCntxtExtension(filePath) : filePath;
+    const resolvedTitle = isCntxtDoc && !filePath ? promoteToCntxtExtension(title) : title;
+    const resolvedPath = filePath;
 
     const newTab: Tab = {
       id,
@@ -478,11 +478,11 @@ export const useTabStore = create<TabState>((set, get) => ({
     const updated = tabs.map(tab => {
       if (tab.id === tabId) {
         const isCntxtDoc = hasCntxtPipeBlock(content);
-        const shouldPromote = isCntxtDoc && (tab.title.endsWith('.md') || tab.title.endsWith('.markdown'));
+        // Only promote title if the tab is an untitled, unsaved document without a disk filePath
+        const shouldPromoteUntitled = isCntxtDoc && !tab.filePath && (tab.title.endsWith('.md') || tab.title.endsWith('.markdown'));
         return {
           ...tab,
-          title: shouldPromote ? promoteToCntxtExtension(tab.title) : tab.title,
-          filePath: shouldPromote && tab.filePath ? promoteToCntxtExtension(tab.filePath) : tab.filePath,
+          title: shouldPromoteUntitled ? promoteToCntxtExtension(tab.title) : tab.title,
           content,
           isDirty: true,
           lastModifiedTime: Date.now()

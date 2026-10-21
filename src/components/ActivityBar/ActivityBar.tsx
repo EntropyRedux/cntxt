@@ -6,8 +6,7 @@ import {
   Zap, 
   Settings,
   User,
-  FolderGit2,
-  Bot
+  FolderGit2
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useAuthStore } from '../../store/authStore';
