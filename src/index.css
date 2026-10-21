@@ -2141,3 +2141,109 @@ footer[data-shell-statusbar],
   border-radius: 3px;
   border: 1px solid rgba(217, 119, 6, 0.2);
 }
+
+
+/* =========================================================
+   CNTXT Pipe (`|`) Code Blocks & Rich Containers (FG-22)
+   - Seamless editor canvas (no background color change, no boxes)
+   - Continuous unbroken left accent rail offset into the left margin
+   - Scrollbar-aligned floating action pill + horizontal popup bar
+   - Fixed core header + closing footer metadata rail
+   ========================================================= */
+
+.cm-live-codeblock-header {
+  container-type: inline-size;
+  container-name: cb-header;
+}
+
+.cm-cntxt-container-start,
+.cm-cntxt-container-mid,
+.cm-cntxt-container-end {
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.cm-cntxt-container-mid {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.cm-live-codeblock-header.cm-cntxt-container-header {
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.cm-live-codeblock-header.cm-cntxt-container-header.cm-codeblock-header-collapsed {
+  border-bottom: 1px solid color-mix(in srgb, var(--text-muted) 18%, transparent) !important;
+}
+
+.cm-cntxt-container-end {
+  position: relative;
+}
+
+.cm-live-codeblock-footer.cm-cntxt-metadata-rail {
+  height: auto !important;
+  border-top: 1px dashed color-mix(in srgb, var(--border-subtle) 70%, transparent);
+  margin-top: 4px;
+}
+
+/* Continuous Unbroken Left Accent Rail (offset 14px left of content column, 1px muted) */
+.cm-cntxt-left-rail {
+  width: 1px;
+  border-radius: 9999px;
+  background-color: var(--accent-primary, #6366F1);
+  background-color: color-mix(in srgb, var(--accent-primary, #6366F1) 42%, transparent);
+  pointer-events: none;
+  transition: top 0.08s ease-out, height 0.08s ease-out;
+}
+
+.cm-cntxt-left-rail::before,
+.cm-cntxt-left-rail::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 5px;
+  height: 1px;
+  border-radius: 9999px;
+  background-color: inherit;
+}
+
+.cm-cntxt-left-rail::before {
+  top: 0;
+}
+
+.cm-cntxt-left-rail::after {
+  bottom: 0;
+}
+
+.cm-cntxt-left-rail.cm-cntxt-rail-locked-user {
+  background-color: #F59E0B;
+  background-color: color-mix(in srgb, #F59E0B 45%, transparent);
+}
+
+/* Responsive Header Buttons: hide text labels when editor pane or window is narrow */
+@container cb-header (max-width: 560px) {
+  .cm-codeblock-btn-label {
+    display: none !important;
+  }
+  .cm-codeblock-action-btn {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+}
+
+@media (max-width: 820px) {
+  .cm-live-codeblock-header .cm-codeblock-btn-label {
+    display: none !important;
+  }
+  .cm-live-codeblock-header .cm-codeblock-action-btn {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+}

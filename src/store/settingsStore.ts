@@ -113,6 +113,9 @@ const DEFAULT_SETTINGS: ViewSettings = {
     jsonLint: true,
     markdownLint: true
   },
+  deliverableSaveLocation: 'workspace',
+  deliverableWorkspaceSubfolder: '.cntxt/deliverables',
+  deliverableCustomFolderPath: '',
   autoAdaptFontToTheme: true,
   isFontCustomizedByUser: false
 };
@@ -143,6 +146,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           const parsed = JSON.parse(stored);
           if (parsed.uiDensity === 'comfortable' || parsed.uiDensity === 'compact') {
             parsed.uiDensity = 'desktop';
+          }
+          if (parsed.activeSidebarTab === 'omni-terminal') {
+            parsed.activeSidebarTab = 'explorer';
           }
           initialSettings = { ...initialSettings, ...parsed };
         }

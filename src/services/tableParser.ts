@@ -36,7 +36,7 @@ export function parseTableSeparator(line: string): ('left' | 'center' | 'right')
 export function splitTableRow(line: string): string[] {
   const trimmed = line.trim();
   const inner = trimmed.replace(/^\|/, '').replace(/\|$/, '');
-  return inner.split('|').map(c => c.trim());
+  return inner.split(/(?<!\\)\|/).map(c => c.replace(/\\\|/g, '|').trim());
 }
 
 export function parseMarkdownTableLines(lines: string[]): ParsedTable | null {
@@ -83,7 +83,7 @@ export function formatTableCellHtml(text: string): string {
   const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
   const mathPlaceholders = new Map<string, string>();
 
-  let tokenized = text.replace(/(?<!\$)\$(?!\$)((?:\\\$|[^\$\n])+?)(?<!\$)\$(?!\$)/g, (_, formula) => {
+  const tokenized = text.replace(/(?<!\$)\$(?!\$)((?:\\\$|[^\$\n])+?)(?<!\$)\$(?!\$)/g, (_, formula) => {
     const key = `@@CNTXT_MATH_${nonce}_${mathPlaceholders.size}@@`;
     const res = renderLatex(formula, false);
     mathPlaceholders.set(key, `<span class="cm-table-math inline-flex align-middle" data-cntxt-math="${nonce}">${res.html}</span>`);
@@ -91,11 +91,11 @@ export function formatTableCellHtml(text: string): string {
   });
 
   // 2. Pre-sanitize non-math text to strip dangerous tags (<style>, <script>, <iframe>)
-  let cleanText = sanitizePreviewHtml(tokenized);
+  const cleanText = sanitizePreviewHtml(tokenized);
 
-  // 3. Escape raw HTML entities on non-math text segments
+  // 3. Escape raw HTML entities on non-math text segments (avoid double-escaping entities from sanitizePreviewHtml)
   let safeText = cleanText
-    .replace(/&/g, '&amp;')
+    .replace(/&(?!amp;|lt;|gt;|quot;|#)/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');

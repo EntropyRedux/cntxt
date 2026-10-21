@@ -1140,23 +1140,6 @@ export const SettingsPanel: React.FC = () => {
               />
             </div>
 
-            {/* Toggle: Omni Terminal Subsystem */}
-            <div className="flex items-start justify-between gap-2 pt-1 border-t border-[var(--border-subtle)]">
-              <div>
-                <span className="text-xs text-[var(--text-primary)] block font-medium">Omni Terminal Mission Control</span>
-                <span className="text-[10px] text-[var(--text-muted)] leading-tight block mt-0.5">
-                  Enable the collaborative multi-agent mission control panel with dual .cntxt logging and pop-out floating chat. Requires both Terminal Shells & Experimental Settings enabled.
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                id="toggle-omni-terminal"
-                checked={settings.enableOmniTerminal ?? false}
-                onChange={(e) => updateSettings({ enableOmniTerminal: e.target.checked })}
-                className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer shrink-0 mt-0.5"
-              />
-            </div>
-
             {/* 5. Localhost REST API Gateway */}
             <ErrorBoundary fallbackTitle="REST Gateway Settings Error">
               <RestGatewaySettingsCard
@@ -1177,6 +1160,67 @@ export const SettingsPanel: React.FC = () => {
                 onRegenerateToken={handleRegenerateToken}
               />
             </ErrorBoundary>
+
+            {/* 6. Agent Deliverables & Thread Routing */}
+            <div className="p-2.5 rounded border border-[var(--border-subtle)] bg-[var(--card-secondary-bg)] space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-xs text-[var(--text-primary)]">Agent Deliverables & Thread Routing</div>
+                  <div className="text-[10px] text-[var(--text-muted)]">
+                    Default folder for new .cntxt deliverables when no tab is set as Active Thread.
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="deliverableLocation"
+                    value="workspace"
+                    checked={(settings.deliverableSaveLocation ?? 'workspace') === 'workspace'}
+                    onChange={() => updateSettings({ deliverableSaveLocation: 'workspace' })}
+                    className="accent-[var(--accent-primary)] cursor-pointer"
+                  />
+                  <span className="text-[var(--text-primary)]">Workspace Folder</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="deliverableLocation"
+                    value="custom-folder"
+                    checked={settings.deliverableSaveLocation === 'custom-folder'}
+                    onChange={() => updateSettings({ deliverableSaveLocation: 'custom-folder' })}
+                    className="accent-[var(--accent-primary)] cursor-pointer"
+                  />
+                  <span className="text-[var(--text-primary)]">Custom Device Folder</span>
+                </label>
+              </div>
+
+              {(settings.deliverableSaveLocation ?? 'workspace') === 'workspace' ? (
+                <div className="space-y-1">
+                  <label className="text-[10px] text-[var(--text-muted)]">Workspace Subfolder</label>
+                  <input
+                    type="text"
+                    value={settings.deliverableWorkspaceSubfolder ?? '.cntxt/deliverables'}
+                    onChange={(e) => updateSettings({ deliverableWorkspaceSubfolder: e.target.value })}
+                    placeholder=".cntxt/deliverables"
+                    className="w-full text-xs font-mono px-2 py-1 rounded bg-[var(--input-bg)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <label className="text-[10px] text-[var(--text-muted)]">Custom Folder Path</label>
+                  <input
+                    type="text"
+                    value={settings.deliverableCustomFolderPath ?? ''}
+                    onChange={(e) => updateSettings({ deliverableCustomFolderPath: e.target.value })}
+                    placeholder="e.g. C:/Users/Documents/CNTXT/deliverables"
+                    className="w-full text-xs font-mono px-2 py-1 rounded bg-[var(--input-bg)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -10,7 +10,6 @@ import { ErrorBoundary } from '../components/Common/ErrorBoundary';
 import { useRuntimeBridge } from '../adapters';
 import { useSettingsStore } from '../store/settingsStore';
 import { AppUiEvents } from '../ui-contract/actionContract';
-import { OmniFloatingChat } from '../components/OmniTerminal/OmniFloatingChat';
 
 export interface ShellLayoutProps {
   events: AppUiEvents;
@@ -81,11 +80,6 @@ export const ClassicShell: React.FC<ShellLayoutProps> = ({
 
       {/* 3. Status Bar */}
       <ShellStatusBar />
-
-      {/* 4. Omni Terminal Floating Overlay */}
-      <ErrorBoundary fallbackTitle="Floating Chat Error">
-        <OmniFloatingChat />
-      </ErrorBoundary>
     </div>
   );
 };

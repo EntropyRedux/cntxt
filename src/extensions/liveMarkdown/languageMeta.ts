@@ -64,9 +64,13 @@ export function getLanguageMeta(rawLang: string): LanguageMeta {
     case 'dockerfile':
     case 'docker':
       return { name: 'Docker', color: '#38BDF8', bg: 'rgba(56, 189, 248, 0.15)' };
+    case 'deliverable':
+    case 'agent':
+    case 'cntxt':
+      return { name: 'AI Deliverable', color: '#10B981', bg: 'rgba(16, 185, 129, 0.15)' };
     default:
       return { 
-        name: rawLang ? rawLang.toUpperCase() : 'Code', 
+        name: lang ? lang.toUpperCase() : 'Code', 
         color: '#A1A1AA', 
         bg: 'rgba(161, 161, 170, 0.15)' 
       };

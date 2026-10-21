@@ -25,12 +25,10 @@ export const liveThemeFacet = Facet.define<string, string>({
 export { setLiveMarkdownBridge } from './liveMarkdown/index';
 export * from './liveMarkdown/widgets';
 import {
+  findCntxtContainers,
   findCodeBlocks,
   findMathBlocks,
   findTables,
-  CodeBlockLineEntry,
-  MathBlockInfo,
-  TableBlockInfo,
   MermaidBlockWidget,
   DisplayMathWidget,
   InlineMathWidget,
@@ -45,6 +43,8 @@ import {
   ImageWidget,
   setLiveMarkdownBridge
 } from './liveMarkdown/index';
+import { cntxtBlockOverlayPlugin } from './liveMarkdown/cntxtBlockOverlay';
+import { parseBlockInfoString } from '../services/editor/cntxtBlockParser';
 
 interface RangeDecoItem {
   from: number;
@@ -68,10 +68,11 @@ function buildDecorations(state: EditorState): DecorationSet {
 
     const collapsedBlocks = state.field(codeBlockCollapseField, false) || new Set<number>();
 
-    // 1. Scan document structures
-    const codeBlocksByLine = findCodeBlocks(doc);
-    const mathBlocksByLine = findMathBlocks(doc, codeBlocksByLine);
-    const tableBlocksByLine = findTables(doc, codeBlocksByLine, mathBlocksByLine);
+    // 1. Scan document structures (Two-Tier: Outer CNTXT Rich Containers + Inner Code/Math/Tables)
+    const cntxtContainersByLine = findCntxtContainers(doc);
+    const codeBlocksByLine = findCodeBlocks(doc, cntxtContainersByLine);
+    const mathBlocksByLine = findMathBlocks(doc, codeBlocksByLine, cntxtContainersByLine);
+    const tableBlocksByLine = findTables(doc, codeBlocksByLine, mathBlocksByLine, cntxtContainersByLine);
 
     // 2. Determine active lines where the cursor / selection currently sits
     const activeLines = new Set<number>();
@@ -93,12 +94,146 @@ function buildDecorations(state: EditorState): DecorationSet {
       const isLineActive = activeLines.has(line.number);
 
       // =====================================================================
+      // 0. Outer CNTXT Rich Container (`~~~markdown | ...`, ` ```cntxt | ...`)
+      // =====================================================================
+      const containerEntry = cntxtContainersByLine.get(line.number);
+      let containerMidClass = '';
+
+      if (containerEntry) {
+        const { role: cRole, container } = containerEntry;
+        const innerLineCount = Math.max(0, container.endLine - container.startLine - 1);
+        const isContainerCollapsed = collapsedBlocks.has(container.startLine);
+
+        // Check if cursor or active selection is on the opening/closing fence or inside when collapsed
+        let isContainerActive = false;
+        for (let l = container.startLine; l <= container.endLine; l++) {
+          if (activeLines.has(l)) {
+            isContainerActive = true;
+            break;
+          }
+        }
+        if (!isContainerActive) {
+          const mainSel = state.selection.main;
+          const selStartLine = doc.lineAt(mainSel.from).number;
+          const selEndLine = doc.lineAt(mainSel.to).number;
+          if (selStartLine <= container.endLine && selEndLine >= container.startLine) {
+            isContainerActive = true;
+          }
+        }
+
+        if (cRole === 'start' || cRole === 'single') {
+          if (isContainerCollapsed) {
+            builder.add(
+              line.from,
+              line.from,
+              Decoration.line({ class: 'cm-live-codeblock-start cm-cntxt-container-start cm-live-codeblock-collapsed' })
+            );
+            builder.add(
+              line.from,
+              line.to,
+              Decoration.replace({
+                widget: new CodeBlockHeaderWidget(
+                  container.language,
+                  container.codeContent,
+                  line.from,
+                  container.startLine,
+                  container.endLine,
+                  true,
+                  innerLineCount,
+                  true
+                )
+              })
+            );
+            if (container.endLine > container.startLine) {
+              const endLineObj = doc.line(container.endLine);
+              builder.add(
+                line.to,
+                endLineObj.to,
+                Decoration.replace({ block: true })
+              );
+            }
+            pos = doc.line(container.endLine).to + 1;
+            continue;
+          }
+
+          if (isLineActive) {
+            builder.add(
+              line.from,
+              line.from,
+              Decoration.line({ class: 'cm-live-codeblock-start cm-cntxt-container-start cm-live-active-row' })
+            );
+            pos = line.to + 1;
+            continue;
+          }
+
+          builder.add(
+            line.from,
+            line.from,
+            Decoration.line({ class: 'cm-live-codeblock-start cm-cntxt-container-start' })
+          );
+          builder.add(
+            line.from,
+            line.to,
+            Decoration.replace({
+              widget: new CodeBlockHeaderWidget(
+                container.language,
+                container.codeContent,
+                line.from,
+                container.startLine,
+                container.endLine,
+                false,
+                innerLineCount,
+                true
+              )
+            })
+          );
+          pos = line.to + 1;
+          continue;
+        } else if (cRole === 'end') {
+          if (isLineActive) {
+            builder.add(
+              line.from,
+              line.from,
+              Decoration.line({ class: 'cm-live-codeblock-end cm-cntxt-container-end cm-live-active-row' })
+            );
+            pos = line.to + 1;
+            continue;
+          }
+
+          builder.add(
+            line.from,
+            line.from,
+            Decoration.line({ class: 'cm-live-codeblock-end cm-cntxt-container-end' })
+          );
+          builder.add(
+            line.from,
+            line.to,
+            Decoration.replace({
+              widget: new CodeBlockFooterWidget(true, container.language)
+            })
+          );
+          pos = line.to + 1;
+          continue;
+        } else if (cRole === 'mid') {
+          // Pass-through! Middle lines of a CNTXT Rich Container fall right through
+          // to render Mermaid diagrams, Markdown tables, Math, Headings, and Rich Text!
+          const lockCls = container.params.locked === 'user'
+            ? ' cm-cntxt-locked-user'
+            : container.params.locked === 'agent'
+              ? ' cm-cntxt-locked-agent'
+              : '';
+          containerMidClass = ` cm-cntxt-container-mid${lockCls}`;
+        }
+      }
+
+      // =====================================================================
       // A. Fenced Code Block Container (Mermaid, LaTeX, or standard Code)
       // =====================================================================
       const codeBlockEntry = codeBlocksByLine.get(line.number);
       if (codeBlockEntry) {
         const { role, block } = codeBlockEntry;
-        const lang = block.language.toLowerCase().trim();
+        const parsedBlockInfo = parseBlockInfoString(block.language);
+        const lang = parsedBlockInfo.type;
 
         // Check if cursor or active search selection is anywhere inside this code block
         let isBlockActive = false;
@@ -161,24 +296,15 @@ function buildDecorations(state: EditorState): DecorationSet {
         }
 
         // --- Standard Code Block Rendering ---
-        if (isLineActive) {
-          builder.add(
-            line.from,
-            line.from,
-            Decoration.line({ class: `cm-live-codeblock-${role} cm-live-active-row` })
-          );
-          pos = line.to + 1;
-          continue;
-        }
-
+        const pipeBlockClass = parsedBlockInfo.isCNTXT ? ` cm-cntxt-container-${role}` : '';
         const isCollapsed = collapsedBlocks.has(block.startLine);
         const innerLineCount = Math.max(0, block.endLine - block.startLine - 1);
 
-        if (isCollapsed && !isBlockActive) {
+        if (isCollapsed && (role === 'start' || role === 'single')) {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: 'cm-live-codeblock-start cm-live-codeblock-collapsed' })
+            Decoration.line({ class: `cm-live-codeblock-start${parsedBlockInfo.isCNTXT ? ' cm-cntxt-container-start' : ''} cm-live-codeblock-collapsed${containerMidClass}` })
           );
           builder.add(
             line.from,
@@ -191,7 +317,8 @@ function buildDecorations(state: EditorState): DecorationSet {
                 block.startLine,
                 block.endLine,
                 true,
-                innerLineCount
+                innerLineCount,
+                parsedBlockInfo.isCNTXT
               )
             })
           );
@@ -207,11 +334,21 @@ function buildDecorations(state: EditorState): DecorationSet {
           continue;
         }
 
+        if (isLineActive) {
+          builder.add(
+            line.from,
+            line.from,
+            Decoration.line({ class: `cm-live-codeblock-${role}${pipeBlockClass} cm-live-active-row${containerMidClass}` })
+          );
+          pos = line.to + 1;
+          continue;
+        }
+
         if (role === 'start') {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: 'cm-live-codeblock-start' })
+            Decoration.line({ class: `cm-live-codeblock-start${pipeBlockClass}${containerMidClass}` })
           );
           builder.add(
             line.from,
@@ -224,7 +361,8 @@ function buildDecorations(state: EditorState): DecorationSet {
                 block.startLine,
                 block.endLine,
                 false,
-                innerLineCount
+                innerLineCount,
+                parsedBlockInfo.isCNTXT
               )
             })
           );
@@ -232,26 +370,26 @@ function buildDecorations(state: EditorState): DecorationSet {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: 'cm-live-codeblock-mid' })
+            Decoration.line({ class: `cm-live-codeblock-mid${pipeBlockClass}${containerMidClass}` })
           );
         } else if (role === 'end') {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: 'cm-live-codeblock-end' })
+            Decoration.line({ class: `cm-live-codeblock-end${pipeBlockClass}${containerMidClass}` })
           );
           builder.add(
             line.from,
             line.to,
             Decoration.replace({
-              widget: new CodeBlockFooterWidget()
+              widget: new CodeBlockFooterWidget(parsedBlockInfo.isCNTXT, block.language)
             })
           );
         } else if (role === 'single') {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: 'cm-live-codeblock-single' })
+            Decoration.line({ class: `cm-live-codeblock-single${pipeBlockClass}${containerMidClass}` })
           );
         }
 
@@ -300,7 +438,7 @@ function buildDecorations(state: EditorState): DecorationSet {
           }
         } else {
           // Block is being edited - show raw markdown for focused lines
-          builder.add(line.from, line.from, Decoration.line({ class: 'cm-live-active-row' }));
+          builder.add(line.from, line.from, Decoration.line({ class: `cm-live-active-row${containerMidClass}` }));
           pos = line.to + 1;
           continue;
         }
@@ -347,7 +485,7 @@ function buildDecorations(state: EditorState): DecorationSet {
           }
         } else {
           // Table row is being edited
-          builder.add(line.from, line.from, Decoration.line({ class: 'cm-live-active-row' }));
+          builder.add(line.from, line.from, Decoration.line({ class: `cm-live-active-row${containerMidClass}` }));
           pos = line.to + 1;
           continue;
         }
@@ -357,7 +495,12 @@ function buildDecorations(state: EditorState): DecorationSet {
       // D. Regular Markdown Row
       // =====================================================================
 
-      let lineDeco: Decoration | null = isLineActive ? Decoration.line({ class: 'cm-live-active-row' }) : null;
+      let lineDeco: Decoration | null =
+        isLineActive || containerMidClass
+          ? Decoration.line({
+              class: `${isLineActive ? 'cm-live-active-row' : ''}${containerMidClass}`.trim()
+            })
+          : null;
       const rangeDecos: RangeDecoItem[] = [];
       const lineText = line.text;
 
@@ -367,7 +510,7 @@ function buildDecorations(state: EditorState): DecorationSet {
         const level = headingMatch[1].length;
         const markerLen = headingMatch[1].length + 1;
         lineDeco = Decoration.line({ 
-          class: `cm-live-heading cm-live-h${level}${isLineActive ? ' cm-live-active-row' : ''}` 
+          class: `cm-live-heading cm-live-h${level}${isLineActive ? ' cm-live-active-row' : ''}${containerMidClass}` 
         });
         if (isLineActive) {
           rangeDecos.push({
@@ -388,7 +531,7 @@ function buildDecorations(state: EditorState): DecorationSet {
       const quoteMatch = lineText.match(/^>\s*(.*)$/);
       if (quoteMatch && !headingMatch) {
         lineDeco = Decoration.line({ 
-          class: `cm-live-blockquote${isLineActive ? ' cm-live-active-row' : ''}` 
+          class: `cm-live-blockquote${isLineActive ? ' cm-live-active-row' : ''}${containerMidClass}` 
         });
         const prefixLen = lineText.startsWith('> ') ? 2 : 1;
         if (isLineActive) {
@@ -412,7 +555,7 @@ function buildDecorations(state: EditorState): DecorationSet {
         const isChecked = taskMatch[2].toLowerCase() === 'x';
         const prefixLen = taskMatch[1].length + 2;
         lineDeco = Decoration.line({ 
-          class: (isChecked ? 'cm-live-task-done' : 'cm-live-task-item') + (isLineActive ? ' cm-live-active-row' : '') 
+          class: (isChecked ? 'cm-live-task-done' : 'cm-live-task-item') + (isLineActive ? ' cm-live-active-row' : '') + containerMidClass
         });
         rangeDecos.push({
           from: line.from,
@@ -903,5 +1046,10 @@ export function liveMarkdownExtension(
     setLiveMarkdownBridge(bridge);
   }
   if (!enabled) return [];
-  return [liveThemeFacet.of(themeName), codeBlockCollapseField, liveMarkdownField];
+  return [
+    liveThemeFacet.of(themeName),
+    codeBlockCollapseField,
+    liveMarkdownField,
+    cntxtBlockOverlayPlugin,
+  ];
 }

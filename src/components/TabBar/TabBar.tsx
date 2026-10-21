@@ -10,7 +10,8 @@ import {
   Search,
   FolderOpen,
   Clipboard,
-  Terminal
+  Terminal,
+  Radio
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -28,6 +29,7 @@ export const TabBar: React.FC = () => {
     closeOtherTabs, 
     createTab, 
     duplicateTab,
+    toggleActiveThread,
     closeTabsToRight,
     reorderTabs
   } = useTabStore();
@@ -116,6 +118,7 @@ export const TabBar: React.FC = () => {
   };
 
   const getLanguageStrokeColor = (title: string, lang: string) => {
+    if (title.endsWith('.cntxt')) return 'var(--accent-primary)';
     if (title.endsWith('.md') || lang === 'markdown') return 'var(--status-success)';
     if (title.endsWith('.json') || lang === 'json') return 'var(--status-warning)';
     if (title.endsWith('.yaml') || title.endsWith('.yml')) return 'var(--accent-primary)';
@@ -462,9 +465,19 @@ export const TabBar: React.FC = () => {
               )}
 
               {/* Title */}
-              <span className="truncate text-[12px] flex-1">
-                {tab.title}
-              </span>
+              <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
+                {tab.isActiveThread && (
+                  <span
+                    title="Active Thread: Agent deliverables prepend here"
+                    className="inline-flex items-center justify-center text-[var(--accent-primary)] shrink-0"
+                  >
+                    <Radio className="w-3 h-3 animate-pulse" />
+                  </span>
+                )}
+                <span className="truncate text-[12px]">
+                  {tab.title}
+                </span>
+              </div>
 
               {/* Dirty / Close button */}
               <div className="shrink-0 flex items-center justify-center w-5 h-5 ml-0.5">
@@ -671,6 +684,14 @@ export const TabBar: React.FC = () => {
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                         <polyline points="14 2 14 8 20 8" />
                       </svg>
+                      {t.isActiveThread && (
+                        <span
+                          title="Active Thread"
+                          className="inline-flex items-center justify-center text-[var(--accent-primary)] shrink-0"
+                        >
+                          <Radio className="w-3 h-3" />
+                        </span>
+                      )}
                       <span className="truncate">{t.title}</span>
                     </div>
 
@@ -715,6 +736,22 @@ export const TabBar: React.FC = () => {
             style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
             className="theme-dropdown fixed z-50 min-w-[170px] rounded-lg shadow-2xl py-1 text-xs select-none animate-in fade-in zoom-in-95"
           >
+            <button
+              onClick={() => {
+                toggleActiveThread(contextMenu.tab.id);
+                setContextMenu(null);
+              }}
+              className="w-full px-3 py-1.5 text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center justify-between text-[var(--text-primary)] cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Radio className={`w-3.5 h-3.5 ${contextMenu.tab.isActiveThread ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]'}`} />
+                <span>{contextMenu.tab.isActiveThread ? 'Active Thread (Enabled)' : 'Toggle as Active Thread'}</span>
+              </div>
+              {contextMenu.tab.isActiveThread && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              )}
+            </button>
+            <div className="my-1 border-t border-[var(--border-primary)]" />
             <button
               onClick={() => {
                 closeTab(contextMenu.tab.id);

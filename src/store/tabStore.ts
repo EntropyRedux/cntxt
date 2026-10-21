@@ -12,6 +12,10 @@ import { safePersist, safeRemove } from '../services/storageHelper';
 import { writeTabCache, readTabCache, clearTabCache } from '../adapters/tabSessionCache';
 import { editorStateCache } from '../services/editor/editorStateCache';
 import { validateTab } from '../contracts/boundarySchemas';
+import {
+  hasCntxtPipeBlock,
+  promoteToCntxtExtension,
+} from '../services/editor/cntxtBlockParser';
 
 let activeStorage: IStorageBridge | null = null;
 
@@ -35,6 +39,7 @@ interface TabState {
   saveCurrentTab: () => Promise<void>;
   saveTabAs: (tabId: string, newTitle: string, newPath?: string) => Promise<void>;
   duplicateTab: (tabId: string) => string;
+  toggleActiveThread: (tabId: string) => void;
   closeTabsToRight: (tabId: string) => void;
   openWelcomeTab: () => string;
   resetWelcomeTab: () => Promise<void>;
@@ -185,11 +190,15 @@ export const useTabStore = create<TabState>((set, get) => ({
 
   createTab: (title = 'Untitled.md', content = '', language: SupportedLanguage = 'markdown', filePath = null, pinnedTabId?: string, tabType: TabType = 'document') => {
     const id = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const isCntxtDoc = hasCntxtPipeBlock(content);
+    const resolvedTitle = isCntxtDoc ? promoteToCntxtExtension(title) : title;
+    const resolvedPath = isCntxtDoc && filePath ? promoteToCntxtExtension(filePath) : filePath;
+
     const newTab: Tab = {
       id,
-      title,
+      title: resolvedTitle,
       content,
-      filePath,
+      filePath: resolvedPath,
       folderPath: null,
       isDirty: false,
       language,
@@ -468,8 +477,12 @@ export const useTabStore = create<TabState>((set, get) => ({
     const { tabs } = get();
     const updated = tabs.map(tab => {
       if (tab.id === tabId) {
+        const isCntxtDoc = hasCntxtPipeBlock(content);
+        const shouldPromote = isCntxtDoc && (tab.title.endsWith('.md') || tab.title.endsWith('.markdown'));
         return {
           ...tab,
+          title: shouldPromote ? promoteToCntxtExtension(tab.title) : tab.title,
+          filePath: shouldPromote && tab.filePath ? promoteToCntxtExtension(tab.filePath) : tab.filePath,
           content,
           isDirty: true,
           lastModifiedTime: Date.now()
@@ -613,6 +626,45 @@ export const useTabStore = create<TabState>((set, get) => ({
     set({ tabs: updated });
     writeTabCache(updated, activeTabId);
     saveTabsMeta(updated, activeTabId);
+  },
+
+  toggleActiveThread: (tabId: string) => {
+    const { tabs, activeTabId } = get();
+    const target = tabs.find((t) => t.id === tabId);
+    if (!target) return;
+
+    const willBeActive = !target.isActiveThread;
+    const updated = tabs.map((t) => {
+      if (t.id === tabId) {
+        return {
+          ...t,
+          isActiveThread: willBeActive,
+          // When promoted to active thread, automatically promote extension to .cntxt
+          title: willBeActive ? promoteToCntxtExtension(t.title) : t.title,
+          filePath: willBeActive && t.filePath ? promoteToCntxtExtension(t.filePath) : t.filePath,
+        };
+      }
+      // At most one tab can be the active thread at a time
+      return willBeActive ? { ...t, isActiveThread: false } : t;
+    });
+
+    set({ tabs: updated });
+    writeTabCache(updated, activeTabId);
+    saveTabsMeta(updated, activeTabId);
+
+    if (willBeActive) {
+      useNotificationStore.getState().addNotification(
+        'Active Thread Enabled',
+        `"${promoteToCntxtExtension(target.title)}" is now the active thread. Agent deliverables will prepend to this tab.`,
+        'info'
+      );
+    } else {
+      useNotificationStore.getState().addNotification(
+        'Active Thread Disabled',
+        `"${target.title}" is no longer the active thread. Deliverables will create new tabs.`,
+        'info'
+      );
+    }
   },
 
   openTerminalTab: (title = 'Terminal', channelId?: string) => {

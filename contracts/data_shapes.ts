@@ -51,6 +51,7 @@ export interface Tab {
   selectionStartLine?: number | null;
   selectionEndLine?: number | null;
   isPinned?: boolean;
+  isActiveThread?: boolean;
   isTruncatedView?: boolean;
   rawFullContent?: string;
   chunkSession?: ChunkSessionMetadata;
@@ -176,6 +177,9 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   autosaveIntervalMs?: number;
   enableRestGateway?: boolean;
   restGatewayPort?: number;
+  deliverableSaveLocation?: 'workspace' | 'custom-folder';
+  deliverableWorkspaceSubfolder?: string;
+  deliverableCustomFolderPath?: string;
 
   autocompleteConfig: AutocompleteConfig;
   spellCheckConfig: SpellCheckConfig;
@@ -691,7 +695,7 @@ export interface PanelAppRecord {
 // 11. Host Command Bus & RPC Domain Shapes (FG-16)
 // ==========================================
 
-export type CntxtRpcDomain = 'editor' | 'tabs' | 'workspace' | 'templates' | 'actions' | 'notify' | 'terminal';
+export type CntxtRpcDomain = 'editor' | 'tabs' | 'workspace' | 'templates' | 'actions' | 'notify' | 'terminal' | 'blocks';
 
 export type CntxtRpcErrorCode =
   | 'NOT_FOUND'
@@ -976,4 +980,99 @@ export interface RestGatewayConfig {
   enabled: boolean;
   port: number;
   authToken: string;
+}
+
+
+// ==========================================
+// 16. CNTXT Block Parser, Rich Containers & Block Orchestration RPC (FG-22)
+// ==========================================
+
+export type CntxtLockValue = 'agent' | 'user';
+
+export interface CntxtBlockParams {
+  id?: string;
+  tags?: string[];
+  locked?: CntxtLockValue;
+  status?: string;
+  link?: string[];
+  source?: string;
+  ts?: string;
+  label?: string;
+  rendererParams?: Record<string, string>;
+}
+
+export interface CntxtParsedBlock {
+  type: string;
+  fence: string;
+  params: CntxtBlockParams;
+  content: string;
+  position: {
+    start: number;
+    end: number;
+    startLine: number;
+    endLine: number;
+  };
+  isCNTXT: boolean;
+  isRichContainer: boolean;
+}
+
+export interface CntxtRawSegment {
+  type: 'markdown';
+  content: string;
+  position: {
+    start: number;
+    end: number;
+  };
+}
+
+export type CntxtDocumentNode = CntxtParsedBlock | CntxtRawSegment;
+
+export interface CntxtRelationshipGraph {
+  byId: Record<string, CntxtParsedBlock>;
+  byTag: Record<string, CntxtParsedBlock[]>;
+  links: Record<string, string[]>;
+  linkedFrom: Record<string, string[]>;
+}
+
+export interface CntxtParsedDocument {
+  nodes: CntxtDocumentNode[];
+  blocks: CntxtParsedBlock[];
+  relationshipGraph: CntxtRelationshipGraph;
+  raw: string;
+  warnings: string[];
+}
+
+export interface BlocksListPayload {
+  tabId?: string;
+  tag?: string;
+  status?: string;
+  onlyCntxt?: boolean;
+}
+
+export interface BlocksGetPayload {
+  id: string;
+  tabId?: string;
+}
+
+export interface BlocksUpsertPayload {
+  id: string;
+  type?: string;
+  content: string;
+  params?: Partial<CntxtBlockParams>;
+  afterBlockId?: string;
+  tabId?: string;
+  actor?: 'agent' | 'user';
+}
+
+export interface BlocksUpdateParamsPayload {
+  id: string;
+  params: Partial<CntxtBlockParams>;
+  tabId?: string;
+  actor?: 'agent' | 'user';
+}
+
+export interface BlocksRemovePayload {
+  id: string;
+  tabId?: string;
+  actor?: 'agent' | 'user';
 }

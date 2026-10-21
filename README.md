@@ -2,16 +2,16 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.6.0) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Automated Cross-Platform Android Signed APK Build Pipeline, Adaptive Launcher Icon Branding (`#141417` background), Host Command Bus & RPC Bridge (`window.CNTXT` via `postMessage`), Sandboxed Mini Panel Apps co-processor engine with path traversal guards & dirty tab mediation, Floating Pop-out Panel Apps with independent window lifecycle & compact widget resizing (down to 220x160), Hardened CSP Security Architecture, Pure Presenter Host Architecture, App Builder resilient SDK with fallback persistence, Blueprint Prompt Archetypes (`build`, `brainstorm`, `adapt`) with 2-way editor tab sync & responsive small-size modes, 14-token universal theme sync, Compact Markdown Accessory Toolbar, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.7.0) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Native Model Context Protocol (MCP) Server for external AI agents (Antigravity, Claude, Cursor, Cline, Windsurf), CNTXT Block Parser Engine & Rich Containers with continuous accent rail and floating scrollbar controls, Active Thread `.cntxt` Orchestration with top-pinned user inbox citations (`id=user-inbox`), Large Document Virtualization (>5MB) with master disk splicing, Localhost REST API Gateway, Automated Cross-Platform Android Signed APK Build Pipeline, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.6.0)
+## Downloads (v0.7.0)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.6.0_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.6.0/CNTXT_0.6.0_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.6.0_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.6.0/CNTXT_0.6.0_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.6.0_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.6.0/CNTXT_0.6.0_portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.7.0_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.0/CNTXT_0.7.0_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.7.0_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.0/CNTXT_0.7.0_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.7.0_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.0/CNTXT_0.7.0_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
@@ -26,8 +26,22 @@
 
 ---
 
+## Key Capabilities in v0.7.0
 
-## Key Capabilities in v0.6.0
+### CNTXT Block Parser Engine & Rich Containers
+- **Governance Primitives**: Fully parsed pipe syntax (`~~~markdown | id=... tags=... locked=... status=... link=... source=... ts=... title=...`).
+- **Graph & Surgical AST Writers**: `CntxtRelationshipGraph` maps forward and reverse dependency back-links; surgical block writers (`updateBlockParams`, `updateBlockContent`, `insertBlock`, `removeBlock`, `upsertBlock`) update blocks in place while preserving document integrity and human `locked=user` guardrails.
+- **Continuous Left Margin Rail & Scrollbar Controls**: Unbroken 1px accent line spanning the entire container height with viewport-aligned floating action popup for block ID copying, status cycling, lock toggling, and fast block folding.
+
+### Native Model Context Protocol (MCP) Server & Agent Automation
+- **Zero-Dependency Stdio Server**: Bridging external AI agents (`Antigravity`, `Claude Code/Desktop`, `Cursor`, `Cline`, `Windsurf`) directly into CNTXT's REST Gateway and Host Command Bus.
+- **Mandatory Container Invariant**: Enforces that all agent deliverables are encapsulated in CNTXT rich containers with full inner Markdown, Mermaid diagrams, and table rendering.
+- **CLI Scripting**: Standalone `send-to-cntxt.ps1` PowerShell bridge with automated port discovery and token authentication.
+
+### Active Thread `.cntxt` Orchestration & Pinned User Inbox
+- **Active Thread Tab Routing**: Right-click any tab -> "Toggle as Active Thread" to route all incoming agent deliverables directly to the top of that tab.
+- **Inline Citation Reply Input (`id=user-inbox`)**: 1-click `[Respond]` button captures highlighted text and line citations (`#blockId · L<start>-L<end>`), automatically writing and appending user feedback into the dedicated user-owned block pinned at the very top of the document.
+- **Automatic Extension Promotion**: Documents containing CNTXT pipe blocks or toggled as Active Thread automatically promote `.md` -> `.cntxt`.
 
 ### Large Document Virtualization (>5MB)
 - **TOC-Chunked Virtual Editing**: Open multi-megabyte markdown books, transcripts, and logs without DOM freezes or memory spikes.

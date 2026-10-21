@@ -27,6 +27,52 @@ fn get_pending_map() -> &'static RpcMap {
     MAP.get_or_init(|| Arc::new(RwLock::new(HashMap::new())))
 }
 
+const GATEWAY_KEYRING_SERVICE: &str = "CNTXT";
+const GATEWAY_KEYRING_KEY: &str = "rest_gateway_token";
+
+fn load_persisted_gateway_token() -> Option<String> {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        if let Ok(entry) = keyring::Entry::new(GATEWAY_KEYRING_SERVICE, GATEWAY_KEYRING_KEY) {
+            if let Ok(token) = entry.get_password() {
+                if token.starts_with("cntxt_sec_") && token.len() == 42 {
+                    return Some(token);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn persist_gateway_token(token: &str) {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        if let Ok(entry) = keyring::Entry::new(GATEWAY_KEYRING_SERVICE, GATEWAY_KEYRING_KEY) {
+            let _ = entry.set_password(token);
+        }
+    }
+    sync_gateway_discovery_file(GATEWAY_PORT.load(Ordering::SeqCst), token);
+}
+
+fn sync_gateway_discovery_file(port: u16, token: &str) {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let effective_port = if port > 0 { port } else { 9876 };
+        let payload = json!({
+            "url": format!("http://127.0.0.1:{}", effective_port),
+            "token": token
+        });
+        let discovery_path = std::path::Path::new("C:/Projects/LocalActive/.localactive/cntxt_gateway.json");
+        if let Some(parent) = discovery_path.parent() {
+            if parent.exists() {
+                if let Ok(pretty) = serde_json::to_string_pretty(&payload) {
+                    let _ = std::fs::write(discovery_path, pretty);
+                }
+            }
+        }
+    }
+}
+
 pub fn current_gateway_token() -> Option<String> {
     GATEWAY_TOKEN.read().ok().and_then(|lock| lock.clone())
 }
@@ -37,11 +83,15 @@ pub fn init_gateway_token_if_empty() -> String {
             return t.clone();
         }
     }
-    let new_token = format!("cntxt_sec_{}", Uuid::new_v4().to_string().replace('-', ""));
+    let token = load_persisted_gateway_token().unwrap_or_else(|| {
+        let generated = format!("cntxt_sec_{}", Uuid::new_v4().to_string().replace('-', ""));
+        persist_gateway_token(&generated);
+        generated
+    });
     if let Ok(mut write_lock) = GATEWAY_TOKEN.write() {
-        *write_lock = Some(new_token.clone());
+        *write_lock = Some(token.clone());
     }
-    new_token
+    token
 }
 
 pub fn is_valid_gateway_token(provided: Option<&str>) -> bool {
@@ -143,6 +193,9 @@ pub async fn start_rest_gateway(
 
     GATEWAY_PORT.store(bound_port, Ordering::SeqCst);
     GATEWAY_RUNNING.store(true, Ordering::SeqCst);
+    if let Some(tok) = current_gateway_token() {
+        sync_gateway_discovery_file(bound_port, &tok);
+    }
 
     let (shutdown_tx, mut shutdown_rx) = tokio::sync::broadcast::channel::<()>(1);
     if let Ok(mut lock) = SHUTDOWN_TX.write() {
@@ -235,6 +288,7 @@ pub async fn regenerate_gateway_token(
     }
 
     let new_token = format!("cntxt_sec_{}", Uuid::new_v4().to_string().replace('-', ""));
+    persist_gateway_token(&new_token);
     if let Ok(mut write_lock) = GATEWAY_TOKEN.write() {
         *write_lock = Some(new_token.clone());
     }

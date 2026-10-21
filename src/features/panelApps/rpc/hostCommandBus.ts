@@ -28,8 +28,22 @@ import {
   validateEditorSetSelections,
   validateEditorFold,
   validateEditorReplaceRange,
-  validateEditorSetDiagnostics
+  validateEditorSetDiagnostics,
+  validateBlocksList,
+  validateBlocksGet,
+  validateBlocksUpsert,
+  validateBlocksUpdateParams,
+  validateBlocksRemove
 } from '../../../contracts/boundarySchemas';
+import {
+  parseCntxtDocument,
+  upsertBlock,
+  updateBlockParams,
+  removeBlock,
+  prependDeliverableToThread,
+  promoteToCntxtExtension,
+  hasCntxtPipeBlock,
+} from '../../../services/editor/cntxtBlockParser';
 import { useTabStore } from '../../../store/tabStore';
 import { useTerminalStore } from '../../../store/terminalStore';
 import { useActionStore } from '../../../store/actionStore';
@@ -117,6 +131,8 @@ export class HostCommandBus {
         return this.handleNotifyDomain(action, payload);
       case 'terminal':
         return this.handleTerminalDomain(action, payload);
+      case 'blocks':
+        return this.handleBlocksDomain(action, payload);
       default:
         throw { code: 'NOT_FOUND', message: `Unknown domain: ${domain}` };
     }
@@ -322,12 +338,45 @@ export class HostCommandBus {
           throw { code: 'VALIDATION_ERROR', message: validated.error.message };
         }
         const { title, content, language, filePath } = validated.data;
+
+        // Check if an Active Thread tab exists to route deliverables into
+        const activeThreadTab = tabStore.tabs.find((t) => t.isActiveThread);
+        const incomingIsDeliverable =
+          typeof content === 'string' &&
+          (hasCntxtPipeBlock(content) || (title && /\.cntxt$/i.test(title)));
+
+        if (activeThreadTab && incomingIsDeliverable && typeof content === 'string') {
+          const prepended = prependDeliverableToThread(activeThreadTab.content, content);
+          tabStore.updateTabContent(activeThreadTab.id, prepended, true);
+          editorRegistry.setContent(activeThreadTab.id, prepended);
+          tabStore.setActiveTabId(activeThreadTab.id);
+          if (activeThreadTab.filePath) {
+            try {
+              await this.bridge.fs.saveFile(activeThreadTab.filePath, prepended);
+            } catch {
+              // Non-fatal if virtual or mock
+            }
+          }
+          useNotificationStore
+            .getState()
+            .addNotification(
+              'Deliverable Prepended',
+              `Prepended to active thread "${activeThreadTab.title}"`,
+              'info'
+            );
+          return { tabId: activeThreadTab.id, prependedToActiveThread: true };
+        }
+
         if (filePath) {
           const normPath = normalizePath(filePath).toLowerCase();
           const existing = tabStore.tabs.find((t) => t.filePath && normalizePath(t.filePath).toLowerCase() === normPath);
           if (existing) {
+            if (typeof content === 'string' && content.length > 0) {
+              tabStore.updateTabContent(existing.id, content, false);
+              editorRegistry.setContent(existing.id, content);
+            }
             tabStore.setActiveTabId(existing.id);
-            return { tabId: existing.id, focused: true };
+            return { tabId: existing.id, focused: true, updated: true };
           }
         }
         const isSupportedLang = (l?: string): l is SupportedLanguage =>
@@ -335,11 +384,16 @@ export class HostCommandBus {
             l as SupportedLanguage
           );
         const targetLang: SupportedLanguage = isSupportedLang(language) ? language : 'markdown';
+
+        const isCntxt = incomingIsDeliverable || hasCntxtPipeBlock(content || '');
+        const finalTitle = isCntxt ? promoteToCntxtExtension(title || 'Deliverable.cntxt') : title;
+        const finalPath = isCntxt && filePath ? promoteToCntxtExtension(filePath) : (filePath ?? null);
+
         const newTabId = tabStore.createTab(
-          title,
+          finalTitle,
           content,
           targetLang,
-          filePath ?? null
+          finalPath
         );
         return { tabId: newTabId };
       }
@@ -736,6 +790,203 @@ export class HostCommandBus {
 
       default:
         throw { code: 'NOT_FOUND', message: `Unknown terminal action: ${action}` };
+    }
+  }
+
+  // ==========================================
+  // Blocks Domain (FG-22 — CNTXT Pipe Block Orchestration)
+  // ==========================================
+
+  private async handleBlocksDomain(action: string, payload: unknown): Promise<unknown> {
+    const tabStore = useTabStore.getState();
+
+    const resolveTargetTab = (tabId?: string) => {
+      const targetId = tabId || tabStore.activeTabId;
+      if (!targetId) {
+        throw { code: 'NOT_FOUND', message: 'No active editor tab available' };
+      }
+      const tab = tabStore.tabs.find((t) => t.id === targetId);
+      if (!tab) {
+        throw { code: 'NOT_FOUND', message: `Tab not found: ${targetId}` };
+      }
+      return tab;
+    };
+
+    switch (action) {
+      case 'list': {
+        const validation = validateBlocksList(payload ?? {});
+        if (!validation.success) {
+          throw { code: 'VALIDATION_ERROR', message: validation.error.message };
+        }
+        const { tabId, tag, status, onlyCntxt = true } = validation.data;
+        const tab = resolveTargetTab(tabId);
+        const parsed = parseCntxtDocument(tab.content);
+
+        let filtered = parsed.blocks;
+        if (onlyCntxt) {
+          filtered = filtered.filter((b) => b.isCNTXT);
+        }
+        if (tag) {
+          filtered = filtered.filter((b) => b.params.tags?.includes(tag));
+        }
+        if (status) {
+          filtered = filtered.filter(
+            (b) => (b.params.status || '').toLowerCase() === status.toLowerCase()
+          );
+        }
+
+        return {
+          tabId: tab.id,
+          blocks: filtered,
+          warnings: parsed.warnings,
+        };
+      }
+
+      case 'get': {
+        const validation = validateBlocksGet(payload);
+        if (!validation.success) {
+          throw { code: 'VALIDATION_ERROR', message: validation.error.message };
+        }
+        const { id, tabId } = validation.data;
+        const tab = resolveTargetTab(tabId);
+        const parsed = parseCntxtDocument(tab.content);
+        const block = parsed.relationshipGraph.byId[id];
+        if (!block) {
+          throw { code: 'NOT_FOUND', message: `CNTXT block with id="${id}" not found` };
+        }
+        return {
+          tabId: tab.id,
+          block,
+          linksTo: parsed.relationshipGraph.links[id] || [],
+          linkedFrom: parsed.relationshipGraph.linkedFrom[id] || [],
+        };
+      }
+
+      case 'upsert': {
+        const validation = validateBlocksUpsert(payload);
+        if (!validation.success) {
+          throw { code: 'VALIDATION_ERROR', message: validation.error.message };
+        }
+        const { id, type, content, params, afterBlockId, tabId, actor = 'agent' } = validation.data;
+        const tab = resolveTargetTab(tabId);
+        const parsed = parseCntxtDocument(tab.content);
+        const existing = parsed.relationshipGraph.byId[id];
+
+        if (existing && existing.params.locked === 'user' && actor !== 'user') {
+          throw {
+            code: 'PERMISSION_DENIED',
+            message: `Block "${id}" is locked by the user (locked=user) and cannot be overwritten by an agent.`,
+          };
+        }
+
+        const result = upsertBlock(
+          parsed,
+          {
+            id,
+            type: type || existing?.type || 'markdown',
+            params: {
+              locked: existing?.params.locked || 'agent',
+              ...(params || {}),
+              id,
+            },
+            content,
+          },
+          afterBlockId
+        );
+
+        tabStore.updateTabContent(tab.id, result.raw, true);
+        editorRegistry.setContent(tab.id, result.raw);
+        if (tab.filePath) {
+          try {
+            await this.bridge.fs.saveFile(tab.filePath, result.raw);
+          } catch {
+            // Non-fatal if disk write fails in virtual/mock environment
+          }
+        }
+
+        return {
+          tabId: tab.id,
+          blockId: id,
+          action: result.action,
+        };
+      }
+
+      case 'updateParams': {
+        const validation = validateBlocksUpdateParams(payload);
+        if (!validation.success) {
+          throw { code: 'VALIDATION_ERROR', message: validation.error.message };
+        }
+        const { id, params, tabId, actor = 'agent' } = validation.data;
+        const tab = resolveTargetTab(tabId);
+        const parsed = parseCntxtDocument(tab.content);
+        const existing = parsed.relationshipGraph.byId[id];
+        if (!existing) {
+          throw { code: 'NOT_FOUND', message: `CNTXT block with id="${id}" not found` };
+        }
+        if (existing.params.locked === 'user' && actor !== 'user') {
+          throw {
+            code: 'PERMISSION_DENIED',
+            message: `Block "${id}" is locked by the user (locked=user) and cannot be modified by an agent.`,
+          };
+        }
+
+        const updatedRaw = updateBlockParams(parsed, id, params);
+        tabStore.updateTabContent(tab.id, updatedRaw, true);
+        editorRegistry.setContent(tab.id, updatedRaw);
+        if (tab.filePath) {
+          try {
+            await this.bridge.fs.saveFile(tab.filePath, updatedRaw);
+          } catch {
+            // Non-fatal
+          }
+        }
+
+        return {
+          tabId: tab.id,
+          blockId: id,
+          updated: true,
+        };
+      }
+
+      case 'remove': {
+        const validation = validateBlocksRemove(payload);
+        if (!validation.success) {
+          throw { code: 'VALIDATION_ERROR', message: validation.error.message };
+        }
+        const { id, tabId, actor = 'agent' } = validation.data;
+        const tab = resolveTargetTab(tabId);
+        const parsed = parseCntxtDocument(tab.content);
+        const existing = parsed.relationshipGraph.byId[id];
+        if (!existing) {
+          throw { code: 'NOT_FOUND', message: `CNTXT block with id="${id}" not found` };
+        }
+        if (existing.params.locked === 'user' && actor !== 'user') {
+          throw {
+            code: 'PERMISSION_DENIED',
+            message: `Block "${id}" is locked by the user (locked=user) and cannot be deleted by an agent.`,
+          };
+        }
+
+        const updatedRaw = removeBlock(parsed, id);
+        tabStore.updateTabContent(tab.id, updatedRaw, true);
+        editorRegistry.setContent(tab.id, updatedRaw);
+        if (tab.filePath) {
+          try {
+            await this.bridge.fs.saveFile(tab.filePath, updatedRaw);
+          } catch {
+            // Non-fatal
+          }
+        }
+
+        return {
+          tabId: tab.id,
+          blockId: id,
+          removed: true,
+        };
+      }
+
+      default:
+        throw { code: 'NOT_FOUND', message: `Unknown blocks action: ${action}` };
     }
   }
 }

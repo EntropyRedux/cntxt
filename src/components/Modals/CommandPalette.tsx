@@ -26,7 +26,7 @@ import { AppIcon } from '../Common/AppIcon';
 import { useTabStore } from '../../store/tabStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
-import { useSettingsStore, isOmniTerminalFeatureEnabled } from '../../store/settingsStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useFormattingStore } from '../../store/formattingStore';
 import { useRibbonStore } from '../../store/ribbonStore';
@@ -211,31 +211,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
           setActiveSidebarTab('settings');
         }
       },
-      ...(isOmniTerminalFeatureEnabled(settings)
-        ? ([
-            {
-              id: 'cmd-open-omni-terminal',
-              title: 'Open Omni Terminal Panel',
-              subtitle: 'Multi-agent mission control, dual .cntxt logging, and targeted orchestration',
-              category: 'Commands',
-              icon: 'Bot',
-              shortcut: 'Ctrl+Shift+T',
-              action: () => {
-                setActiveSidebarTab('omni-terminal');
-              }
-            },
-            {
-              id: 'cmd-toggle-floating-omni',
-              title: settings.isOmniFloating ? 'Dock Omni Terminal to Sidebar' : 'Pop Out Omni Floating Chat',
-              subtitle: 'Detach or dock the Omni Terminal floating multi-agent chat window',
-              category: 'Commands',
-              icon: 'ExternalLink',
-              action: () => {
-                updateSettings({ isOmniFloating: !settings.isOmniFloating });
-              }
-            }
-          ] as PaletteItem[])
-        : []),
       {
         id: 'cmd-customize-formatting',
         title: 'Customize Markdown Formatting Buttons',

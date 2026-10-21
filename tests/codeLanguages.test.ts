@@ -1,5 +1,8 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { Text } from '@codemirror/state';
 import { resolveCodeLanguage } from '../src/services/codeLanguages';
+import { getLanguageMeta } from '../src/extensions/liveMarkdown/languageMeta';
+import { findCntxtContainers, findCodeBlocks } from '../src/extensions/liveMarkdown/scanners';
 
 describe('codeLanguages service (GAP-03)', () => {
   describe('Synchronous Parsers', () => {
@@ -72,6 +75,44 @@ describe('codeLanguages service (GAP-03)', () => {
     it('returns null for completely unrecognized language identifiers', () => {
       expect(resolveCodeLanguage('nonexistent_lang_xyz')).toBeNull();
       expect(resolveCodeLanguage('foo_bar_lang')).toBeNull();
+    });
+  });
+
+  describe('AI Deliverable Code Block Encapsulation & Nested Fences (FG-21)', () => {
+    it('resolves getLanguageMeta for deliverable|@agent headers cleanly', () => {
+      const meta = getLanguageMeta('deliverable|@agy · FG-21 Plan (04:15)');
+      expect(meta.name).toBe('AI Deliverable');
+      expect(meta.color).toBe('#10B981');
+
+      const mdMeta = getLanguageMeta('markdown|@auditor · Pass 1 Report');
+      expect(mdMeta.name).toBe('Markdown');
+    });
+
+    it('preserves outer deliverable code block when inner 3-backtick blocks exist', () => {
+      const docText = [
+        '~~~markdown|@agy · FG-21 Plan',
+        '# Plan Header',
+        '```powershell',
+        'Write-Output "Hello"',
+        '```',
+        'Final line of deliverable',
+        '~~~',
+      ].join('\n');
+
+      const doc = Text.of(docText.split('\n'));
+      const containers = findCntxtContainers(doc);
+      const blocks = findCodeBlocks(doc, containers);
+
+      expect(containers.get(1)?.role).toBe('start');
+      expect(containers.get(1)?.container.startLine).toBe(1);
+      expect(containers.get(1)?.container.endLine).toBe(7);
+      expect(containers.get(1)?.container.isClosed).toBe(true);
+      expect(containers.get(7)?.role).toBe('end');
+
+      // And inner 3-backtick code block is preserved as an inner code block!
+      expect(blocks.get(3)?.role).toBe('start');
+      expect(blocks.get(3)?.block.language).toBe('powershell');
+      expect(blocks.get(5)?.role).toBe('end');
     });
   });
 });

@@ -115,6 +115,21 @@ export const ShellFrame: React.FC = () => {
     bridge.theme.applyTheme(currentTheme);
   }, [settings.theme, bridge.theme]);
 
+  // Auto-start Localhost REST API Gateway on boot when enabled in settings
+  useEffect(() => {
+    if (!bridge.gateway?.isAvailable?.()) return;
+    const isEnabled = Boolean(settings.enableExperimentalSettings && settings.enableRestGateway);
+    if (isEnabled) {
+      bridge.gateway.start(settings.restGatewayPort ?? 9876).catch((err) => {
+        console.warn('[ShellFrame] Failed to auto-start REST gateway:', err);
+      });
+    } else {
+      bridge.gateway.stop().catch(() => {
+        // Ignore stop errors when already inactive
+      });
+    }
+  }, [bridge.gateway, settings.enableExperimentalSettings, settings.enableRestGateway, settings.restGatewayPort]);
+
   // Surface user-visible notification on live markdown decoration rendering errors
   useEffect(() => {
     const handleMarkdownError = (e: Event) => {

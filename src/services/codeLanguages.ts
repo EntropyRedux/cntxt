@@ -1,5 +1,6 @@
 import { Language, LanguageDescription } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
+import { markdown } from '@codemirror/lang-markdown';
 import { html } from '@codemirror/lang-html';
 import { python } from '@codemirror/lang-python';
 import { sql } from '@codemirror/lang-sql';
@@ -7,8 +8,16 @@ import { javascript } from '@codemirror/lang-javascript';
 import { css } from '@codemirror/lang-css';
 import { json } from '@codemirror/lang-json';
 
+const nestedMarkdownLang: Language = markdown({
+  codeLanguages: (info: string) => resolveCodeLanguage(info),
+}).language;
+
 // Pre-instantiated synchronous parsers for instant, zero-latency highlighting
 const syncLanguages: Record<string, Language> = {
+  markdown: nestedMarkdownLang,
+  md: nestedMarkdownLang,
+  cntxt: nestedMarkdownLang,
+  deliverable: nestedMarkdownLang,
   html: html().language,
   htm: html().language,
   xhtml: html().language,
@@ -59,7 +68,11 @@ const aliasMap: Record<string, string> = {
  */
 export function resolveCodeLanguage(info: string): Language | LanguageDescription | null {
   if (!info) return null;
-  const clean = info.toLowerCase().trim().split(/\s+/)[0];
+  const trimmed = info.toLowerCase().trim();
+  if (trimmed.startsWith('|')) {
+    return nestedMarkdownLang;
+  }
+  const clean = trimmed.split('|')[0].trim().split(/\s+/)[0];
   if (!clean) return null;
 
   // 1. Instant synchronous match

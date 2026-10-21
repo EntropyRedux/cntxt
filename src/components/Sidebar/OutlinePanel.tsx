@@ -19,6 +19,7 @@ import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useRuntimeBridge, querySelector } from '../../adapters';
+import { parseBlockInfoString } from '../../services/editor/cntxtBlockParser';
 
 interface OutlineItem {
   id: string;
@@ -75,21 +76,49 @@ export const OutlinePanel: React.FC = () => {
       const lineNum = index + 1;
       const trimmed = line.trim();
 
-      // Check for code blocks ```
-      if (trimmed.startsWith('```')) {
+      // Check for code blocks ``` or ~~~
+      const fenceMatch = trimmed.match(/^(```+|~~~+)(.*)$/);
+      if (fenceMatch) {
+        const fence = fenceMatch[1];
+        const info = fenceMatch[2].trim();
         if (!inCodeBlock) {
+          const parsed = parseBlockInfoString(info);
+          if (parsed.isRichContainer) {
+            if (info) {
+              const labelParts = [
+                parsed.params.id ? `#${parsed.params.id}` : '',
+                parsed.params.label || parsed.type || 'CNTXT Block',
+                parsed.params.status ? `[${parsed.params.status}]` : '',
+              ].filter(Boolean).join(' · ');
+              items.push({
+                id: `code-${lineNum}`,
+                type: 'code',
+                text: `CNTXT (${labelParts})`,
+                lineNumber: lineNum,
+                language: info,
+              });
+            }
+            return;
+          }
           inCodeBlock = true;
-          codeBlockLang = trimmed.slice(3).trim() || 'plaintext';
+          codeBlockLang = `${fence}:::${info || 'plaintext'}`;
           codeBlockStartLine = lineNum;
         } else {
-          items.push({
-            id: `code-${codeBlockStartLine}`,
-            type: 'code',
-            text: `Code block (${codeBlockLang})`,
-            lineNumber: codeBlockStartLine,
-            language: codeBlockLang
-          });
-          inCodeBlock = false;
+          const [openFence, openLang] = codeBlockLang.split(':::');
+          if (fence[0] === openFence[0] && fence.length >= openFence.length && info === '') {
+            const parsed = parseBlockInfoString(openLang);
+            const displayLang = parsed.isCNTXT
+              ? `${parsed.type || 'code'} | ${parsed.params.id ? `#${parsed.params.id}` : parsed.params.label || ''}`.trim()
+              : openLang;
+            items.push({
+              id: `code-${codeBlockStartLine}`,
+              type: 'code',
+              text: `Code block (${displayLang})`,
+              lineNumber: codeBlockStartLine,
+              language: openLang
+            });
+            inCodeBlock = false;
+          }
         }
         return;
       }

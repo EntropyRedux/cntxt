@@ -43,7 +43,7 @@ import {
   EditorReplaceRangePayload,
   EditorDiagnosticItem,
   EditorSetDiagnosticsPayload,
-  RestGatewayConfig
+  RestGatewayConfig, CntxtBlockParams, BlocksListPayload, BlocksGetPayload, BlocksUpsertPayload, BlocksUpdateParamsPayload, BlocksRemovePayload
 } from '../../contracts/data_shapes';
 
 export const SupportedLanguageSchema: z.ZodType<SupportedLanguage> = z.enum([
@@ -78,7 +78,8 @@ export const TabSchema: z.ZodType<Tab> = z.object({
   selectionTo: z.number().optional(),
   selectionStartLine: z.number().nullable().optional(),
   selectionEndLine: z.number().nullable().optional(),
-  isPinned: z.boolean().optional()
+  isPinned: z.boolean().optional(),
+  isActiveThread: z.boolean().optional()
 }) as unknown as z.ZodType<Tab>;
 
 export const TabCacheEntrySchema = z.object({
@@ -350,7 +351,7 @@ export const CntxtRpcDomainSchema = z.enum([
   'templates',
   'actions',
   'notify',
-  'terminal',
+  'terminal', 'blocks',
 ]);
 
 export const CntxtRpcRequestSchema: z.ZodType<CntxtRpcRequest> = z.object({
@@ -687,4 +688,76 @@ export function validateEditorSetDiagnostics(data: unknown) {
 
 export function validateRestGatewayConfig(data: unknown) {
   return RestGatewayConfigSchema.safeParse(data);
+}
+
+
+// ==========================================
+// 16. CNTXT Block Parser & Block Orchestration RPC Schemas (FG-22)
+// ==========================================
+
+export const CntxtBlockParamsPartialSchema: z.ZodType<Partial<CntxtBlockParams>> = z.object({
+  id: z.string().trim().min(1).optional(),
+  tags: z.array(z.string()).optional(),
+  locked: z.enum(['agent', 'user']).optional(),
+  status: z.string().optional(),
+  link: z.array(z.string()).optional(),
+  source: z.string().optional(),
+  ts: z.string().optional(),
+  label: z.string().optional(),
+  rendererParams: z.record(z.string(), z.string()).optional(),
+});
+
+export const BlocksListPayloadSchema: z.ZodType<BlocksListPayload> = z.object({
+  tabId: z.string().optional(),
+  tag: z.string().optional(),
+  status: z.string().optional(),
+  onlyCntxt: z.boolean().optional(),
+});
+
+export const BlocksGetPayloadSchema: z.ZodType<BlocksGetPayload> = z.object({
+  id: z.string().trim().min(1),
+  tabId: z.string().optional(),
+});
+
+export const BlocksUpsertPayloadSchema: z.ZodType<BlocksUpsertPayload> = z.object({
+  id: z.string().trim().min(1),
+  type: z.string().optional(),
+  content: z.string(),
+  params: CntxtBlockParamsPartialSchema.optional(),
+  afterBlockId: z.string().optional(),
+  tabId: z.string().optional(),
+  actor: z.enum(['agent', 'user']).optional(),
+});
+
+export const BlocksUpdateParamsPayloadSchema: z.ZodType<BlocksUpdateParamsPayload> = z.object({
+  id: z.string().trim().min(1),
+  params: CntxtBlockParamsPartialSchema,
+  tabId: z.string().optional(),
+  actor: z.enum(['agent', 'user']).optional(),
+});
+
+export const BlocksRemovePayloadSchema: z.ZodType<BlocksRemovePayload> = z.object({
+  id: z.string().trim().min(1),
+  tabId: z.string().optional(),
+  actor: z.enum(['agent', 'user']).optional(),
+});
+
+export function validateBlocksList(data: unknown) {
+  return BlocksListPayloadSchema.safeParse(data);
+}
+
+export function validateBlocksGet(data: unknown) {
+  return BlocksGetPayloadSchema.safeParse(data);
+}
+
+export function validateBlocksUpsert(data: unknown) {
+  return BlocksUpsertPayloadSchema.safeParse(data);
+}
+
+export function validateBlocksUpdateParams(data: unknown) {
+  return BlocksUpdateParamsPayloadSchema.safeParse(data);
+}
+
+export function validateBlocksRemove(data: unknown) {
+  return BlocksRemovePayloadSchema.safeParse(data);
 }

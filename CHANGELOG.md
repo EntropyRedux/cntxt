@@ -5,6 +5,50 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-10-21
+
+### OmniTerminal Decommissioning & Zero-Dependency Native MCP Server (FG-21)
+- **OmniTerminal Decommissioning**:
+  - Removed deprecated inline terminal chat components (`OmniTerminalView`, `ChatInputBar`, `AgentRosterBar`, `OmniFloatingChat`, `ChatMessageBubble`, `OmniMarkdownViewer`, `omniDocumentSync.ts`, `omniPromptDetector.ts`, `omniRoleGate.ts`, `omniTerminalStore.ts`).
+  - Purged OmniTerminal UI entry points from ActivityBar, CommandPalette, and SettingsPanel while preserving foundational PTY terminal emulator tabs (`TerminalView.tsx`, `terminalStore.ts`).
+- **Zero-Dependency Native MCP Server (`scripts/mcp/cntxt-mcp-server.mjs`)**:
+  - Implemented standalone Node.js Model Context Protocol (MCP) stdio server bridging external AI agents (Antigravity, Claude Code/Desktop, Cursor, Cline, Windsurf) to CNTXT's localhost REST API Gateway and Host Command Bus.
+  - Exposes 8 native tools: `cntxt_open_deliverable`, `cntxt_append_deliverable`, `cntxt_list_blocks`, `cntxt_get_block`, `cntxt_upsert_block`, `cntxt_update_block_params`, `cntxt_get_active_context`, `cntxt_list_tabs`, `cntxt_focus_tab`, `cntxt_set_diagnostics`, and `cntxt_rpc`.
+  - Enforced Mandatory AI Deliverable CNTXT Rich Container Invariant: all agent deliverables are automatically encapsulated inside CNTXT rich containers (`~~~markdown | id=<slug> tags=deliverable locked=agent status=ready source=@agent title="Title"`).
+- **PowerShell Agent Deliverable Bridge (`send-to-cntxt.ps1`)**:
+  - Published zero-dependency PowerShell script for autonomous CLI and agent pipelines with auto-token discovery, candidate port fallback (9876..9881), and rich container packaging.
+
+### CNTXT Block Parser Engine, Rich Container Scanner & Surgical Block RPC (FG-22)
+- **CNTXT Block Parser Engine (`cntxtBlockParser.ts`)**:
+  - Built full CNTXT block grammar parser supporting pipe syntax (`<type> | <key>=<value>...`).
+  - Implemented canonical governance primitives: `id`, `tags`, `locked` (`user` | `agent`), `status` (`draft` | `review` | `ready` | `approved` | `done`), `link`, `source`, `ts`, and `title`/`label`.
+  - Built `CntxtRelationshipGraph` computing forward `links`, reverse `linkedFrom` dependency back-links, and O(1) indices (`byId`, `byType`, `byTag`).
+  - Implemented 5 surgical block writers: `updateBlockParams`, `updateBlockContent`, `insertBlock`, `removeBlock`, and `upsertBlock` with non-destructive round-trip AST serialization.
+- **Two-Tier Rich Container Scanner (`scanners.ts`, `liveMarkdown.ts`)**:
+  - Separated top-level CNTXT containers (`~~~markdown | ...`) from inner fenced code blocks, tables, and Mermaid widgets, preventing inner blocks from prematurely terminating outer deliverable containers.
+- **Continuous Accent Rail & Scrollbar Controls (`cntxtBlockOverlay.ts`, `codeBlockWidget.ts`)**:
+  - Replaced disjoint code block frames with an unbroken continuous left margin accent rail (`.cm-cntxt-left-rail`) spanning the entire height of the deliverable container.
+  - Implemented viewport-aware scrollbar-aligned floating action popup bar providing block ID copy, status cycler, user/agent lock toggler, content copy, clear content, and block collapse controls.
+  - Enforced 100% pure Lucide SVG icon paths across all code block headers, controls, and floating popups (zero emoji fallbacks).
+- **Blocks RPC Domain (`hostCommandBus.ts`, `boundarySchemas.ts`)**:
+  - Added `blocks.list`, `blocks.get`, `blocks.upsert`, `blocks.updateParams`, and `blocks.remove` with strict `locked=user` human permission guardrails.
+
+### Active Thread `.cntxt` Orchestration, Inline Citation Reply Input & Visual Refinements (FG-23)
+- **Visual Refinements (`index.css`)**:
+  - Reduced continuous left accent rail thickness by 2px (from 3px down to 1px) and muted the line color to `color-mix(in srgb, var(--accent-primary, #6366F1) 42%, transparent)` with 1px tick marks.
+- **Inline Citation Reply Popover (`id=user-inbox`) (`cntxtBlockOverlay.ts`, `codeBlockWidget.ts`, `cntxtBlockParser.ts`)**:
+  - Added `[Respond]` button (Lucide `MessageSquarePlus`) on block headers and scrollbar floating popup.
+  - Floating reply popover auto-captures highlighted text selection or cursor line range (`#<blockId> · L<start>-L<end>`) and quote snippet preview.
+  - Submitting writes timestamped (`ts=...`), cited (`link=<blockId>#L<start>-L<end>`) comments directly into the dedicated user-owned block (`id=user-inbox source=@USER locked=user status=open`) pinned at the **very top of the document** via `appendUserInboxEntry`.
+- **Active Thread Routing & Extension Promotion (`tabStore.ts`, `TabBar.tsx`, `hostCommandBus.ts`, `SettingsPanel.tsx`)**:
+  - Added Tab context menu option "Toggle as Active Thread" with Lucide `Radio` icon and pulsing visual badge on the tab bar.
+  - When an active thread tab is enabled, incoming agent deliverables (via MCP, REST Gateway, or RPC `tabs.create`) automatically prepend immediately below `id=user-inbox` via `prependDeliverableToThread`.
+  - Default fallback when no tab is active thread creates a new `.cntxt` file in the configured deliverable directory (workspace `.cntxt/deliverables` or custom folder in Settings -> Storage).
+  - Documents containing CNTXT pipe blocks or toggled as Active Thread automatically promote `.md` -> `.cntxt`.
+- **Testing & Verification**:
+  - Added 13 unit tests in `tests/cntxtBlockParserAndRichContainers.test.ts` covering parsing, relationship graphs, rich containers, surgical writers, permission guards, user inbox citation appending, deliverable prepending, and active thread routing via HostCommandBus.
+  - 728/728 Vitest unit tests passing across 61 test suites.
+
 ## [0.6.0] — 2026-10-20
 
 ### Large Document Virtualization & Headless Virtual Buffer Coordinator (FG-19)

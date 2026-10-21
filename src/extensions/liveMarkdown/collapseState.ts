@@ -3,6 +3,7 @@ import { StateEffect, StateField } from '@codemirror/state';
 export const toggleCodeBlockCollapseEffect = StateEffect.define<number>();
 export const setCodeBlockCollapseEffect = StateEffect.define<{ line: number; collapsed: boolean }>();
 export const clearAllCodeBlockCollapseEffect = StateEffect.define<void>();
+export const openCntxtReplyInputEffect = StateEffect.define<number>();
 
 export const codeBlockCollapseField = StateField.define<ReadonlySet<number>>({
   create() {
