@@ -5,6 +5,19 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] — 2026-10-28
+
+### Editor CodeBlock Header Rendering & DOM Update Stability
+- **CodeBlock Header DOM Update Fix (`codeBlockWidget.ts`)**:
+  - Updated `updateDOM()` in `CodeBlockHeaderWidget` to return `false`. Prevents CodeMirror 6 from skipping `toDOM()` re-rendering during widget recycling and line position updates, eliminating blank/unpopulated header states.
+  - Preserved `eq()` equality check for body line keystrokes, ensuring 100% click accuracy and smooth, un-throttled typing inside code blocks.
+- **CodeBlock Line Height & Container Spacing Normalization (`src/index.css`)**:
+  - Restored `line-height: 0 !important; font-size: 0 !important;` on inactive `.cm-live-codeblock-start` and `.cm-live-codeblock-end` lines. Collapses underlying hidden markdown fence lines so line 1 height is determined cleanly by `CodeBlockHeaderWidget`.
+  - Maintained `font-size: 0.9em !important; line-height: 1.6 !important;` on `.cm-live-active-row` for active line editing.
+- **Automated Verification & Package Staging**:
+  - Verified 738/738 Vitest tests passing across 63 test suites.
+  - Staged Linux Desktop `v0.7.3` release packages and Android signed APK.
+
 ## [0.7.2] — 2026-10-28
 
 ### Android REST Gateway LAN Support, Screen Wake & Background Reliability

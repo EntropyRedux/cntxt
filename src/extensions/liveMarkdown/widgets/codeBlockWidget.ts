@@ -145,7 +145,7 @@ export class CodeBlockHeaderWidget extends WidgetType {
   }
 
   updateDOM(_dom: HTMLElement, _view: EditorView): boolean {
-    return true;
+    return false;
   }
 
   toDOM(view: EditorView): HTMLElement {

@@ -1355,7 +1355,8 @@ body {
   margin-top: 8px !important;
   margin-bottom: 0 !important;
   padding: 0 !important;
-  line-height: normal !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
 }
 
 .cm-live-codeblock-start.cm-live-active-row {
@@ -1396,7 +1397,8 @@ body {
   margin-top: 0 !important;
   margin-bottom: 8px !important;
   padding: 0 !important;
-  line-height: normal !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
 }
 
 .cm-live-codeblock-end.cm-live-active-row {

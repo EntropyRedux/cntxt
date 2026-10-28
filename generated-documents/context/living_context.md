@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.50
+Version: v2.51
 Last Updated: 2026-10-28
-Last Updated By: Prod Agent (Remote Merge: Core Editor Stability + Android REST Gateway LAN v0.7.2)
+Last Updated By: Prod Agent (Editor CodeBlock DOM Update Stability & v0.7.3 Release)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,16 +13,20 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 736/736 Live across 63 suites, Rust Security Test Suite 12/12 Live)
+    [x] Testing (Vitest 738/738 Live across 63 suites, Rust Security Test Suite 16/16 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.7.1 Windows Authenticode Portable + Installers, Linux Portable + Debian Package Installed, Android Signed APK Installed via Wireless ADB)
+  [x] Packaging & Release (v0.7.3 Linux Desktop Build & Android Signed APK Staged)
 
-Current Feature Group: FG-24 Linux Desktop & Android Mobile v0.7.1 Porting & Packaging
-Status: [x] Implemented, Verified, Packaged & Deployed
+Current Feature Group: FG-24 Linux Desktop & Android Mobile v0.7.3 Release
+Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
 Unit Tests: written [x] passing [x] (738/738 unit tests passing across 63 suites in CNTXT, 16 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 Notes:
+- Task 71: Editor CodeBlock Header Rendering & DOM Update Stability (2026-10-28):
+  - Fixed CodeBlockHeaderWidget DOM recycling: updated `updateDOM()` in `CodeBlockHeaderWidget` (`codeBlockWidget.ts`) to `return false`, forcing CodeMirror 6 to re-run `toDOM()` when widget parameters or line positions change. Fixes blank/unpopulated codeblock header rendering.
+  - Normalized container line height in `src/index.css`: restored `line-height: 0 !important; font-size: 0 !important;` on inactive `.cm-live-codeblock-start` and `.cm-live-codeblock-end` lines to collapse underlying hidden markdown fence lines, while maintaining `font-size: 0.9em !important; line-height: 1.6 !important;` on `.cm-live-active-row`.
+  - Staged Linux Desktop and Android `v0.7.3` release packages. Verified 738/738 Vitest tests clean across 63 suites.
 - Task 70: Android REST Gateway LAN Support, Screen Wake & Background Reliability (2026-10-28):
   - Rust REST Gateway LAN Binding & Hardening (commands/gateway.rs):
     - Enabled 0.0.0.0 binding when allow_lan is enabled or automatically on Android.

@@ -2,26 +2,26 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.7.2) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Native Model Context Protocol (MCP) Server for external AI agents (Antigravity, Claude, Cursor, Cline, Windsurf), CNTXT Block Parser Engine & Rich Containers with continuous accent rail and floating scrollbar controls, Active Thread `.cntxt` Orchestration with top-pinned user inbox citations (`id=user-inbox`), Large Document Virtualization (>5MB) with master disk splicing, Local Network (LAN) & Localhost REST API Gateway, Automated Cross-Platform Android Signed APK Build Pipeline, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.7.3) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Native Model Context Protocol (MCP) Server for external AI agents (Antigravity, Claude, Cursor, Cline, Windsurf), CNTXT Block Parser Engine & Rich Containers with continuous accent rail and floating scrollbar controls, Active Thread `.cntxt` Orchestration with top-pinned user inbox citations (`id=user-inbox`), Large Document Virtualization (>5MB) with master disk splicing, Local Network (LAN) & Localhost REST API Gateway, Automated Cross-Platform Android Signed APK Build Pipeline, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.7.2)
+## Downloads (v0.7.3)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.7.1_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.1/CNTXT_0.7.1_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.7.1_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.1/CNTXT_0.7.1_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.7.1_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.1/CNTXT_0.7.1_portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.7.3_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.3/CNTXT_0.7.3_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.7.3_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.3/CNTXT_0.7.3_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.7.3_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.3/CNTXT_0.7.3_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download cntxt-0.7.1-arm64-release-signed.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.1/cntxt-0.7.1-arm64-release-signed.apk) | Signed with Release Keystore (v2 + v3) / Installable via ADB |
+| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download cntxt-0.7.3-arm64-release-signed.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.3/cntxt-0.7.3-arm64-release-signed.apk) | Signed with Release Keystore (v2 + v3) / Installable via ADB |
 
 ### Linux
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Debian / Ubuntu** | `.deb` | Linux x64 | [Download CNTXT_0.7.1_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.1/CNTXT_0.7.1_amd64.deb) | Desktop entry + icons included |
+| **Debian / Ubuntu** | `.deb` | Linux x64 | [Download CNTXT_0.7.3_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.3/CNTXT_0.7.3_amd64.deb) | Desktop entry + icons included |
 | **Standalone Portable** | Binary | Linux x64 | [Download CNTXT_0.7.1_portable](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.1/CNTXT_0.7.1_portable) | Zero-install standalone executable |
 
 ---
