@@ -13,6 +13,8 @@ export interface IAndroidJavaBridge {
   createTempFileForRead?: (path: string) => string;
   saveToSaf?: (path: string, tempPath: string) => boolean;
   consumeSharedText?: () => string;
+  setKeepScreenOn?: (enabled: boolean) => void;
+  setWifiLock?: (enabled: boolean) => void;
 }
 
 export function getAndroidBridge(): IAndroidJavaBridge | null {

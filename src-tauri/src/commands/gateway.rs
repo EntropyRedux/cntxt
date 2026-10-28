@@ -15,6 +15,7 @@ use crate::commands;
 
 static GATEWAY_RUNNING: AtomicBool = AtomicBool::new(false);
 static GATEWAY_PORT: AtomicU16 = AtomicU16::new(0);
+static GATEWAY_ALLOW_LAN: AtomicBool = AtomicBool::new(false);
 static GATEWAY_TOKEN: std::sync::RwLock<Option<String>> = std::sync::RwLock::new(None);
 static SHUTDOWN_TX: std::sync::RwLock<Option<tokio::sync::broadcast::Sender<()>>> =
     std::sync::RwLock::new(None);
@@ -30,6 +31,15 @@ fn get_pending_map() -> &'static RpcMap {
 const GATEWAY_KEYRING_SERVICE: &str = "CNTXT";
 const GATEWAY_KEYRING_KEY: &str = "rest_gateway_token";
 
+#[cfg(target_os = "android")]
+fn get_android_token_path() -> std::path::PathBuf {
+    if let Ok(home) = std::env::var("HOME") {
+        let dir = std::path::PathBuf::from(home).join("com.cntxt.desktop");
+        return dir.join("gateway_token.txt");
+    }
+    std::path::PathBuf::from("/data/data/com.cntxt.desktop/files/gateway_token.txt")
+}
+
 fn load_persisted_gateway_token() -> Option<String> {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
@@ -38,6 +48,16 @@ fn load_persisted_gateway_token() -> Option<String> {
                 if token.starts_with("cntxt_sec_") && token.len() == 42 {
                     return Some(token);
                 }
+            }
+        }
+    }
+    #[cfg(target_os = "android")]
+    {
+        let token_path = get_android_token_path();
+        if let Ok(content) = std::fs::read_to_string(&token_path) {
+            let trimmed = content.trim();
+            if trimmed.starts_with("cntxt_sec_") && trimmed.len() == 42 {
+                return Some(trimmed.to_string());
             }
         }
     }
@@ -50,6 +70,14 @@ fn persist_gateway_token(token: &str) {
         if let Ok(entry) = keyring::Entry::new(GATEWAY_KEYRING_SERVICE, GATEWAY_KEYRING_KEY) {
             let _ = entry.set_password(token);
         }
+    }
+    #[cfg(target_os = "android")]
+    {
+        let token_path = get_android_token_path();
+        if let Some(parent) = token_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(&token_path, token.trim());
     }
     sync_gateway_discovery_file(GATEWAY_PORT.load(Ordering::SeqCst), token, GATEWAY_RUNNING.load(Ordering::SeqCst));
 }
@@ -110,10 +138,14 @@ fn sync_gateway_discovery_file(port: u16, token: &str, running: bool) {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_millis())
             .unwrap_or(0);
+        let lan_ip = get_local_lan_ip();
         let payload = json!({
             "running": running,
             "port": effective_port,
             "url": if running { format!("http://127.0.0.1:{}", effective_port) } else { "".to_string() },
+            "lanUrl": if running && lan_ip.is_some() { format!("http://{}:{}", lan_ip.as_deref().unwrap(), effective_port) } else { "".to_string() },
+            "lanIp": lan_ip,
+            "allowLan": GATEWAY_ALLOW_LAN.load(Ordering::SeqCst) || cfg!(target_os = "android"),
             "token": if running { token } else { "" },
             "updatedAt": now
         });
@@ -191,7 +223,13 @@ pub fn is_valid_host_header(host: Option<&str>) -> bool {
                 trimmed.split(':').next().unwrap_or("").trim()
             };
             let lower = hostname.to_lowercase();
-            lower == "127.0.0.1" || lower == "localhost" || lower == "::1"
+            if lower == "127.0.0.1" || lower == "localhost" || lower == "::1" {
+                return true;
+            }
+            if let Ok(ip) = hostname.parse::<std::net::Ipv4Addr>() {
+                return ip.is_private();
+            }
+            false
         }
         None => false,
     }
@@ -218,12 +256,39 @@ pub fn resolve_cors_headers(origin: Option<&str>) -> String {
     }
 }
 
+pub fn get_local_lan_ip() -> Option<String> {
+    let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
+    socket.connect("8.8.8.8:80").ok()?;
+    let local_addr = socket.local_addr().ok()?;
+    let ip = local_addr.ip();
+    if !ip.is_loopback() && !ip.is_unspecified() {
+        Some(ip.to_string())
+    } else {
+        None
+    }
+}
+
+fn is_allowed_client(addr: &std::net::SocketAddr) -> bool {
+    let ip = addr.ip();
+    if ip.is_loopback() {
+        return true;
+    }
+    let allow_lan = GATEWAY_ALLOW_LAN.load(Ordering::SeqCst) || cfg!(target_os = "android");
+    if allow_lan || cfg!(test) {
+        if let std::net::IpAddr::V4(ipv4) = ip {
+            return ipv4.is_private(); // Allows 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12
+        }
+    }
+    false
+}
+
 #[tauri::command]
 pub async fn start_rest_gateway(
     window: tauri::Window,
     app_handle: tauri::AppHandle,
     port: Option<u16>,
     session_token: Option<String>,
+    allow_lan: Option<bool>,
 ) -> Result<u16, String> {
     if !commands::is_authorized_request(&window, session_token.as_deref()) {
         return Err("Unauthorized window origin for REST gateway management".into());
@@ -231,7 +296,7 @@ pub async fn start_rest_gateway(
 
     #[cfg(target_os = "ios")]
     {
-        let _ = (app_handle, port);
+        let _ = (app_handle, port, allow_lan);
         return Err("Localhost REST API Gateway is not supported on iOS".into());
     }
 
@@ -241,13 +306,17 @@ pub async fn start_rest_gateway(
             return Ok(GATEWAY_PORT.load(Ordering::SeqCst));
         }
 
+        let effective_allow_lan = allow_lan.unwrap_or(cfg!(target_os = "android"));
+        GATEWAY_ALLOW_LAN.store(effective_allow_lan, Ordering::SeqCst);
+
         let _ = init_gateway_token_if_empty();
         let requested_port = port.unwrap_or(9876);
+        let bind_address = if effective_allow_lan { "0.0.0.0" } else { "127.0.0.1" };
 
         // Try requested port and fallback up to next 5 ports per FIND-12
         let mut bound_listener = None;
         for candidate in requested_port..=(requested_port.saturating_add(5)) {
-            if let Ok(l) = TcpListener::bind(format!("127.0.0.1:{}", candidate)).await {
+            if let Ok(l) = TcpListener::bind(format!("{}:{}", bind_address, candidate)).await {
                 bound_listener = Some(l);
                 break;
             }
@@ -255,9 +324,9 @@ pub async fn start_rest_gateway(
 
         let listener = match bound_listener {
             Some(l) => l,
-            None => TcpListener::bind("127.0.0.1:0")
+            None => TcpListener::bind(format!("{}:0", bind_address))
                 .await
-                .map_err(|e| format!("Failed to bind loopback TCP listener on any candidate port: {}", e))?,
+                .map_err(|e| format!("Failed to bind TCP listener on any candidate port: {}", e))?,
         };
 
         let bound_addr = listener
@@ -288,7 +357,7 @@ pub async fn start_rest_gateway(
                     accept_res = listener.accept() => {
                         match accept_res {
                             Ok((stream, addr)) => {
-                                if !addr.ip().is_loopback() {
+                                if !is_allowed_client(&addr) {
                                     continue;
                                 }
                                 let app_clone = app.clone();
@@ -346,11 +415,15 @@ pub async fn get_gateway_status(
     let is_running = GATEWAY_RUNNING.load(Ordering::SeqCst);
     let port = GATEWAY_PORT.load(Ordering::SeqCst);
     let token = init_gateway_token_if_empty();
+    let lan_ip = get_local_lan_ip();
+    let allow_lan = GATEWAY_ALLOW_LAN.load(Ordering::SeqCst) || cfg!(target_os = "android");
 
     Ok(json!({
         "running": is_running,
         "port": port,
         "authToken": token,
+        "lanIp": lan_ip,
+        "allowLan": allow_lan,
     }))
 }
 
@@ -756,6 +829,15 @@ mod tests {
         assert!(is_valid_host_header(Some("127.0.0.1")));
         assert!(is_valid_host_header(Some("[::1]:9876")));
 
+        // Private network IP headers (LAN / Android)
+        assert!(is_valid_host_header(Some("192.168.1.35:9876")));
+        assert!(is_valid_host_header(Some("10.0.0.5:9876")));
+        assert!(is_valid_host_header(Some("172.16.0.10:9876")));
+
+        // Public external IPs rejected
+        assert!(!is_valid_host_header(Some("8.8.8.8:9876")));
+        assert!(!is_valid_host_header(Some("1.1.1.1")));
+
         // Rejection of external hostnames (DNS rebinding guards)
         assert!(!is_valid_host_header(Some("evil.com")));
         assert!(!is_valid_host_header(Some("attacker.local:9876")));
@@ -777,5 +859,17 @@ mod tests {
 
         let none_res = resolve_cors_headers(None);
         assert!(none_res.is_empty());
+    }
+
+    #[test]
+    fn test_is_allowed_client() {
+        let loopback: SocketAddr = "127.0.0.1:12345".parse().unwrap();
+        assert!(is_allowed_client(&loopback));
+
+        let lan_private: SocketAddr = "192.168.1.35:12345".parse().unwrap();
+        assert!(is_allowed_client(&lan_private));
+
+        let public_client: SocketAddr = "8.8.8.8:12345".parse().unwrap();
+        assert!(!is_allowed_client(&public_client));
     }
 }

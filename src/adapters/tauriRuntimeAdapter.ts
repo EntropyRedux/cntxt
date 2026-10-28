@@ -802,17 +802,17 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   public gateway: IRestGatewayBridge = {
     isAvailable: (): boolean => true,
-    start: async (port?: number): Promise<{ port: number; authToken: string }> => {
-      const boundPort = await this.invokeTauri<number>('start_rest_gateway', { port });
+    start: async (port?: number, allowLan?: boolean): Promise<{ port: number; authToken: string; lanIp?: string | null }> => {
+      const boundPort = await this.invokeTauri<number>('start_rest_gateway', { port, allow_lan: allowLan });
       const status = await this.invokeTauri<IRestGatewayStatus>('get_gateway_status');
-      return { port: boundPort ?? 9876, authToken: status?.authToken ?? '' };
+      return { port: boundPort ?? 9876, authToken: status?.authToken ?? '', lanIp: status?.lanIp };
     },
     stop: async (): Promise<void> => {
       await this.invokeTauriVoid('stop_rest_gateway');
     },
     getStatus: async (): Promise<IRestGatewayStatus> => {
       const status = await this.invokeTauri<IRestGatewayStatus>('get_gateway_status');
-      return status ?? { running: false, port: 0, authToken: '' };
+      return status ?? { running: false, port: 0, authToken: '', lanIp: null, allowLan: false };
     },
     regenerateToken: async (): Promise<string> => {
       const token = await this.invokeTauri<string>('regenerate_gateway_token');

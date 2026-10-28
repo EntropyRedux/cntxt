@@ -37,15 +37,20 @@ console.log(`  Target: ${target}                     `);
 console.log('========================================');
 
 // 1. Environment Setup
-const androidHome = process.env.ANDROID_HOME || '/home/en/Android/Sdk';
-const ndkHome = process.env.NDK_HOME || path.join(androidHome, 'ndk/27.0.12077973');
-const javaHome = process.env.JAVA_HOME || '/home/en/.local/share/jdk-21';
+const isWindowsPlatform = process.platform === 'win32';
+const defaultAndroidHome = isWindowsPlatform
+  ? path.join(process.env.LOCALAPPDATA || 'C:\\Users\\mbula\\AppData\\Local', 'Android', 'Sdk')
+  : '/home/en/Android/Sdk';
+const androidHome = process.env.ANDROID_HOME || defaultAndroidHome;
+const ndkHome = process.env.NDK_HOME || path.join(androidHome, 'ndk', '27.0.12077973');
+const javaHome = process.env.JAVA_HOME || (isWindowsPlatform ? 'C:\\Program Files\\Microsoft\\jdk-17.0.18.8-hotspot' : '/home/en/.local/share/jdk-21');
 
 process.env.ANDROID_HOME = androidHome;
 process.env.NDK_HOME = ndkHome;
 process.env.JAVA_HOME = javaHome;
 process.env.NODE_OPTIONS = '--max-old-space-size=4096';
-process.env.ANDROID_USER_HOME = path.join(process.env.HOME || '/home/en', '.android');
+const userHome = process.env.USERPROFILE || process.env.HOME || '/home/en';
+process.env.ANDROID_USER_HOME = path.join(userHome, '.android');
 delete process.env.ANDROID_PREFS_ROOT;
 
 console.log(`ANDROID_HOME : ${androidHome}`);

@@ -66,6 +66,11 @@ export default defineConfig(() => {
       environment: 'node',
       exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
       setupFiles: ['./tests/setup/vitest.setup.ts'],
+      server: {
+        deps: {
+          external: [/cntxt-mcp-server\.mjs/],
+        },
+      },
     },
     esbuild: {
       sourcemap: false,

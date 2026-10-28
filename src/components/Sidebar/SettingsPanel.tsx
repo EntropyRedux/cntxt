@@ -56,8 +56,12 @@ export const SettingsPanel: React.FC = () => {
   });
   const [gatewayLoading, setGatewayLoading] = useState(false);
   const [tokenCopied, setTokenCopied] = useState(false);
+  const [lanUrlCopied, setLanUrlCopied] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [gatewayError, setGatewayError] = useState<string | null>(null);
+
+  const isAndroid = bridge.platform.os === 'android';
+  const effectiveAllowLan = settings.allowRestGatewayLan ?? isAndroid;
 
   // Sync gateway state on mount or when settings change
   useEffect(() => {
@@ -68,12 +72,14 @@ export const SettingsPanel: React.FC = () => {
       try {
         const isEnabled = Boolean(settings.enableExperimentalSettings && settings.enableRestGateway);
         if (isEnabled) {
-          const res = await bridge.gateway?.start(settings.restGatewayPort ?? 9876);
+          const res = await bridge.gateway?.start(settings.restGatewayPort ?? 9876, effectiveAllowLan);
           if (isMounted && res) {
             setGatewayStatus({
               running: true,
               port: res.port,
               authToken: res.authToken,
+              lanIp: res.lanIp,
+              allowLan: effectiveAllowLan,
             });
             setGatewayError(null);
           }
@@ -99,7 +105,7 @@ export const SettingsPanel: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [bridge.gateway, settings.enableExperimentalSettings, settings.enableRestGateway, settings.restGatewayPort]);
+  }, [bridge.gateway, settings.enableExperimentalSettings, settings.enableRestGateway, settings.restGatewayPort, effectiveAllowLan]);
 
   const handleToggleRestGateway = async (enabled: boolean) => {
     updateSettings({ enableRestGateway: enabled });
@@ -109,18 +115,20 @@ export const SettingsPanel: React.FC = () => {
     setGatewayError(null);
     try {
       if (enabled) {
-        const res = await bridge.gateway.start(settings.restGatewayPort ?? 9876);
+        const res = await bridge.gateway.start(settings.restGatewayPort ?? 9876, effectiveAllowLan);
         setGatewayStatus({
           running: true,
           port: res.port,
           authToken: res.authToken,
+          lanIp: res.lanIp,
+          allowLan: effectiveAllowLan,
         });
-        addNotification('REST Gateway Active', `Listening on port ${res.port}`, 'info');
+        addNotification('REST Gateway Active', `Listening on port ${res.port}${res.lanIp ? ` (LAN: ${res.lanIp})` : ''}`, 'info');
       } else {
         await bridge.gateway.stop();
         const status = await bridge.gateway.getStatus();
         setGatewayStatus(status);
-        addNotification('REST Gateway Inactive', 'Localhost REST listener disabled', 'info');
+        addNotification('REST Gateway Inactive', 'REST listener disabled', 'info');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to update gateway';
@@ -130,6 +138,61 @@ export const SettingsPanel: React.FC = () => {
       setGatewayLoading(false);
     }
   };
+
+  const handleToggleAllowLan = async (allow: boolean) => {
+    updateSettings({ allowRestGatewayLan: allow });
+    if (!bridge.gateway?.isAvailable?.() || !settings.enableRestGateway) return;
+
+    setGatewayLoading(true);
+    setGatewayError(null);
+    try {
+      await bridge.gateway.stop();
+      const res = await bridge.gateway.start(settings.restGatewayPort ?? 9876, allow);
+      setGatewayStatus({
+        running: true,
+        port: res.port,
+        authToken: res.authToken,
+        lanIp: res.lanIp,
+        allowLan: allow,
+      });
+      addNotification('REST Gateway Updated', `LAN mode ${allow ? 'enabled' : 'disabled'}`, 'info');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update LAN mode';
+      setGatewayError(msg);
+      addNotification('REST Gateway Error', msg, 'error');
+    } finally {
+      setGatewayLoading(false);
+    }
+  };
+
+  const handleCopyLanUrl = async () => {
+    if (!gatewayStatus.lanIp) return;
+    const url = `http://${gatewayStatus.lanIp}:${gatewayStatus.port || settings.restGatewayPort || 9876}`;
+    try {
+      await bridge.clipboard.writeText(url);
+      setLanUrlCopied(true);
+      setTimeout(() => setLanUrlCopied(false), 2000);
+      addNotification('LAN Endpoint Copied', `${url} copied to clipboard`, 'info');
+    } catch {
+      addNotification('Copy Failed', 'Unable to copy LAN endpoint URL', 'error');
+    }
+  };
+
+  const handleToggleKeepScreenAwake = (awake: boolean) => {
+    updateSettings({ keepScreenAwake: awake });
+    bridge.platform.setKeepScreenOn?.(awake);
+    addNotification(
+      awake ? 'Screen Kept Awake' : 'Normal Screen Timeout',
+      awake ? 'Display will remain active during review sessions' : 'Standard display sleep restored',
+      'info'
+    );
+  };
+
+  useEffect(() => {
+    if (settings.keepScreenAwake && bridge.platform.os === 'android') {
+      bridge.platform.setKeepScreenOn?.(true);
+    }
+  }, [settings.keepScreenAwake, bridge.platform]);
 
   const handlePortChange = (port: number) => {
     updateSettings({ restGatewayPort: port });
@@ -542,6 +605,21 @@ export const SettingsPanel: React.FC = () => {
                 touchOptimized: e.target.checked,
                 uiDensity: e.target.checked ? 'touch' : 'desktop'
               })}
+              className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
+            />
+          </div>
+
+          {/* Keep Screen Awake Toggle (Active Review Mode) */}
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[var(--text-primary)] block font-medium">Keep Screen Awake</span>
+              <span className="text-[10px] text-[var(--text-muted)]">Prevents screen timeout during review and companion display sessions</span>
+            </div>
+            <input
+              type="checkbox"
+              id="toggle-keep-screen-awake"
+              checked={settings.keepScreenAwake ?? false}
+              onChange={(e) => handleToggleKeepScreenAwake(e.target.checked)}
               className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer"
             />
           </div>
@@ -1148,6 +1226,9 @@ export const SettingsPanel: React.FC = () => {
                 running={gatewayStatus.running}
                 boundPort={gatewayStatus.port}
                 authToken={gatewayStatus.authToken}
+                lanIp={gatewayStatus.lanIp}
+                allowLan={effectiveAllowLan}
+                isCopiedLanUrl={lanUrlCopied}
                 isAvailable={Boolean(bridge.gateway?.isAvailable?.())}
                 isLoading={gatewayLoading}
                 isCopied={tokenCopied}
@@ -1155,8 +1236,10 @@ export const SettingsPanel: React.FC = () => {
                 error={gatewayError}
                 onToggleEnabled={handleToggleRestGateway}
                 onPortChange={handlePortChange}
+                onToggleAllowLan={handleToggleAllowLan}
                 onToggleShowToken={() => setShowToken(!showToken)}
                 onCopyToken={handleCopyToken}
+                onCopyLanUrl={handleCopyLanUrl}
                 onRegenerateToken={handleRegenerateToken}
               />
             </ErrorBoundary>

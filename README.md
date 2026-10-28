@@ -2,9 +2,9 @@
 
 **A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.7.1) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Native Model Context Protocol (MCP) Server for external AI agents (Antigravity, Claude, Cursor, Cline, Windsurf), CNTXT Block Parser Engine & Rich Containers with continuous accent rail and floating scrollbar controls, Active Thread `.cntxt` Orchestration with top-pinned user inbox citations (`id=user-inbox`), Large Document Virtualization (>5MB) with master disk splicing, Localhost REST API Gateway, Automated Cross-Platform Android Signed APK Build Pipeline, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.7.2) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Native Model Context Protocol (MCP) Server for external AI agents (Antigravity, Claude, Cursor, Cline, Windsurf), CNTXT Block Parser Engine & Rich Containers with continuous accent rail and floating scrollbar controls, Active Thread `.cntxt` Orchestration with top-pinned user inbox citations (`id=user-inbox`), Large Document Virtualization (>5MB) with master disk splicing, Local Network (LAN) & Localhost REST API Gateway, Automated Cross-Platform Android Signed APK Build Pipeline, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.7.1)
+## Downloads (v0.7.2)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
@@ -48,7 +48,7 @@
 - **Non-Destructive Disk Splicing**: Edits to isolated sections are safely spliced into the master disk file without loading entire multi-megabyte contents into CodeMirror 6 memory.
 - **Fail-Safe Recovery**: Automatic backup file creation (`.edited-chunk-recovery-<ts>.md` / `.edited-chunk-conflict-<ts>.md`) guards against external disk edits or splicing anomalies.
 
-### Localhost REST API Gateway & Host Command Bus
+### Local Network (LAN) & Localhost REST API Gateway & Host Command Bus
 - **External CLI Integration**: Headless automation bridge enabling external terminal agents (`agy`, `cline`, curl scripts) to inspect workspace state, open tabs, replace text, and execute RPC actions.
 - **Security & Sandboxing**: Authenticated via constant-time `X-CNTXT-Token` verification, loopback-only Host validation (`127.0.0.1`, `localhost`, `[::1]`) guarding against DNS rebinding, and strictly loopback CORS origin controls.
 - **Advanced Editor RPCs**: Multi-cursor selection controls, fold/unfold ranges, diagnostics markers, and range replacements with typed Zod boundary validation.

@@ -587,6 +587,8 @@ export const RestGatewayConfigSchema: z.ZodType<RestGatewayConfig> = z.object({
   enabled: z.boolean(),
   port: z.number().int().min(1024).max(65535),
   authToken: z.string().min(1),
+  allowLan: z.boolean().optional(),
+  lanIp: z.string().nullable().optional(),
 });
 
 export function validateEditorSetSelections(data: unknown) {

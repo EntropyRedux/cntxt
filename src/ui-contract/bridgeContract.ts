@@ -110,6 +110,8 @@ export interface IPlatformBridge {
   isMac: boolean;
   isMobile: boolean;
   consumeSharedText?: () => string | null;
+  setKeepScreenOn?: (enabled: boolean) => void;
+  setWifiLock?: (enabled: boolean) => void;
 }
 
 /**
@@ -164,11 +166,13 @@ export interface IRestGatewayStatus {
   running: boolean;
   port: number;
   authToken: string;
+  lanIp?: string | null;
+  allowLan?: boolean;
 }
 
 export interface IRestGatewayBridge {
   isAvailable: () => boolean;
-  start: (port?: number) => Promise<{ port: number; authToken: string }>;
+  start: (port?: number, allowLan?: boolean) => Promise<{ port: number; authToken: string; lanIp?: string | null }>;
   stop: () => Promise<void>;
   getStatus: () => Promise<IRestGatewayStatus>;
   regenerateToken?: () => Promise<string>;
@@ -189,4 +193,3 @@ export interface IRuntimeBridge {
   openFileExplorer?: (path: string) => Promise<boolean>;
   openExternalUrl?: (url: string) => Promise<boolean>;
 }
-

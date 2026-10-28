@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.48
+Version: v2.49
 Last Updated: 2026-10-28
-Last Updated By: Prod Agent (FG-24 Linux Desktop & Android Mobile v0.7.1 Port Delivery & Wireless ADB Deployment)
+Last Updated By: Prod Agent (Android REST Gateway LAN Support, Screen Wake & Wi-Fi Lock v0.7.2)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -20,9 +20,24 @@ Active Stage:
 Current Feature Group: FG-24 Linux Desktop & Android Mobile v0.7.1 Porting & Packaging
 Status: [x] Implemented, Verified, Packaged & Deployed
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (734/734 unit tests passing across 63 suites in CNTXT, 12 native Rust security tests clean)
+Unit Tests: written [x] passing [x] (738/738 unit tests passing across 63 suites in CNTXT, 16 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 Notes:
+- Task 69: Android REST Gateway LAN Support, Screen Wake & Background Reliability (2026-10-28):
+  - Rust REST Gateway LAN Binding & Hardening (commands/gateway.rs):
+    - Enabled 0.0.0.0 binding when allow_lan is enabled or automatically on Android.
+    - Added RFC 1918 private IP validation (192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12) for incoming connections and Host headers (preventing DNS rebinding while allowing LAN companion requests).
+    - Hardened token persistence on Android at /data/data/com.cntxt.desktop/files/gateway_token.txt.
+    - Added UDP-based get_local_lan_ip() to detect and advertise device Wi-Fi IP.
+    - Verified Rust tests 4/4 clean in commands::gateway::tests.
+  - Frontend UI & Presenter Purity (RestGatewaySettingsCard.tsx & SettingsPanel.tsx):
+    - Added pure UI controls for LAN mode toggle, Wi-Fi LAN IP display endpoint, and URL copy action.
+    - Added "Keep Screen Awake" setting toggle to prevent mobile display sleep during live companion review sessions.
+    - Synchronized canonical data shapes across contracts/data_shapes.ts, boundarySchemas.ts, and bridgeContract.ts.
+    - 738/738 Vitest tests clean across 63 suites.
+  - Native Android Lifecycle & Locks (MainActivity.kt & Manifest):
+    - Injected setKeepScreenOn (FLAG_KEEP_SCREEN_ON) and setWifiLock (WIFI_MODE_FULL_HIGH_PERF) in AndroidInterface.
+    - Declared android.permission.WAKE_LOCK and android.permission.ACCESS_WIFI_STATE in AndroidManifest.xml.
 - Task 68: Feature Group FG-24 — Linux Desktop & Android Mobile v0.7.1 Ports & Wireless ADB Deployment (2026-10-28):
   - Linux Desktop Porting & Installation:
     - Built and staged `dist-installer/CNTXT_0.7.1_amd64.deb` (8.9 MB) and `dist-portable/CNTXT_0.7.1_portable` / `cntxt-portable` (15 MB).

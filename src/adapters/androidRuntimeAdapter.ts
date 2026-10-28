@@ -29,6 +29,18 @@ export class AndroidRuntimeAdapter extends TauriRuntimeAdapter {
         return androidBridge.consumeSharedText() || null;
       }
       return null;
+    },
+    setKeepScreenOn: (enabled: boolean) => {
+      const androidBridge = getAndroidBridge();
+      if (androidBridge?.setKeepScreenOn) {
+        androidBridge.setKeepScreenOn(enabled);
+      }
+    },
+    setWifiLock: (enabled: boolean) => {
+      const androidBridge = getAndroidBridge();
+      if (androidBridge?.setWifiLock) {
+        androidBridge.setWifiLock(enabled);
+      }
     }
   };
 
@@ -56,6 +68,21 @@ export class AndroidRuntimeAdapter extends TauriRuntimeAdapter {
 
   constructor() {
     super();
+    const originalStart = this.gateway.start.bind(this.gateway);
+    const originalStop = this.gateway.stop.bind(this.gateway);
+    this.gateway = {
+      ...this.gateway,
+      start: async (port?: number, allowLan?: boolean) => {
+        const effectiveAllowLan = allowLan ?? true;
+        const res = await originalStart(port, effectiveAllowLan);
+        getAndroidBridge()?.setWifiLock?.(true);
+        return res;
+      },
+      stop: async () => {
+        await originalStop();
+        getAndroidBridge()?.setWifiLock?.(false);
+      }
+    };
     this.fs = {
       ...this.fs,
       openFile: async (): Promise<BridgeFileResult | null> => {

@@ -5,6 +5,23 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] — 2026-10-28
+
+### Android REST Gateway LAN Support, Screen Wake & Background Reliability
+- **REST Gateway LAN Binding & Hardening (`commands/gateway.rs`)**:
+  - Bound TCP listener to `0.0.0.0` when LAN access is enabled (or automatically on Android), allowing external companion tools to connect directly without ADB port forwards.
+  - Added RFC 1918 private network subnet verification (`192.168.0.0/16`, `10.0.0.0/8`, `172.16.0.0/12`) for incoming client sockets and Host headers (guarding against public traffic and DNS rebinding attacks).
+  - Implemented UDP-based local LAN IP detection (`get_local_lan_ip()`), advertising the device's live Wi-Fi IP in status and discovery files.
+  - Persisted the gateway authentication token on Android at `/data/data/com.cntxt.desktop/files/gateway_token.txt`.
+- **UI Presenter Purity & Settings Controls (`RestGatewaySettingsCard.tsx`, `SettingsPanel.tsx`)**:
+  - Maintained 100% Presenter Purity in `RestGatewaySettingsCard`: prop-driven UI for LAN toggle, Wi-Fi LAN IP display endpoint, and URL clipboard copy action.
+  - Added "Keep Screen Awake" setting toggle under Mobile Settings, preventing screen timeout during active companion review sessions.
+  - Updated canonical schemas across `contracts/data_shapes.ts`, `boundarySchemas.ts`, and `bridgeContract.ts`.
+- **Android Native Lifecycle & Power Management (`MainActivity.kt`, `AndroidManifest.xml`)**:
+  - Injected `setKeepScreenOn` (`FLAG_KEEP_SCREEN_ON`) and `setWifiLock` (`WIFI_MODE_FULL_HIGH_PERF`) in `AndroidInterface`.
+  - Declared `android.permission.WAKE_LOCK` and `android.permission.ACCESS_WIFI_STATE` in `AndroidManifest.xml`.
+  - Enforced lifecycle cleanup releasing Wi-Fi locks on activity teardown (`onDestroy`).
+
 ## [0.7.1] — 2026-10-28
 
 ### Linux Desktop & Android Mobile v0.7.1 Ports (FG-24)

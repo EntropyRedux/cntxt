@@ -8,7 +8,8 @@ import {
   Eye, 
   EyeOff, 
   ShieldCheck, 
-  AlertCircle 
+  AlertCircle,
+  Wifi
 } from 'lucide-react';
 
 export interface RestGatewaySettingsCardProps {
@@ -22,10 +23,15 @@ export interface RestGatewaySettingsCardProps {
   isCopied: boolean;
   showToken: boolean;
   error?: string | null;
+  lanIp?: string | null;
+  allowLan?: boolean;
+  isCopiedLanUrl?: boolean;
   onToggleEnabled: (enabled: boolean) => void;
   onPortChange: (port: number) => void;
+  onToggleAllowLan?: (allow: boolean) => void;
   onToggleShowToken: () => void;
   onCopyToken: () => void;
+  onCopyLanUrl?: () => void;
   onRegenerateToken: () => void;
 }
 
@@ -44,10 +50,15 @@ export const RestGatewaySettingsCard: React.FC<RestGatewaySettingsCardProps> = (
   isCopied,
   showToken,
   error,
+  lanIp,
+  allowLan,
+  isCopiedLanUrl,
   onToggleEnabled,
   onPortChange,
+  onToggleAllowLan,
   onToggleShowToken,
   onCopyToken,
+  onCopyLanUrl,
   onRegenerateToken,
 }) => {
   const [localPort, setLocalPort] = React.useState(port);
@@ -63,6 +74,7 @@ export const RestGatewaySettingsCard: React.FC<RestGatewaySettingsCardProps> = (
       setLocalPort(port);
     }
   };
+
   return (
     <div className="space-y-3 pt-2 border-t border-[var(--border-subtle)]">
       <div className="flex items-start justify-between gap-2">
@@ -138,8 +150,62 @@ export const RestGatewaySettingsCard: React.FC<RestGatewaySettingsCardProps> = (
             />
           </div>
 
+          {/* Local Network (LAN) Toggle */}
+          <div className="flex items-start justify-between gap-2 pt-1 border-t border-[var(--border-subtle)]/50">
+            <div className="flex-1">
+              <span className="text-[10px] text-[var(--text-primary)] font-medium block">
+                Allow Connections from Local Network (LAN)
+              </span>
+              <span className="text-[9px] text-[var(--text-muted)] leading-tight block mt-0.5">
+                Accepts RFC 1918 private requests (192.168.x.x, 10.x.x.x) so your PC scripts can push reviews to this device.
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              id="toggle-rest-gateway-lan"
+              checked={allowLan ?? false}
+              disabled={isLoading}
+              onChange={(e) => onToggleAllowLan?.(e.target.checked)}
+              className="accent-[var(--accent-primary)] rounded w-3.5 h-3.5 cursor-pointer shrink-0 mt-0.5 disabled:opacity-50"
+            />
+          </div>
+
+          {/* Device Wi-Fi / LAN IP Endpoint */}
+          {running && lanIp ? (
+            <div className="space-y-1 pt-1 border-t border-[var(--border-subtle)]/50">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-[var(--text-primary)] font-medium flex items-center gap-1">
+                  <Wifi className="w-3 h-3 text-emerald-400" />
+                  <span>Device LAN Endpoint</span>
+                </span>
+                <span className="text-[9px] text-emerald-400 font-mono">Wi-Fi IP: {lanIp}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  readOnly
+                  value={`http://${lanIp}:${boundPort || port}`}
+                  className="flex-1 px-2 py-1 text-[11px] font-mono bg-[var(--input-bg)] border border-[var(--input-border)] rounded text-[var(--text-secondary)] select-all focus:outline-none focus:border-[var(--accent-primary)]"
+                />
+                <button
+                  type="button"
+                  onClick={onCopyLanUrl}
+                  disabled={!lanIp}
+                  title="Copy LAN endpoint URL to clipboard"
+                  className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--card-secondary-bg)] hover:bg-[var(--card-hover-bg)] border border-[var(--border-subtle)] rounded cursor-pointer transition-colors disabled:opacity-50"
+                >
+                  {isCopiedLanUrl ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {/* Authentication Token Field */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 pt-1 border-t border-[var(--border-subtle)]/50">
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-[var(--text-primary)] font-medium flex items-center gap-1">
                 <Key className="w-3 h-3 text-[var(--accent-primary)]" />
@@ -191,7 +257,9 @@ export const RestGatewaySettingsCard: React.FC<RestGatewaySettingsCardProps> = (
           {/* Quick CLI usage tip */}
           <div className="p-1.5 rounded bg-[var(--input-bg)]/80 border border-[var(--border-subtle)] text-[9px] font-mono text-[var(--text-muted)] flex items-center gap-1.5 overflow-x-auto">
             <ShieldCheck className="w-3 h-3 text-[var(--accent-primary)] shrink-0" />
-            <span className="truncate">curl -H &quot;X-CNTXT-Token: {authToken ? authToken.slice(0, 14) + '...' : 'TOKEN'}&quot; http://127.0.0.1:{boundPort || port}/api/v1/health</span>
+            <span className="truncate">
+              curl -H &quot;X-CNTXT-Token: {authToken ? authToken.slice(0, 14) + '...' : 'TOKEN'}&quot; http://{allowLan && lanIp ? lanIp : '127.0.0.1'}:{boundPort || port}/api/v1/health
+            </span>
           </div>
 
           {error && (

@@ -173,6 +173,8 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   autosaveIntervalMs?: number;
   enableRestGateway?: boolean;
   restGatewayPort?: number;
+  allowRestGatewayLan?: boolean;
+  keepScreenAwake?: boolean;
   deliverableSaveLocation?: 'workspace' | 'custom-folder';
   deliverableWorkspaceSubfolder?: string;
   deliverableCustomFolderPath?: string;
@@ -924,6 +926,8 @@ export interface RestGatewayConfig {
   enabled: boolean;
   port: number;
   authToken: string;
+  allowLan?: boolean;
+  lanIp?: string | null;
 }
 
 
