@@ -1352,7 +1352,7 @@ body {
   border-right: 1px solid var(--codeblock-container-border) !important;
   border-top-left-radius: 8px !important;
   border-top-right-radius: 8px !important;
-  margin-top: 0 !important;
+  margin-top: 8px !important;
   margin-bottom: 0 !important;
   padding: 0 !important;
   line-height: normal !important;
@@ -1367,7 +1367,7 @@ body {
   padding-right: 14px !important;
   padding-top: 6px !important;
   padding-bottom: 6px !important;
-  margin-top: 0 !important;
+  margin-top: 8px !important;
   margin-bottom: 0 !important;
 }
 
@@ -1394,7 +1394,7 @@ body {
   border-bottom-left-radius: 8px !important;
   border-bottom-right-radius: 8px !important;
   margin-top: 0 !important;
-  margin-bottom: 0 !important;
+  margin-bottom: 8px !important;
   padding: 0 !important;
   line-height: normal !important;
 }
@@ -1409,15 +1409,15 @@ body {
   padding-top: 4px !important;
   padding-bottom: 6px !important;
   margin-top: 0 !important;
-  margin-bottom: 0 !important;
+  margin-bottom: 8px !important;
 }
 
 .cm-live-codeblock-single {
   background-color: var(--codeblock-container-bg) !important;
   border: 1px solid var(--codeblock-container-border) !important;
   border-radius: 8px !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
   padding: 6px 14px !important;
   font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
   line-height: 1.6 !important;
@@ -1431,20 +1431,20 @@ body {
   color: var(--text-secondary);
   line-height: normal !important;
   font-size: 12px !important;
-  margin-top: 8px;
+  margin-top: 0 !important;
 }
 
 .cm-live-codeblock-footer {
   height: 6px;
-  margin-bottom: 8px;
-}
-
-.cm-live-codeblock-start.cm-live-codeblock-collapsed {
   margin-bottom: 0 !important;
 }
 
+.cm-live-codeblock-start.cm-live-codeblock-collapsed {
+  margin-bottom: 8px !important;
+}
+
 .cm-codeblock-header-collapsed {
-  margin-bottom: 8px;
+  margin-bottom: 0 !important;
 }
 
 .cm-live-collapse-btn {

@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.49
+Version: v2.50
 Last Updated: 2026-10-28
-Last Updated By: Prod Agent (Android REST Gateway LAN Support, Screen Wake & Wi-Fi Lock v0.7.2)
+Last Updated By: Prod Agent (Remote Merge: Core Editor Stability + Android REST Gateway LAN v0.7.2)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,7 +13,7 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 734/734 Live across 63 suites, Rust Security Test Suite 12/12 Live)
+    [x] Testing (Vitest 736/736 Live across 63 suites, Rust Security Test Suite 12/12 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.1 Windows Authenticode Portable + Installers, Linux Portable + Debian Package Installed, Android Signed APK Installed via Wireless ADB)
 
@@ -23,7 +23,7 @@ Background Processes: event-driven PTY streaming & debounced file-tailer synchro
 Unit Tests: written [x] passing [x] (738/738 unit tests passing across 63 suites in CNTXT, 16 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 Notes:
-- Task 69: Android REST Gateway LAN Support, Screen Wake & Background Reliability (2026-10-28):
+- Task 70: Android REST Gateway LAN Support, Screen Wake & Background Reliability (2026-10-28):
   - Rust REST Gateway LAN Binding & Hardening (commands/gateway.rs):
     - Enabled 0.0.0.0 binding when allow_lan is enabled or automatically on Android.
     - Added RFC 1918 private IP validation (192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12) for incoming connections and Host headers (preventing DNS rebinding while allowing LAN companion requests).
@@ -38,6 +38,11 @@ Notes:
   - Native Android Lifecycle & Locks (MainActivity.kt & Manifest):
     - Injected setKeepScreenOn (FLAG_KEEP_SCREEN_ON) and setWifiLock (WIFI_MODE_FULL_HIGH_PERF) in AndroidInterface.
     - Declared android.permission.WAKE_LOCK and android.permission.ACCESS_WIFI_STATE in AndroidManifest.xml.
+- Task 69: Core Editor Stability — Click Accuracy, HR Rules & Codeblock Header Alignment (2026-10-28):
+  - Fixed click accuracy and typing inside fenced code blocks: removed `codeContent` comparison from `CodeBlockHeaderWidget.eq()` and implemented `updateDOM()` to prevent DOM recreation and cursor jumping on keystrokes.
+  - Fixed horizontal rule `---` trapping cursor: added `if (hrMatch && !isLineActive)` in `liveMarkdown.ts` so active lines remain raw editable text.
+  - Adjusted codeblock container margins in `src/index.css`. User verified click accuracy is fully stabilized; space above codeblock header recorded in `issues_improvements.md` for dedicated visual tuning in next session.
+  - Unit tests: 736/736 passing across 63 test suites, lint clean.
 - Task 68: Feature Group FG-24 — Linux Desktop & Android Mobile v0.7.1 Ports & Wireless ADB Deployment (2026-10-28):
   - Linux Desktop Porting & Installation:
     - Built and staged `dist-installer/CNTXT_0.7.1_amd64.deb` (8.9 MB) and `dist-portable/CNTXT_0.7.1_portable` / `cntxt-portable` (15 MB).
