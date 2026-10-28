@@ -1,10 +1,10 @@
 # Issues
 1. Activating a .cntxt document as active thread, no diference vs. it not activated
 2. Conversation mode is still unstable, will preform more tests
-3. [RESOLVED 2026-10-28] Code block issues, click accuracy reduced:
-   - Root Cause A: External CSS applied `margin-top: 8px` on `.cm-live-codeblock-start` and `margin-bottom: 8px` on `.cm-live-codeblock-end`. In CodeMirror 6, margins on `.cm-line` elements create unmeasured layout gaps outside CodeMirror's `heightMap`, causing vertical coordinate offsets that misrouted clicks across code block boundaries.
-   - Root Cause B: `CodeBlockHeaderWidget.eq()` was checking `this.codeContent === other.codeContent`, forcing CodeMirror to destroy and recreate the header widget DOM on every single keystroke typed inside the code block.
-   - Fix: Removed all margins from `.cm-line` elements and moved spacing inside widgets (`.cm-live-codeblock-header`, `.cm-live-codeblock-footer`), normalized line heights, stabilized `CodeBlockHeaderWidget.eq()` without `codeContent` comparison, and implemented `updateDOM()` to prevent DOM thrashing.
+3. [RESOLVED 2026-10-28] Code block issues, click accuracy reduced & header margin:
+   - Root Cause A: `CodeBlockHeaderWidget.eq()` was checking `this.codeContent === other.codeContent`, forcing CodeMirror to destroy and recreate the header widget DOM on every single keystroke typed inside the code block. This caused DOM thrashing and cursor focus jumping.
+   - Root Cause B: Moving vertical margins into child widget (`.cm-live-codeblock-header { margin-top: 8px }`) pushed the header down inside the container, exposing an empty band of container background above the header.
+   - Fix: Stabilized `CodeBlockHeaderWidget.eq()` without `codeContent` comparison, implemented `updateDOM()` to prevent DOM thrashing, set `.cm-live-codeblock-header { margin-top: 0 !important }` so the header sits flush at the container top, and restored outer spacing cleanly on the container wrapper `.cm-live-codeblock-start { margin-top: 8px !important }` and `.cm-live-codeblock-end { margin-bottom: 8px !important }`.
 4. When in a cntxt special block, selecting a section and adding a response/comment, typing text into the input field then scrolls on the mouse, the typed text resets, it appears scrlling also resets the input field, not a major issue but if fixing is trivial, fix
 5. adding a response on a section > after entering, the viewport moves to the added response moving me away from the current section I am viewing
 6. [RESOLVED 2026-10-28] REST Gateway multi-window broadcast: when opening tabs or dispatching RPC via REST API (`/api/v1/tabs/open`), `app.emit` broadcasts to all open windows, causing tabs to duplicate across both the main window and secondary/popout windows instead of targeting only the main window. Resolved via `app.emit_to("main", ...)` and `getCurrentWindow().label === 'main'`.
