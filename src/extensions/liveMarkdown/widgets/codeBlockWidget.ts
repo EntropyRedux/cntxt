@@ -135,7 +135,6 @@ export class CodeBlockHeaderWidget extends WidgetType {
   eq(other: CodeBlockHeaderWidget): boolean {
     return (
       this.language === other.language &&
-      this.codeContent === other.codeContent &&
       this.linePos === other.linePos &&
       this.startLine === other.startLine &&
       this.endLine === other.endLine &&
@@ -143,6 +142,10 @@ export class CodeBlockHeaderWidget extends WidgetType {
       this.lineCount === other.lineCount &&
       this.isRichContainer === other.isRichContainer
     );
+  }
+
+  updateDOM(_dom: HTMLElement, _view: EditorView): boolean {
+    return true;
   }
 
   toDOM(view: EditorView): HTMLElement {
@@ -524,7 +527,18 @@ export class CodeBlockHeaderWidget extends WidgetType {
       e.preventDefault();
       e.stopPropagation();
       try {
-        await copyText(this.codeContent, getActiveBridge() || undefined);
+        let contentToCopy = this.codeContent;
+        if (this.startLine !== undefined && this.endLine !== undefined) {
+          const doc = view.state.doc;
+          if (this.startLine < doc.lines && this.endLine <= doc.lines) {
+            const fromPos = doc.line(this.startLine + 1).from;
+            const toPos = doc.line(this.endLine - 1).to;
+            if (toPos >= fromPos) {
+              contentToCopy = doc.sliceString(fromPos, toPos);
+            }
+          }
+        }
+        await copyText(contentToCopy, getActiveBridge() || undefined);
         copyLabel.textContent = 'Copied!';
         copyBtn.classList.add('text-[var(--status-success)]');
         copyIcon.innerHTML = LUCIDE_SVGS.check;

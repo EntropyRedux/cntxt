@@ -1352,10 +1352,10 @@ body {
   border-right: 1px solid var(--codeblock-container-border) !important;
   border-top-left-radius: 8px !important;
   border-top-right-radius: 8px !important;
-  margin-top: 8px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
   padding: 0 !important;
-  line-height: 0 !important;
-  font-size: 0 !important;
+  line-height: normal !important;
 }
 
 .cm-live-codeblock-start.cm-live-active-row {
@@ -1365,8 +1365,10 @@ body {
   color: var(--accent-primary) !important;
   padding-left: 14px !important;
   padding-right: 14px !important;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .cm-live-codeblock-mid {
@@ -1375,16 +1377,13 @@ body {
   border-right: 1px solid var(--codeblock-container-border) !important;
   padding-left: 14px !important;
   padding-right: 14px !important;
-  padding-top: 1px !important;
-  padding-bottom: 1px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace !important;
   font-size: 0.92em !important;
-  line-height: 1.55 !important;
-}
-
-/* First line of code inside the container gets comfortable top breathing room without excess gap */
-.cm-live-codeblock-start + .cm-live-codeblock-mid {
-  padding-top: 6px !important;
+  line-height: 1.6 !important;
 }
 
 .cm-live-codeblock-end {
@@ -1394,10 +1393,10 @@ body {
   border-bottom: 1px solid var(--codeblock-container-border) !important;
   border-bottom-left-radius: 8px !important;
   border-bottom-right-radius: 8px !important;
-  margin-bottom: 8px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
   padding: 0 !important;
-  line-height: 0 !important;
-  font-size: 0 !important;
+  line-height: normal !important;
 }
 
 .cm-live-codeblock-end.cm-live-active-row {
@@ -1409,16 +1408,19 @@ body {
   padding-right: 14px !important;
   padding-top: 4px !important;
   padding-bottom: 6px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .cm-live-codeblock-single {
   background-color: var(--codeblock-container-bg) !important;
   border: 1px solid var(--codeblock-container-border) !important;
   border-radius: 8px !important;
-  margin-top: 6px !important;
-  margin-bottom: 6px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
   padding: 6px 14px !important;
   font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  line-height: 1.6 !important;
 }
 
 .cm-live-codeblock-header {
@@ -1429,14 +1431,20 @@ body {
   color: var(--text-secondary);
   line-height: normal !important;
   font-size: 12px !important;
+  margin-top: 8px;
 }
 
 .cm-live-codeblock-footer {
   height: 6px;
+  margin-bottom: 8px;
 }
 
 .cm-live-codeblock-start.cm-live-codeblock-collapsed {
-  margin-bottom: 8px !important;
+  margin-bottom: 0 !important;
+}
+
+.cm-codeblock-header-collapsed {
+  margin-bottom: 8px;
 }
 
 .cm-live-collapse-btn {

@@ -168,4 +168,77 @@ describe('Extended Markdown Inline Formatting', () => {
     const expandedState = trExpand.state;
     expect(expandedState.field(codeBlockCollapseField).has(1)).toBe(false);
   });
+
+  it('keeps horizontal rule (---) as editable raw text when cursor is on the line, and replaces with HrWidget when cursor moves away', () => {
+    const doc = 'First line\n---\nThird line';
+    const hrLineFrom = 11; // start of '---\n'
+    const hrLineTo = 14;   // end of '---'
+
+    // 1. Cursor is on the '---' line (active line)
+    const activeState = EditorState.create({
+      doc,
+      selection: { anchor: 13 }, // on the '---' line
+      extensions: [liveMarkdownField]
+    });
+
+    const activeDecos = activeState.field(liveMarkdownField);
+    let hrWidgetPresentWhenActive = false;
+    activeDecos.between(hrLineFrom, hrLineTo, (_from, _to, value) => {
+      if (value.spec.widget && value.spec.widget.constructor.name === 'HrWidget') {
+        hrWidgetPresentWhenActive = true;
+      }
+    });
+    // While typing or editing on the --- line, it must NOT be replaced with a widget
+    expect(hrWidgetPresentWhenActive).toBe(false);
+
+    // 2. Cursor moves away (to line 1)
+    const inactiveState = EditorState.create({
+      doc,
+      selection: { anchor: 0 }, // on line 1
+      extensions: [liveMarkdownField]
+    });
+
+    const inactiveDecos = inactiveState.field(liveMarkdownField);
+    let hrWidgetPresentWhenInactive = false;
+    inactiveDecos.between(hrLineFrom, hrLineTo, (_from, _to, value) => {
+      if (value.spec.widget && value.spec.widget.constructor.name === 'HrWidget') {
+        hrWidgetPresentWhenInactive = true;
+      }
+    });
+    // When the cursor moves away, it cleanly renders as HrWidget
+    expect(hrWidgetPresentWhenInactive).toBe(true);
+  });
+
+  it('CodeBlockHeaderWidget does not re-create DOM on keystrokes inside code blocks (stable eq)', () => {
+    const doc = '```ts\nconst a = 1;\n```';
+    const state = EditorState.create({
+      doc,
+      selection: { anchor: doc.length },
+      extensions: [codeBlockCollapseField, liveMarkdownField]
+    });
+
+    const decos = state.field(liveMarkdownField);
+    let headerWidget: any = null;
+    decos.between(0, doc.length, (_from, _to, value) => {
+      if (value.spec.widget && value.spec.widget.constructor.name === 'CodeBlockHeaderWidget') {
+        headerWidget = value.spec.widget;
+      }
+    });
+    expect(headerWidget).toBeDefined();
+
+    // Create another widget instance representing an updated code content after a keystroke
+    const updatedWidget = new (headerWidget.constructor)(
+      headerWidget.language,
+      'const a = 12;', // modified content
+      headerWidget.linePos,
+      headerWidget.startLine,
+      headerWidget.endLine,
+      headerWidget.isCollapsed,
+      headerWidget.lineCount,
+      headerWidget.isRichContainer
+    );
+
+    // eq must return true so CodeMirror avoids DOM recreation while typing inside the block
+    expect(headerWidget.eq(updatedWidget)).toBe(true);
+  });
 });

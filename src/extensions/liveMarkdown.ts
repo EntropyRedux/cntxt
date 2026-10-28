@@ -568,7 +568,7 @@ function buildDecorations(state: EditorState): DecorationSet {
 
       // 4. Horizontal Rules (---, ***, ___)
       const hrMatch = lineText.match(/^(\-{3,}|\*{3,}|_{3,})\s*$/);
-      if (hrMatch) {
+      if (hrMatch && !isLineActive) {
         rangeDecos.push({
           from: line.from,
           to: line.to,
