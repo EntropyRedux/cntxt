@@ -16,13 +16,13 @@
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download cntxt-0.5.14-arm64-release-signed.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.14/cntxt-0.5.14-arm64-release-signed.apk) | Signed with Release Keystore / Installable via ADB |
+| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download cntxt-0.7.1-arm64-release-signed.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.1/cntxt-0.7.1-arm64-release-signed.apk) | Signed with Release Keystore (v2 + v3) / Installable via ADB |
 
 ### Linux
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Debian / Ubuntu** | `.deb` | Linux x64 | [Download cntxt_0.5.13_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.13/cntxt_0.5.13_amd64.deb) | Desktop entry + icons included |
-| **AppImage** | `.AppImage` | Linux x64 | [Download cntxt_0.5.13_amd64.AppImage](https://github.com/EntropyRedux/cntxt/releases/download/v0.5.13/cntxt_0.5.13_amd64.AppImage) | Universal Linux portable |
+| **Debian / Ubuntu** | `.deb` | Linux x64 | [Download CNTXT_0.7.1_amd64.deb](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.1/CNTXT_0.7.1_amd64.deb) | Desktop entry + icons included |
+| **Standalone Portable** | Binary | Linux x64 | [Download CNTXT_0.7.1_portable](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.1/CNTXT_0.7.1_portable) | Zero-install standalone executable |
 
 ---
 

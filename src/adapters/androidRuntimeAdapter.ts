@@ -10,7 +10,9 @@ import {
   BridgeFolderResult,
   BridgeDirectoryEntry,
   IPlatformBridge,
-  ITerminalBridge
+  ITerminalBridge,
+  IRestGatewayBridge,
+  IRestGatewayStatus
 } from '../ui-contract/bridgeContract';
 import { getAndroidBridge } from './androidBridgeHelper';
 import { useNotificationStore } from '../store/notificationStore';

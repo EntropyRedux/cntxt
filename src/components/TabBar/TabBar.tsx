@@ -287,6 +287,15 @@ export const TabBar: React.FC = () => {
             {activeTab ? activeTab.title : 'Tabs (0)'}
           </span>
 
+          {activeTab?.isActiveThread && (
+            <span
+              className="flex items-center justify-center text-[var(--accent-primary)] shrink-0"
+              title="Designated Active Thread"
+            >
+              <Radio className="w-3.5 h-3.5 animate-pulse" />
+            </span>
+          )}
+
           {activeTab?.isDirty && (
             <span
               className="w-2 h-2 rounded-full bg-[var(--status-warning)] shrink-0 animate-pulse"
@@ -375,6 +384,22 @@ export const TabBar: React.FC = () => {
                       {t.isDirty && (
                         <span className="w-2 h-2 rounded-full bg-[var(--status-warning)] mr-1" title="Unsaved changes" />
                       )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleActiveThread(t.id);
+                        }}
+                        title={t.isActiveThread ? 'Unset Active Thread' : 'Set as Active Thread'}
+                        aria-label={t.isActiveThread ? `Unset ${t.title} as Active Thread` : `Set ${t.title} as Active Thread`}
+                        className={`p-1.5 rounded-lg transition-colors active:scale-90 ${
+                          t.isActiveThread
+                            ? 'text-[var(--accent-primary)] bg-[var(--accent-container)]'
+                            : 'text-[var(--text-muted)] hover:bg-[var(--card-hover-bg)] hover:text-[var(--text-primary)]'
+                        }`}
+                      >
+                        <Radio className={`w-4 h-4 ${t.isActiveThread ? 'animate-pulse' : ''}`} />
+                      </button>
                       <button
                         type="button"
                         onClick={(e) => {

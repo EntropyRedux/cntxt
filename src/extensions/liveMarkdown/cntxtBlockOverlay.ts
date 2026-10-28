@@ -71,6 +71,22 @@ function collectCntxtBlocks(view: EditorView): OverlayBlockDescriptor[] {
   return result.sort((a, b) => a.startLine - b.startLine);
 }
 
+const activeOverlayDismissCallbacks = new Set<() => boolean>();
+
+/**
+ * Dismisses any open CNTXT block reply popover or floating control bar.
+ * Returns true if an active overlay popover was open and dismissed.
+ */
+export function dismissActiveCntxtOverlayPopover(): boolean {
+  let dismissed = false;
+  for (const cb of activeOverlayDismissCallbacks) {
+    if (cb()) {
+      dismissed = true;
+    }
+  }
+  return dismissed;
+}
+
 export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
   class {
     private overlayLayer: HTMLElement;
@@ -78,6 +94,7 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
     private activeReplyBlockStartLine: number | null = null;
     private rafId: number | null = null;
     private onScrollBound: () => void;
+    private dismissCallback: () => boolean;
 
     constructor(private view: EditorView) {
       this.overlayLayer = createElement('div', {
@@ -96,6 +113,18 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
 
       this.onScrollBound = () => this.scheduleSync();
       scroller.addEventListener('scroll', this.onScrollBound, { passive: true });
+
+      this.dismissCallback = () => {
+        if (this.activeReplyBlockStartLine !== null || this.openPopupStartLine !== null) {
+          this.activeReplyBlockStartLine = null;
+          this.openPopupStartLine = null;
+          this.syncOverlay();
+          return true;
+        }
+        return false;
+      };
+      activeOverlayDismissCallbacks.add(this.dismissCallback);
+
       this.scheduleSync();
     }
 
@@ -563,11 +592,16 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
 
       const container = createElement('div', {
         className:
-          'cm-cntxt-reply-popover pointer-events-auto fixed sm:absolute z-50 flex flex-col gap-2 p-3 rounded-xl bg-[var(--modal-bg,#18181b)] border border-[var(--border-primary,#3f3f46)] shadow-2xl backdrop-blur-md text-xs font-sans text-[var(--text-primary,#f4f4f5)] transition-all',
+          'cm-cntxt-reply-popover pointer-events-auto absolute z-50 flex flex-col gap-2 p-3 rounded-xl bg-[var(--modal-bg,#18181b)] border border-[var(--border-primary,#3f3f46)] shadow-2xl backdrop-blur-md text-xs font-sans text-[var(--text-primary,#f4f4f5)] transition-all overflow-y-auto',
       });
-      container.style.width = 'min(420px, calc(100vw - 32px))';
-      container.style.right = '16px';
-      container.style.top = `${Math.max(16, scroller.scrollTop + 48)}px`;
+      const viewportH = scroller.clientHeight || 400;
+      const estimatedPopoverH = 220;
+      const maxTopOffset = Math.max(8, viewportH - estimatedPopoverH - 12);
+      const clampedOffset = Math.min(48, maxTopOffset);
+      container.style.width = 'min(420px, calc(100vw - 24px))';
+      container.style.right = '12px';
+      container.style.top = `${Math.max(8, scroller.scrollTop + clampedOffset)}px`;
+      container.style.maxHeight = `${Math.max(180, viewportH - 16)}px`;
 
       // Header row
       const header = createElement('div', {
@@ -733,6 +767,7 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
       if (this.rafId !== null) {
         cancelAnimationFrame(this.rafId);
       }
+      activeOverlayDismissCallbacks.delete(this.dismissCallback);
       this.view.scrollDOM.removeEventListener('scroll', this.onScrollBound);
       this.overlayLayer.remove();
     }

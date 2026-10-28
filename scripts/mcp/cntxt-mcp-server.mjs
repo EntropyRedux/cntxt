@@ -36,6 +36,10 @@ function getCandidateConfigPaths() {
     paths.push(path.join(process.env.LOCALAPPDATA, 'com.cntxt.desktop', 'gateway_runtime.json'));
   }
 
+  if (process.env.XDG_CONFIG_HOME) {
+    paths.push(path.join(process.env.XDG_CONFIG_HOME, 'com.cntxt.desktop', 'gateway_runtime.json'));
+  }
+
   if (process.env.HOME) {
     paths.push(
       path.join(process.env.HOME, 'Library', 'Application Support', 'com.cntxt.desktop', 'gateway_runtime.json')

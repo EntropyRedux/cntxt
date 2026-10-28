@@ -23,7 +23,7 @@ import {
 import { liveMarkdownExtension } from '../src/extensions/liveMarkdown';
 import { HostCommandBus } from '../src/features/panelApps/rpc/hostCommandBus';
 import { useTabStore } from '../src/store/tabStore';
-import { BrowserRuntimeAdapter } from '../src/adapters/BrowserRuntimeAdapter';
+import { BrowserRuntimeAdapter } from '../src/adapters/browserRuntimeAdapter';
 
 describe('FG-22: CNTXT Block Parser, Rich Containers & Blocks RPC', () => {
   describe('1. parseBlockInfoString & serializeBlockInfoString', () => {

@@ -71,10 +71,11 @@
           "md",
           "markdown",
           "mdown",
-          "mkdn"
+          "mkdn",
+          "cntxt"
         ],
         "name": "Markdown Document",
-        "description": "Markdown Document",
+        "description": "Markdown & CNTXT Document",
         "role": "Editor"
       },
       {

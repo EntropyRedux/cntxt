@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.47
+Version: v2.48
 Last Updated: 2026-10-28
-Last Updated By: Antigravity (REST Gateway Multi-Window Event Isolation Priority Logging)
+Last Updated By: Prod Agent (FG-24 Linux Desktop & Android Mobile v0.7.1 Port Delivery & Wireless ADB Deployment)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -11,18 +11,40 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-23 Complete & Verified)
+  [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 728/728 Live across 61 suites, Rust Security Test Suite 12/12 Live)
+    [x] Testing (Vitest 734/734 Live across 63 suites, Rust Security Test Suite 12/12 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.7.1 Authenticode Signed Portable Executable & Native Installers Built: CNTXT_0.7.1_portable.exe, CNTXT_0.7.1_x64-setup.exe, CNTXT_0.7.1_x64_en-US.msi; v0.5.14 Android Signed APK Pipeline Live)
+  [x] Packaging & Release (v0.7.1 Windows Authenticode Portable + Installers, Linux Portable + Debian Package Installed, Android Signed APK Installed via Wireless ADB)
 
-Current Feature Group: Pass 2 Audit Reconciliation & Remediation (FG-21, FG-22, FG-23)
-Status: [x] Reconciled & Remediated (All 12 findings resolved)
+Current Feature Group: FG-24 Linux Desktop & Android Mobile v0.7.1 Porting & Packaging
+Status: [x] Implemented, Verified, Packaged & Deployed
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (731/731 unit tests passing across 62 suites in CNTXT, 12 native Rust security tests clean)
-Active Plan: /generated-documents/plans/feature_group_FG23_active_thread_and_user_inbox_2026-10-21.md
+Unit Tests: written [x] passing [x] (734/734 unit tests passing across 63 suites in CNTXT, 12 native Rust security tests clean)
+Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 Notes:
+- Task 68: Feature Group FG-24 — Linux Desktop & Android Mobile v0.7.1 Ports & Wireless ADB Deployment (2026-10-28):
+  - Linux Desktop Porting & Installation:
+    - Built and staged `dist-installer/CNTXT_0.7.1_amd64.deb` (8.9 MB) and `dist-portable/CNTXT_0.7.1_portable` / `cntxt-portable` (15 MB).
+    - Installed Linux package into host user environment (`~/.local/bin/cntxt`, `~/.local/share/applications/CNTXT.desktop`, `~/.local/share/icons/hicolor/`).
+    - Added `.cntxt` file association and language detection across `tauri.conf.json`, `file.rs`, `tauriRuntimeAdapter.ts`, and `ShellFrame.tsx`.
+    - Added multi-terminal fallback support in `pty.rs` honoring user shell override and iterating `$TERMINAL`, `x-terminal-emulator`, `gnome-terminal`, `konsole`, `xfce4-terminal`, `alacritty`, `kitty`, `wezterm`, and `xterm`.
+    - Hardened `validate_path` in `file.rs` to detect and reject cross-platform backslash directory traversal sequences (`folder\..\..\secret.txt`) on Unix systems.
+  - Android Mobile Porting & Touch Ergonomics:
+    - Built and staged `dist-android/cntxt-0.7.1-arm64-release-signed.apk` (19 MB, `versionCode=7001`, `versionName=0.7.1`, verified v2/v3 signatures).
+    - Established wireless ADB over TCP port 5555 with connected POCO F1 at `192.168.1.138:5555` and deployed `v0.7.1`.
+    - Deployed and launched `cntxt-0.7.1-arm64-release-signed.apk` to USB-connected tablet device (`2405CPCFBG` / `ce6162a`).
+    - Restored `onWebViewCreate` and `OnBackPressedCallback` handshake in `MainActivity.kt` delegating to `window.__CNTXT_HANDLE_BACK__()`.
+    - Added touch-mode Active Thread support in `TabBar.tsx`: displays pulsing `Radio` icon on the floating tab pill and provides 1-tap touch-accessible `Radio` toggle buttons per tab in the `Open Tabs` dropdown.
+    - Clamped `[Respond]` inline citation popover in `cntxtBlockOverlay.ts` to mobile viewport bounds and wired into the Android back button dismissal hierarchy.
+    - Enabled and Verified Localhost REST Gateway on Android:
+      - Lifted mobile restrictions in `gateway.rs` and `androidRuntimeAdapter.ts` (exposing `bridge.gateway.isAvailable() === true`).
+      - Verified Tokio TCP listener binds cleanly to `127.0.0.1:9876` on Android.
+      - Tested `/api/v1/health` returning `{"status":"ok","version":"0.7.1"}` and `/api/v1/rpc` executing `tabs.list` and `/api/v1/tabs/open` creating tabs in the live Android UI via ADB and loopback.
+  - Task 66 Multi-Window Event Isolation & Discovery:
+    - Isolated external REST Gateway RPC requests via `app.emit_to("main", ...)` in `gateway.rs` and added `getCurrentWindow().label === 'main'` listener guard in `tauriRuntimeAdapter.ts`.
+    - Added `$XDG_CONFIG_HOME` resolution in `gateway.rs` and `cntxt-mcp-server.mjs`.
+    - Gated REST Gateway on mobile platforms (`AndroidRuntimeAdapter.gateway.isAvailable() === false`).
 - Task 66: High-Priority Architectural Finding — REST Gateway Multi-Window Event Isolation (2026-10-28):
   - Finding: When external tools (e.g. `odin-reviewer`, external test harness, MCP client) send requests to `/api/v1/tabs/open` or `/api/v1/rpc`, `src-tauri/src/commands/gateway.rs` issues a global application-level event broadcast via `app.emit("cntxt://rpc-request", emit_payload)`.
   - Impact: In multi-window desktop configurations (e.g., primary docked window + secondary popout/floating window), all webviews in the process receive the event simultaneously and instantiate duplicate tabs.

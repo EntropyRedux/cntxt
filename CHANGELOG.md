@@ -5,7 +5,23 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.1] — 2026-10-21
+## [0.7.1] — 2026-10-28
+
+### Linux Desktop & Android Mobile v0.7.1 Ports (FG-24)
+- **Linux Native Packaging & Staging (`build-portable.mjs`, `tauri.conf.json`)**:
+  - Recompiled release binaries for Linux x64: `dist-installer/CNTXT_0.7.1_amd64.deb` (8.9 MB) and `dist-portable/CNTXT_0.7.1_portable` / `cntxt-portable` (15 MB).
+  - Registered `.cntxt` file association in `tauri.conf.json` (`bundle.fileAssociations`) and detected `.cntxt` extension as Markdown in `file.rs`, `tauriRuntimeAdapter.ts`, and `ShellFrame.tsx`.
+  - Added robust Linux external terminal launcher fallback in `pty.rs` honoring user shell override and iterating `$TERMINAL`, `x-terminal-emulator`, `gnome-terminal`, `konsole`, `xfce4-terminal`, `alacritty`, `kitty`, `wezterm`, and `xterm`.
+- **Android Mobile v0.7.1 Port & Touch Ergonomics (`build-android.mjs`, `MainActivity.kt`, `TabBar.tsx`, `cntxtBlockOverlay.ts`)**:
+  - Recompiled signed Android release APK: `dist-android/cntxt-0.7.1-arm64-release-signed.apk` (19 MB, `versionCode=7001`, `versionName=0.7.1`, verified v2/v3 signing).
+  - Restored `onWebViewCreate` and `OnBackPressedCallback` handshake in `MainActivity.kt` delegating to `window.__CNTXT_HANDLE_BACK__()`.
+  - Added touch-mode Active Thread support in `TabBar.tsx`: displays pulsing `Radio` icon on the floating tab pill and provides 1-tap touch-accessible `Radio` toggle buttons per tab in the `Open Tabs` dropdown.
+  - Clamped `[Respond]` inline citation popover in `cntxtBlockOverlay.ts` to mobile viewport bounds and wired into the Android back button dismissal hierarchy.
+  - Enabled and verified Localhost REST API Gateway on Android: Tokio TCP listener binds to loopback (`127.0.0.1:9876`), verified `/api/v1/health` and RPC `/api/v1/rpc` tab creation on POCO F1.
+- **REST Gateway Multi-Window Event Isolation & Path Resolution (Task 66)**:
+  - Isolated external REST Gateway RPC requests via `app.emit_to("main", ...)` in `gateway.rs` and added `getCurrentWindow().label === 'main'` listener guard in `tauriRuntimeAdapter.ts`.
+  - Added `$XDG_CONFIG_HOME` resolution in `gateway.rs` and `cntxt-mcp-server.mjs`.
+  - Gated REST Gateway on mobile platforms (`AndroidRuntimeAdapter.gateway.isAvailable() === false`).
 
 ### Security Hardening & Audit Remediation
 - **RPC `locked=user` Guardrail (`hostCommandBus.ts`)**:

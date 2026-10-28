@@ -63,8 +63,10 @@ if (fs.existsSync(targetFingerprintDir)) {
 
 // 3. Build Tauri release binary with single-threaded cargo gate (CARGO_BUILD_JOBS=1)
 // Note: Tauri CLI automatically executes beforeBuildCommand ("npm run build") to compile frontend assets
-console.log('🦀 Compiling native release executable and bundles (CARGO_BUILD_JOBS=1)...');
-process.env.CARGO_BUILD_JOBS = '1';
+console.log('🦀 Compiling native release executable and bundles...');
+if (isWindows && !process.env.CARGO_BUILD_JOBS) {
+  process.env.CARGO_BUILD_JOBS = '1';
+}
 execSync('npx @tauri-apps/cli build', { cwd: rootDir, stdio: 'inherit', env: process.env });
 
 // 5. Copy release binary to dist-portable/
@@ -91,8 +93,24 @@ if (fs.existsSync(releaseBinary)) {
     // Ignore if not running
   }
 
-  const targetName = isWindows ? `CNTXT_${version}_portable.exe` : 'cntxt-portable';
+  const targetName = isWindows ? `CNTXT_${version}_portable.exe` : `CNTXT_${version}_portable`;
   const targetPath = path.join(portableDir, targetName);
+
+  // Remove stale versioned portable binaries from previous versions
+  for (const existing of fs.readdirSync(portableDir)) {
+    if (
+      existing.startsWith('CNTXT_') &&
+      existing.includes('_portable') &&
+      existing !== targetName &&
+      existing !== `CNTXT_${version}_portable.exe`
+    ) {
+      try {
+        fs.rmSync(path.join(portableDir, existing), { force: true });
+      } catch {
+        // Ignore locked files
+      }
+    }
+  }
 
   let copied = false;
   try {
@@ -117,6 +135,13 @@ if (fs.existsSync(releaseBinary)) {
   }
   if (!isWindows && copied) {
     fs.chmodSync(targetPath, 0o755);
+    const unversionedLinuxPath = path.join(portableDir, 'cntxt-portable');
+    try {
+      fs.copyFileSync(releaseBinary, unversionedLinuxPath);
+      fs.chmodSync(unversionedLinuxPath, 0o755);
+    } catch (e) {
+      console.warn(`Could not update cntxt-portable: ${e.message}`);
+    }
   }
 
   if (fs.existsSync(targetPath)) {
@@ -136,16 +161,37 @@ if (!fs.existsSync(distInstallerDir)) {
   fs.mkdirSync(distInstallerDir, { recursive: true });
 }
 
-const bundlesToCopy = [
-  {
-    src: path.join(bundleDir, 'nsis', `CNTXT_${version}_x64-setup.exe`),
-    label: 'NSIS installer',
-  },
-  {
-    src: path.join(bundleDir, 'msi', `CNTXT_${version}_x64_en-US.msi`),
-    label: 'MSI installer',
-  },
-];
+const bundlesToCopy = isWindows
+  ? [
+      {
+        src: path.join(bundleDir, 'nsis', `CNTXT_${version}_x64-setup.exe`),
+        label: 'NSIS installer',
+      },
+      {
+        src: path.join(bundleDir, 'msi', `CNTXT_${version}_x64_en-US.msi`),
+        label: 'MSI installer',
+      },
+    ]
+  : isLinux
+    ? [
+        {
+          src: path.join(bundleDir, 'deb', `CNTXT_${version}_amd64.deb`),
+          label: 'Debian (.deb) installer',
+        },
+      ]
+    : [];
+
+if (isLinux) {
+  for (const existing of fs.readdirSync(distInstallerDir)) {
+    if (existing.endsWith('_amd64.deb') && existing !== `CNTXT_${version}_amd64.deb`) {
+      try {
+        fs.rmSync(path.join(distInstallerDir, existing), { force: true });
+      } catch {
+        // Ignore
+      }
+    }
+  }
+}
 
 let copiedCount = 0;
 for (const { src, label } of bundlesToCopy) {

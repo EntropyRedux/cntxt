@@ -76,8 +76,22 @@ fn get_gateway_runtime_path() -> std::path::PathBuf {
             return dir.join("gateway_runtime.json");
         }
     }
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "android")]
     {
+        if let Ok(home) = std::env::var("HOME") {
+            let dir = std::path::PathBuf::from(home).join("com.cntxt.desktop");
+            return dir.join("gateway_runtime.json");
+        }
+        return std::path::PathBuf::from("/data/data/com.cntxt.desktop/files/gateway_runtime.json");
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "android")))]
+    {
+        if let Ok(xdg_config) = std::env::var("XDG_CONFIG_HOME") {
+            if !xdg_config.trim().is_empty() {
+                let dir = std::path::PathBuf::from(xdg_config).join("com.cntxt.desktop");
+                return dir.join("gateway_runtime.json");
+            }
+        }
         if let Ok(home) = std::env::var("HOME") {
             let dir = std::path::PathBuf::from(home)
                 .join(".config")
@@ -89,7 +103,7 @@ fn get_gateway_runtime_path() -> std::path::PathBuf {
 }
 
 fn sync_gateway_discovery_file(port: u16, token: &str, running: bool) {
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(not(target_os = "ios"))]
     {
         let effective_port = if running && port > 0 { port } else { 0 };
         let now = std::time::SystemTime::now()
@@ -215,78 +229,87 @@ pub async fn start_rest_gateway(
         return Err("Unauthorized window origin for REST gateway management".into());
     }
 
-    if GATEWAY_RUNNING.load(Ordering::SeqCst) {
-        return Ok(GATEWAY_PORT.load(Ordering::SeqCst));
+    #[cfg(target_os = "ios")]
+    {
+        let _ = (app_handle, port);
+        return Err("Localhost REST API Gateway is not supported on iOS".into());
     }
 
-    let _ = init_gateway_token_if_empty();
-    let requested_port = port.unwrap_or(9876);
-
-    // Try requested port and fallback up to next 5 ports per FIND-12
-    let mut bound_listener = None;
-    for candidate in requested_port..=(requested_port.saturating_add(5)) {
-        if let Ok(l) = TcpListener::bind(format!("127.0.0.1:{}", candidate)).await {
-            bound_listener = Some(l);
-            break;
+    #[cfg(not(target_os = "ios"))]
+    {
+        if GATEWAY_RUNNING.load(Ordering::SeqCst) {
+            return Ok(GATEWAY_PORT.load(Ordering::SeqCst));
         }
-    }
 
-    let listener = match bound_listener {
-        Some(l) => l,
-        None => TcpListener::bind("127.0.0.1:0")
-            .await
-            .map_err(|e| format!("Failed to bind loopback TCP listener on any candidate port: {}", e))?,
-    };
+        let _ = init_gateway_token_if_empty();
+        let requested_port = port.unwrap_or(9876);
 
-    let bound_addr = listener
-        .local_addr()
-        .map_err(|e| format!("Failed to read bound port: {}", e))?;
-    let bound_port = bound_addr.port();
+        // Try requested port and fallback up to next 5 ports per FIND-12
+        let mut bound_listener = None;
+        for candidate in requested_port..=(requested_port.saturating_add(5)) {
+            if let Ok(l) = TcpListener::bind(format!("127.0.0.1:{}", candidate)).await {
+                bound_listener = Some(l);
+                break;
+            }
+        }
 
-    GATEWAY_PORT.store(bound_port, Ordering::SeqCst);
-    GATEWAY_RUNNING.store(true, Ordering::SeqCst);
-    if let Some(tok) = current_gateway_token() {
-        sync_gateway_discovery_file(bound_port, &tok, true);
-    }
+        let listener = match bound_listener {
+            Some(l) => l,
+            None => TcpListener::bind("127.0.0.1:0")
+                .await
+                .map_err(|e| format!("Failed to bind loopback TCP listener on any candidate port: {}", e))?,
+        };
 
-    let (shutdown_tx, mut shutdown_rx) = tokio::sync::broadcast::channel::<()>(1);
-    if let Ok(mut lock) = SHUTDOWN_TX.write() {
-        *lock = Some(shutdown_tx);
-    }
+        let bound_addr = listener
+            .local_addr()
+            .map_err(|e| format!("Failed to read bound port: {}", e))?;
+        let bound_port = bound_addr.port();
 
-    let app = app_handle.clone();
-    let pending_map = get_pending_map().clone();
+        GATEWAY_PORT.store(bound_port, Ordering::SeqCst);
+        GATEWAY_RUNNING.store(true, Ordering::SeqCst);
+        if let Some(tok) = current_gateway_token() {
+            sync_gateway_discovery_file(bound_port, &tok, true);
+        }
 
-    tokio::spawn(async move {
-        loop {
-            tokio::select! {
-                _ = shutdown_rx.recv() => {
-                    break;
-                }
-                accept_res = listener.accept() => {
-                    match accept_res {
-                        Ok((stream, addr)) => {
-                            if !addr.ip().is_loopback() {
-                                continue;
+        let (shutdown_tx, mut shutdown_rx) = tokio::sync::broadcast::channel::<()>(1);
+        if let Ok(mut lock) = SHUTDOWN_TX.write() {
+            *lock = Some(shutdown_tx);
+        }
+
+        let app = app_handle.clone();
+        let pending_map = get_pending_map().clone();
+
+        tokio::spawn(async move {
+            loop {
+                tokio::select! {
+                    _ = shutdown_rx.recv() => {
+                        break;
+                    }
+                    accept_res = listener.accept() => {
+                        match accept_res {
+                            Ok((stream, addr)) => {
+                                if !addr.ip().is_loopback() {
+                                    continue;
+                                }
+                                let app_clone = app.clone();
+                                let map_clone = pending_map.clone();
+                                tokio::spawn(async move {
+                                    handle_http_client(stream, addr, app_clone, map_clone).await;
+                                });
                             }
-                            let app_clone = app.clone();
-                            let map_clone = pending_map.clone();
-                            tokio::spawn(async move {
-                                handle_http_client(stream, addr, app_clone, map_clone).await;
-                            });
-                        }
-                        Err(_) => {
-                            if !GATEWAY_RUNNING.load(Ordering::SeqCst) {
-                                break;
+                            Err(_) => {
+                                if !GATEWAY_RUNNING.load(Ordering::SeqCst) {
+                                    break;
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-    });
+        });
 
-    Ok(bound_port)
+        Ok(bound_port)
+    }
 }
 
 #[tauri::command]
@@ -636,12 +659,19 @@ Connection: close\r\n\r\n{}",
         map_lock.insert(correlation_id.clone(), tx);
     }
 
+    let target_window = rpc_request
+        .get("targetWindow")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("main")
+        .to_string();
+
     let emit_payload = json!({
         "correlationId": correlation_id.clone(),
         "request": rpc_request
     });
 
-    let _ = app.emit("cntxt://rpc-request", emit_payload);
+    let _ = app.emit_to(target_window.as_str(), "cntxt://rpc-request", emit_payload);
 
     // Await response with 15-second timeout (per FIND-PLAN-20-02)
     let response_result = tokio::time::timeout(Duration::from_secs(15), rx).await;

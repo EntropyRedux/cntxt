@@ -382,6 +382,7 @@ pub async fn spawn_external_terminal(
         #[cfg(target_os = "macos")]
         {
             use std::process::Command;
+            let _ = shell_override;
             Command::new("open")
                 .args(["-a", "Terminal", canonical_dir.to_str().unwrap_or(".")])
                 .spawn()
@@ -391,11 +392,53 @@ pub async fn spawn_external_terminal(
         #[cfg(not(target_os = "macos"))]
         {
             use std::process::Command;
-            Command::new("x-terminal-emulator")
-                .current_dir(&canonical_dir)
-                .spawn()
-                .map_err(|e| format!("Failed to spawn Linux terminal: {}", e))?;
-            Ok(true)
+            let shell = shell_override.unwrap_or_default();
+            if !shell.is_empty() {
+                let sanitized = sanitize_command(&shell)?;
+                if Command::new(&sanitized)
+                    .current_dir(&canonical_dir)
+                    .spawn()
+                    .is_ok()
+                {
+                    return Ok(true);
+                }
+            }
+
+            if let Ok(env_term) = std::env::var("TERMINAL") {
+                if !env_term.trim().is_empty() {
+                    if let Ok(sanitized_term) = sanitize_command(env_term.trim()) {
+                        if Command::new(&sanitized_term)
+                            .current_dir(&canonical_dir)
+                            .spawn()
+                            .is_ok()
+                        {
+                            return Ok(true);
+                        }
+                    }
+                }
+            }
+
+            let candidates = [
+                "x-terminal-emulator",
+                "gnome-terminal",
+                "konsole",
+                "xfce4-terminal",
+                "alacritty",
+                "kitty",
+                "wezterm",
+                "xterm",
+            ];
+            for term in candidates {
+                if Command::new(term)
+                    .current_dir(&canonical_dir)
+                    .spawn()
+                    .is_ok()
+                {
+                    return Ok(true);
+                }
+            }
+
+            Err("Failed to spawn Linux terminal: no supported terminal emulator found in PATH".to_string())
         }
     }
 

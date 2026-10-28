@@ -21,6 +21,7 @@ import { usePanelAppsStore } from '../features/panelApps/state/panelAppsStore';
 import { WebAuthGateway } from '../components/Auth/WebAuthGateway';
 import { compressAndConvertToDataUrl, generateImageAlt } from '../services/imageService';
 import { openDocumentWithLargeDocCheck } from '../services/largeDocHelper';
+import { dismissActiveCntxtOverlayPopover } from '../extensions/liveMarkdown/cntxtBlockOverlay';
 import { SupportedLanguage } from '../types';
 
 declare global {
@@ -150,6 +151,7 @@ export const ShellFrame: React.FC = () => {
         case 'markdown':
         case 'mdown':
         case 'mkdn':
+        case 'cntxt':
           return 'markdown';
         case 'js':
         case 'jsx':
@@ -283,6 +285,9 @@ export const ShellFrame: React.FC = () => {
   // Register Android back-button handshake handler with priority dismiss hierarchy
   useEffect(() => {
     const handleAndroidBack = (): boolean => {
+      if (dismissActiveCntxtOverlayPopover()) {
+        return true;
+      }
       if (isCommandPaletteOpen) {
         setIsCommandPaletteOpen(false);
         return true;

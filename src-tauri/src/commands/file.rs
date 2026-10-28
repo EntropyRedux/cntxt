@@ -87,8 +87,10 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
 
     let path_buf = PathBuf::from(path);
 
-    // Reject true directory traversal sequences (ParentDir components)
-    if path_buf.components().any(|c| c == std::path::Component::ParentDir) {
+    // Reject true directory traversal sequences (ParentDir components or cross-platform '..\' segments)
+    if path_buf.components().any(|c| c == std::path::Component::ParentDir)
+        || path.split(['/', '\\']).any(|seg| seg == "..")
+    {
         return Err("Path traversal sequence '..' is prohibited".to_string());
     }
 
@@ -160,7 +162,7 @@ pub async fn open_file_dialog(window: Window, session_token: Option<String>) -> 
 
         let file_path = FileDialog::new()
             .add_filter("All Files", &["*"])
-            .add_filter("Markdown", &["md"])
+            .add_filter("Markdown", &["md", "markdown", "cntxt"])
             .add_filter("Text", &["txt"])
             .add_filter("JSON", &["json"])
             .add_filter("YAML", &["yaml", "yml"])
@@ -199,7 +201,7 @@ pub async fn save_file_dialog(window: Window, default_name: Option<String>, sess
 
         let mut dialog = FileDialog::new()
             .add_filter("All Files", &["*"])
-            .add_filter("Markdown", &["md"])
+            .add_filter("Markdown", &["md", "markdown", "cntxt"])
             .add_filter("Text", &["txt"])
             .add_filter("JSON", &["json"])
             .add_filter("YAML", &["yaml", "yml"])
@@ -262,7 +264,7 @@ pub fn detect_language_from_path(window: Window, path: String, session_token: Op
         .unwrap_or("");
 
     match extension {
-        "md" | "markdown" => "markdown",
+        "md" | "markdown" | "cntxt" => "markdown",
         "txt" => "text",
         "json" | "jsonc" => "json",
         "yaml" | "yml" => "yaml",

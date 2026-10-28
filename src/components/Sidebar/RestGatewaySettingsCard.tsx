@@ -88,7 +88,7 @@ export const RestGatewaySettingsCard: React.FC<RestGatewaySettingsCardProps> = (
       {!isAvailable ? (
         <div className="p-2 rounded bg-[var(--card-secondary-bg)] border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)] flex items-center gap-1.5">
           <AlertCircle className="w-3.5 h-3.5 text-[var(--status-warning)] shrink-0" />
-          <span>Desktop native runtime required. REST Gateway is unavailable in browser or mobile mode.</span>
+          <span>Desktop or Android native runtime required. REST Gateway is unavailable in browser mode.</span>
         </div>
       ) : enabled ? (
         <div className="space-y-2.5 pl-2.5 border-l-2 border-[var(--accent-primary)]/40 bg-[var(--card-secondary-bg)]/50 p-2.5 rounded-r-md">

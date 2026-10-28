@@ -85,6 +85,7 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
     switch (ext) {
       case 'md':
       case 'markdown':
+      case 'cntxt':
         return 'markdown';
       case 'js':
       case 'jsx':
@@ -754,8 +755,24 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
 
   private initRpcListener(): void {
     if (typeof window === 'undefined') return;
+    try {
+      const currentWin = getCurrentWindow();
+      if (currentWin && typeof currentWin.label === 'string' && currentWin.label !== 'main') {
+        return;
+      }
+    } catch {
+      // Proceed if window label cannot be synchronously inspected in test/mock environments
+    }
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen<{ correlationId: string; request: CntxtRpcRequest }>('cntxt://rpc-request', async (event) => {
+        try {
+          const win = getCurrentWindow();
+          if (win && typeof win.label === 'string' && win.label !== 'main') {
+            return;
+          }
+        } catch {
+          // Proceed in non-windowed test environments
+        }
         const { correlationId, request } = event.payload;
         try {
           const bus = getHostCommandBus(this);
