@@ -1,18 +1,11 @@
-# Issues (Completed in v0.3.3)
-- [x] 1. Adding custom markdown formatting buttons not functional (Resolved)
-- [x] 2. CTRL+S or File > Save Document returns an error 'Could not write to file path' (Resolved)
-- [x] 3. *Italic* or _italic_ italicizing text does not actually italicize them unless inside inline code (Resolved)
-- [x] 4. External web link implementation / links not actually working properly (Resolved: Ctrl+Click and context menu open in system browser)
-- [x] 5. Action Scripts Panel > Collapse/Expand all categories button > only affects the 'General' category (Resolved)
-
-# Improvements (Completed in v0.3.4)
-- [x] 1. When browsing a folder on the file explorer, at the very end of the file lists, add a + New file button, so that the user can create new file on any folder or subfolder inside their chosen workspace.
-- [x] 2. Reduce the editor padding options to: 12px, 24px, 36px.
-- [x] 3. Add 'insert' variable (`fmt_variable` / `{{variable}}`) in the markdown quick formatting bar and modular ribbon.
-- [x] 4. Add variable extractions (extract answered variables, extract rows with variables, extract rows without variables, select text > extract).
-- [x] 5. Export as `${filename}_blueprint.cntxt`.
-- [x] 6. Fine tune text color syntax highlighting and variable tokens.
-- [x] 7. Increase the size of the popup modal for filling up document variables (`VariableFillerModal.tsx` expanded to `max-w-5xl` 88vh).
-- [x] 8. Document outline > quick append section input allowing text to append on selected heading or toggle top/bottom of document.
-- [x] 10. When opening documents especially large documents (>100KB), a modal prompts the user with TOC outline checklist to truncate or open full document.
-- [x] 11. Document outline panel split into two: top section is the TOC/symbols, bottom section is a chat-like quick append input field.
+# Issues
+1. Activating a .cntxt document as active thread, no diference vs. it not activated
+2. Conversation mode is still unstable, will preform more tests3
+3. Code block issues, when in ordinary code blocks, click accuracy is reduced
+4. When in a cntxt special block, selecting a section and adding a response/comment, typing text into the input field then scrolls on the mouse, the typed text resets, it appears scrlling also resets the input field, not a major issue but if fixing is trivial, fix
+5. adding a response on a section > after entering, the viewport moves to the added response moving me away from the current section I am viewing
+6. [PRIORITY] REST Gateway multi-window broadcast: when opening tabs or dispatching RPC via REST API (`/api/v1/tabs/open`), `app.emit` broadcasts to all open windows, causing tabs to duplicate across both the main window and secondary/popout windows instead of targeting only the main window.
+# Improvements
+1. Special table code block to create notion-like tables
+2. When connecting via REST API, the connected agent/program must receive a response on what available controls and how to use it must be sent so the agent knows how to the feature
+3. Conversation mode: user responses hidden in document by default, only appears if exported as .cntxt file(to follow)

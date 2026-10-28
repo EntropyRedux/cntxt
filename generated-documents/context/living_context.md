@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.46
-Last Updated: 2026-10-21
-Last Updated By: Prod Agent (v0.7.1 Release Packaging & Audit Remediation Sync)
+Version: v2.47
+Last Updated: 2026-10-28
+Last Updated By: Antigravity (REST Gateway Multi-Window Event Isolation Priority Logging)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -23,6 +23,17 @@ Background Processes: event-driven PTY streaming & debounced file-tailer synchro
 Unit Tests: written [x] passing [x] (731/731 unit tests passing across 62 suites in CNTXT, 12 native Rust security tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG23_active_thread_and_user_inbox_2026-10-21.md
 Notes:
+- Task 66: High-Priority Architectural Finding — REST Gateway Multi-Window Event Isolation (2026-10-28):
+  - Finding: When external tools (e.g. `odin-reviewer`, external test harness, MCP client) send requests to `/api/v1/tabs/open` or `/api/v1/rpc`, `src-tauri/src/commands/gateway.rs` issues a global application-level event broadcast via `app.emit("cntxt://rpc-request", emit_payload)`.
+  - Impact: In multi-window desktop configurations (e.g., primary docked window + secondary popout/floating window), all webviews in the process receive the event simultaneously and instantiate duplicate tabs.
+  - Priority Resolution Architecture:
+    1. Update `gateway.rs` to route requests explicitly to the primary window via `app.emit_to("main", ...)` (or allow an optional target window label in the payload).
+    2. Guard `initRpcListener` in `tauriRuntimeAdapter.ts` using `getCurrentWindow().label === 'main'` so secondary windows ignore external gateway broadcasts by default.
+    3. Ensure `gateway_runtime.json` synchronization in `APPDATA/com.cntxt.desktop/` always reflects live port binds without relying on workspace-relative fallbacks.
+- Task 67: External Workflow Protocol & Boundary Invariant — Zero Scraping of In-Memory Editor State (2026-10-28):
+  - Invariant: External automation pipelines (such as Odin Reviewer) must never attempt to scrape internal editor database files (`kv_store.json`) or background tab buffers to infer live user input (such as manual observations).
+  - Automation pipelines must strictly wait for the human reviewer to state that manual observations are ready, and read the saved file directly from the task review folder on disk (`manual_observations.md`).
+  - CNTXT gateway interaction by external scripts is strictly restricted to locating/updating the active `Review.md` tab.
 - Task 65: Pass 2 Prod Agent Audit Reconciliation (2026-10-21):
   - Executed complete reconciliation and remediation of all 12 findings from Pass 1 Independent Blind Auditor report (`generated-documents/audits/raw_findings_feature_cntxt_fg21_fg22_2026-10-21.md`).
   - FIND-01 (Pillar 8): Enforced `effectiveActor` guardrail in `hostCommandBus.ts` so external RPC callers cannot self-assert `actor: 'user'` on `locked=user` blocks. Only internal UI callers (`appId === 'internal'`) can mutate user-locked blocks.
