@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.48
+Version: v2.49
 Last Updated: 2026-10-28
-Last Updated By: Prod Agent (FG-24 Linux Desktop & Android Mobile v0.7.1 Port Delivery & Wireless ADB Deployment)
+Last Updated By: Prod Agent (Editor Stability & Codeblock Click Accuracy Fixes)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,16 +13,21 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 734/734 Live across 63 suites, Rust Security Test Suite 12/12 Live)
+    [x] Testing (Vitest 736/736 Live across 63 suites, Rust Security Test Suite 12/12 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.1 Windows Authenticode Portable + Installers, Linux Portable + Debian Package Installed, Android Signed APK Installed via Wireless ADB)
 
 Current Feature Group: FG-24 Linux Desktop & Android Mobile v0.7.1 Porting & Packaging
 Status: [x] Implemented, Verified, Packaged & Deployed
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (734/734 unit tests passing across 63 suites in CNTXT, 12 native Rust security tests clean)
+Unit Tests: written [x] passing [x] (736/736 unit tests passing across 63 suites in CNTXT, 12 native Rust security tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 Notes:
+- Task 69: Core Editor Stability — Click Accuracy, HR Rules & Codeblock Header Alignment (2026-10-28):
+  - Fixed click accuracy and typing inside fenced code blocks: removed `codeContent` comparison from `CodeBlockHeaderWidget.eq()` and implemented `updateDOM()` to prevent DOM recreation and cursor jumping on keystrokes.
+  - Fixed horizontal rule `---` trapping cursor: added `if (hrMatch && !isLineActive)` in `liveMarkdown.ts` so active lines remain raw editable text.
+  - Adjusted codeblock container margins in `src/index.css`. User verified click accuracy is fully stabilized; space above codeblock header recorded in `issues_improvements.md` for dedicated visual tuning in next session.
+  - Unit tests: 736/736 passing across 63 test suites, lint clean.
 - Task 68: Feature Group FG-24 — Linux Desktop & Android Mobile v0.7.1 Ports & Wireless ADB Deployment (2026-10-28):
   - Linux Desktop Porting & Installation:
     - Built and staged `dist-installer/CNTXT_0.7.1_amd64.deb` (8.9 MB) and `dist-portable/CNTXT_0.7.1_portable` / `cntxt-portable` (15 MB).
