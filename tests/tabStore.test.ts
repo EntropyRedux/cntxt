@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useTabStore, flushPendingSaves, setDemoWelcomeDisabled, isDemoWelcomeDisabled } from '../src/store/tabStore';
+import { useConfirmStore } from '../src/store/confirmStore';
 
 describe('TabStore', () => {
   beforeEach(() => {
     useTabStore.setState({ tabs: [], activeTabId: '', isSaving: false });
+    useConfirmStore.setState({ isOpen: false, options: null, isLoading: false });
   });
 
   it('creates a new tab with default parameters', () => {
@@ -36,13 +38,90 @@ describe('TabStore', () => {
     expect(tab?.isDirty).toBe(true);
   });
 
-  it('closes a tab and creates an untitled tab if all tabs are closed', () => {
+  it('closes a clean tab and creates an untitled tab if all tabs are closed', () => {
     const tabId = useTabStore.getState().createTab('Doc.md', 'Content');
     useTabStore.getState().closeTab(tabId);
 
     const state = useTabStore.getState();
     expect(state.tabs.length).toBe(1);
     expect(state.tabs[0].title).toBe('Untitled.md');
+  });
+
+  it('intercepts closing a dirty tab and requests user confirmation', () => {
+    const tabId = useTabStore.getState().createTab('UnsavedDoc.md', 'Initial');
+    useTabStore.getState().updateTabContent(tabId, 'Modified content');
+    expect(useTabStore.getState().tabs.find(t => t.id === tabId)?.isDirty).toBe(true);
+
+    // Attempt close without force
+    useTabStore.getState().closeTab(tabId);
+
+    // Tab must remain open pending confirmation
+    expect(useTabStore.getState().tabs.some(t => t.id === tabId)).toBe(true);
+    expect(useConfirmStore.getState().isOpen).toBe(true);
+    expect(useConfirmStore.getState().options?.title).toBe('Unsaved Changes');
+    expect(useConfirmStore.getState().options?.message).toContain('UnsavedDoc.md');
+
+    // Canceling keeps tab open
+    useConfirmStore.getState().closeConfirm();
+    expect(useConfirmStore.getState().isOpen).toBe(false);
+    expect(useTabStore.getState().tabs.some(t => t.id === tabId)).toBe(true);
+
+    // Re-attempt and confirm discard
+    useTabStore.getState().closeTab(tabId);
+    useConfirmStore.getState().triggerConfirm();
+    expect(useTabStore.getState().tabs.some(t => t.id === tabId)).toBe(false);
+  });
+
+  it('closes a dirty tab immediately when force is true', () => {
+    const tabId = useTabStore.getState().createTab('DirtyForce.md', 'Initial');
+    useTabStore.getState().updateTabContent(tabId, 'Changed');
+    expect(useTabStore.getState().tabs.find(t => t.id === tabId)?.isDirty).toBe(true);
+
+    useTabStore.getState().closeTab(tabId, true);
+    expect(useConfirmStore.getState().isOpen).toBe(false);
+    expect(useTabStore.getState().tabs.some(t => t.id === tabId)).toBe(false);
+  });
+
+  it('prompts confirmation when closeOtherTabs includes dirty tabs', () => {
+    const keepId = useTabStore.getState().createTab('Keep.md');
+    const dirtyId = useTabStore.getState().createTab('DirtyOther.md');
+    useTabStore.getState().updateTabContent(dirtyId, 'Modified');
+
+    useTabStore.getState().closeOtherTabs(keepId);
+    expect(useConfirmStore.getState().isOpen).toBe(true);
+    expect(useTabStore.getState().tabs.length).toBe(2);
+
+    useConfirmStore.getState().triggerConfirm();
+    expect(useTabStore.getState().tabs.length).toBe(1);
+    expect(useTabStore.getState().tabs[0].id).toBe(keepId);
+  });
+
+  it('prompts confirmation when closeTabsToRight includes dirty tabs', () => {
+    const leftId = useTabStore.getState().createTab('Left.md');
+    const rightId = useTabStore.getState().createTab('RightDirty.md');
+    useTabStore.getState().updateTabContent(rightId, 'Dirty Content');
+
+    useTabStore.getState().closeTabsToRight(leftId);
+    expect(useConfirmStore.getState().isOpen).toBe(true);
+    expect(useTabStore.getState().tabs.length).toBe(2);
+
+    useConfirmStore.getState().triggerConfirm();
+    expect(useTabStore.getState().tabs.length).toBe(1);
+    expect(useTabStore.getState().tabs[0].id).toBe(leftId);
+  });
+
+  it('prompts confirmation when closeAllTabs includes dirty tabs', () => {
+    const cleanId = useTabStore.getState().createTab('Clean.md');
+    const dirtyId = useTabStore.getState().createTab('DirtyAll.md');
+    useTabStore.getState().updateTabContent(dirtyId, 'Dirty Content');
+
+    useTabStore.getState().closeAllTabs();
+    expect(useConfirmStore.getState().isOpen).toBe(true);
+    expect(useTabStore.getState().tabs.length).toBe(2);
+
+    useConfirmStore.getState().triggerConfirm();
+    expect(useTabStore.getState().tabs.length).toBe(1);
+    expect(useTabStore.getState().tabs[0].title).toBe('Untitled.md');
   });
 
   it('toggles tab pin state', () => {

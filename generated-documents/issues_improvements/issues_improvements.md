@@ -11,3 +11,8 @@
 4. When cntxt is connected to an agent, cntxt also sends a directive to the agent on how to use cntxt
 5. gatway security, should REST api be converted to MCP?
 6. UNdo close current tab or closed tab history
+7. Ribbon bar can save files as saved bookmark(loads the file from file explorer as long as it is still in there - return error if not)
+8. Add a view mode for templates and actions panel: can view like cards grids or detailed list(current)
+9. Title bar, menu bar, ribbon bar, side rail -> remove dividing lines/outlines so it looks more seamless
+10. Size adjustable markdown formatting toolbar so no need for single row and multi rows switchers...
+11. 

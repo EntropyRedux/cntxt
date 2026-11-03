@@ -663,7 +663,7 @@ export const FileExplorer: React.FC = () => {
         safePersist(bridge.storage, 'contextpad_virtual_files', JSON.stringify(updated), 'workspace files');
         const openTab = tabs.find(t => (item.path && t.filePath === item.path) || t.title === item.name);
         if (openTab) {
-          useTabStore.getState().closeTab(openTab.id);
+          useTabStore.getState().closeTab(openTab.id, true);
         }
         addNotification('Deleted', `Deleted "${item.name}"`, 'info');
       }

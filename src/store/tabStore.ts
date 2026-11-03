@@ -8,6 +8,7 @@ import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { useSettingsStore } from './settingsStore';
 import { useNotificationStore } from './notificationStore';
+import { useConfirmStore } from './confirmStore';
 import { safePersist, safeRemove } from '../services/storageHelper';
 import { writeTabCache, readTabCache, clearTabCache } from '../adapters/tabSessionCache';
 import { editorStateCache } from '../services/editor/editorStateCache';
@@ -29,9 +30,9 @@ interface TabState {
   // Actions
   setActiveTabId: (id: string) => void;
   createTab: (title?: string, content?: string, language?: SupportedLanguage, filePath?: string | null, pinnedTabId?: string | null, tabType?: TabType) => string;
-  closeTab: (tabId: string) => void;
-  closeAllTabs: () => void;
-  closeOtherTabs: (keepTabId: string) => void;
+  closeTab: (tabId: string, force?: boolean) => void;
+  closeAllTabs: (force?: boolean) => void;
+  closeOtherTabs: (keepTabId: string, force?: boolean) => void;
   updateTabContent: (tabId: string, content: string, isExternal?: boolean) => void;
   updateTabMetadata: (tabId: string, updates: Partial<Tab>) => void;
   insertTextAtCursor: (tabId: string, textToInsert: string, replaceSelection?: boolean) => void;
@@ -40,7 +41,7 @@ interface TabState {
   saveTabAs: (tabId: string, newTitle: string, newPath?: string) => Promise<void>;
   duplicateTab: (tabId: string) => string;
   toggleActiveThread: (tabId: string) => void;
-  closeTabsToRight: (tabId: string) => void;
+  closeTabsToRight: (tabId: string, force?: boolean) => void;
   openWelcomeTab: () => string;
   resetWelcomeTab: () => Promise<void>;
   openMarkdownGuideTab: () => string;
@@ -222,10 +223,25 @@ export const useTabStore = create<TabState>((set, get) => ({
     return id;
   },
 
-  closeTab: (tabId: string) => {
+  closeTab: (tabId: string, force = false) => {
+    const { tabs, activeTabId } = get();
+    const target = tabs.find(t => t.id === tabId);
+    if (target?.isDirty && !force) {
+      useConfirmStore.getState().showConfirm({
+        title: 'Unsaved Changes',
+        message: `"${target.title}" has unsaved changes. Do you want to close it and discard your changes?`,
+        confirmLabel: 'Discard & Close',
+        cancelLabel: 'Keep Editing',
+        variant: 'warning',
+        onConfirm: () => {
+          get().closeTab(tabId, true);
+        }
+      });
+      return;
+    }
+
     cancelPendingSave(tabId);
     editorStateCache.evictTabState(tabId);
-    const { tabs, activeTabId } = get();
     if (tabs.length === 1) {
       // Create a fresh untitled tab when closing the last one
       const newId = get().createTab('Untitled.md', '', 'markdown');
@@ -256,9 +272,27 @@ export const useTabStore = create<TabState>((set, get) => ({
     saveTabsMeta(newTabs, nextActiveId);
   },
 
-  closeOtherTabs: (keepTabId: string) => {
+  closeOtherTabs: (keepTabId: string, force = false) => {
     const { tabs } = get();
     const toDelete = tabs.filter(t => t.id !== keepTabId);
+    const dirtyTabs = toDelete.filter(t => t.isDirty);
+
+    if (dirtyTabs.length > 0 && !force) {
+      useConfirmStore.getState().showConfirm({
+        title: 'Unsaved Changes',
+        message: dirtyTabs.length === 1
+          ? `"${dirtyTabs[0].title}" has unsaved changes. Close other tabs and discard changes?`
+          : `${dirtyTabs.length} tabs have unsaved changes. Close other tabs and discard changes?`,
+        confirmLabel: 'Discard & Close All',
+        cancelLabel: 'Keep Editing',
+        variant: 'warning',
+        onConfirm: () => {
+          get().closeOtherTabs(keepTabId, true);
+        }
+      });
+      return;
+    }
+
     const remaining = tabs.filter(t => t.id === keepTabId);
 
     toDelete.forEach(t => {
@@ -273,13 +307,30 @@ export const useTabStore = create<TabState>((set, get) => ({
     saveTabsMeta(remaining, keepTabId);
   },
 
-  closeTabsToRight: (tabId: string) => {
+  closeTabsToRight: (tabId: string, force = false) => {
     const { tabs, activeTabId } = get();
     const index = tabs.findIndex(t => t.id === tabId);
     if (index === -1) return;
 
     const remaining = tabs.slice(0, index + 1);
     const toDelete = tabs.slice(index + 1);
+    const dirtyTabs = toDelete.filter(t => t.isDirty);
+
+    if (dirtyTabs.length > 0 && !force) {
+      useConfirmStore.getState().showConfirm({
+        title: 'Unsaved Changes',
+        message: dirtyTabs.length === 1
+          ? `"${dirtyTabs[0].title}" has unsaved changes. Close tabs to the right and discard changes?`
+          : `${dirtyTabs.length} tabs to the right have unsaved changes. Close them and discard changes?`,
+        confirmLabel: 'Discard & Close',
+        cancelLabel: 'Keep Editing',
+        variant: 'warning',
+        onConfirm: () => {
+          get().closeTabsToRight(tabId, true);
+        }
+      });
+      return;
+    }
 
     toDelete.forEach(t => {
       cancelPendingSave(t.id);
@@ -316,8 +367,24 @@ export const useTabStore = create<TabState>((set, get) => ({
     saveTabsMeta(reordered, activeTabId);
   },
 
-  closeAllTabs: () => {
+  closeAllTabs: (force = false) => {
     const { tabs } = get();
+    const dirtyTabs = tabs.filter(t => t.isDirty);
+
+    if (dirtyTabs.length > 0 && !force) {
+      useConfirmStore.getState().showConfirm({
+        title: 'Unsaved Changes',
+        message: `${dirtyTabs.length} tab${dirtyTabs.length > 1 ? 's have' : ' has'} unsaved changes. Close all tabs and discard changes?`,
+        confirmLabel: 'Discard & Close All',
+        cancelLabel: 'Keep Editing',
+        variant: 'warning',
+        onConfirm: () => {
+          get().closeAllTabs(true);
+        }
+      });
+      return;
+    }
+
     tabs.forEach(t => cancelPendingSave(t.id));
     editorStateCache.clearAllTabStates();
     if (activeStorage) {
