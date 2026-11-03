@@ -10,8 +10,13 @@ export const test = base.extend<{ app: void } & E2EOptions>({
     async ({ page, demo }, use) => {
       await page.addInitScript(
         ([flag]) => {
-          (window as any).__CONTEXTPAD_DEMO__ = flag;
-          (window as any).__E2E_ACTION_TIMEOUT__ = 25000;
+                    interface ExtendedWindow extends Window {
+            __CONTEXTPAD_DEMO__?: boolean;
+            __E2E_ACTION_TIMEOUT__?: number;
+          }
+          const win = window as ExtendedWindow;
+          win.__CONTEXTPAD_DEMO__ = flag;
+          win.__E2E_ACTION_TIMEOUT__ = 25000;
           try {
             window.localStorage.setItem('contextpad_guest_mode', 'true');
             window.localStorage.setItem('contextpad_onboarding_completed', 'true');

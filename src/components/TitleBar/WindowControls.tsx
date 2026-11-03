@@ -116,7 +116,7 @@ export const WindowControls: React.FC<WindowControlsProps> = ({ className = '' }
         onClick={handleClose}
         title="Close"
         aria-label="Close Window"
-        className="w-11 h-full flex items-center justify-center text-[var(--text-secondary)] hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer"
+        className="w-11 h-full flex items-center justify-center text-[var(--text-secondary)] hover:text-white hover:bg-[var(--status-error,#e81123)] transition-colors cursor-pointer"
       >
         <X className="w-3.5 h-3.5" />
       </button>

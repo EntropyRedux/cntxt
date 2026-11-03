@@ -343,7 +343,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
   return (
     <div
-      className={`flex flex-col h-full w-full bg-[#0a0b0e] text-[#e2e8f0] font-mono select-text overflow-hidden ${className}`}
+      className={`flex flex-col h-full w-full bg-[var(--bg-primary,#0a0b0e)] text-[var(--text-primary,#e2e8f0)] font-mono select-text overflow-hidden ${className}`}
     >
       {/* Platform banner if in web/unsupported mode */}
       {!isTerminalAvailable && (
@@ -356,7 +356,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       )}
 
       {/* Terminal Channel Tabs & Controls Header */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#1e222d] bg-[#0f1117] shrink-0 gap-2">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--border-subtle,#1e222d)] bg-[var(--bg-secondary,#0f1117)] shrink-0 gap-2">
         {/* Left: Channel Tabs */}
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
           {channelList.map((channel) => {
@@ -369,8 +369,8 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
                 onClick={() => setActiveChannel(channel.id)}
                 className={`group flex items-center gap-1.5 px-2.5 py-1 rounded text-xs cursor-pointer border transition-all select-none ${
                   isActive
-                    ? 'bg-[#1a1d26] text-white border-sky-500/40 shadow-sm'
-                    : 'bg-[#12141a] text-[#8e95a5] border-transparent hover:text-white hover:bg-[#161822]'
+                    ? 'bg-[var(--card-secondary-bg,#1a1d26)] text-[var(--text-primary,#ffffff)] border-sky-500/40 shadow-sm'
+                    : 'bg-[var(--bg-primary,#12141a)] text-[var(--text-muted,#8e95a5)] border-transparent hover:text-[var(--text-primary,#ffffff)] hover:bg-[var(--card-secondary-bg,#161822)]'
                 }`}
               >
                 <div
@@ -404,7 +404,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
           <button
             onClick={handleNewChannel}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[#8e95a5] hover:text-white hover:bg-[#1a1d26] transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--text-muted,#8e95a5)] hover:text-[var(--text-primary,#ffffff)] hover:bg-[var(--card-secondary-bg,#1a1d26)] transition-colors"
             title="Create New Terminal Shell"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -414,7 +414,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
         {/* Right: Controls & Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[10px] text-[#64748b] hidden md:inline select-none">
+          <span className="text-[10px] text-[var(--text-muted,#64748b)] hidden md:inline select-none">
             Click terminal to type
           </span>
 
@@ -447,7 +447,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           {bridge.terminal?.spawnExternal && (
             <button
               onClick={handleSpawnExternal}
-              className="p-1 rounded text-[#8e95a5] hover:text-sky-400 hover:bg-[#1a1d26] transition-colors"
+              className="p-1 rounded text-[var(--text-muted,#8e95a5)] hover:text-sky-400 hover:bg-[var(--card-secondary-bg,#1a1d26)] transition-colors"
               title="Open in External Native Window"
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -456,7 +456,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
           <button
             onClick={handleClear}
-            className="p-1 rounded text-[#8e95a5] hover:text-white hover:bg-[#1a1d26] transition-colors"
+            className="p-1 rounded text-[var(--text-muted,#8e95a5)] hover:text-[var(--text-primary,#ffffff)] hover:bg-[var(--card-secondary-bg,#1a1d26)] transition-colors"
             title="Clear Terminal Output"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -464,7 +464,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
           <button
             onClick={handleCopy}
-            className="p-1 rounded text-[#8e95a5] hover:text-white hover:bg-[#1a1d26] transition-colors"
+            className="p-1 rounded text-[var(--text-muted,#8e95a5)] hover:text-[var(--text-primary,#ffffff)] hover:bg-[var(--card-secondary-bg,#1a1d26)] transition-colors"
             title="Copy Output"
           >
             {isCopied ? (
@@ -478,7 +478,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
       {/* Terminal Viewport */}
       <div
-        className="flex-1 w-full h-full relative overflow-hidden bg-[#0a0b0e]"
+        className="flex-1 w-full h-full relative overflow-hidden bg-[var(--bg-primary,#0a0b0e)]"
         onClick={() => termRef.current?.focus()}
       >
         {canvasError ? (

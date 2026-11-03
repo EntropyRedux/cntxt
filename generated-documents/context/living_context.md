@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.51
-Last Updated: 2026-10-28
-Last Updated By: Prod Agent (Editor CodeBlock DOM Update Stability & v0.7.3 Release)
+Version: v2.53
+Last Updated: 2026-11-04
+Last Updated By: Prod Agent (v0.7.4 Release Packaging)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,16 +13,46 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 738/738 Live across 63 suites, Rust Security Test Suite 16/16 Live)
+    [x] Testing (Vitest 741/741 Live across 64 suites, Rust Security Test Suite 13/13 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.7.3 Linux Desktop Build & Android Signed APK Staged)
+  [x] Packaging & Release (v0.7.4 Windows Executables & Android Signed APK Staged)
 
-Current Feature Group: FG-24 Linux Desktop & Android Mobile v0.7.3 Release
+Current Feature Group: FG-24 Linux Desktop & Android Mobile v0.7.4 Release
 Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (738/738 unit tests passing across 63 suites in CNTXT, 16 native Rust tests clean)
+Unit Tests: written [x] passing [x] (741/741 unit tests passing across 64 suites in CNTXT, 13 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
+
+━━━ MOCK REGISTRY SNAPSHOT ━━━
+* Active Mocks Physically Quarantined in `mocks/`:
+  - `mocks/index.ts`: Synthetic mock arrays (`DEFAULT_PINNED_TABS`, `MOCK_WORKFLOWS`, `MOCK_FILES`) and demo-mode flags (`IS_PROTOTYPE_DEMO_MODE`) strictly isolated for browser prototype sandbox and E2E fixtures. Verified: zero production imports across `/src/`.
+  - `mocks/mockRuntimeAdapter.ts`: In-memory mock runtime bridge adapter used strictly for headless unit test isolation and demo web previews.
+* Mocks Active in Production `/src/`: NONE (0 inline fallback mocks, zero synthetic collections; collections initialize empty `[]` or `null`).
+
+━━━ RECONCILED TRADEOFF HISTORY ━━━
+* `TR-017` (Pillar 1 - Factory Presets): `DEFAULT_TEMPLATES` in `templateStore.ts`, `DEFAULT_RIBBON_ITEMS` in `ribbonStore.ts`, and `PRESET_FORMATTING_BUTTONS` in `formattingStore.ts` serve as factory defaults and starter prompt templates for end-user productivity upon clean install, distinct from test mocks.
+* `TR-018` (Pillar 8 - Custom HTML Sanitizer): `domHelper.ts` provides a custom DOMParser + regex HTML sanitizer engineered for dual-environment operation (browser webview + Node/Vitest headless testing) with KaTeX math and SVG support, eliminating `dompurify` and `jsdom` bundle bloat on mobile. Verified by 19 unit tests.
+* `TR-019` (Pillar 2 - Xterm.js Canvas Hex Theme): `TerminalView.tsx` passes literal hex palette strings to Xterm.js because the underlying Canvas/WebGL terminal renderer requires raw color strings rather than CSS custom properties. Outer wrapper UI containers are tokenized with CSS variables (`var(--...)`).
+* `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
+
 Notes:
+- Task 72: Full Codebase Audit Reconciliation & Hardening (2026-11-03):
+  - Executed complete Pass 2 Prod Agent reconciliation across all 16 findings from Pass 1 Full Codebase Audit (`generated-documents/audits/raw_findings_full_codebase_cntxt_2026-11-03.md`).
+  - FIND-01 & FIND-02 (Pillar 1): Reconciled factory UI configurations (`DEFAULT_TEMPLATES`, `DEFAULT_RIBBON_ITEMS`, `PRESET_FORMATTING_BUTTONS`) as approved product presets (`TR-017`).
+  - FIND-03 (Pillar 1): Established formal Mock Registry Snapshot documenting quarantined files `mocks/index.ts` and `mocks/mockRuntimeAdapter.ts`.
+  - FIND-04 (Pillar 1): Implemented `migratePanelAppManifest` in `boundarySchemas.ts` ensuring forward-compatible deterministic migration path for evolving panel-app manifests.
+  - FIND-05 (Pillar 9): Eliminated 6 empty `catch {}` blocks in `AppPanelPlaceholder.tsx` by replacing them with structured console diagnostics and error posting.
+  - FIND-06 (Pillar 9): Added structured diagnostic recording (`recordDiagnostic`) and user notification in `SettingsPanel.tsx` on REST gateway stop failures.
+  - FIND-07 (Pillar 9): Created structured in-memory diagnostic ring buffer service (`diagnosticLogger.ts`) with sensitive field redaction and wired into `ErrorBoundary.tsx`. Added unit suite `diagnosticLogger.test.ts`.
+  - FIND-08 (Pillar 4): Refactored `HostCommandBus.ts` to use a dynamic domain registry (`domainHandlers` Map and `registerDomain` API), eliminating hardcoded switch dispatch.
+  - FIND-09 (Pillar 8): Documented custom DOMParser HTML sanitizer in `domHelper.ts` as approved dual-environment tradeoff (`TR-018`).
+  - FIND-10 (Pillar 8): Added CSRF `expected_state` validation on POST `/auth/token` path in `src-tauri/src/commands/auth.rs`.
+  - FIND-11 (Pillar 2): Replaced hardcoded hex literals in `WindowControls.tsx` and `TerminalView.tsx` with tokenized design variables (`var(--...)`).
+  - FIND-12 (Pillar 10): Optimized linear `Array.includes` scans in bulk actions/templates to O(1) `Set` lookups in `actionStore.ts`, `ActionManager.tsx`, and `TemplateManager.tsx`.
+  - FIND-13 (Pillar 5): Cleaned `package.json` by deduplicating `vite` and moving `@tailwindcss/vite` and `@vitejs/plugin-react` to `devDependencies`.
+  - FIND-14 (Pillar 3): Replaced `(window as any)` assertions in `mocks/index.ts` and `e2e/fixtures.ts` with typed `Window` interface extensions.
+  - FIND-15 (Pillar 9): Reconciled native Rust test count to 13/13 in `living_context.md`.
+  - FIND-16 (Governance): Scaffolding `.agent-state.json` at project root tracking live state and audit status.
 - Task 71: Editor CodeBlock Header Rendering & DOM Update Stability (2026-10-28):
   - Fixed CodeBlockHeaderWidget DOM recycling: updated `updateDOM()` in `CodeBlockHeaderWidget` (`codeBlockWidget.ts`) to `return false`, forcing CodeMirror 6 to re-run `toDOM()` when widget parameters or line positions change. Fixes blank/unpopulated codeblock header rendering.
   - Normalized container line height in `src/index.css`: restored `line-height: 0 !important; font-size: 0 !important;` on inactive `.cm-live-codeblock-start` and `.cm-live-codeblock-end` lines to collapse underlying hidden markdown fence lines, while maintaining `font-size: 0.9em !important; line-height: 1.6 !important;` on `.cm-live-active-row`.

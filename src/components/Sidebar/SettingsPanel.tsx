@@ -33,6 +33,7 @@ import { useRuntimeBridge, STORAGE_KEYS, getSafeStorageItem } from '../../adapte
 import { ThemeName } from '../../types';
 import { CURATED_FONTS, getCuratedFontByFamily, THEME_DEFAULT_FONTS } from '../../constants/fonts';
 import { validateWorkspaceBackup } from '../../contracts/boundarySchemas';
+import { recordDiagnostic } from '../../services/diagnosticLogger';
 import { PersonalGitHubLibraryConfig } from '../../contracts/data_shapes';
 import { GoogleIcon, GitHubIcon } from '../Auth/BrandIcons';
 import { PersonalGitHubLibraryModal } from './PersonalGitHubLibraryModal';
@@ -1096,8 +1097,9 @@ export const SettingsPanel: React.FC = () => {
                     await bridge.gateway.stop();
                     const status = await bridge.gateway.getStatus();
                     setGatewayStatus(status);
-                  } catch {
-                    // Ignore
+                  } catch (err) {
+                    recordDiagnostic('warn', 'SettingsPanel', 'Failed to stop REST gateway on disable', { error: String(err) });
+                    useNotificationStore.getState().addNotification('Gateway Notice', 'REST gateway process could not be stopped cleanly.', 'warning');
                   }
                 }
               }}

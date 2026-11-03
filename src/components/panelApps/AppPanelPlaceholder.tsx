@@ -387,7 +387,9 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
               configurable: true,
               enumerable: true
             });
-          } catch(e) {}
+          } catch(e) {
+            console.warn('[AppPanelPolyfill] Failed to define store token on window:', e);
+          }
           try {
             if (window.Window && window.Window.prototype) {
               Object.defineProperty(window.Window.prototype, '${storeToken}', {
@@ -397,7 +399,9 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
                 enumerable: true
               });
             }
-          } catch(err) {}
+          } catch(err) {
+            console.warn('[AppPanelPolyfill] Failed to define store token on Window.prototype:', err);
+          }
           try {
             Object.defineProperty(window, '${sessToken}', {
               get: function() { return ssObj; },
@@ -405,7 +409,9 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
               configurable: true,
               enumerable: true
             });
-          } catch(e) {}
+          } catch(e) {
+            console.warn('[AppPanelPolyfill] Failed to define sess token on window:', e);
+          }
           try {
             if (window.Window && window.Window.prototype) {
               Object.defineProperty(window.Window.prototype, '${sessToken}', {
@@ -415,7 +421,9 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
                 enumerable: true
               });
             }
-          } catch(err) {}
+          } catch(err) {
+            console.warn('[AppPanelPolyfill] Failed to define sess token on Window.prototype:', err);
+          }
 
           // Expose unified CNTXT_STORAGE bridge
           window.CNTXT_STORAGE = {
@@ -440,7 +448,9 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
                 lineno: ev.lineno,
                 colno: ev.colno
               }, '*');
-            } catch(e) {}
+            } catch(e) {
+              console.error('[AppPanelError] Failed to postMessage error event to parent:', e);
+            }
           });
           window.addEventListener('unhandledrejection', function(ev) {
             try {
@@ -449,7 +459,9 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
                 appId: '${activeApp.id}',
                 message: (ev.reason && (ev.reason.message || ev.reason.stack)) || String(ev.reason)
               }, '*');
-            } catch(e) {}
+            } catch(e) {
+              console.error('[AppPanelError] Failed to postMessage unhandled rejection to parent:', e);
+            }
           });
 
           // Expose unified window.CNTXT SDK for panel apps (FG-16)

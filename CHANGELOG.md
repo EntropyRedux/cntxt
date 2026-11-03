@@ -5,6 +5,29 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.4] — 2026-11-04
+
+### Full Codebase Audit Remediation, Security Hardening & Observability Architecture
+- **In-Memory Diagnostic Ring Buffer & Telemetry (src/services/diagnosticLogger.ts)**:
+  - Implemented 100-capacity rolling circular ring buffer recording structured diagnostic events with timestamp, severity level, context, and automatic redaction of sensitive credentials (tokens, passwords, keys).
+  - Integrated diagnosticLogger directly into ErrorBoundary.componentDidCatch to preserve actionable diagnostic traces on unhandled render errors.
+- **RPC Host Command Bus Extensibility (hostCommandBus.ts)**:
+  - Refactored RPC domain dispatch from hardcoded switch statements into a dynamic registration registry (domainHandlers Map and public egisterDomain(name, handler) API) complying with Pillar 4 open plugin extensibility.
+- **REST & OAuth Loopback Security Hardening (commands/auth.rs)**:
+  - Enforced strict CSRF expected_state verification on POST /auth/token loopback callbacks, rejecting mismatched state payloads with 400 Bad Request.
+- **Panel App Manifest Deterministic Migration (oundarySchemas.ts)**:
+  - Added migratePanelAppManifest helper providing backward and forward compatible evolution paths for stored panel-app manifests.
+- **Error Resilience & Diagnostics (AppPanelPlaceholder.tsx, SettingsPanel.tsx)**:
+  - Replaced silent empty catch {} blocks in the panel-app sandbox polyfill and error listeners with structured diagnostic reporting and parent error messaging.
+  - Added diagnostic logging and user toast alerts on REST gateway teardown failures in Settings.
+- **Performance & Collection Optimization (ctionStore.ts, ActionManager.tsx, TemplateManager.tsx)**:
+  - Replaced linear O(N × M) scans in bulk action and template operations with O(1) Set lookups.
+- **Presenter Purity & Design Tokens (TerminalView.tsx, WindowControls.tsx)**:
+  - Tokenized hardcoded hex color literals in UI presenters with CSS theme variables (ar(--...)).
+- **Packaging Stability & WiX Fix (	auri.conf.json)**:
+  - Escaped XML entity in file association description, resolving WiX MSI candle.exe compiler failures.
+  - Deduplicated package.json build dependencies.
+
 ## [0.7.3] — 2026-10-28
 
 ### Editor CodeBlock Header Rendering & DOM Update Stability

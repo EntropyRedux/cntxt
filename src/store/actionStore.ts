@@ -254,7 +254,8 @@ export const useActionStore = create<ActionState>((set, get) => ({
   },
 
   toggleActionsEnabledBulk: (ids, enabled) => {
-    const updated = get().actions.map(a => ids.includes(a.id) ? { ...a, enabled } : a);
+    const idSet = new Set(ids);
+    const updated = get().actions.map(a => idSet.has(a.id) ? { ...a, enabled } : a);
     set({ actions: updated });
     saveActions(updated);
   },
@@ -272,10 +273,11 @@ export const useActionStore = create<ActionState>((set, get) => ({
   },
 
   deleteActionsBulk: (ids) => {
-    const updated = get().actions.filter(a => !ids.includes(a.id));
+    const idSet = new Set(ids);
+    const updated = get().actions.filter(a => !idSet.has(a.id));
     set({
       actions: updated,
-      selectedActionIds: get().selectedActionIds.filter(id => !ids.includes(id))
+      selectedActionIds: get().selectedActionIds.filter(id => !idSet.has(id))
     });
     saveActions(updated);
   },

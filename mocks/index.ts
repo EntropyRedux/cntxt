@@ -8,9 +8,16 @@
 
 import { Template, Action, PinnedTab, VirtualFile, PinnedItem, OpenedFileRecord } from '../contracts/data_shapes';
 
+declare global {
+  interface Window {
+    __CONTEXTPAD_DEMO__?: boolean;
+    __E2E_ACTION_TIMEOUT__?: number;
+  }
+}
+
 // Mode flag: defaults to FALSE in production desktop. Set true only if explicitly requested.
-export const IS_PROTOTYPE_DEMO_MODE = typeof window !== 'undefined' 
-  ? Boolean((window as any).__CONTEXTPAD_DEMO__) 
+export const IS_PROTOTYPE_DEMO_MODE = typeof window !== 'undefined'
+  ? Boolean(window.__CONTEXTPAD_DEMO__)
   : false;
 
 // CLEARED (TR-013): Migrated to src/constants/welcomeDoc.ts

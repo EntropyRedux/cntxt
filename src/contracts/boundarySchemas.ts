@@ -305,6 +305,33 @@ export const PanelAppManifestSchema: z.ZodType<PanelAppManifest> = z.object({
   createdFrom: z.enum(['file', 'tab', 'prompt']),
 });
 
+/**
+ * Deterministic migration helper for PanelAppManifest schema evolution (Pillar 1).
+ * Migrates legacy/evolving manifest objects to current canonical schema.
+ */
+export function migratePanelAppManifest(raw: unknown): PanelAppManifest {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new Error('Invalid manifest: expected an object');
+  }
+  const obj = { ...(raw as Record<string, unknown>) };
+  if (!obj.schemaVersion) {
+    obj.schemaVersion = 1;
+  }
+  if (!obj.network) {
+    obj.network = 'offline';
+  }
+  if (!obj.runtime) {
+    obj.runtime = 'html';
+  }
+  if (typeof obj.panelWidth !== 'number') {
+    obj.panelWidth = 480;
+  }
+  if (typeof obj.description !== 'string') {
+    obj.description = '';
+  }
+  return PanelAppManifestSchema.parse(obj);
+}
+
 export const PanelAppPresentationModeSchema = z.enum(['docked', 'floating']);
 
 export const PanelAppFloatingPositionSchema = z.object({

@@ -369,7 +369,8 @@ export const ActionManager: React.FC = () => {
 
   const handleBulkToggleEnabled = () => {
     if (selectedActionIds.length === 0) return;
-    const selectedActions = actions.filter(a => selectedActionIds.includes(a.id));
+    const selectedIdSet = new Set(selectedActionIds);
+    const selectedActions = actions.filter(a => selectedIdSet.has(a.id));
     const anyDisabled = selectedActions.some(a => a.enabled === false);
     toggleActionsEnabledBulk(selectedActionIds, anyDisabled);
     addNotification('Bulk Status', `${anyDisabled ? 'Enabled' : 'Disabled'} ${selectedActionIds.length} action(s)`, 'info');

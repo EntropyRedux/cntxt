@@ -310,11 +310,25 @@ pub async fn start_oauth_listener(window: Window, expected_state: String, sessio
                     let body = &final_req[body_start + 4..];
                     let trimmed_body = body.trim();
                     if !trimmed_body.is_empty() {
-                        if trimmed_body.starts_with('{') {
-                            captured_payload = Some(trimmed_body.to_string());
+                        let parsed_val = if trimmed_body.starts_with('{') {
+                            serde_json::from_str::<serde_json::Value>(trimmed_body).ok()
                         } else {
                             let map = parse_query_params(trimmed_body);
-                            captured_payload = Some(serde_json::Value::Object(map).to_string());
+                            Some(serde_json::Value::Object(map))
+                        };
+
+                        if let Some(val) = parsed_val {
+                            // CSRF State validation on POST path
+                            if !expected_state.is_empty() {
+                                let received_state = val.get("state").and_then(|v| v.as_str()).unwrap_or("");
+                                if received_state != expected_state {
+                                    let err_json = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: 48\r\n\r\n{\"error\":\"Invalid OAuth state parameter (CSRF)\"}";
+                                    let _ = socket.write_all(err_json.as_bytes()).await;
+                                    let _ = socket.flush().await;
+                                    return Err("OAuth state mismatch on POST /auth/token: potential CSRF attack detected".into());
+                                }
+                            }
+                            captured_payload = Some(val.to_string());
                         }
                     }
                 }

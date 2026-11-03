@@ -70,8 +70,28 @@ export function isPathInsideRoot(rootPath: string, targetPath: string): boolean 
   return normTarget === normRoot || normTarget.startsWith(normRoot + '/');
 }
 
+export type RpcDomainHandler = (action: string, payload: unknown, appId?: string) => Promise<unknown>;
+
 export class HostCommandBus {
-  constructor(private bridge: IRuntimeBridge) {}
+  private domainHandlers = new Map<string, RpcDomainHandler>();
+
+  constructor(private bridge: IRuntimeBridge) {
+    this.registerDomain('editor', (action, payload) => this.handleEditorDomain(action, payload));
+    this.registerDomain('tabs', (action, payload) => this.handleTabsDomain(action, payload));
+    this.registerDomain('workspace', (action, payload) => this.handleWorkspaceDomain(action, payload));
+    this.registerDomain('templates', (action, payload) => this.handleTemplatesDomain(action, payload));
+    this.registerDomain('actions', (action, payload) => this.handleActionsDomain(action, payload));
+    this.registerDomain('notify', (action, payload) => this.handleNotifyDomain(action, payload));
+    this.registerDomain('terminal', (action, payload) => this.handleTerminalDomain(action, payload));
+    this.registerDomain('blocks', (action, payload, appId) => this.handleBlocksDomain(action, payload, appId));
+  }
+
+  /**
+   * Dynamically registers or overrides an RPC domain handler (Pillar 4 Extensibility).
+   */
+  public registerDomain(domain: string, handler: RpcDomainHandler): void {
+    this.domainHandlers.set(domain, handler);
+  }
 
   /**
    * Dispatches a raw RPC request payload and returns a typed RPC response.
@@ -114,28 +134,12 @@ export class HostCommandBus {
   }
 
   private async executeDomainAction(request: CntxtRpcRequest): Promise<unknown> {
-    const { domain, action, payload } = request;
-
-    switch (domain) {
-      case 'editor':
-        return this.handleEditorDomain(action, payload);
-      case 'tabs':
-        return this.handleTabsDomain(action, payload);
-      case 'workspace':
-        return this.handleWorkspaceDomain(action, payload);
-      case 'templates':
-        return this.handleTemplatesDomain(action, payload);
-      case 'actions':
-        return this.handleActionsDomain(action, payload);
-      case 'notify':
-        return this.handleNotifyDomain(action, payload);
-      case 'terminal':
-        return this.handleTerminalDomain(action, payload);
-      case 'blocks':
-        return this.handleBlocksDomain(action, payload, request.appId);
-      default:
-        throw { code: 'NOT_FOUND', message: `Unknown domain: ${domain}` };
+    const { domain, action, payload, appId } = request;
+    const handler = this.domainHandlers.get(domain);
+    if (!handler) {
+      throw { code: 'NOT_FOUND', message: `Unknown domain: ${domain}` };
     }
+    return handler(action, payload, appId);
   }
 
   // ==========================================

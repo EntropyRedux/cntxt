@@ -1,4 +1,5 @@
 import React from 'react';
+import { recordDiagnostic } from '../../services/diagnosticLogger';
 
 export interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -33,6 +34,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   public componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('[ErrorBoundary caught error]:', error, errorInfo);
+    recordDiagnostic('error', 'ErrorBoundary', error.message, {
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+    });
     this.setState({ errorInfo });
   }
 

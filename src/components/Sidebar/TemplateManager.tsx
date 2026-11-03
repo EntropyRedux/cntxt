@@ -346,7 +346,8 @@ export const TemplateManager: React.FC = () => {
 
   const handleBulkToggleVisibility = () => {
     if (selectedTemplateIds.length === 0) return;
-    const selected = templates.filter(t => selectedTemplateIds.includes(t.id));
+    const selectedIdSet = new Set(selectedTemplateIds);
+    const selected = templates.filter(t => selectedIdSet.has(t.id));
     const anyHidden = selected.some(t => t.isHidden);
     toggleTemplatesVisibilityBulk(selectedTemplateIds, !anyHidden);
     addNotification('Visibility Updated', `Updated visibility for ${selected.length} templates`, 'info');
