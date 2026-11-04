@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Minus, Square, Copy, X } from 'lucide-react';
 import { useRuntimeBridge } from '../../adapters';
+import { useTabStore } from '../../store/tabStore';
+import { useConfirmStore } from '../../store/confirmStore';
 
 export interface WindowControlsProps {
   className?: string;
@@ -72,6 +74,27 @@ export const WindowControls: React.FC<WindowControlsProps> = ({ className = '' }
 
   const handleClose = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    const { tabs } = useTabStore.getState();
+    const dirtyTabs = tabs.filter(t => t.isDirty);
+    if (dirtyTabs.length > 0) {
+      useConfirmStore.getState().showConfirm({
+        title: 'Unsaved Changes',
+        message: dirtyTabs.length === 1
+          ? `"${dirtyTabs[0].title}" has unsaved changes. Are you sure you want to exit? Your changes will be lost.`
+          : `${dirtyTabs.length} tabs have unsaved changes. Are you sure you want to exit? Your changes will be lost.`,
+        confirmLabel: 'Discard & Exit',
+        cancelLabel: 'Keep Editing',
+        variant: 'warning',
+        onConfirm: async () => {
+          try {
+            await bridge.window.close?.();
+          } catch (err) {
+            console.error('[WindowControls] close error:', err);
+          }
+        }
+      });
+      return;
+    }
     try {
       await bridge.window.close?.();
     } catch (err) {
