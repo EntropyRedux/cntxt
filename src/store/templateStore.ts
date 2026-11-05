@@ -107,10 +107,26 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
         try {
           const raw = JSON.parse(stored);
           if (Array.isArray(raw)) {
-            templates = raw
-              .map((item) => TemplateSchema.safeParse(item))
-              .filter((res): res is { success: true; data: any } => res.success)
-              .map((res) => res.data as Template);
+            const validTemplates: Template[] = [];
+            for (const item of raw) {
+              const res = TemplateSchema.safeParse(item);
+              if (res.success) {
+                const d = res.data;
+                validTemplates.push({
+                  id: d.id || `template-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  name: d.name,
+                  description: d.description || '',
+                  content: d.content,
+                  category: d.category || 'GENERAL',
+                  variables: d.variables || [],
+                  isHidden: d.isHidden ?? false,
+                  isPinned: d.isPinned ?? false,
+                  createdAt: d.createdAt || Date.now(),
+                  updatedAt: d.updatedAt || Date.now(),
+                });
+              }
+            }
+            templates = validTemplates;
           } else {
             templates = [];
           }

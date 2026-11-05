@@ -23,6 +23,7 @@ const CACHE_KEY = 'cntxt_tab_cache_v2';
 const MAX_CONTENT_CACHE_BYTES = 256 * 1024; // 256 KB
 
 interface TabCacheEntry {
+  version: number;
   tabs: Tab[];
   activeTabId: string;
   checksum: string;
@@ -63,6 +64,7 @@ export function writeTabCache(tabs: Tab[], activeTabId: string): void {
   try {
     const clamped = clampTabsForCache(tabs);
     const entry: TabCacheEntry = {
+      version: 1,
       tabs: clamped,
       activeTabId,
       checksum: computeChecksum(clamped, activeTabId),
@@ -87,6 +89,14 @@ export function readTabCache(): { tabs: Tab[]; activeTabId: string } | null {
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      const v = typeof parsed.version === 'number' ? parsed.version : 1;
+      if (v !== 1) {
+        recordDiagnostic('warn', 'TabCache', `unsupported cache version: ${v}`);
+        clearTabCache();
+        return null;
+      }
+    }
     const validation = TabCacheEntrySchema.safeParse(parsed);
     if (!validation.success) {
       recordDiagnostic('warn', 'TabCache', 'boundary schema validation failed — discarding invalid cache');
@@ -106,6 +116,7 @@ export function readTabCache(): { tabs: Tab[]; activeTabId: string } | null {
 
     return { tabs: entry.tabs, activeTabId: entry.activeTabId };
   } catch (e) {
+    recordDiagnostic('warn', 'TabCache', 'read failed', { error: String(e) });
     console.warn('[TabCache] read failed:', e);
     clearTabCache();
     return null;

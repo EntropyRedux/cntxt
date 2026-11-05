@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ViewSettings } from '../types';
 import { DEFAULT_MODEL_ID } from '../constants/models';
+import { ViewSettingsSchema } from '../contracts/boundarySchemas';
 import { THEME_DEFAULT_FONTS } from '../constants/fonts';
 import { IStorageBridge, IPlatformBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
@@ -145,15 +146,20 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       try {
         const stored = await activeStorage.getItem(STORAGE_KEYS.SETTINGS);
         if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed && typeof parsed === 'object') {
-            if (parsed.uiDensity === 'comfortable' || parsed.uiDensity === 'compact') {
-              parsed.uiDensity = 'desktop';
+          const raw = JSON.parse(stored);
+          if (raw && typeof raw === 'object') {
+            if (raw.uiDensity === 'comfortable' || raw.uiDensity === 'compact') {
+              raw.uiDensity = 'desktop';
             }
-            if (parsed.activeSidebarTab === 'omni-terminal') {
-            parsed.activeSidebarTab = 'explorer';
+            if (raw.activeSidebarTab === 'omni-terminal') {
+              raw.activeSidebarTab = 'explorer';
             }
-            initialSettings = { ...initialSettings, ...parsed };
+          }
+          const validation = ViewSettingsSchema.safeParse(raw);
+          if (validation.success) {
+            initialSettings = { ...initialSettings, ...validation.data };
+          } else {
+            console.warn('Stored settings failed schema validation:', validation.error);
           }
         }
       } catch (e) {

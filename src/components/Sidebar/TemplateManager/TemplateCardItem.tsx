@@ -50,7 +50,8 @@ export const TemplateCardItem: React.FC<TemplateCardItemProps> = ({
       await copyText(template.content);
       setIsCopied(true);
       useNotificationStore.getState().addNotification('Copied', `"${template.name}" copied to clipboard`, 'success');
-      setTimeout(() => setIsCopied(false), 1500);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setIsCopied(false), 1500);
     } catch {
       useNotificationStore.getState().addNotification('Copy Error', 'Failed to copy template', 'error');
     }

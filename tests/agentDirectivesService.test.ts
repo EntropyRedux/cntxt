@@ -8,6 +8,9 @@ import {
   getAgentBootstrapPrompt,
   CNTXT_PROTOCOL_VERSION,
   CNTXT_APP_VERSION,
+  REST_ENDPOINTS,
+  MCP_TOOLS,
+  RPC_DOMAINS,
 } from '../src/services/agentDirectivesService';
 import packageJson from '../package.json';
 
@@ -68,25 +71,40 @@ describe('Agent Directives & Capabilities Discovery (Improvements 2, 4, 5)', () 
     );
   });
 
-  describe('Cross-Surface Parity Verification (Pillar 4 & NEW-03)', () => {
-    it('verifies that Rust gateway directivesSummary aligns with TS agent directives', () => {
+  describe('Cross-Surface Parity Verification (Pillar 4 & NEW-03 / VER-08)', () => {
+    it('verifies that all REST endpoints are routed in Rust gateway.rs', () => {
       const gatewayRsPath = path.resolve(__dirname, '../src-tauri/src/commands/gateway.rs');
       const gatewaySource = fs.readFileSync(gatewayRsPath, 'utf8');
 
-      // Check that gateway.rs contains the core Rich Container directive string
       expect(gatewaySource).toContain('directivesSummary');
       expect(gatewaySource).toContain('~~~markdown | id=<slug> tags=deliverable locked=agent status=ready');
-      expect(gatewaySource).toContain('/api/v1/capabilities');
-      expect(gatewaySource).toContain('/api/v1/directives');
+
+      // Verify full catalog parity
+      for (const endpoint of REST_ENDPOINTS) {
+        expect(gatewaySource).toContain(endpoint.path);
+      }
     });
 
-    it('verifies that MCP server instructions align with TS agent directives', () => {
+    it('verifies that all MCP tools exist in cntxt-mcp-server.mjs', () => {
       const mcpServerPath = path.resolve(__dirname, '../scripts/mcp/cntxt-mcp-server.mjs');
       const mcpSource = fs.readFileSync(mcpServerPath, 'utf8');
 
       expect(mcpSource).toContain('instructions:');
       expect(mcpSource).toContain('~~~markdown | id=<slug> tags=deliverable locked=agent status=ready');
       expect(mcpSource).toContain('locked=user');
+
+      for (const tool of MCP_TOOLS) {
+        expect(mcpSource).toContain(tool.name);
+      }
+    });
+
+    it('verifies that all RPC domains are handled in hostCommandBus.ts', () => {
+      const busPath = path.resolve(__dirname, '../src/features/panelApps/rpc/hostCommandBus.ts');
+      const busSource = fs.readFileSync(busPath, 'utf8');
+
+      for (const domainDef of RPC_DOMAINS) {
+        expect(busSource).toContain(`registerDomain('${domainDef.domain}'`);
+      }
     });
   });
 });

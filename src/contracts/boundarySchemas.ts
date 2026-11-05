@@ -38,7 +38,12 @@ import {
   EditorDiagnosticItem,
   EditorSetDiagnosticsPayload,
   RestGatewayConfig, CntxtBlockParams, BlocksListPayload, BlocksGetPayload, BlocksUpsertPayload, BlocksUpdateParamsPayload, BlocksRemovePayload,
-  DirectivesGetPayload
+  DirectivesGetPayload,
+  RibbonItem,
+  RibbonItemType,
+  MarkdownFormatType,
+  ViewSettings,
+  ThemeName
 } from '../../contracts/data_shapes';
 
 export const SupportedLanguageSchema: z.ZodType<SupportedLanguage> = z.enum([
@@ -715,4 +720,106 @@ export const DirectivesGetPayloadSchema: z.ZodType<DirectivesGetPayload> = z.obj
 
 export function validateDirectivesGet(data: unknown) {
   return DirectivesGetPayloadSchema.safeParse(data || {});
+}
+
+// 19. Ribbon & ViewSettings Boundary Schemas (VER-02 / VER-07)
+export const RibbonItemTypeSchema: z.ZodType<RibbonItemType> = z.enum([
+  'tool', 'action', 'workflow', 'template', 'command', 'formatting', 'separator', 'tab', 'file'
+]);
+
+export const MarkdownFormatTypeSchema: z.ZodType<MarkdownFormatType> = z.enum([
+  'wrap', 'line-prefix', 'block', 'insert', 'command'
+]);
+
+export const RibbonItemSchema: z.ZodType<RibbonItem> = z.object({
+  id: z.string().min(1),
+  label: z.string(),
+  icon: z.string(),
+  type: RibbonItemTypeSchema,
+  targetId: z.string().optional(),
+  color: z.string().optional(),
+  shortcut: z.string().optional(),
+  tooltip: z.string().optional(),
+  enabled: z.boolean(),
+  order: z.number(),
+  showLabel: z.boolean().optional(),
+  prefix: z.string().optional(),
+  suffix: z.string().optional(),
+  formatType: MarkdownFormatTypeSchema.optional()
+});
+
+export function validateRibbonItem(data: unknown) {
+  return RibbonItemSchema.safeParse(data);
+}
+
+export const ViewSettingsSchema = z.object({
+  theme: z.enum(['google-material-3', 'parchment', 'contextpad-dark', 'one-dark', 'dracula', 'nord', 'monokai', 'github-dark', 'github-light', 'solarized-dark']).optional(),
+  fontSize: z.number().optional(),
+  fontFamily: z.string().optional(),
+  autoAdaptFontToTheme: z.boolean().optional(),
+  lineHeight: z.number().optional(),
+  wordWrap: z.boolean().optional(),
+  tabSize: z.number().optional(),
+  enableCodeLinting: z.boolean().optional(),
+  showLineNumbers: z.boolean().optional(),
+  showCodeBlockMarkers: z.boolean().optional(),
+  typingDirection: z.enum(['top-to-bottom', 'bottom-to-up']).optional(),
+  syntaxHighlighting: z.enum(['auto', 'automatic', 'markdown', 'markdown-formatted', 'headers', 'headers-only', 'none', 'off']).optional(),
+  enableLargeDocDetection: z.boolean().optional(),
+  largeDocThresholdKb: z.number().optional(),
+  largeDocThresholdLines: z.number().optional(),
+  previewMaxWidth: z.enum(['narrow', 'standard', 'wide', 'full']).optional(),
+  previewFontScale: z.number().optional(),
+  previewContentMargin: z.enum(['compact', 'normal', 'spacious']).optional(),
+  previewShowTOC: z.boolean().optional(),
+  previewCustomCSS: z.string().optional(),
+  previewSplitOrientation: z.enum(['horizontal', 'vertical']).optional(),
+  previewEngine: z.literal('integrated').optional(),
+  previewTheme: z.enum(['match', 'light', 'dark']).optional(),
+  showStatusBar: z.boolean().optional(),
+  showBreadcrumb: z.boolean().optional(),
+  showActivityBar: z.boolean().optional(),
+  showSidebar: z.boolean().optional(),
+  showRibbon: z.boolean().optional(),
+  showMenuBar: z.boolean().optional(),
+  activeSidebarTab: z.enum(['explorer', 'outline', 'templates', 'actions', 'tokens', 'settings', 'app-builder', 'panel-app']).optional(),
+  showLivePreview: z.boolean().optional(),
+  editorMode: z.enum(['raw', 'rendered']).optional(),
+  enableMarkdownRendering: z.boolean().optional(),
+  showTokenStats: z.boolean().optional(),
+  indexingScope: z.enum(['performance', 'thorough']).optional(),
+  selectedModelId: z.string().optional(),
+  budgetThreshold: z.number().optional(),
+  uiDensity: z.enum(['desktop', 'touch']).optional(),
+  touchOptimized: z.boolean().optional(),
+  sidebarOverlay: z.boolean().optional(),
+  showMobileAccessoryBar: z.boolean().optional(),
+  templateViewMode: z.enum(['list', 'grid']).optional(),
+  actionViewMode: z.enum(['list', 'grid']).optional(),
+  enableExperimentalSettings: z.boolean().optional(),
+  enableLiveTokenEstimator: z.boolean().optional(),
+  enableAutosave: z.boolean().optional(),
+  enableLiveDomSync: z.boolean().optional(),
+  enableLiveMarkdownSync: z.boolean().optional(),
+  enableTerminalBus: z.boolean().optional(),
+  autosaveIntervalMs: z.number().optional(),
+  enableRestGateway: z.boolean().optional(),
+  restGatewayPort: z.number().optional(),
+  allowRestGatewayLan: z.boolean().optional(),
+  keepScreenAwake: z.boolean().optional(),
+  deliverableSaveLocation: z.enum(['workspace', 'custom-folder']).optional(),
+  enableBracketMatching: z.boolean().optional(),
+  enableFoldGutter: z.boolean().optional(),
+  enableAutoIndent: z.boolean().optional(),
+  largeFileThreshold: z.number().optional(),
+  parserMode: z.enum(['auto', 'ast', 'stream', 'plain']).optional(),
+  enableAutocomplete: z.boolean().optional(),
+  enableSpellCheck: z.boolean().optional(),
+  spellCheckMode: z.enum(['built-in', 'browser']).optional(),
+  editorMaxWidth: z.enum(['narrow', 'standard', 'wide', 'full']).optional(),
+  editorPadding: z.enum(['compact', 'normal', 'spacious']).optional()
+}).passthrough();
+
+export function validateViewSettings(data: unknown) {
+  return ViewSettingsSchema.safeParse(data);
 }

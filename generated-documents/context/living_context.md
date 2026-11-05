@@ -13,14 +13,14 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 766/766 Live across 65 suites, Rust Gateway & Security Test Suite 13/13 Live)
+    [x] Testing (Vitest 767/767 Live across 65 suites, Rust Gateway & Security Test Suite 13/13 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.8 Release Staged & Pushed)
 
 Current Feature Group: FG-25 Agent Directives, Discovery & Dual-Tier Security Architecture (v0.7.8)
 Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (766/766 unit tests passing across 65 suites in CNTXT, 13 native Rust tests clean)
+Unit Tests: written [x] passing [x] (767/767 unit tests passing across 65 suites in CNTXT, 13 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 
 ━━━ MOCK REGISTRY SNAPSHOT ━━━

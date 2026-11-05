@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { RibbonItem, RibbonItemType } from '../types';
+import { RibbonItemSchema } from '../contracts/boundarySchemas';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
@@ -167,9 +168,13 @@ export const useRibbonStore = create<RibbonState>((set, get) => ({
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const validItems = parsed.filter(
-            (item: any) => item && typeof item.id === 'string' && typeof item.order === 'number'
-          ) as RibbonItem[];
+          const validItems: RibbonItem[] = [];
+          for (const item of parsed) {
+            const res = RibbonItemSchema.safeParse(item);
+            if (res.success) {
+              validItems.push(res.data);
+            }
+          }
           if (validItems.length > 0) {
             set({ items: validItems.sort((a, b) => a.order - b.order) });
             return;

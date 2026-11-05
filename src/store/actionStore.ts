@@ -103,12 +103,26 @@ export const useActionStore = create<ActionState>((set, get) => ({
       if (stored) {
         try {
           const raw = JSON.parse(stored);
-          const validated = Array.isArray(raw)
-            ? raw
-                .map((item) => ActionSchema.safeParse(item))
-                .filter((res): res is { success: true; data: any } => res.success)
-                .map((res) => res.data as Action)
-            : [];
+          const validated: Action[] = [];
+          if (Array.isArray(raw)) {
+            for (const item of raw) {
+              const res = ActionSchema.safeParse(item);
+              if (res.success) {
+                const d = res.data;
+                validated.push({
+                  id: d.id || `action-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  name: d.name,
+                  description: d.description || '',
+                  code: d.code,
+                  category: (d.category as ActionCategory) || 'CUSTOM',
+                  enabled: d.enabled ?? true,
+                  isPinned: d.isPinned ?? false,
+                  createdAt: d.createdAt,
+                  updatedAt: d.updatedAt,
+                });
+              }
+            }
+          }
           set({ actions: validated });
         } catch {
           set({ actions: [] });

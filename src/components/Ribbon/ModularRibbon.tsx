@@ -179,19 +179,17 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
             if (fileContent !== null) {
               const filename = filePath.split(/[\/\\]/).pop() || item.label || 'Untitled.md';
               const ext = filename.split('.').pop()?.toLowerCase() || '';
-              let lang = 'markdown';
+              let lang: SupportedLanguage = 'markdown';
               if (['js', 'jsx', 'mjs', 'cjs'].includes(ext)) lang = 'javascript';
               else if (['ts', 'tsx'].includes(ext)) lang = 'typescript';
               else if (['py'].includes(ext)) lang = 'python';
-              else if (['rs'].includes(ext)) lang = 'rust';
               else if (['html', 'htm'].includes(ext)) lang = 'html';
               else if (['css'].includes(ext)) lang = 'css';
               else if (['json'].includes(ext)) lang = 'json';
               else if (['yaml', 'yml'].includes(ext)) lang = 'yaml';
-              else if (['csv'].includes(ext)) lang = 'csv';
-              else if (['sql'].includes(ext)) lang = 'sql';
+              else if (['txt', 'log', 'csv', 'sql', 'rs'].includes(ext)) lang = 'text';
 
-              const newTabId = useTabStore.getState().createTab(filename, fileContent, lang as any, filePath);
+              const newTabId = useTabStore.getState().createTab(filename, fileContent, lang, filePath);
               useTabStore.getState().setActiveTabId(newTabId);
               addNotification('File Opened', `Opened "${filename}" from ribbon`, 'success');
               return;

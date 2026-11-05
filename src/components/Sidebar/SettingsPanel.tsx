@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Check, 
   Download, 
@@ -61,6 +61,18 @@ export const SettingsPanel: React.FC = () => {
   const [lanUrlCopied, setLanUrlCopied] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [gatewayError, setGatewayError] = useState<string | null>(null);
+
+  const tokenTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lanUrlTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const promptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (tokenTimeoutRef.current) clearTimeout(tokenTimeoutRef.current);
+      if (lanUrlTimeoutRef.current) clearTimeout(lanUrlTimeoutRef.current);
+      if (promptTimeoutRef.current) clearTimeout(promptTimeoutRef.current);
+    };
+  }, []);
 
   const isAndroid = bridge.platform.os === 'android';
   const effectiveAllowLan = settings.allowRestGatewayLan ?? isAndroid;
@@ -173,7 +185,8 @@ export const SettingsPanel: React.FC = () => {
     try {
       await bridge.clipboard.writeText(url);
       setLanUrlCopied(true);
-      setTimeout(() => setLanUrlCopied(false), 2000);
+      if (lanUrlTimeoutRef.current) clearTimeout(lanUrlTimeoutRef.current);
+      lanUrlTimeoutRef.current = setTimeout(() => setLanUrlCopied(false), 2000);
       addNotification('LAN Endpoint Copied', `${url} copied to clipboard`, 'info');
     } catch {
       addNotification('Copy Failed', 'Unable to copy LAN endpoint URL', 'error');
@@ -211,7 +224,8 @@ export const SettingsPanel: React.FC = () => {
     try {
       await bridge.clipboard.writeText(prompt);
       setBootstrapPromptCopied(true);
-      setTimeout(() => setBootstrapPromptCopied(false), 2000);
+      if (promptTimeoutRef.current) clearTimeout(promptTimeoutRef.current);
+      promptTimeoutRef.current = setTimeout(() => setBootstrapPromptCopied(false), 2000);
       addNotification('Prompt Copied', 'Agent bootstrap prompt copied to clipboard', 'info');
     } catch {
       addNotification('Copy Failed', 'Unable to copy bootstrap prompt', 'error');
@@ -222,7 +236,8 @@ export const SettingsPanel: React.FC = () => {
     try {
       await bridge.clipboard.writeText(gatewayStatus.authToken);
       setTokenCopied(true);
-      setTimeout(() => setTokenCopied(false), 2000);
+      if (tokenTimeoutRef.current) clearTimeout(tokenTimeoutRef.current);
+      tokenTimeoutRef.current = setTimeout(() => setTokenCopied(false), 2000);
       addNotification('Token Copied', 'X-CNTXT-Token copied to clipboard', 'info');
     } catch {
       addNotification('Copy Failed', 'Unable to copy token', 'error');

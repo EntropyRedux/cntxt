@@ -51,7 +51,8 @@ export const ActionCardItem: React.FC<ActionCardItemProps> = ({
       await copyText(action.code);
       setIsCopied(true);
       useNotificationStore.getState().addNotification('Copied', `"${action.name}" script copied`, 'success');
-      setTimeout(() => setIsCopied(false), 1500);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setIsCopied(false), 1500);
     } catch {
       useNotificationStore.getState().addNotification('Copy Error', 'Failed to copy action code', 'error');
     }
