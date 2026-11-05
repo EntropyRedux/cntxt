@@ -24,7 +24,9 @@ import {
   ArrowRight, 
   Trash2, 
   Minus, 
-  EyeOff 
+  EyeOff,
+  Bookmark,
+  FolderOpen
 } from 'lucide-react';
 
 export interface ModularRibbonProps {
@@ -35,7 +37,8 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
   const bridge = useRuntimeBridge();
   const { 
     items, 
-    openCustomizer, 
+    openCustomizer,
+    addItem, 
     toggleItemLabel, 
     moveItemUp, 
     moveItemDown, 
@@ -147,7 +150,60 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
               bridge.shareContent?.(content);
             }
             break;
-          default:
+          case 'tab': {
+        if (!item.targetId) return;
+        const allTabs = useTabStore.getState().tabs;
+        const targetTab = allTabs.find(t => t.id === item.targetId);
+        if (targetTab) {
+          useTabStore.getState().setActiveTabId(targetTab.id);
+        } else {
+          addNotification('Tab Not Open', `Tab "${item.label}" is no longer open`, 'warning');
+        }
+        break;
+      }
+
+      case 'file': {
+        if (!item.targetId) return;
+        const filePath = item.targetId;
+        const allTabs = useTabStore.getState().tabs;
+        const existingTab = allTabs.find(t => t.filePath === filePath);
+        if (existingTab) {
+          useTabStore.getState().setActiveTabId(existingTab.id);
+          return;
+        }
+
+        if (bridge.fs.readFile) {
+          try {
+            const fileContent = await bridge.fs.readFile(filePath);
+            if (fileContent !== null) {
+              const filename = filePath.split(/[\/\\]/).pop() || item.label || 'Untitled.md';
+              const ext = filename.split('.').pop()?.toLowerCase() || '';
+              let lang = 'markdown';
+              if (['js', 'jsx', 'mjs', 'cjs'].includes(ext)) lang = 'javascript';
+              else if (['ts', 'tsx'].includes(ext)) lang = 'typescript';
+              else if (['py'].includes(ext)) lang = 'python';
+              else if (['rs'].includes(ext)) lang = 'rust';
+              else if (['html', 'htm'].includes(ext)) lang = 'html';
+              else if (['css'].includes(ext)) lang = 'css';
+              else if (['json'].includes(ext)) lang = 'json';
+              else if (['yaml', 'yml'].includes(ext)) lang = 'yaml';
+              else if (['csv'].includes(ext)) lang = 'csv';
+              else if (['sql'].includes(ext)) lang = 'sql';
+
+              const newTabId = useTabStore.getState().createTab(filename, fileContent, lang as any, filePath);
+              useTabStore.getState().setActiveTabId(newTabId);
+              addNotification('File Opened', `Opened "${filename}" from ribbon`, 'success');
+              return;
+            }
+          } catch (err) {
+            console.error('[ModularRibbon] Error opening bookmarked file:', err);
+          }
+        }
+        addNotification('File Error', `Cannot open "${item.label}": file does not exist at ${filePath}`, 'error');
+        break;
+      }
+
+      default:
             break;
         }
         break;
@@ -302,50 +358,19 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
       data-shell-ribbon
       onContextMenu={(e) => handleContextMenu(e, null)}
       className={`${
-        isMultiRow 
-          ? 'h-auto min-h-[34px] py-1' 
-          : (isTouch ? 'h-10.5' : 'h-8.5')
-      } bg-[var(--titlebar-bg)] border-b border-[var(--border-subtle)] px-2 flex items-start sm:items-center justify-between text-xs shrink-0 select-none transition-all duration-150`}
+        isTouch ? 'h-10.5' : 'h-8.5'
+      } bg-[var(--titlebar-bg)] border-b border-[var(--border-subtle)] px-2 flex items-center justify-between text-xs shrink-0 select-none transition-all duration-150`}
     >
-      {/* Down Chevron (expands to multi-row if overflowing/clicked) & Dynamic Ribbon Buttons Area */}
+      {/* Dynamic Ribbon Buttons Area with Horizontal Scroll */}
       <div 
         ref={scrollContainerRef}
-        className={`flex items-center gap-1 ${
-          isMultiRow 
-            ? 'flex-wrap py-0.5' 
-            : 'overflow-x-auto no-scrollbar flex-nowrap py-0.5'
-        } min-w-0 flex-1`}
-      >
-        <button
-          type="button"
-          id="modular-ribbon-expand-btn"
-          onClick={() => setIsMultiRow(prev => !prev)}
-          title={
-            isMultiRow 
-              ? "Collapse ribbon to single row" 
-              : hasOverflow 
-                ? "Expand modular ribbon (more icons available)" 
-                : "Expand modular ribbon into multiple rows"
+        onWheel={(e) => {
+          if (scrollContainerRef.current && e.deltaY !== 0) {
+            scrollContainerRef.current.scrollLeft += e.deltaY;
           }
-          aria-label={isMultiRow ? "Collapse ribbon to single row" : "Expand ribbon into multiple rows"}
-          className={`${
-            isTouch ? 'w-8 h-8' : 'w-6 h-6'
-          } flex items-center justify-center rounded transition-all shrink-0 cursor-pointer active:scale-95 ${
-            isMultiRow
-              ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] shadow-2xs'
-              : hasOverflow
-                ? 'text-[var(--accent-primary)] bg-[var(--accent-container)]/40 hover:bg-[var(--accent-container)]/70'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
-          }`}
-        >
-          {isMultiRow ? (
-            <ChevronUp className="w-3.5 h-3.5 stroke-[2.2]" />
-          ) : (
-            <ChevronDown className="w-3.5 h-3.5 stroke-[2.2]" />
-          )}
-        </button>
-
-        <div className="h-3.5 w-px bg-[var(--border-subtle)] mx-0.5 shrink-0" />
+        }}
+        className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-nowrap py-0.5 min-w-0 flex-1"
+      >
 
         {activeItems.map((item) => {
           // 1. Separator divider
@@ -438,7 +463,7 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
       </div>
 
       {/* Ribbon Customizer Quick Access Button */}
-      <div className={`flex items-center gap-1 pl-2 border-l border-[var(--border-subtle)] shrink-0 ml-1 ${isMultiRow ? 'self-start mt-0.5' : ''}`}>
+      <div className={'flex items-center gap-1 pl-2 border-l border-[var(--border-subtle)] shrink-0 ml-1'}>
         <button
           type="button"
           onClick={openCustomizer}
@@ -520,6 +545,57 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
               <div className="my-1 border-t border-[var(--border-subtle)]" />
             </>
           )}
+
+          <button
+            type="button"
+            onClick={() => {
+              const { tabs, activeTabId } = useTabStore.getState();
+              const activeTab = tabs.find(t => t.id === activeTabId);
+              if (activeTab) {
+                addItem({
+                  label: activeTab.title,
+                  icon: activeTab.tabType === 'terminal' ? 'Terminal' : (activeTab.filePath ? 'Bookmark' : 'FileText'),
+                  color: 'blue',
+                  type: 'tab',
+                  targetId: activeTab.id,
+                  tooltip: activeTab.filePath ? `Open Tab: ${activeTab.title} (${activeTab.filePath})` : `Open Tab: ${activeTab.title}`,
+                  enabled: true,
+                  showLabel: false
+                });
+                addNotification('Ribbon Pin', `Pinned "${activeTab.title}" to ribbon`, 'success');
+              }
+              setContextMenu(null);
+            }}
+            className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-[var(--card-hover-bg)] hover:text-[var(--accent-primary)] transition-colors cursor-pointer"
+          >
+            <Bookmark className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+            <span>Pin Active Tab to Ribbon</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              setContextMenu(null);
+              const file = await bridge.fs.openFile();
+              if (file && file.path) {
+                addItem({
+                  label: file.name || file.path.split(/[\/\\]/).pop() || 'File',
+                  icon: 'Bookmark',
+                  color: 'amber',
+                  type: 'file',
+                  targetId: file.path,
+                  tooltip: `File Bookmark: ${file.path}`,
+                  enabled: true,
+                  showLabel: false
+                });
+                addNotification('Ribbon Pin', `Pinned "${file.name}" to ribbon`, 'success');
+              }
+            }}
+            className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-[var(--card-hover-bg)] hover:text-[var(--accent-primary)] transition-colors cursor-pointer"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            <span>Browse File to Pin...</span>
+          </button>
 
           <button
             type="button"

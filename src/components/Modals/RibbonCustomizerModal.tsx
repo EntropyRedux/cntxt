@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../../primitives/Modal';
 import { Button } from '../../primitives/Button';
 import { Badge } from '../../primitives/Badge';
@@ -10,6 +10,9 @@ import { useRibbonStore } from '../../store/ribbonStore';
 import { useActionStore } from '../../store/actionStore';
 import { useTemplateStore } from '../../store/templateStore';
 import { useFormattingStore } from '../../store/formattingStore';
+import { useTabStore } from '../../store/tabStore';
+import { useFileHistoryStore } from '../../store/fileHistoryStore';
+import { useRuntimeBridge } from '../../adapters';
 import { RibbonItem, RibbonItemType, MarkdownFormatType } from '../../types';
 import {
   SlidersHorizontal,
@@ -34,7 +37,8 @@ import {
   Check,
   Palette,
   Minus,
-  Type
+  Type,
+  Bookmark
 } from 'lucide-react';
 
 const COLOR_OPTIONS = [
@@ -53,10 +57,6 @@ const BUILT_IN_TOOLS = [
   { id: 'outline', label: 'Outline', icon: 'ListTree', color: 'cyan', shortcut: 'Ctrl+Shift+O', desc: 'Navigates markdown document headings' },
   { id: 'templates', label: 'Templates', icon: 'FileText', color: 'purple', desc: 'Context prompt templates browser' },
   { id: 'explorer', label: 'File Explorer', icon: 'FolderOpen', color: 'blue', desc: 'Workspace files & document tree' },
-  { id: 'toggle-view', label: 'Rendered View Toggle', icon: 'Eye', color: 'accent', shortcut: 'Ctrl+M', desc: 'Switches between live markdown preview and code editor' },
-  { id: 'command-palette', label: 'Command Palette', icon: 'Command', color: 'purple', shortcut: 'Ctrl+K', desc: 'Quick launcher for all commands & actions' },
-  { id: 'new-doc', label: 'New Document', icon: 'Plus', color: 'accent', shortcut: 'Ctrl+N', desc: 'Creates a new empty context prompt tab' },
-  { id: 'save-file', label: 'Save Document', icon: 'Save', color: 'emerald', shortcut: 'Ctrl+S', desc: 'Saves current active document to disk' },
   { id: 'insert-image-modal', label: 'Insert Image', icon: 'Image', color: 'emerald', shortcut: 'Ctrl+V / Drag', desc: 'Insert local image or web URL, or paste directly' },
 ];
 
@@ -79,7 +79,16 @@ export const RibbonCustomizerModal: React.FC = () => {
   const { templates } = useTemplateStore();
   const { buttons: formattingButtons } = useFormattingStore();
 
-  const [activeTab, setActiveTab] = useState<'manage' | 'add_tools' | 'add_formatting' | 'add_actions' | 'add_templates' | 'custom'>('manage');
+  const bridge = useRuntimeBridge();
+  const { tabs: openTabs } = useTabStore();
+  const { openedHistory: recentFiles } = useFileHistoryStore();
+  const [workspacePath, setWorkspacePath] = useState<string | null>(null);
+
+  useEffect(() => {
+    bridge.storage.getItem('contextpad_workspace_path').then(ws => setWorkspacePath(ws));
+  }, [bridge]);
+
+  const [activeTab, setActiveTab] = useState<'manage' | 'add_tools' | 'add_formatting' | 'add_actions' | 'add_templates' | 'add_tabs_files' | 'custom'>('manage');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
@@ -315,6 +324,20 @@ export const RibbonCustomizerModal: React.FC = () => {
             }`}
           >
             <FileText className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('add_tabs_files')}
+            title="Pin Open Tabs & Files"
+            aria-label="Pin Open Tabs & Files"
+            className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
+              activeTab === 'add_tabs_files'
+                ? 'bg-[var(--card-bg)] text-[var(--accent-primary)] shadow-2xs font-semibold'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Bookmark className="w-4 h-4" />
           </button>
 
           <button
@@ -835,6 +858,139 @@ export const RibbonCustomizerModal: React.FC = () => {
                   </Card>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Pin Tabs & Files */}
+        {activeTab === 'add_tabs_files' && (
+          <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+            {/* Open Tabs */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between pb-1 border-b border-[var(--border-subtle)]">
+                <span className="text-xs font-semibold text-[var(--text-primary)]">Open Tabs in CNTXT</span>
+                <span className="text-[11px] text-[var(--text-muted)]">{openTabs.length} open</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {openTabs.map((tab) => {
+                  const added = isAlreadyInRibbon(tab.id, 'tab');
+                  return (
+                    <Card key={tab.id} variant="default" padding="sm" className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded bg-[var(--app-bg)] border border-[var(--border-subtle)] flex items-center justify-center shrink-0">
+                          <Bookmark className="w-3.5 h-3.5 text-blue-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-[var(--text-primary)] truncate max-w-[130px]">{tab.title}</div>
+                          <div className="text-[10px] text-[var(--text-muted)] truncate max-w-[130px]">{tab.filePath || 'Untitled document'}</div>
+                        </div>
+                      </div>
+                      <Button
+                        variant={added ? 'secondary' : 'primary'}
+                        size="xs"
+                        disabled={added}
+                        icon={added ? Check : Plus}
+                        onClick={() => {
+                          addItem({
+                            label: tab.title,
+                            icon: tab.tabType === 'terminal' ? 'Terminal' : (tab.filePath ? 'Bookmark' : 'FileText'),
+                            color: 'blue',
+                            type: 'tab',
+                            targetId: tab.id,
+                            tooltip: tab.filePath ? `Open Tab: ${tab.title} (${tab.filePath})` : `Open Tab: ${tab.title}`,
+                            enabled: true
+                          });
+                          setActiveTab('manage');
+                        }}
+                      >
+                        {added ? 'Pinned' : 'Pin'}
+                      </Button>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Workspace & Local File Picker */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between pb-1 border-b border-[var(--border-subtle)]">
+                <div>
+                  <span className="text-xs font-semibold text-[var(--text-primary)]">Workspace & Local Files</span>
+                  {workspacePath && (
+                    <div className="text-[10px] text-[var(--text-muted)] truncate max-w-[260px] font-mono">
+                      {workspacePath}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="primary"
+                  size="xs"
+                  icon={FolderOpen}
+                  onClick={async () => {
+                    const res = await bridge.fs.openFile();
+                    if (res && res.path) {
+                      addItem({
+                        label: res.name || res.path.split(/[\/\\]/).pop() || 'File',
+                        icon: 'Bookmark',
+                        color: 'amber',
+                        type: 'file',
+                        targetId: res.path,
+                        tooltip: `File Bookmark: ${res.path}`,
+                        enabled: true
+                      });
+                      setActiveTab('manage');
+                    }
+                  }}
+                >
+                  Browse File...
+                </Button>
+              </div>
+
+              {/* Recent Files List */}
+              {recentFiles.length > 0 && (
+                <div className="space-y-1">
+                  <div className="text-[11px] font-medium text-[var(--text-secondary)]">Recently Opened Files</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {recentFiles.slice(0, 6).map((f) => {
+                      const fPath = f.path || f.name;
+                      const added = isAlreadyInRibbon(fPath, 'file');
+                      return (
+                        <Card key={f.id || fPath} variant="default" padding="sm" className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-7 h-7 rounded bg-[var(--app-bg)] border border-[var(--border-subtle)] flex items-center justify-center shrink-0">
+                              <FileText className="w-3.5 h-3.5 text-amber-500" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-semibold text-[var(--text-primary)] truncate max-w-[130px]">{f.name}</div>
+                              <div className="text-[10px] text-[var(--text-muted)] truncate max-w-[130px]">{fPath}</div>
+                            </div>
+                          </div>
+                          <Button
+                            variant={added ? 'secondary' : 'primary'}
+                            size="xs"
+                            disabled={added}
+                            icon={added ? Check : Plus}
+                            onClick={() => {
+                              addItem({
+                                label: f.name,
+                                icon: 'Bookmark',
+                                color: 'amber',
+                                type: 'file',
+                                targetId: fPath,
+                                tooltip: `File Bookmark: ${fPath}`,
+                                enabled: true
+                              });
+                              setActiveTab('manage');
+                            }}
+                          >
+                            {added ? 'Pinned' : 'Pin'}
+                          </Button>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

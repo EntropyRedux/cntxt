@@ -237,5 +237,21 @@ describe('SettingsStore', () => {
     useSettingsStore.getState().updateSettings({ enableExperimentalSettings: false });
     expect(isRestGatewayFeatureEnabled(useSettingsStore.getState().settings)).toBe(false);
   });
-});
+  it('toggles templateViewMode and actionViewMode between list and grid', () => {
+    const store = useSettingsStore.getState();
+    expect(store.settings.templateViewMode).toBeUndefined(); // or default 'list'
+    expect(store.settings.actionViewMode).toBeUndefined();
 
+    store.setTemplateViewMode('grid');
+    expect(useSettingsStore.getState().settings.templateViewMode).toBe('grid');
+
+    store.setTemplateViewMode('list');
+    expect(useSettingsStore.getState().settings.templateViewMode).toBe('list');
+
+    store.setActionViewMode('grid');
+    expect(useSettingsStore.getState().settings.actionViewMode).toBe('grid');
+
+    store.setActionViewMode('list');
+    expect(useSettingsStore.getState().settings.actionViewMode).toBe('list');
+  });
+});

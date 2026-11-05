@@ -162,6 +162,8 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   touchOptimized: boolean;
   sidebarOverlay: boolean;
   showMobileAccessoryBar: boolean;
+  templateViewMode?: 'list' | 'grid';
+  actionViewMode?: 'list' | 'grid';
   
   // USER-FACING TOGGLES FOR BACKGROUND PROCESSES (EXPERIMENTAL GATING)
   enableExperimentalSettings: boolean;
@@ -443,7 +445,7 @@ export interface VirtualFileTree {
 // 8. Ribbon, Formatting & Formula Shapes
 // ==========================================
 
-export type RibbonItemType = 'tool' | 'action' | 'workflow' | 'template' | 'command' | 'formatting' | 'separator';
+export type RibbonItemType = 'tool' | 'action' | 'workflow' | 'template' | 'command' | 'formatting' | 'separator' | 'tab' | 'file';
 
 export type MarkdownFormatType = 'wrap' | 'line-prefix' | 'block' | 'insert' | 'command';
 

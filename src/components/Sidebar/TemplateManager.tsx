@@ -20,7 +20,9 @@ import {
   FileText, 
   X,
   Save,
-  Sparkles
+  Sparkles,
+  LayoutList,
+  LayoutGrid
 } from 'lucide-react';
 import { useTemplateStore } from '../../store/templateStore';
 import { useTabStore } from '../../store/tabStore';
@@ -30,6 +32,8 @@ import { editorRegistry } from '../../services/editor/editorRegistry';
 import { processTemplateVariables, extractTemplateVariables } from '../../services/editor/templateVariableService';
 import { CategorySelector } from './TemplateManager/CategorySelector';
 import { TemplateRowItem } from './TemplateManager/TemplateRowItem';
+import { TemplateCardItem } from './TemplateManager/TemplateCardItem';
+import { useSettingsStore } from '../../store/settingsStore';
 import { CategoryManagerModal } from '../Common/CategoryManagerModal';
 import { useConfirmStore } from '../../store/confirmStore';
 
@@ -72,6 +76,8 @@ export const TemplateManager: React.FC = () => {
   const { showConfirm } = useConfirmStore();
   const { tabs, activeTabId, insertTextAtCursor } = useTabStore();
   const { addNotification } = useNotificationStore();
+  const { settings, setTemplateViewMode } = useSettingsStore();
+  const templateViewMode = settings.templateViewMode || 'list';
 
   // Category Manager modal state
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
@@ -522,6 +528,20 @@ export const TemplateManager: React.FC = () => {
           <div className="flex items-center gap-1 ml-auto shrink-0">
             <button
               type="button"
+              onClick={() => setTemplateViewMode(templateViewMode === 'grid' ? 'list' : 'grid')}
+              title={templateViewMode === 'grid' ? 'Switch to Detailed List View' : 'Switch to Cards Grid View'}
+              aria-label={templateViewMode === 'grid' ? 'Switch to Detailed List View' : 'Switch to Cards Grid View'}
+              className={`w-6.5 h-6.5 flex items-center justify-center rounded transition-all cursor-pointer ${
+                templateViewMode === 'grid'
+                  ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-bold'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+              }`}
+            >
+              {templateViewMode === 'grid' ? <LayoutGrid size={14} /> : <LayoutList size={14} />}
+            </button>
+
+            <button
+              type="button"
               onClick={toggleShowHidden}
               title={showHidden ? 'Hide hidden templates' : 'Show hidden templates'}
               aria-label={showHidden ? 'Hide hidden templates' : 'Show hidden templates'}
@@ -809,23 +829,41 @@ export const TemplateManager: React.FC = () => {
 
                 {/* Category Items: Rendered as lighter card containers */}
                 {!isCollapsed && (
-                  <div className="p-1.5 space-y-1 bg-[var(--sidebar-bg)]">
-                    {items.map(template => (
-                      <TemplateRowItem
-                        key={template.id}
-                        template={template}
-                        bulkMode={bulkMode}
-                        isSelected={selectedTemplateIds.includes(template.id)}
-                        isExpanded={expandedTemplateIds.has(template.id)}
-                        onToggleExpand={() => handleToggleRowExpand(template.id)}
-                        onToggleSelect={toggleSelection}
-                        onUseTemplate={handleUseTemplate}
-                        onEdit={handleEdit}
-                        onDelete={(tmplId) => handleDeleteTemplate(tmplId, template.name)}
-                        onOpenVariableModal={openVariableModal}
-                      />
-                    ))}
-                  </div>
+                  templateViewMode === 'grid' ? (
+                    <div className="p-1.5 grid grid-cols-1 sm:grid-cols-2 gap-2 bg-[var(--sidebar-bg)]">
+                      {items.map(template => (
+                        <TemplateCardItem
+                          key={template.id}
+                          template={template}
+                          bulkMode={bulkMode}
+                          isSelected={selectedTemplateIds.includes(template.id)}
+                          onToggleSelect={toggleSelection}
+                          onUseTemplate={handleUseTemplate}
+                          onEdit={handleEdit}
+                          onDelete={(tmplId) => handleDeleteTemplate(tmplId, template.name)}
+                          onOpenVariableModal={openVariableModal}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-1.5 space-y-1 bg-[var(--sidebar-bg)]">
+                      {items.map(template => (
+                        <TemplateRowItem
+                          key={template.id}
+                          template={template}
+                          bulkMode={bulkMode}
+                          isSelected={selectedTemplateIds.includes(template.id)}
+                          isExpanded={expandedTemplateIds.has(template.id)}
+                          onToggleExpand={() => handleToggleRowExpand(template.id)}
+                          onToggleSelect={toggleSelection}
+                          onUseTemplate={handleUseTemplate}
+                          onEdit={handleEdit}
+                          onDelete={(tmplId) => handleDeleteTemplate(tmplId, template.name)}
+                          onOpenVariableModal={openVariableModal}
+                        />
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
             );

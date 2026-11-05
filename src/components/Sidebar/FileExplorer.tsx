@@ -15,10 +15,12 @@ import {
   RefreshCw,
   Edit2,
   Copy,
-  Clipboard
+  Clipboard,
+  Bookmark
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useRibbonStore } from '../../store/ribbonStore';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useFileHistoryStore, PinnedItem, OpenedFileRecord } from '../../store/fileHistoryStore';
 import { useRuntimeBridge } from '../../adapters';
@@ -1062,15 +1064,38 @@ export const FileExplorer: React.FC = () => {
           onClick={(e) => e.stopPropagation()}
         >
           {contextMenu.item.type === 'file' && (
-            <button
-              onClick={() => {
-                handleOpenFile(contextMenu.item);
-                setContextMenu(null);
-              }}
-              className="w-full text-left px-3 py-1.5 hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
-            >
-              <span>Open File</span>
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  handleOpenFile(contextMenu.item);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
+              >
+                <span>Open File</span>
+              </button>
+              <button
+                onClick={() => {
+                  const file = contextMenu.item;
+                  useRibbonStore.getState().addItem({
+                    label: file.name,
+                    icon: 'Bookmark',
+                    color: 'amber',
+                    type: 'file',
+                    targetId: file.path || file.name,
+                    tooltip: `File Bookmark: ${file.path || file.name}`,
+                    enabled: true,
+                    showLabel: false
+                  });
+                  useNotificationStore.getState().addNotification('Ribbon Pin', `Pinned "${file.name}" to ribbon`, 'success');
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-[var(--card-hover-bg)] flex items-center gap-2 cursor-pointer"
+              >
+                <Bookmark className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                <span>Pin to Ribbon</span>
+              </button>
+            </>
           )}
 
           <button

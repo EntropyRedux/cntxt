@@ -161,4 +161,38 @@ describe('RibbonStore Operations', () => {
     );
     expect(activeRibbonItems.some(i => i.targetId === 'toggle-view')).toBe(false);
   });
+  it('supports adding tab and file bookmark items to ribbon', () => {
+    const store = useRibbonStore.getState();
+    const tabItem = store.addItem({
+      label: 'Main Doc',
+      icon: 'Bookmark',
+      color: 'blue',
+      type: 'tab',
+      targetId: 'tab-123',
+      tooltip: 'Open Tab: Main Doc',
+      enabled: true
+    });
+
+    expect(tabItem.id).toBeDefined();
+    expect(tabItem.type).toBe('tab');
+    expect(tabItem.targetId).toBe('tab-123');
+
+    const fileItem = store.addItem({
+      label: 'Notes.md',
+      icon: 'Bookmark',
+      color: 'amber',
+      type: 'file',
+      targetId: 'C:/docs/Notes.md',
+      tooltip: 'File Bookmark: C:/docs/Notes.md',
+      enabled: true
+    });
+
+    expect(fileItem.id).toBeDefined();
+    expect(fileItem.type).toBe('file');
+    expect(fileItem.targetId).toBe('C:/docs/Notes.md');
+
+    const items = useRibbonStore.getState().items;
+    expect(items.some(i => i.type === 'tab' && i.targetId === 'tab-123')).toBe(true);
+    expect(items.some(i => i.type === 'file' && i.targetId === 'C:/docs/Notes.md')).toBe(true);
+  });
 });

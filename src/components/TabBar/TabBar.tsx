@@ -11,9 +11,12 @@ import {
   FolderOpen,
   Clipboard,
   Terminal,
-  Radio
+  Radio,
+  Bookmark
 } from 'lucide-react';
 import { useTabStore } from '../../store/tabStore';
+import { useRibbonStore } from '../../store/ribbonStore';
+import { useNotificationStore } from '../../store/notificationStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Tab } from '../../types';
 import { addDocumentListener, addWindowListener, useRuntimeBridge } from '../../adapters';
@@ -797,6 +800,27 @@ export const TabBar: React.FC = () => {
             >
               <span>Reopen Closed Tab</span>
               <span className="text-[10px] text-[var(--text-muted)] group-hover:text-white">Ctrl+Shift+T</span>
+            </button>
+            <button
+              onClick={() => {
+                const tab = contextMenu.tab;
+                useRibbonStore.getState().addItem({
+                  label: tab.title,
+                  icon: tab.tabType === 'terminal' ? 'Terminal' : (tab.filePath ? 'Bookmark' : 'FileText'),
+                  color: 'blue',
+                  type: 'tab',
+                  targetId: tab.id,
+                  tooltip: tab.filePath ? `Open Tab: ${tab.title} (${tab.filePath})` : `Open Tab: ${tab.title}`,
+                  enabled: true,
+                  showLabel: false
+                });
+                useNotificationStore.getState().addNotification('Ribbon Pin', `Pinned "${tab.title}" to ribbon`, 'success');
+                setContextMenu(null);
+              }}
+              className="w-full px-3 py-1.5 text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center justify-between text-[var(--text-primary)]"
+            >
+              <span>Pin Tab to Ribbon</span>
+              <Bookmark className="w-3.5 h-3.5 opacity-70" />
             </button>
             <button
               onClick={() => {

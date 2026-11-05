@@ -33,6 +33,8 @@ interface SettingsState {
   setActiveSidebarTab: (tab: ViewSettings['activeSidebarTab']) => void;
   setTheme: (theme: ViewSettings['theme']) => void;
   setModel: (modelId: string) => void;
+  setTemplateViewMode: (mode: 'list' | 'grid') => void;
+  setActionViewMode: (mode: 'list' | 'grid') => void;
   resetSettings: () => void;
 }
 
@@ -82,6 +84,8 @@ const DEFAULT_SETTINGS: ViewSettings = {
   touchOptimized: false,
   sidebarOverlay: false,
   showMobileAccessoryBar: true,
+  templateViewMode: 'list',
+  actionViewMode: 'list',
   enableExperimentalSettings: false,
   enableLiveTokenEstimator: true,
   enableAutosave: true,
@@ -291,6 +295,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setModel: (selectedModelId) => {
     get().updateSettings({ selectedModelId });
+  },
+
+  setTemplateViewMode: (templateViewMode) => {
+    get().updateSettings({ templateViewMode });
+  },
+
+  setActionViewMode: (actionViewMode) => {
+    get().updateSettings({ actionViewMode });
   },
 
   resetSettings: () => {

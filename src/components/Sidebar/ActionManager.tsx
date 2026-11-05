@@ -22,7 +22,9 @@ import {
   MousePointerClick, 
   Calculator, 
   Code, 
-  Power 
+  Power,
+  LayoutList,
+  LayoutGrid
 } from 'lucide-react';
 import { useActionStore } from '../../store/actionStore';
 import { useTabStore } from '../../store/tabStore';
@@ -32,6 +34,8 @@ import { Action } from '../../contracts/data_shapes';
 import { FormulaEngine, getFormulaFunctionsByCategory, FormulaFunctionInfo } from '../../services/formulaParser';
 import { CategorySelector } from './TemplateManager/CategorySelector';
 import { ActionRowItem } from './ActionManager/ActionRowItem';
+import { ActionCardItem } from './ActionManager/ActionCardItem';
+import { useSettingsStore } from '../../store/settingsStore';
 import { CategoryManagerModal } from '../Common/CategoryManagerModal';
 import { useConfirmStore } from '../../store/confirmStore';
 import { useRuntimeBridge, getSelectionText } from '../../adapters';
@@ -72,6 +76,8 @@ export const ActionManager: React.FC = () => {
   const { tabs, activeTabId, updateTabContent, createTab, insertTextAtCursor } = useTabStore();
   const { templates, getVisibleTemplates, openVariableModal } = useTemplateStore();
   const { addNotification } = useNotificationStore();
+  const { settings, setActionViewMode } = useSettingsStore();
+  const actionViewMode = settings.actionViewMode || 'list';
 
   // Category Manager modal state
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
@@ -499,6 +505,21 @@ export const ActionManager: React.FC = () => {
 
         {/* Right Toolbar Items: Bulk Mode, Show/Hide Disabled */}
         <div className="flex items-center gap-1">
+          {/* View Mode Toggle: List vs Card Grid */}
+          <button
+            type="button"
+            onClick={() => setActionViewMode(actionViewMode === 'grid' ? 'list' : 'grid')}
+            title={actionViewMode === 'grid' ? 'Switch to Detailed List View' : 'Switch to Cards Grid View'}
+            aria-label={actionViewMode === 'grid' ? 'Switch to Detailed List View' : 'Switch to Cards Grid View'}
+            className={`w-6 h-6 flex items-center justify-center rounded transition-colors cursor-pointer ${
+              actionViewMode === 'grid'
+                ? 'bg-[var(--accent-container)] text-[var(--accent-primary)] font-bold'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)]'
+            }`}
+          >
+            {actionViewMode === 'grid' ? <LayoutGrid size={14} /> : <LayoutList size={14} />}
+          </button>
+
           {/* Bulk Mode Toggle */}
           <button
             type="button"
@@ -942,21 +963,39 @@ export const ActionManager: React.FC = () => {
 
                 {/* Category Action Rows */}
                 {!isCollapsed && (
-                  <div className="p-1.5 space-y-1.5 bg-[var(--sidebar-bg)]/50">
-                    {categoryActions.map(action => (
-                      <ActionRowItem
-                        key={action.id}
-                        action={action}
-                        bulkMode={bulkMode}
-                        isSelected={selectedActionIds.includes(action.id)}
-                        onToggleSelect={toggleSelection}
-                        onRunAction={handleRunAction}
-                        onEdit={handleEdit}
-                        onDelete={(actionId) => handleDeleteAction(actionId, action.name)}
-                        onToggleEnabled={toggleActionEnabled}
-                      />
-                    ))}
-                  </div>
+                  actionViewMode === 'grid' ? (
+                    <div className="p-1.5 grid grid-cols-1 sm:grid-cols-2 gap-2 bg-[var(--sidebar-bg)]/50">
+                      {categoryActions.map(action => (
+                        <ActionCardItem
+                          key={action.id}
+                          action={action}
+                          bulkMode={bulkMode}
+                          isSelected={selectedActionIds.includes(action.id)}
+                          onToggleSelect={toggleSelection}
+                          onRunAction={handleRunAction}
+                          onEdit={handleEdit}
+                          onDelete={(actionId) => handleDeleteAction(actionId, action.name)}
+                          onToggleEnabled={toggleActionEnabled}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-1.5 space-y-1.5 bg-[var(--sidebar-bg)]/50">
+                      {categoryActions.map(action => (
+                        <ActionRowItem
+                          key={action.id}
+                          action={action}
+                          bulkMode={bulkMode}
+                          isSelected={selectedActionIds.includes(action.id)}
+                          onToggleSelect={toggleSelection}
+                          onRunAction={handleRunAction}
+                          onEdit={handleEdit}
+                          onDelete={(actionId) => handleDeleteAction(actionId, action.name)}
+                          onToggleEnabled={toggleActionEnabled}
+                        />
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
             );

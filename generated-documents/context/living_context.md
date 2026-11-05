@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.53
-Last Updated: 2026-11-04
-Last Updated By: Prod Agent (v0.7.4 Release Packaging)
+Version: v2.55
+Last Updated: 2026-11-05
+Last Updated By: Prod Agent (v0.7.6 Ribbon Bookmarks, Card Grid View & Modular Ribbon Optimization)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -36,6 +36,26 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
+- Task 74: Feature Group B — Modular Ribbon Optimization, Tab & File Bookmarks, and Template/Action Card Grid View (2026-11-05):
+  - Modular Ribbon Optimization & Horizontal Wheel Scroll (Improvement 10):
+    - Excised redundant built-in ribbon items (`toggle-view`, `command-palette`, `new-doc`, `save-file`).
+    - Excised the extreme-left expand chevron (`#modular-ribbon-expand-btn`) and left divider from `ModularRibbon.tsx`.
+    - Added smooth mouse-wheel horizontal scrolling handler (`onWheel`) to the ribbon items container.
+  - Ribbon Tab & File Bookmarking (Improvement 7):
+    - Extended `RibbonItemType` in `contracts/data_shapes.ts` with `'tab' | 'file'`.
+    - Implemented ribbon button click routing: activating existing open tabs in memory or loading files from disk via `bridge.fs.readFile` with file extension syntax detection and missing-file error alerts.
+    - Added "Pin Active Tab to Ribbon" and "Browse File to Pin..." to empty-area ribbon context menu.
+    - Added "Pin Tab to Ribbon" option to `TabBar.tsx` tab context menu.
+    - Added "Pin to Ribbon" option to `FileExplorer.tsx` file context menu.
+    - Updated `RibbonCustomizerModal.tsx` with dedicated `'add_tabs_files'` tab supporting 1-click pinning from open tabs, recent files, and native workspace file dialog (`contextpad_workspace_path`).
+  - Card / Grid View for Templates & Actions (Improvement 8):
+    - Created Notion-style `TemplateCardItem.tsx` and `ActionCardItem.tsx` with category badges, 2-line preview, dynamic variables indicator, formula badge, and quick run/insert hover controls.
+    - Added view mode toggle controls (`LayoutGrid` / `LayoutList`) to `TemplateManager.tsx` and `ActionManager.tsx`.
+    - Added `templateViewMode` and `actionViewMode` ('list' | 'grid') preferences to `settingsStore.ts`.
+  - Verification & Release:
+    - Bumped version to `v0.7.6` across `package.json`, `tauri.conf.json`, `Cargo.toml`.
+    - Verified zero TypeScript errors, zero platform leaks, and 100% canonical contract synchronization.
+    - Verified 751/751 unit tests passing cleanly across 64 suites.
 - Task 72: Full Codebase Audit Reconciliation & Hardening (2026-11-03):
   - Executed complete Pass 2 Prod Agent reconciliation across all 16 findings from Pass 1 Full Codebase Audit (`generated-documents/audits/raw_findings_full_codebase_cntxt_2026-11-03.md`).
   - FIND-01 & FIND-02 (Pillar 1): Reconciled factory UI configurations (`DEFAULT_TEMPLATES`, `DEFAULT_RIBBON_ITEMS`, `PRESET_FORMATTING_BUTTONS`) as approved product presets (`TR-017`).
