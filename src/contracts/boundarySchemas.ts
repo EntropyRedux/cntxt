@@ -43,7 +43,15 @@ import {
   RibbonItemType,
   MarkdownFormatType,
   ViewSettings,
-  ThemeName
+  ThemeName,
+  Action,
+  ActionOp,
+  ActionSelectionBehavior,
+  Template,
+  TemplateVariable,
+  AutocompleteConfig,
+  SpellCheckConfig,
+  CodeLintConfig
 } from '../../contracts/data_shapes';
 
 export const SupportedLanguageSchema: z.ZodType<SupportedLanguage> = z.enum([
@@ -92,21 +100,65 @@ export const TabCacheEntrySchema = z.object({
 
 export const ActionCategorySchema = z.enum(['TEXT', 'FORMAT', 'CODE', 'TEMPLATES', 'EXTERNAL', 'CUSTOM']);
 
+export const ActionOpSchema: z.ZodType<ActionOp> = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('setText'), text: z.string() }),
+  z.object({ type: z.literal('insertAtCursor'), text: z.string() }),
+  z.object({ type: z.literal('wrapSelection'), before: z.string(), after: z.string() }),
+  z.object({ type: z.literal('replaceSelection'), text: z.string() }),
+  z.object({
+    type: z.literal('transform'),
+    transform: z.string(),
+    args: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional() }),
+  z.object({ type: z.literal('formula'), expression: z.string() }),
+  z.object({
+    type: z.literal('toast'),
+    message: z.string(),
+    toastType: z.enum(['info', 'success', 'warning', 'error']).optional()
+  }),
+  z.object({
+    type: z.literal('openTab'),
+    title: z.string(),
+    content: z.string(),
+    language: z.string().optional()
+  }),
+  z.object({ type: z.literal('openVariableModal') }),
+  z.object({ type: z.literal('copyToClipboard'), text: z.string().optional() })
+]);
+
+export const ActionSelectionBehaviorSchema: z.ZodType<ActionSelectionBehavior> = z.enum(['auto', 'replace', 'insert']);
+
 export const ActionSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1),
   description: z.string().optional(),
+  type: z.enum(['button', 'command']).optional(),
+  codeType: z.enum(['formula', 'javascript', 'declarative']).optional(),
   code: z.string(),
+  pipeline: z.array(ActionOpSchema).optional(),
   category: z.string().optional(),
+  selectionBehavior: ActionSelectionBehaviorSchema.optional(),
   enabled: z.boolean().optional(),
   isPinned: z.boolean().optional(),
+  isDefault: z.boolean().optional(),
+  icon: z.string().optional(),
+  color: z.string().optional(),
+  shortcut: z.string().optional(),
   createdAt: z.number().optional(),
   updatedAt: z.number().optional(),
   buttonText: z.string().optional(),
   buttonIcon: z.string().optional(),
   buttonColor: z.string().optional(),
   buttonPosition: z.string().optional()
-});
+}).passthrough();
+
+export const TemplateVariableSchema: z.ZodType<TemplateVariable> = z.object({
+  name: z.string().min(1),
+  defaultValue: z.string().optional(),
+  description: z.string().optional(),
+  required: z.boolean().optional(),
+  type: z.enum(['string', 'number', 'boolean', 'choice']).optional(),
+  choices: z.array(z.string()).optional()
+}).passthrough();
 
 export const TemplateSchema = z.object({
   id: z.string().optional(),
@@ -115,11 +167,12 @@ export const TemplateSchema = z.object({
   content: z.string(),
   category: z.string().optional(),
   variables: z.array(z.string()).optional(),
+  variableDefs: z.array(TemplateVariableSchema).optional(),
   isHidden: z.boolean().optional(),
   isPinned: z.boolean().optional(),
   createdAt: z.number().optional(),
   updatedAt: z.number().optional()
-});
+}).passthrough();
 
 export interface VirtualFileInput {
   id?: string;
@@ -752,11 +805,32 @@ export function validateRibbonItem(data: unknown) {
   return RibbonItemSchema.safeParse(data);
 }
 
+export const AutocompleteConfigSchema: z.ZodType<AutocompleteConfig> = z.object({
+  enableKeywords: z.boolean(),
+  enableTemplates: z.boolean(),
+  enableFormulas: z.boolean(),
+  enableSlashCommands: z.boolean(),
+  minWordLength: z.number()
+}).passthrough();
+
+export const SpellCheckConfigSchema: z.ZodType<SpellCheckConfig> = z.object({
+  enabled: z.boolean(),
+  mode: z.enum(['built-in', 'browser']),
+  language: z.string()
+}).passthrough();
+
+export const CodeLintConfigSchema: z.ZodType<CodeLintConfig> = z.object({
+  enabled: z.boolean(),
+  jsonLint: z.boolean(),
+  markdownLint: z.boolean()
+}).passthrough();
+
 export const ViewSettingsSchema = z.object({
   theme: z.enum(['google-material-3', 'parchment', 'contextpad-dark', 'one-dark', 'dracula', 'nord', 'monokai', 'github-dark', 'github-light', 'solarized-dark']).optional(),
   fontSize: z.number().optional(),
   fontFamily: z.string().optional(),
   autoAdaptFontToTheme: z.boolean().optional(),
+  isFontCustomizedByUser: z.boolean().optional(),
   lineHeight: z.number().optional(),
   wordWrap: z.boolean().optional(),
   tabSize: z.number().optional(),
@@ -808,6 +882,8 @@ export const ViewSettingsSchema = z.object({
   allowRestGatewayLan: z.boolean().optional(),
   keepScreenAwake: z.boolean().optional(),
   deliverableSaveLocation: z.enum(['workspace', 'custom-folder']).optional(),
+  deliverableWorkspaceSubfolder: z.string().optional(),
+  deliverableCustomFolderPath: z.string().optional(),
   enableBracketMatching: z.boolean().optional(),
   enableFoldGutter: z.boolean().optional(),
   enableAutoIndent: z.boolean().optional(),
@@ -817,7 +893,10 @@ export const ViewSettingsSchema = z.object({
   enableSpellCheck: z.boolean().optional(),
   spellCheckMode: z.enum(['built-in', 'browser']).optional(),
   editorMaxWidth: z.enum(['narrow', 'standard', 'wide', 'full']).optional(),
-  editorPadding: z.enum(['compact', 'normal', 'spacious']).optional()
+  editorPadding: z.enum(['compact', 'normal', 'spacious']).optional(),
+  autocompleteConfig: AutocompleteConfigSchema.optional(),
+  spellCheckConfig: SpellCheckConfigSchema.optional(),
+  codeLintConfig: CodeLintConfigSchema.optional()
 }).passthrough();
 
 export function validateViewSettings(data: unknown) {

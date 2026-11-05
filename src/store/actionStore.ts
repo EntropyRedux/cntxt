@@ -109,7 +109,8 @@ export const useActionStore = create<ActionState>((set, get) => ({
               const res = ActionSchema.safeParse(item);
               if (res.success) {
                 const d = res.data;
-                validated.push({
+                const action: Action = {
+                  ...d,
                   id: d.id || `action-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                   name: d.name,
                   description: d.description || '',
@@ -119,7 +120,16 @@ export const useActionStore = create<ActionState>((set, get) => ({
                   isPinned: d.isPinned ?? false,
                   createdAt: d.createdAt,
                   updatedAt: d.updatedAt,
-                });
+                  type: d.type,
+                  codeType: d.codeType,
+                  pipeline: d.pipeline,
+                  selectionBehavior: d.selectionBehavior,
+                  isDefault: d.isDefault,
+                  icon: d.icon,
+                  color: d.color,
+                  shortcut: d.shortcut,
+                };
+                validated.push(action);
               }
             }
           }

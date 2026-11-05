@@ -35,6 +35,44 @@ describe('Template Store', () => {
     resetStore();
   });
 
+  it('preserves variableDefs when hydrating templates from storage (V2-02)', async () => {
+    const mockStorage = {
+      getItem: async (key: string) => {
+        if (key === 'contextpad_templates') {
+          return JSON.stringify([
+            {
+              id: 'tmpl-with-defs',
+              name: 'Invoice Template',
+              description: 'Generates client invoices',
+              content: 'Invoice for {{client}}: {{amount}}',
+              category: 'FINANCE',
+              variables: ['client', 'amount'],
+              variableDefs: [
+                { name: 'client', required: true, type: 'string', description: 'Client company name' },
+                { name: 'amount', defaultValue: '100', type: 'number' }
+              ],
+              isHidden: false,
+              isPinned: true,
+              createdAt: 1000,
+              updatedAt: 2000
+            }
+          ]);
+        }
+        return null;
+      },
+      setItem: async () => {},
+      removeItem: async () => {},
+      clear: async () => {}
+    };
+
+    await useTemplateStore.getState().initializeTemplates(mockStorage as any);
+    const tmpl = useTemplateStore.getState().templates.find(t => t.id === 'tmpl-with-defs');
+    expect(tmpl).toBeDefined();
+    expect(tmpl?.variableDefs).toHaveLength(2);
+    expect(tmpl?.variableDefs?.[0].description).toBe('Client company name');
+    expect(tmpl?.variableDefs?.[1].defaultValue).toBe('100');
+  });
+
   it('initializes with empty state', () => {
     const state = useTemplateStore.getState();
     expect(state.templates).toEqual([]);

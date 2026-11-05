@@ -6,6 +6,7 @@ import { THEME_DEFAULT_FONTS } from '../constants/fonts';
 import { IStorageBridge, IPlatformBridge } from '../ui-contract/bridgeContract';
 import { STORAGE_KEYS } from '../adapters/storageKeys';
 import { safePersist } from '../services/storageHelper';
+import { recordDiagnostic } from '../services/diagnosticLogger';
 import { clearMermaidCache } from '../services/mermaidRenderer';
 
 let activeStorage: IStorageBridge | null = null;
@@ -147,7 +148,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         const stored = await activeStorage.getItem(STORAGE_KEYS.SETTINGS);
         if (stored) {
           const raw = JSON.parse(stored);
-          if (raw && typeof raw === 'object') {
+          if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
             if (raw.uiDensity === 'comfortable' || raw.uiDensity === 'compact') {
               raw.uiDensity = 'desktop';
             }
@@ -159,10 +160,29 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           if (validation.success) {
             initialSettings = { ...initialSettings, ...validation.data };
           } else {
-            console.warn('Stored settings failed schema validation:', validation.error);
+            recordDiagnostic('warn', 'SettingsStore', 'stored settings partial validation failure — recovering valid fields', {
+              issues: validation.error.issues,
+            });
+            console.warn('[SettingsStore] Stored settings failed full schema validation; recovering valid fields:', validation.error);
+
+            if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+              const rawObj = raw as Record<string, unknown>;
+              const shape = ViewSettingsSchema.shape as Record<string, import('zod').ZodTypeAny>;
+              const recovered: Record<string, unknown> = {};
+              for (const [key, value] of Object.entries(rawObj)) {
+                if (shape[key]) {
+                  const fieldRes = shape[key].safeParse(value);
+                  if (fieldRes.success) {
+                    recovered[key] = fieldRes.data;
+                  }
+                }
+              }
+              initialSettings = { ...initialSettings, ...recovered };
+            }
           }
         }
       } catch (e) {
+        recordDiagnostic('warn', 'SettingsStore', 'failed to parse stored settings JSON', { error: String(e) });
         console.warn('Failed to load stored settings:', e);
       }
     }

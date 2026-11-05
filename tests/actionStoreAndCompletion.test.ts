@@ -42,6 +42,48 @@ describe('ActionStore & Category Management', () => {
     expect(updated?.name).toBe('Prettify Markdown');
   });
 
+  it('preserves type, codeType, pipeline, selectionBehavior, and icons on storage hydration (V2-01)', async () => {
+    const mockStorage = {
+      getItem: async (key: string) => {
+        if (key === 'contextpad_actions') {
+          return JSON.stringify([
+            {
+              id: 'act-complex',
+              name: 'Pipeline Action',
+              description: 'Runs declarative pipeline',
+              code: '',
+              category: 'FORMAT',
+              type: 'button',
+              codeType: 'declarative',
+              pipeline: [{ type: 'wrapSelection', before: '«', after: '»' }],
+              selectionBehavior: 'replace',
+              isDefault: false,
+              icon: 'Wand',
+              color: 'var(--accent)',
+              shortcut: 'Ctrl+Shift+P',
+              enabled: true
+            }
+          ]);
+        }
+        return null;
+      },
+      setItem: async () => {},
+      removeItem: async () => {},
+      clear: async () => {}
+    };
+
+    await useActionStore.getState().initializeActions(mockStorage as any);
+    const hydrated = useActionStore.getState().actions.find(a => a.id === 'act-complex');
+    expect(hydrated).toBeDefined();
+    expect(hydrated?.type).toBe('button');
+    expect(hydrated?.codeType).toBe('declarative');
+    expect(hydrated?.pipeline).toEqual([{ type: 'wrapSelection', before: '«', after: '»' }]);
+    expect(hydrated?.selectionBehavior).toBe('replace');
+    expect(hydrated?.icon).toBe('Wand');
+    expect(hydrated?.color).toBe('var(--accent)');
+    expect(hydrated?.shortcut).toBe('Ctrl+Shift+P');
+  });
+
   it('toggles action pin status and checks isActionPinned', () => {
     const store = useActionStore.getState();
     const id = store.createAction({

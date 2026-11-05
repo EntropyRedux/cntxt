@@ -237,6 +237,42 @@ describe('SettingsStore', () => {
     useSettingsStore.getState().updateSettings({ enableExperimentalSettings: false });
     expect(isRestGatewayFeatureEnabled(useSettingsStore.getState().settings)).toBe(false);
   });
+  it('resiliently recovers valid settings when stored JSON contains corrupted fields (V2-03)', async () => {
+    const mockStorage = {
+      getItem: async (key: string) => {
+        if (key === 'contextpad_settings') {
+          return JSON.stringify({
+            fontSize: 'CORRUPTED_STRING_INSTEAD_OF_NUMBER',
+            wordWrap: false,
+            theme: 'dracula',
+            showLineNumbers: false,
+            deliverableWorkspaceSubfolder: 'Deliverables',
+            autocompleteConfig: {
+              enableKeywords: false,
+              enableTemplates: true,
+              enableFormulas: true,
+              enableSlashCommands: false,
+              minWordLength: 3
+            }
+          });
+        }
+        return null;
+      },
+      setItem: async () => {},
+      removeItem: async () => {},
+      clear: async () => {}
+    };
+
+    await useSettingsStore.getState().initializeSettings(mockStorage as any);
+    const settings = useSettingsStore.getState().settings;
+    expect(settings.fontSize).toBe(14);
+    expect(settings.wordWrap).toBe(false);
+    expect(settings.theme).toBe('dracula');
+    expect(settings.showLineNumbers).toBe(false);
+    expect(settings.deliverableWorkspaceSubfolder).toBe('Deliverables');
+    expect(settings.autocompleteConfig.enableKeywords).toBe(false);
+  });
+
   it('toggles templateViewMode and actionViewMode between list and grid', () => {
     const store = useSettingsStore.getState();
     expect(store.settings.templateViewMode).toBeUndefined(); // or default 'list'

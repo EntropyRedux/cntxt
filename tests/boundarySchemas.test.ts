@@ -134,6 +134,27 @@ describe('Boundary Schemas (P-10 Verification)', () => {
       expect(validateAction({ id: '1', name: 'No Code' }).success).toBe(false);
       expect(validateAction({ id: '2', code: 'api.toast("hi");' }).success).toBe(false);
     });
+
+    it('validates comprehensive action with type, codeType, pipeline, selectionBehavior (V2-01)', () => {
+      const fullAction = {
+        name: 'Transform Action',
+        code: 'return 42;',
+        type: 'button',
+        codeType: 'declarative',
+        pipeline: [{ type: 'wrapSelection', before: '[', after: ']' }],
+        selectionBehavior: 'replace',
+        icon: 'Sparkles',
+        color: 'var(--accent)',
+        shortcut: 'Ctrl+Shift+L'
+      };
+      const result = validateAction(fullAction);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.codeType).toBe('declarative');
+        expect(result.data.selectionBehavior).toBe('replace');
+        expect(result.data.icon).toBe('Sparkles');
+      }
+    });
   });
 
   describe('TemplateSchema', () => {
@@ -156,6 +177,19 @@ describe('Boundary Schemas (P-10 Verification)', () => {
     it('rejects a template missing name or content', () => {
       expect(validateTemplate({ id: 't1', name: 'No Content' }).success).toBe(false);
       expect(validateTemplate({ id: 't2', content: 'No Name' }).success).toBe(false);
+    });
+
+    it('validates template with variableDefs (V2-02)', () => {
+      const tmpl = {
+        name: 'Report',
+        content: 'Report for {{year}}',
+        variableDefs: [{ name: 'year', defaultValue: '2026', type: 'string', required: true }]
+      };
+      const result = validateTemplate(tmpl);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.variableDefs?.[0].defaultValue).toBe('2026');
+      }
     });
   });
 

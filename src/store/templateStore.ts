@@ -112,18 +112,21 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
               const res = TemplateSchema.safeParse(item);
               if (res.success) {
                 const d = res.data;
-                validTemplates.push({
+                const template: Template = {
+                  ...d,
                   id: d.id || `template-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                   name: d.name,
                   description: d.description || '',
                   content: d.content,
                   category: d.category || 'GENERAL',
                   variables: d.variables || [],
+                  variableDefs: d.variableDefs,
                   isHidden: d.isHidden ?? false,
                   isPinned: d.isPinned ?? false,
                   createdAt: d.createdAt || Date.now(),
                   updatedAt: d.updatedAt || Date.now(),
-                });
+                };
+                validTemplates.push(template);
               }
             }
             templates = validTemplates;
