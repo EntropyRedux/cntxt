@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.56
-Last Updated: 2026-11-05
-Last Updated By: Prod Agent (v0.7.7 Release Packaging — Zero-Margin Accuracy & Resizable Toolbar)
+Version: v2.57
+Last Updated: 2026-11-06
+Last Updated By: Prod Agent (v0.7.8 Release — Agent Directives, Capabilities Discovery & 1-Click Bootstrap)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -17,10 +17,10 @@ Active Stage:
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.4 Windows Executables & Android Signed APK Staged)
 
-Current Feature Group: FG-24 Linux Desktop & Android Mobile v0.7.4 Release
+Current Feature Group: FG-25 Agent Directives, Discovery & Dual-Tier Security Architecture (v0.7.8)
 Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (741/741 unit tests passing across 64 suites in CNTXT, 13 native Rust tests clean)
+Unit Tests: written [x] passing [x] (763/763 unit tests passing across 65 suites in CNTXT, 13 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 
 ━━━ MOCK REGISTRY SNAPSHOT ━━━
@@ -36,6 +36,19 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
+- Task 76: Agent Directives, Capabilities Discovery & Dual-Tier Security (2026-11-06):
+  - Authoritative Agent Directives Service (src/services/agentDirectivesService.ts):
+    - Authored single source of truth for AI agent governance and directives across REST, Host Command Bus, and MCP.
+    - Enforces Rich Container syntax (~~~markdown | id=<slug> tags=deliverable locked=agent status=ready source=@agent title="<Title>"), locked=user human guardrail protection, blocks.upsert surgical updates, and [[#^block-id]] citations.
+  - REST Gateway Discovery Endpoints (src-tauri/src/commands/gateway.rs):
+    - Added GET /api/v1/capabilities and GET /api/v1/directives (supporting text/markdown), enhanced GET /api/v1/health with discovery pointers.
+  - Host Command Bus Directives Domain (src/features/panelApps/rpc/hostCommandBus.ts):
+    - Registered directives domain with get and getGuide actions, validated by Zod DirectivesGetPayloadSchema.
+  - Native MCP Stdio Protocol Expansion (scripts/mcp/cntxt-mcp-server.mjs):
+    - Injected directives into MCP initialize.instructions, implemented resources/list and resources/read (cntxt://directives/*), and added Tool 14: cntxt_get_directives.
+  - 1-Click Agent Bootstrap Prompt (RestGatewaySettingsCard.tsx, SettingsPanel.tsx):
+    - Added "Copy Agent Prompt" button in Settings enabling 1-click bootstrap prompt generation for external agents (Antigravity, Claude, Cursor, Cline).
+  - Verification: 763/763 unit tests passing across 65 suites, 0 platform leaks, 100% canonical contract synchronization.
 - Task 75: Code Block Click Accuracy Hardening & Resizable Markdown Formatting Toolbar (2026-11-05):
   - Code Block Click Accuracy Hardening (Issue 3):
     - Eliminated CSS margins on `.cm-line` code block boundaries in `src/index.css` (`.cm-live-codeblock-start`, `.cm-live-codeblock-end`, `.cm-live-codeblock-single` set to `margin-top: 0 !important; margin-bottom: 0 !important;`).

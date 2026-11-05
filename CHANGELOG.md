@@ -5,6 +5,25 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.8] — 2026-11-06
+
+### Agent Directives, Capabilities Discovery & Zero-Friction Agent Connection (Improvements 2, 4, 5)
+- **Authoritative Agent Directives Service (`src/services/agentDirectivesService.ts`)**:
+  - Implemented the authoritative single source of truth for external AI agent integration, governing all connection channels (REST API, Host Command Bus, and MCP Server).
+  - Enforces the Mandatory Rich Container Deliverable Wrapping invariant (`~~~markdown | id=<slug> tags=deliverable locked=agent status=ready source=@agent title="..."`), human guardrail protections (`locked=user` immutability), surgical block operations (`blocks.upsert`, `blocks.updateParams`), and active thread `.cntxt` user inbox citations (`[[#^block-id]]`).
+  - Added dynamic capabilities catalog detailing all REST endpoints, RPC domains/actions, and MCP tools.
+- **REST Gateway Capabilities & Directives Endpoints (`src-tauri/src/commands/gateway.rs`)**:
+  - Added `GET /api/v1/capabilities`: Authenticated endpoint returning machine-readable capabilities manifest and structured agent directives.
+  - Added `GET /api/v1/directives`: Authenticated endpoint supporting both JSON and direct raw Markdown formatting (`Accept: text/markdown`).
+  - Enhanced `GET /api/v1/health` with discovery pointers (`capabilitiesUrl`, `directivesUrl`, `directivesSummary`).
+- **Host Command Bus Directives Domain (`src/features/panelApps/rpc/hostCommandBus.ts`)**:
+  - Registered dynamic `'directives'` domain with `get` and `getGuide` actions with typed Zod boundary validation (`validateDirectivesGet`).
+- **Native MCP Stdio Server Protocol Expansion (`scripts/mcp/cntxt-mcp-server.mjs`)**:
+  - Injected authoritative directives instructions into the MCP protocol `initialize` response (`instructions`).
+  - Implemented MCP resources `resources/list` and `resources/read` exposing `cntxt://directives/agent-guide` and `cntxt://directives/capabilities`.
+  - Added MCP Tool 14: `cntxt_get_directives` allowing agents to query syntax rules and supported features dynamically.
+- **1-Click Agent Bootstrap Prompt (`RestGatewaySettingsCard.tsx`, `SettingsPanel.tsx`)**:
+  - Added `[ 📋 Copy Agent Prompt ]` button in Settings allowing users to connect external AI agents (Antigravity, Claude, Cursor, Cline) with a single paste.
 ## [0.7.4] — 2026-11-04
 
 ### Full Codebase Audit Remediation, Security Hardening & Observability Architecture

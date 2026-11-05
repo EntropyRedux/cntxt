@@ -37,7 +37,8 @@ import {
   EditorReplaceRangePayload,
   EditorDiagnosticItem,
   EditorSetDiagnosticsPayload,
-  RestGatewayConfig, CntxtBlockParams, BlocksListPayload, BlocksGetPayload, BlocksUpsertPayload, BlocksUpdateParamsPayload, BlocksRemovePayload
+  RestGatewayConfig, CntxtBlockParams, BlocksListPayload, BlocksGetPayload, BlocksUpsertPayload, BlocksUpdateParamsPayload, BlocksRemovePayload,
+  DirectivesGetPayload
 } from '../../contracts/data_shapes';
 
 export const SupportedLanguageSchema: z.ZodType<SupportedLanguage> = z.enum([
@@ -372,7 +373,7 @@ export const CntxtRpcDomainSchema = z.enum([
   'templates',
   'actions',
   'notify',
-  'terminal', 'blocks',
+  'terminal', 'blocks', 'directives',
 ]);
 
 export const CntxtRpcRequestSchema: z.ZodType<CntxtRpcRequest> = z.object({
@@ -704,4 +705,13 @@ export function validateBlocksUpdateParams(data: unknown) {
 
 export function validateBlocksRemove(data: unknown) {
   return BlocksRemovePayloadSchema.safeParse(data);
+}
+
+// 18. Directives & Capabilities Domain (Improvements 2, 4, 5)
+export const DirectivesGetPayloadSchema: z.ZodType<DirectivesGetPayload> = z.object({
+  format: z.enum(['json', 'markdown']).optional(),
+});
+
+export function validateDirectivesGet(data: unknown) {
+  return DirectivesGetPayloadSchema.safeParse(data || {});
 }

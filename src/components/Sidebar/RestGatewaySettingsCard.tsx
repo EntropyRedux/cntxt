@@ -9,7 +9,8 @@ import {
   EyeOff, 
   ShieldCheck, 
   AlertCircle,
-  Wifi
+  Wifi,
+  Sparkles
 } from 'lucide-react';
 
 export interface RestGatewaySettingsCardProps {
@@ -33,6 +34,8 @@ export interface RestGatewaySettingsCardProps {
   onCopyToken: () => void;
   onCopyLanUrl?: () => void;
   onRegenerateToken: () => void;
+  onCopyBootstrapPrompt?: () => void;
+  isCopiedBootstrapPrompt?: boolean;
 }
 
 /**
@@ -60,6 +63,8 @@ export const RestGatewaySettingsCard: React.FC<RestGatewaySettingsCardProps> = (
   onCopyToken,
   onCopyLanUrl,
   onRegenerateToken,
+  onCopyBootstrapPrompt,
+  isCopiedBootstrapPrompt,
 }) => {
   const [localPort, setLocalPort] = React.useState(port);
   React.useEffect(() => {
@@ -262,6 +267,38 @@ export const RestGatewaySettingsCard: React.FC<RestGatewaySettingsCardProps> = (
             </span>
           </div>
 
+          {/* 1-Click Agent Bootstrap Prompt (FG-25) */}
+          <div className="pt-1 border-t border-[var(--border-subtle)]/50 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-[var(--text-primary)] font-medium flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-[var(--accent-primary)]" />
+                <span>AI Agent Connect Prompt</span>
+              </span>
+              <button
+                type="button"
+                id="copy-agent-bootstrap-prompt-btn"
+                onClick={onCopyBootstrapPrompt}
+                disabled={!authToken}
+                title="Copy bootstrap prompt to paste into Antigravity, Claude, Cursor, or Cline"
+                className="px-2 py-0.5 rounded text-[10px] font-medium bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/30 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50"
+              >
+                {isCopiedBootstrapPrompt ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span className="text-emerald-400">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Agent Prompt</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <span className="text-[9px] text-[var(--text-muted)] leading-tight block">
+              Paste this prompt into your agent of choice so it automatically discovers CNTXT endpoints and Rich Container rules.
+            </span>
+          </div>
           {error && (
             <div className="p-1.5 rounded bg-rose-500/10 border border-rose-500/30 text-[10px] text-rose-400 flex items-center gap-1.5">
               <AlertCircle className="w-3 h-3 shrink-0" />

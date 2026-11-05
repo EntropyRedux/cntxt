@@ -695,7 +695,7 @@ export interface PanelAppRecord {
 // 11. Host Command Bus & RPC Domain Shapes (FG-16)
 // ==========================================
 
-export type CntxtRpcDomain = 'editor' | 'tabs' | 'workspace' | 'templates' | 'actions' | 'notify' | 'terminal' | 'blocks';
+export type CntxtRpcDomain = 'editor' | 'tabs' | 'workspace' | 'templates' | 'actions' | 'notify' | 'terminal' | 'blocks' | 'directives';
 
 export type CntxtRpcErrorCode =
   | 'NOT_FOUND'
@@ -1026,3 +1026,83 @@ export interface BlocksRemovePayload {
   tabId?: string;
   actor?: 'agent' | 'user';
 }
+
+// ==========================================
+// 17. Agent Directives & Capabilities Discovery (Improvements 2, 4, 5)
+// ==========================================
+
+export interface CntxtAgentDirective {
+  version: string;
+  systemDirective: string;
+  richContainerSyntax: {
+    fence: string;
+    headerFormat: string;
+    governanceParams: {
+      id: string;
+      tags: string;
+      locked: 'user' | 'agent' | 'system';
+      status: 'draft' | 'review' | 'ready' | 'approved' | 'rejected';
+      source: string;
+      title: string;
+    };
+    example: string;
+  };
+  citationSyntax: {
+    blockCitation: string;
+    inboxId: string;
+    description: string;
+  };
+  bestPractices: string[];
+}
+
+export interface CntxtEndpointDefinition {
+  path: string;
+  method: 'GET' | 'POST';
+  description: string;
+  requiresAuth: boolean;
+}
+
+export interface CntxtRpcActionDefinition {
+  action: string;
+  description: string;
+  payloadSchemaSummary: string;
+}
+
+export interface CntxtRpcDomainDefinition {
+  domain: CntxtRpcDomain;
+  description: string;
+  actions: CntxtRpcActionDefinition[];
+}
+
+export interface CntxtMcpToolDefinition {
+  name: string;
+  description: string;
+  inputSchemaSummary: Record<string, unknown>;
+}
+
+export interface CntxtCapabilitiesManifest {
+  status: 'ok';
+  version: string;
+  name: string;
+  description: string;
+  securityModel: {
+    mcp: string;
+    restGateway: string;
+    tokenHeader: string;
+  };
+  restEndpoints: CntxtEndpointDefinition[];
+  rpcDomains: CntxtRpcDomainDefinition[];
+  mcpTools: CntxtMcpToolDefinition[];
+  directives: CntxtAgentDirective;
+}
+
+export interface DirectivesGetPayload {
+  format?: 'json' | 'markdown';
+}
+
+export interface DirectivesGetResult {
+  capabilities: CntxtCapabilitiesManifest;
+  directives: CntxtAgentDirective;
+  guideMarkdown: string;
+}
+

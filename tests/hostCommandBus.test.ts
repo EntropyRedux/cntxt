@@ -710,5 +710,79 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
       expect(content).toBe('Fallback content');
     });
   });
+  describe('12. Directives & Capabilities Domain (Improvements 2, 4, 5)', () => {
+    it('returns complete capabilities manifest and structured directives on directives.get', async () => {
+      const response = await bus.handleRequest({
+        id: 'r_dir_1',
+        domain: 'directives',
+        action: 'get',
+        appId: 'rest_gateway',
+        payload: {},
+      });
+
+      expect(response.success).toBe(true);
+      const data = response.data as any;
+      expect(data.capabilities.status).toBe('ok');
+      expect(data.capabilities.rpcDomains.length).toBeGreaterThan(0);
+      expect(data.capabilities.restEndpoints.length).toBeGreaterThan(0);
+      expect(data.directives.systemDirective).toContain('CNTXT Rich Containers');
+      expect(data.guideMarkdown).toContain('# CNTXT AI Agent Integration & Governance Protocol');
+    });
+
+    it('supports format: "markdown" to return markdown guide directly', async () => {
+      const response = await bus.handleRequest({
+        id: 'r_dir_2',
+        domain: 'directives',
+        action: 'get',
+        appId: 'agent-1',
+        payload: { format: 'markdown' },
+      });
+
+      expect(response.success).toBe(true);
+      const data = response.data as any;
+      expect(data.guideMarkdown).toContain('# CNTXT AI Agent Integration & Governance Protocol');
+      expect(data.capabilities).toBeUndefined();
+    });
+
+    it('returns raw markdown guide on directives.getGuide', async () => {
+      const response = await bus.handleRequest({
+        id: 'r_dir_3',
+        domain: 'directives',
+        action: 'getGuide',
+        appId: 'agent-1',
+        payload: {},
+      });
+
+      expect(response.success).toBe(true);
+      const data = response.data as any;
+      expect(data.guideMarkdown).toContain('Mandatory Rich Container Deliverable Wrapping');
+    });
+
+    it('rejects invalid format with VALIDATION_ERROR', async () => {
+      const response = await bus.handleRequest({
+        id: 'r_dir_4',
+        domain: 'directives',
+        action: 'get',
+        appId: 'agent-1',
+        payload: { format: 'invalid_format' },
+      });
+
+      expect(response.success).toBe(false);
+      expect(response.error?.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns NOT_FOUND for unknown directives action', async () => {
+      const response = await bus.handleRequest({
+        id: 'r_dir_5',
+        domain: 'directives',
+        action: 'unknownAction',
+        appId: 'agent-1',
+        payload: {},
+      });
+
+      expect(response.success).toBe(false);
+      expect(response.error?.code).toBe('NOT_FOUND');
+    });
+  });
 });
 

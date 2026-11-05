@@ -33,7 +33,8 @@ import {
   validateBlocksGet,
   validateBlocksUpsert,
   validateBlocksUpdateParams,
-  validateBlocksRemove
+  validateBlocksRemove,
+  validateDirectivesGet
 } from '../../../contracts/boundarySchemas';
 import {
   parseCntxtDocument,
@@ -53,6 +54,11 @@ import { editorRegistry } from '../../../services/editor/editorRegistry';
 import { executeActionById } from '../../../services/actionExecutor';
 import { processTemplateVariables } from '../../../services/editor/templateVariableService';
 import { IRuntimeBridge, BridgeDirectoryEntry } from '../../../ui-contract/bridgeContract';
+import {
+  getCapabilitiesManifest,
+  getAgentDirectives,
+  getRawMarkdownGuide,
+} from '../../../services/agentDirectivesService';
 
 /**
  * Normalizes slash direction to standard POSIX-style forward slashes.
@@ -84,6 +90,7 @@ export class HostCommandBus {
     this.registerDomain('notify', (action, payload) => this.handleNotifyDomain(action, payload));
     this.registerDomain('terminal', (action, payload) => this.handleTerminalDomain(action, payload));
     this.registerDomain('blocks', (action, payload, appId) => this.handleBlocksDomain(action, payload, appId));
+    this.registerDomain('directives', (action, payload) => this.handleDirectivesDomain(action, payload));
   }
 
   /**
@@ -1045,6 +1052,41 @@ export class HostCommandBus {
 
       default:
         throw { code: 'NOT_FOUND', message: `Unknown blocks action: ${action}` };
+    }
+  }
+
+  // ==========================================
+  // Directives Domain (Improvements 2, 4, 5)
+  // ==========================================
+
+  private async handleDirectivesDomain(action: string, payload: unknown): Promise<unknown> {
+    switch (action) {
+      case 'get': {
+        const validation = validateDirectivesGet(payload);
+        if (!validation.success) {
+          throw { code: 'VALIDATION_ERROR', message: validation.error.message };
+        }
+        const { format = 'json' } = validation.data;
+        if (format === 'markdown') {
+          return {
+            guideMarkdown: getRawMarkdownGuide(),
+          };
+        }
+        return {
+          capabilities: getCapabilitiesManifest(),
+          directives: getAgentDirectives(),
+          guideMarkdown: getRawMarkdownGuide(),
+        };
+      }
+
+      case 'getGuide': {
+        return {
+          guideMarkdown: getRawMarkdownGuide(),
+        };
+      }
+
+      default:
+        throw { code: 'NOT_FOUND', message: `Unknown directives action: ${action}` };
     }
   }
 }

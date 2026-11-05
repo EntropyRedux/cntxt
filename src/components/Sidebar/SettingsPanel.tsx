@@ -38,6 +38,7 @@ import { PersonalGitHubLibraryConfig } from '../../contracts/data_shapes';
 import { GoogleIcon, GitHubIcon } from '../Auth/BrandIcons';
 import { PersonalGitHubLibraryModal } from './PersonalGitHubLibraryModal';
 import { RestGatewaySettingsCard } from './RestGatewaySettingsCard';
+import { getAgentBootstrapPrompt } from '../../services/agentDirectivesService';
 import { ErrorBoundary } from '../Common/ErrorBoundary';
 import { IRestGatewayStatus } from '../../ui-contract/bridgeContract';
 
@@ -199,6 +200,23 @@ export const SettingsPanel: React.FC = () => {
     updateSettings({ restGatewayPort: port });
   };
 
+  const [bootstrapPromptCopied, setBootstrapPromptCopied] = useState(false);
+
+  const handleCopyBootstrapPrompt = async () => {
+    if (!gatewayStatus.authToken) return;
+    const effectiveHost = (effectiveAllowLan && gatewayStatus.lanIp) ? gatewayStatus.lanIp : '127.0.0.1';
+    const effectivePort = gatewayStatus.port || settings.restGatewayPort || 9876;
+    const baseUrl = `http://${effectiveHost}:${effectivePort}`;
+    const prompt = getAgentBootstrapPrompt(baseUrl, gatewayStatus.authToken);
+    try {
+      await bridge.clipboard.writeText(prompt);
+      setBootstrapPromptCopied(true);
+      setTimeout(() => setBootstrapPromptCopied(false), 2000);
+      addNotification('Prompt Copied', 'Agent bootstrap prompt copied to clipboard', 'info');
+    } catch {
+      addNotification('Copy Failed', 'Unable to copy bootstrap prompt', 'error');
+    }
+  };
   const handleCopyToken = async () => {
     if (!gatewayStatus.authToken) return;
     try {
@@ -1243,6 +1261,8 @@ export const SettingsPanel: React.FC = () => {
                 onCopyToken={handleCopyToken}
                 onCopyLanUrl={handleCopyLanUrl}
                 onRegenerateToken={handleRegenerateToken}
+                onCopyBootstrapPrompt={handleCopyBootstrapPrompt}
+                isCopiedBootstrapPrompt={bootstrapPromptCopied}
               />
             </ErrorBoundary>
 

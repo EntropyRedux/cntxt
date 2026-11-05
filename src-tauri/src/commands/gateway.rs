@@ -564,11 +564,14 @@ Connection: close\r\n\r\n{}",
         return;
     }
 
-    // Health Check (Minimal liveness only per FIND-PLAN-20-01)
+    // Health Check (Minimal liveness + discovery pointers)
     if method == "GET" && path == "/api/v1/health" {
         let body = json!({
             "status": "ok",
-            "version": env!("CARGO_PKG_VERSION")
+            "version": env!("CARGO_PKG_VERSION"),
+            "capabilitiesUrl": "/api/v1/capabilities",
+            "directivesUrl": "/api/v1/directives",
+            "directivesSummary": "All deliverables must be formatted inside CNTXT Rich Containers (~~~markdown | id=<slug> tags=deliverable locked=agent status=ready source=@agent title=\"<Title>\"). Respect locked=user blocks, use blocks.upsert, and resolve active thread citations."
         })
         .to_string();
         let resp = format!(
@@ -654,6 +657,31 @@ Connection: close\r\n\r\n{}",
     // Construct CntxtRpcRequest
     let correlation_id = Uuid::new_v4().to_string();
     let (rpc_request, parse_ok) = match (method, path) {
+        ("GET", "/api/v1/capabilities") => (
+            json!({
+                "id": correlation_id,
+                "domain": "directives",
+                "action": "get",
+                "appId": "rest_gateway",
+                "payload": { "format": "json" }
+            }),
+            true,
+        ),
+        ("GET", "/api/v1/directives") => {
+            let wants_md = headers.get("accept").map(|s| s.contains("text/markdown")).unwrap_or(false);
+            (
+                json!({
+                    "id": correlation_id,
+                    "domain": "directives",
+                    "action": "get",
+                    "appId": "rest_gateway",
+                    "payload": {
+                        "format": if wants_md { "markdown" } else { "json" }
+                    }
+                }),
+                true,
+            )
+        },
         ("GET", "/api/v1/workspace") => (
             json!({
                 "id": correlation_id,
@@ -749,11 +777,24 @@ Connection: close\r\n\r\n{}",
     // Await response with 15-second timeout (per FIND-PLAN-20-02)
     let response_result = tokio::time::timeout(Duration::from_secs(15), rx).await;
 
-    let (status_code, status_text, response_json) = match response_result {
-        Ok(Ok(val)) => ("200", "OK", val.to_string()),
+    let (status_code, status_text, content_type, response_body) = match response_result {
+        Ok(Ok(val)) => {
+            let wants_md = path == "/api/v1/directives"
+                && headers.get("accept").map(|s| s.contains("text/markdown")).unwrap_or(false);
+            if wants_md {
+                if let Some(md) = val.get("data").and_then(|d| d.get("guideMarkdown")).and_then(|m| m.as_str()) {
+                    ("200", "OK", "text/markdown; charset=utf-8", md.to_string())
+                } else {
+                    ("200", "OK", "application/json; charset=utf-8", val.to_string())
+                }
+            } else {
+                ("200", "OK", "application/json; charset=utf-8", val.to_string())
+            }
+        }
         Ok(Err(_)) => (
             "500",
             "Internal Server Error",
+            "application/json; charset=utf-8",
             json!({
                 "success": false,
                 "error": {
@@ -770,6 +811,7 @@ Connection: close\r\n\r\n{}",
             (
                 "504",
                 "Gateway Timeout",
+                "application/json; charset=utf-8",
                 json!({
                     "success": false,
                     "error": {
@@ -784,14 +826,15 @@ Connection: close\r\n\r\n{}",
 
     let http_response = format!(
         "HTTP/1.1 {} {}\r\n\
-Content-Type: application/json; charset=utf-8\r\n\
+Content-Type: {}\r\n\
 {}Content-Length: {}\r\n\
 Connection: close\r\n\r\n{}",
         status_code,
         status_text,
+        content_type,
         cors_headers,
-        response_json.len(),
-        response_json
+        response_body.len(),
+        response_body
     );
 
     let _ = stream.write_all(http_response.as_bytes()).await;

@@ -4,9 +4,11 @@ import {
   getToolDefinitions,
   registerTool,
   handleToolCall,
+  getResourceDefinitions,
+  handleResourceRead,
 } from '../scripts/mcp/cntxt-mcp-server.mjs';
 
-describe('CNTXT Native MCP Server (FG-21 / FG-22)', () => {
+describe('CNTXT Native MCP Server (FG-21 / FG-22 / FG-25)', () => {
   describe('1. wrapDeliverableInCodeBlock', () => {
     it('wraps raw text in a canonical CNTXT rich container block', () => {
       const wrapped = wrapDeliverableInCodeBlock(
@@ -34,12 +36,12 @@ describe('CNTXT Native MCP Server (FG-21 / FG-22)', () => {
     });
   });
 
-  describe('2. Tool Registry and Declarations (Pillar 4 & FG-21 §1.3)', () => {
-    it('exposes all declared MCP tools including clear_diagnostics, apply_template, and notify', () => {
+  describe('2. Tool Registry and Declarations (Pillar 4 & FG-21 §1.3 & FG-25)', () => {
+    it('exposes all declared MCP tools including clear_diagnostics, apply_template, notify, and get_directives', () => {
       const tools = getToolDefinitions();
       const toolNames = tools.map((t) => t.name);
 
-      // FG-21 & FG-22 declared tools
+      // FG-21, FG-22 & FG-25 declared tools
       expect(toolNames).toContain('cntxt_open_deliverable');
       expect(toolNames).toContain('cntxt_append_deliverable');
       expect(toolNames).toContain('cntxt_list_blocks');
@@ -53,6 +55,7 @@ describe('CNTXT Native MCP Server (FG-21 / FG-22)', () => {
       expect(toolNames).toContain('cntxt_clear_diagnostics');
       expect(toolNames).toContain('cntxt_apply_template');
       expect(toolNames).toContain('cntxt_notify');
+      expect(toolNames).toContain('cntxt_get_directives');
 
       // Undeclared raw passthrough cntxt_rpc must NOT be present
       expect(toolNames).not.toContain('cntxt_rpc');
@@ -80,6 +83,22 @@ describe('CNTXT Native MCP Server (FG-21 / FG-22)', () => {
     it('throws when invoking an unknown tool', async () => {
       await expect(handleToolCall('cntxt_nonexistent_tool', {})).rejects.toThrow(
         /Unknown CNTXT MCP tool: cntxt_nonexistent_tool/
+      );
+    });
+  });
+
+  describe('3. MCP Resources & Directives (FG-25 / Improvements 2 & 4)', () => {
+    it('exposes standard directives resources for connecting agents', () => {
+      const resources = getResourceDefinitions();
+      const uris = resources.map((r: any) => r.uri);
+
+      expect(uris).toContain('cntxt://directives/agent-guide');
+      expect(uris).toContain('cntxt://directives/capabilities');
+    });
+
+    it('throws when reading an unknown resource URI', async () => {
+      await expect(handleResourceRead('cntxt://unknown/resource')).rejects.toThrow(
+        /Resource not found: cntxt:\/\/unknown\/resource/
       );
     });
   });
