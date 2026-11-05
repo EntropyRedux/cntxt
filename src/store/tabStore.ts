@@ -26,11 +26,13 @@ interface TabState {
   isSaving: boolean;
   /** True until initializeTabs resolves; used to show EditorSkeleton instead of empty state. */
   isHydrating: boolean;
+  closedTabsHistory: Tab[];
 
   // Actions
   setActiveTabId: (id: string) => void;
   createTab: (title?: string, content?: string, language?: SupportedLanguage, filePath?: string | null, pinnedTabId?: string | null, tabType?: TabType) => string;
   closeTab: (tabId: string, force?: boolean) => void;
+  reopenClosedTab: () => string | null;
   closeAllTabs: (force?: boolean) => void;
   closeOtherTabs: (keepTabId: string, force?: boolean) => void;
   updateTabContent: (tabId: string, content: string, isExternal?: boolean) => void;
@@ -73,6 +75,7 @@ export const useTabStore = create<TabState>((set, get) => ({
   activeTabId: '',
   isSaving: false,
   isHydrating: true,
+  closedTabsHistory: [],
 
   initializeTabs: async (storage?: IStorageBridge, disableDemoWelcome?: boolean) => {
     if (storage) {
@@ -224,7 +227,7 @@ export const useTabStore = create<TabState>((set, get) => ({
   },
 
   closeTab: (tabId: string, force = false) => {
-    const { tabs, activeTabId } = get();
+    const { tabs, activeTabId, closedTabsHistory } = get();
     const target = tabs.find(t => t.id === tabId);
     if (target?.isDirty && !force) {
       useConfirmStore.getState().showConfirm({
@@ -240,13 +243,22 @@ export const useTabStore = create<TabState>((set, get) => ({
       return;
     }
 
+    // Record in closed tabs history (skip blank untitled documents)
+    let nextHistory = closedTabsHistory || [];
+    if (target) {
+      const isBlankUntitled = !target.filePath && !target.content && target.title.startsWith('Untitled');
+      if (!isBlankUntitled) {
+        nextHistory = [{ ...target, isDirty: false }, ...nextHistory].slice(0, 10);
+      }
+    }
+
     cancelPendingSave(tabId);
     editorStateCache.evictTabState(tabId);
     if (tabs.length === 1) {
       // Create a fresh untitled tab when closing the last one
       const newId = get().createTab('Untitled.md', '', 'markdown');
       const filtered = get().tabs.filter(t => t.id !== tabId);
-      set({ tabs: filtered, activeTabId: newId });
+      set({ tabs: filtered, activeTabId: newId, closedTabsHistory: nextHistory });
       writeTabCache(filtered, newId);
       if (activeStorage) {
         safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, `tab ${tabId}`);
@@ -264,7 +276,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       nextActiveId = newTabs[nextIndex]?.id || '';
     }
 
-    set({ tabs: newTabs, activeTabId: nextActiveId });
+    set({ tabs: newTabs, activeTabId: nextActiveId, closedTabsHistory: nextHistory });
     writeTabCache(newTabs, nextActiveId);
     if (activeStorage) {
       safeRemove(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${tabId}`, `tab ${tabId}`);
@@ -764,7 +776,55 @@ export const useTabStore = create<TabState>((set, get) => ({
     writeTabCache(newTabs, id);
     saveTabsMeta(newTabs, id);
     return id;
-  }
+  },
+
+  reopenClosedTab: () => {
+    const { closedTabsHistory, tabs } = get();
+    if (!closedTabsHistory || closedTabsHistory.length === 0) {
+      useNotificationStore.getState().addNotification('Tab History', 'No recently closed tabs to reopen.', 'info');
+      return null;
+    }
+
+    const [tabToRestore, ...remainingHistory] = closedTabsHistory;
+    let restoredId = tabToRestore.id;
+    if (tabs.some(t => t.id === restoredId)) {
+      restoredId = `tab_${Date.now()}`;
+    }
+
+    const restoredTab: Tab = {
+      ...tabToRestore,
+      id: restoredId,
+      isDirty: false,
+      lastModifiedTime: Date.now()
+    };
+
+    let newTabs: Tab[];
+    if (tabs.length === 1 && !tabs[0].filePath && !tabs[0].content && tabs[0].title.startsWith('Untitled')) {
+      newTabs = [restoredTab];
+    } else {
+      newTabs = [...tabs, restoredTab];
+    }
+
+    set({
+      tabs: newTabs,
+      activeTabId: restoredId,
+      closedTabsHistory: remainingHistory
+    });
+
+    writeTabCache(newTabs, restoredId);
+    if (activeStorage) {
+      safePersist(activeStorage, `${STORAGE_KEYS.TAB_CONTENT_PREFIX}${restoredId}`, restoredTab.content, `reopen tab ${restoredId}`);
+    }
+    saveTabsMeta(newTabs, restoredId);
+
+    useNotificationStore.getState().addNotification(
+      'Tab Restored',
+      `Reopened "${restoredTab.title}"`,
+      'info'
+    );
+
+    return restoredId;
+  },
 }));
 
 // Helper functions for metadata persistence and debounced saves

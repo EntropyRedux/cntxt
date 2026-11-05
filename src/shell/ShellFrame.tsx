@@ -48,6 +48,7 @@ export const ShellFrame: React.FC = () => {
     createTab,
     saveCurrentTab,
     closeTab,
+    reopenClosedTab,
     insertTextAtCursor,
   } = useTabStore();
 
@@ -405,6 +406,9 @@ export const ShellFrame: React.FC = () => {
       } else {
         createTab();
       }
+    } else if (modifier && e.shiftKey && e.key.toLowerCase() === 't') {
+      e.preventDefault();
+      reopenClosedTab();
     } else if (modifier && e.key.toLowerCase() === 'w') {
       e.preventDefault();
       if (activeTabId) closeTab(activeTabId);

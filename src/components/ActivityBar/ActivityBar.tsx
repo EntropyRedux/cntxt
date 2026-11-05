@@ -66,7 +66,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertica
       <>
         <nav 
           aria-label="Touch Navigation Bar"
-          className="theme-activitybar w-full border-t border-[var(--border-primary)] bg-[var(--activitybar-bg)] h-12 flex items-center justify-between px-2 sm:px-4 shrink-0 select-none relative z-20 overflow-x-auto no-scrollbar shadow-xs"
+          className="theme-activitybar w-full border-t border-[var(--border-subtle)] bg-[var(--activitybar-bg)] h-12 flex items-center justify-between px-2 sm:px-4 shrink-0 select-none relative z-20 overflow-x-auto no-scrollbar shadow-xs"
         >
           <div className="flex items-center justify-around sm:justify-center sm:gap-1.5 w-full max-w-2xl mx-auto">
             {/* Primary Navigation Items */}
@@ -187,7 +187,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertica
     <>
       <aside 
         aria-label="Activity Bar"
-        className="theme-activitybar w-11 sm:w-12 h-full flex flex-col items-center py-2 justify-between shrink-0 select-none relative z-30 overflow-y-auto no-scrollbar border-r border-[var(--border-primary)]"
+        className="theme-activitybar w-11 sm:w-12 h-full flex flex-col items-center py-2 justify-between shrink-0 select-none relative z-30 overflow-y-auto no-scrollbar border-r border-[var(--border-subtle)]"
       >
         {/* Top Section */}
         <div className="flex flex-col items-center space-y-1.5 w-full">

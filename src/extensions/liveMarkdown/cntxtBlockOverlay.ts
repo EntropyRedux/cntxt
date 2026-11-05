@@ -92,6 +92,7 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
     private overlayLayer: HTMLElement;
     private openPopupStartLine: number | null = null;
     private activeReplyBlockStartLine: number | null = null;
+    private draftCommentText = '';
     private rafId: number | null = null;
     private onScrollBound: () => void;
     private dismissCallback: () => boolean;
@@ -118,6 +119,7 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
         if (this.activeReplyBlockStartLine !== null || this.openPopupStartLine !== null) {
           this.activeReplyBlockStartLine = null;
           this.openPopupStartLine = null;
+          this.draftCommentText = '';
           this.syncOverlay();
           return true;
         }
@@ -132,6 +134,9 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
       for (const tr of update.transactions) {
         for (const effect of tr.effects) {
           if (effect.is(openCntxtReplyInputEffect)) {
+            if (this.activeReplyBlockStartLine !== effect.value) {
+              this.draftCommentText = '';
+            }
             this.activeReplyBlockStartLine = effect.value;
             this.openPopupStartLine = null;
           }
@@ -642,6 +647,7 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
         e.preventDefault();
         e.stopPropagation();
         this.activeReplyBlockStartLine = null;
+        this.draftCommentText = '';
         this.syncOverlay();
       });
       badgeAndClose.appendChild(closeBtn);
@@ -665,6 +671,10 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
         placeholder:
           'Write comment or instructions for AI agent... (Shift+Enter for newline, Enter to submit)',
       }) as HTMLTextAreaElement;
+      textarea.value = this.draftCommentText;
+      textarea.addEventListener('input', () => {
+        this.draftCommentText = textarea.value;
+      });
       container.appendChild(textarea);
 
       // Action footer
@@ -688,6 +698,7 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
         e.preventDefault();
         e.stopPropagation();
         this.activeReplyBlockStartLine = null;
+        this.draftCommentText = '';
         this.syncOverlay();
       });
       btnGroup.appendChild(cancelBtn);
@@ -706,10 +717,27 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
         });
 
         if (updatedDoc !== rawDoc) {
+          const scroller = this.view.scrollDOM;
+          const priorScrollTop = scroller ? scroller.scrollTop : 0;
+          const priorScrollLeft = scroller ? scroller.scrollLeft : 0;
+
           this.view.dispatch({
             changes: { from: 0, to: this.view.state.doc.length, insert: updatedDoc },
             userEvent: 'input.cntxt-inbox',
+            scrollIntoView: false,
           });
+
+          if (scroller) {
+            scroller.scrollTop = priorScrollTop;
+            scroller.scrollLeft = priorScrollLeft;
+            requestAnimationFrame(() => {
+              if (scroller) {
+                scroller.scrollTop = priorScrollTop;
+                scroller.scrollLeft = priorScrollLeft;
+              }
+            });
+          }
+
           useNotificationStore
             .getState()
             .addNotification(
@@ -718,6 +746,7 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
               'info'
             );
         }
+        this.draftCommentText = '';
         this.activeReplyBlockStartLine = null;
         this.syncOverlay();
       };
@@ -752,6 +781,7 @@ export const cntxtBlockOverlayPlugin = ViewPlugin.fromClass(
           e.preventDefault();
           e.stopPropagation();
           this.activeReplyBlockStartLine = null;
+          this.draftCommentText = '';
           this.syncOverlay();
         }
       });

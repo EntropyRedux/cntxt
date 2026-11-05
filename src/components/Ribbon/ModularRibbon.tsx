@@ -305,7 +305,7 @@ export const ModularRibbon: React.FC<ModularRibbonProps> = ({ events }) => {
         isMultiRow 
           ? 'h-auto min-h-[34px] py-1' 
           : (isTouch ? 'h-10.5' : 'h-8.5')
-      } bg-[var(--titlebar-bg)] border-b border-[var(--titlebar-border)] px-2 flex items-start sm:items-center justify-between text-xs shrink-0 select-none transition-all duration-150`}
+      } bg-[var(--titlebar-bg)] border-b border-[var(--border-subtle)] px-2 flex items-start sm:items-center justify-between text-xs shrink-0 select-none transition-all duration-150`}
     >
       {/* Down Chevron (expands to multi-row if overflowing/clicked) & Dynamic Ribbon Buttons Area */}
       <div 

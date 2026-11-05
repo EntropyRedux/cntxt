@@ -4,7 +4,7 @@ import { useConfirmStore } from '../src/store/confirmStore';
 
 describe('TabStore', () => {
   beforeEach(() => {
-    useTabStore.setState({ tabs: [], activeTabId: '', isSaving: false });
+    useTabStore.setState({ tabs: [], activeTabId: '', closedTabsHistory: [], isSaving: false });
     useConfirmStore.setState({ isOpen: false, options: null, isLoading: false });
   });
 
@@ -233,5 +233,48 @@ describe('TabStore', () => {
     useTabStore.getState().reorderTabs(2, 0);
     state = useTabStore.getState();
     expect(state.tabs.map(t => t.id)).toEqual([idA, idB, idC]);
+  });
+  it('pushes closed tabs to closedTabsHistory and reopens the most recently closed tab', () => {
+    const tab1Id = useTabStore.getState().createTab('FirstDoc.md', 'Content 1');
+    const tab2Id = useTabStore.getState().createTab('SecondDoc.md', 'Content 2');
+
+    // Close tab 2
+    useTabStore.getState().closeTab(tab2Id);
+    expect(useTabStore.getState().tabs.some(t => t.id === tab2Id)).toBe(false);
+    expect(useTabStore.getState().closedTabsHistory.length).toBe(1);
+    expect(useTabStore.getState().closedTabsHistory[0].title).toBe('SecondDoc.md');
+
+    // Reopen closed tab
+    const restoredId = useTabStore.getState().reopenClosedTab();
+    expect(restoredId).toBeDefined();
+    expect(useTabStore.getState().tabs.length).toBe(2);
+    expect(useTabStore.getState().activeTabId).toBe(restoredId);
+
+    const restoredTab = useTabStore.getState().tabs.find(t => t.id === restoredId);
+    expect(restoredTab?.title).toBe('SecondDoc.md');
+    expect(restoredTab?.content).toBe('Content 2');
+    expect(useTabStore.getState().closedTabsHistory.length).toBe(0);
+  });
+
+  it('handles reopenClosedTab when history is empty without throwing', () => {
+    useTabStore.setState({ closedTabsHistory: [] });
+    const result = useTabStore.getState().reopenClosedTab();
+    expect(result).toBeNull();
+  });
+
+  it('replaces pristine empty placeholder tab when reopening a closed tab', () => {
+    const tabId = useTabStore.getState().createTab('Important.md', 'Critical data');
+    useTabStore.getState().closeTab(tabId);
+
+    // Only the default fresh untitled tab remains
+    expect(useTabStore.getState().tabs.length).toBe(1);
+    expect(useTabStore.getState().tabs[0].title).toBe('Untitled.md');
+
+    // Reopen should replace the untouched empty untitled placeholder
+    const restoredId = useTabStore.getState().reopenClosedTab();
+    expect(useTabStore.getState().tabs.length).toBe(1);
+    expect(useTabStore.getState().tabs[0].id).toBe(restoredId);
+    expect(useTabStore.getState().tabs[0].title).toBe('Important.md');
+    expect(useTabStore.getState().tabs[0].content).toBe('Critical data');
   });
 });

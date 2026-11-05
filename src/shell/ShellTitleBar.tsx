@@ -53,7 +53,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
     bridge.window.toggleMaximize?.();
   };
 
-  const { createTab, closeTab, activeTabId } = useTabStore();
+  const { createTab, closeTab, reopenClosedTab, activeTabId } = useTabStore();
   const { 
     settings, 
     setTheme, 
@@ -123,6 +123,11 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
           label: 'Close Current Tab', 
           shortcut: 'Ctrl+W', 
           action: () => { if (activeTabId) closeTab(activeTabId); } 
+        },
+        { 
+          label: 'Reopen Closed Tab', 
+          shortcut: 'Ctrl+Shift+T', 
+          action: () => reopenClosedTab() 
         },
         { isDivider: true },
         { label: 'Export Workspace...', shortcut: 'JSON', action: events.onExportWorkspace },
@@ -327,7 +332,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
         data-tauri-drag-region
         onMouseDown={handleWindowDrag}
         onDoubleClick={handleTitleBarDoubleClick}
-        className={`h-9 bg-[var(--titlebar-bg)] border-b border-[var(--titlebar-border)] flex items-center justify-between px-2 sm:px-3 shrink-0 gap-2 min-w-0 relative overflow-visible cursor-default select-none ${
+        className={`h-9 bg-[var(--titlebar-bg)] ${settings.showMenuBar === false && settings.showRibbon === false ? "border-b border-[var(--border-subtle)]" : ""} flex items-center justify-between px-2 sm:px-3 shrink-0 gap-2 min-w-0 relative overflow-visible cursor-default select-none ${
           openMenu === 'theme' ? 'z-50' : 'z-30'
         }`}
       >
@@ -558,7 +563,7 @@ export const ShellTitleBar: React.FC<ShellTitleBarProps> = ({
       {/* Row 2: Compact Menu Bar (File, Edit, View, Tools, Help) */}
       {settings.showMenuBar !== false && (
         <nav 
-          className={`bg-[var(--titlebar-bg)] border-b border-[var(--titlebar-border)] flex items-center px-2 sm:px-3 shrink-0 gap-0.5 sm:gap-1 select-none relative transition-all cursor-default overflow-visible ${
+          className={`bg-[var(--titlebar-bg)] ${settings.showRibbon === false ? "border-b border-[var(--border-subtle)]" : ""} flex items-center px-2 sm:px-3 shrink-0 gap-0.5 sm:gap-1 select-none relative transition-all cursor-default overflow-visible ${
             openMenu !== null && openMenu !== 'theme' ? 'z-50' : 'z-20'
           } ${
             settings.touchOptimized ? 'h-8.5' : 'h-7'

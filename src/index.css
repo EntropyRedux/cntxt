@@ -911,7 +911,7 @@ body {
 .theme-titlebar {
   background-color: var(--titlebar-bg);
   color: var(--titlebar-fg);
-  border-bottom: 1px solid var(--titlebar-border);
+  border-bottom: none;
 }
 
 .theme-tabbar {

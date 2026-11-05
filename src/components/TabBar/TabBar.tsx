@@ -31,7 +31,8 @@ export const TabBar: React.FC = () => {
     duplicateTab,
     toggleActiveThread,
     closeTabsToRight,
-    reorderTabs
+    reorderTabs,
+    reopenClosedTab
   } = useTabStore();
 
   const bridge = useRuntimeBridge();
@@ -786,6 +787,16 @@ export const TabBar: React.FC = () => {
             >
               <span>Close Tab</span>
               <span className="text-[10px] text-[var(--text-muted)] group-hover:text-white">Ctrl+W</span>
+            </button>
+            <button
+              onClick={() => {
+                reopenClosedTab();
+                setContextMenu(null);
+              }}
+              className="w-full px-3 py-1.5 text-left hover:bg-[var(--accent-primary)] hover:text-white flex items-center justify-between text-[var(--text-primary)]"
+            >
+              <span>Reopen Closed Tab</span>
+              <span className="text-[10px] text-[var(--text-muted)] group-hover:text-white">Ctrl+Shift+T</span>
             </button>
             <button
               onClick={() => {
