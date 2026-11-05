@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.58
+Version: v2.59
 Last Updated: 2026-11-06
-Last Updated By: Prod Agent (Reconciliation of V2-01..V2-03 Data Loss & Validation Verification Round 2)
+Last Updated By: Prod Agent (Reconciliation of Round 3 Defect V3-01 in settingsStore)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,14 +13,14 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 772/772 Live across 65 suites, Rust Gateway & Security Test Suite 13/13 Live)
+    [x] Testing (Vitest 773/773 Live across 65 suites, Rust Gateway & Security Test Suite 13/13 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.8 Release Staged & Pushed)
 
 Current Feature Group: FG-25 Agent Directives, Discovery & Dual-Tier Security Architecture (v0.7.8)
 Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (772/772 unit tests passing across 65 suites in CNTXT, 13 native Rust tests clean)
+Unit Tests: written [x] passing [x] (773/773 unit tests passing across 65 suites in CNTXT, 13 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 
 ━━━ MOCK REGISTRY SNAPSHOT ━━━
@@ -36,12 +36,13 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
-- Task 77: Reconciliation of Verification Round 2 Defects V2-01..V2-03 (2026-11-06):
+- Task 77: Reconciliation of Verification Defects V2-01..V2-03 & V3-01 (2026-11-06):
   - Remediated V2-01 [HIGH]: Action hydration in `actionStore.ts` now preserves all operational fields (`type`, `codeType`, `pipeline`, `selectionBehavior`, `isDefault`, `icon`, `color`, `shortcut`, and `button*`). `ActionOpSchema` and `ActionSelectionBehaviorSchema` added to `boundarySchemas.ts`.
   - Remediated V2-02 [MEDIUM]: Template hydration in `templateStore.ts` preserves `variableDefs`. `TemplateVariableSchema` added to `boundarySchemas.ts`.
   - Remediated V2-03 [LOW]: `ViewSettingsSchema` now validates `deliverableWorkspaceSubfolder`, `deliverableCustomFolderPath`, `isFontCustomizedByUser`, and nested configs (`autocompleteConfig`, `spellCheckConfig`, `codeLintConfig`). `settingsStore.ts` implements resilient field-by-field salvage instead of all-or-nothing reset on corrupted stored JSON, with structured telemetry logging.
-  - Added regression test suites in `boundarySchemas.test.ts`, `actionStoreAndCompletion.test.ts`, `templateStore.test.ts`, and `settingsStore.test.ts`.
-  - Verification: 772/772 unit tests passing across 65 suites, 0 platform leaks, 13/13 native Rust tests passing, scanner 0 `any` (P3=0).
+  - Remediated V3-01 [LOW]: Guarded `settingsStore.ts` field-recovery loop against prototype keys (`__proto__`, `constructor`, `toString`). The loop now iterates strictly over schema keys via `Object.entries(shape)` and checks `Object.prototype.hasOwnProperty.call(rawObj, key)` with explicit function guard, preventing `TypeError` resets.
+  - Added regression test suites in `boundarySchemas.test.ts`, `actionStoreAndCompletion.test.ts`, `templateStore.test.ts`, and `settingsStore.test.ts` (including prototype pollution recovery).
+  - Verification: 773/773 unit tests passing across 65 suites, 0 platform leaks, 13/13 native Rust tests passing, scanner 0 `any` (P3=0).
 - Task 76: Agent Directives, Capabilities Discovery & Dual-Tier Security (2026-11-06):
   - Authoritative Agent Directives Service (src/services/agentDirectivesService.ts):
     - Authored single source of truth for AI agent governance and directives across REST, Host Command Bus, and MCP.

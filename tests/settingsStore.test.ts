@@ -273,6 +273,35 @@ describe('SettingsStore', () => {
     expect(settings.autocompleteConfig.enableKeywords).toBe(false);
   });
 
+  it('resiliently recovers valid settings even when corrupted stored JSON contains prototype pollution keys (V3-01)', async () => {
+    const mockStorage = {
+      getItem: async (key: string) => {
+        if (key === 'contextpad_settings') {
+          return JSON.stringify({
+            __proto__: { polluted: true },
+            constructor: 'not-a-schema',
+            toString: 12345,
+            valueOf: null,
+            fontSize: 'corrupted-string',
+            wordWrap: false,
+            theme: 'dracula'
+          });
+        }
+        return null;
+      },
+      setItem: async () => {},
+      removeItem: async () => {},
+      clear: async () => {}
+    };
+
+    await useSettingsStore.getState().initializeSettings(mockStorage as any);
+    const settings = useSettingsStore.getState().settings;
+    expect(settings.fontSize).toBe(14); // recovered to default
+    expect(settings.wordWrap).toBe(false); // successfully recovered
+    expect(settings.theme).toBe('dracula'); // successfully recovered
+    expect((Object.prototype as any).polluted).toBeUndefined();
+  });
+
   it('toggles templateViewMode and actionViewMode between list and grid', () => {
     const store = useSettingsStore.getState();
     expect(store.settings.templateViewMode).toBeUndefined(); // or default 'list'

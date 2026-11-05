@@ -167,11 +167,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
             if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
               const rawObj = raw as Record<string, unknown>;
-              const shape = ViewSettingsSchema.shape as Record<string, import('zod').ZodTypeAny>;
+              const shape = ViewSettingsSchema.shape;
               const recovered: Record<string, unknown> = {};
-              for (const [key, value] of Object.entries(rawObj)) {
-                if (shape[key]) {
-                  const fieldRes = shape[key].safeParse(value);
+              for (const [key, schema] of Object.entries(shape)) {
+                if (
+                  Object.prototype.hasOwnProperty.call(rawObj, key) &&
+                  schema &&
+                  typeof schema.safeParse === 'function'
+                ) {
+                  const fieldRes = schema.safeParse(rawObj[key]);
                   if (fieldRes.success) {
                     recovered[key] = fieldRes.data;
                   }
