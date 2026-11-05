@@ -165,10 +165,15 @@ export const useRibbonStore = create<RibbonState>((set, get) => ({
     try {
       const stored = await activeStorage.getItem(STORAGE_KEYS.RIBBON);
       if (stored) {
-        const parsed = JSON.parse(stored) as RibbonItem[];
+        const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          set({ items: parsed.sort((a, b) => a.order - b.order) });
-          return;
+          const validItems = parsed.filter(
+            (item: any) => item && typeof item.id === 'string' && typeof item.order === 'number'
+          ) as RibbonItem[];
+          if (validItems.length > 0) {
+            set({ items: validItems.sort((a, b) => a.order - b.order) });
+            return;
+          }
         }
       }
     } catch {

@@ -1,3 +1,4 @@
+import packageJson from '../../package.json';
 /**
  * Agent Directives & Capabilities Discovery Service (FG-25 / Improvements 2, 4, 5)
  *
@@ -14,6 +15,7 @@ import {
 } from '../contracts/data_shapes';
 
 export const CNTXT_PROTOCOL_VERSION = '1.0.0';
+export const CNTXT_APP_VERSION = packageJson.version || '0.7.8';
 
 export const CNTXT_AGENT_DIRECTIVE: CntxtAgentDirective = {
   version: CNTXT_PROTOCOL_VERSION,
@@ -244,7 +246,7 @@ export function getAgentDirectives(): CntxtAgentDirective {
 /**
  * Builds the complete machine-readable capabilities manifest for external agents.
  */
-export function getCapabilitiesManifest(version = '0.7.8'): CntxtCapabilitiesManifest {
+export function getCapabilitiesManifest(version = CNTXT_APP_VERSION): CntxtCapabilitiesManifest {
   return {
     status: 'ok',
     version,
@@ -266,7 +268,7 @@ export function getCapabilitiesManifest(version = '0.7.8'): CntxtCapabilitiesMan
 /**
  * Generates the authoritative Markdown guide for external agents.
  */
-export function getRawMarkdownGuide(version = '0.7.8'): string {
+export function getRawMarkdownGuide(version = CNTXT_APP_VERSION): string {
   return [
     `# CNTXT AI Agent Integration & Governance Protocol (v${version})`,
     '',

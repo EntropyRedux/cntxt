@@ -4,6 +4,7 @@ import {
   getToolDefinitions,
   registerTool,
   handleToolCall,
+  registerResource,
   getResourceDefinitions,
   handleResourceRead,
 } from '../scripts/mcp/cntxt-mcp-server.mjs';
@@ -39,7 +40,7 @@ describe('CNTXT Native MCP Server (FG-21 / FG-22 / FG-25)', () => {
   describe('2. Tool Registry and Declarations (Pillar 4 & FG-21 §1.3 & FG-25)', () => {
     it('exposes all declared MCP tools including clear_diagnostics, apply_template, notify, and get_directives', () => {
       const tools = getToolDefinitions();
-      const toolNames = tools.map((t) => t.name);
+      const toolNames = tools.map((t: any) => t.name);
 
       // FG-21, FG-22 & FG-25 declared tools
       expect(toolNames).toContain('cntxt_open_deliverable');
@@ -94,6 +95,29 @@ describe('CNTXT Native MCP Server (FG-21 / FG-22 / FG-25)', () => {
 
       expect(uris).toContain('cntxt://directives/agent-guide');
       expect(uris).toContain('cntxt://directives/capabilities');
+    });
+
+    it('supports dynamic registration of custom MCP resources (Pillar 4 Modularity)', async () => {
+      let readCount = 0;
+      registerResource(
+        'cntxt://custom/test-resource',
+        {
+          name: 'Custom Resource',
+          description: 'A test custom resource',
+          mimeType: 'text/plain',
+        },
+        async (uri: string) => {
+          readCount++;
+          return { contents: [{ uri, mimeType: 'text/plain', text: 'Custom Hello' }] };
+        }
+      );
+
+      const definitions = getResourceDefinitions();
+      expect(definitions.map((d: any) => d.uri)).toContain('cntxt://custom/test-resource');
+
+      const res = await handleResourceRead('cntxt://custom/test-resource');
+      expect(readCount).toBe(1);
+      expect((res as any).contents[0].text).toBe('Custom Hello');
     });
 
     it('throws when reading an unknown resource URI', async () => {

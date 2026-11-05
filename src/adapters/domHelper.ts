@@ -1,3 +1,4 @@
+import { recordDiagnostic } from '../services/diagnosticLogger';
 /**
  * DOM Helper for Adapter Layer
  * Quarantines direct DOM interactions (document, window, navigator) inside src/adapters/.
@@ -250,7 +251,7 @@ export function useWindowDrag(bridge: IRuntimeBridge) {
       return;
     }
 
-    (async () => { try { bridge.window.startDragging?.(); } catch (e) { console.warn("[domHelper] startDragging failed:", e); } })();
+    (async () => { try { bridge.window.startDragging?.(); } catch (e) { recordDiagnostic("warn", "domHelper", "startDragging failed", { error: String(e) }); console.warn("[domHelper] startDragging failed:", e); } })();
   };
 
   return { handleMouseDown };

@@ -16,6 +16,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 
+let mcpPackageVersion = '0.7.8';
+try {
+  const pkgUrl = new URL('../../package.json', import.meta.url);
+  if (fs.existsSync(pkgUrl)) {
+    mcpPackageVersion = JSON.parse(fs.readFileSync(pkgUrl, 'utf8')).version || '0.7.8';
+  }
+} catch {
+  // Fallback to static version
+}
 const CANDIDATE_PORTS = [9876, 9877, 9878, 9879, 9880, 9881];
 
 /**
@@ -636,28 +645,44 @@ registerTool(
 );
 
 // ==========================================
-// MCP Resources (Pillar 4 Modularity)
+// Dynamic MCP Resource Registry (Pillar 4 Modularity)
 // ==========================================
 
+const resourceRegistry = new Map();
+
+export function registerResource(uri, definition, handler) {
+  resourceRegistry.set(uri, {
+    definition: {
+      uri,
+      name: definition.name,
+      description: definition.description,
+      mimeType: definition.mimeType,
+    },
+    handler,
+  });
+}
+
 export function getResourceDefinitions() {
-  return [
-    {
-      uri: 'cntxt://directives/agent-guide',
-      name: 'CNTXT AI Agent Integration & Governance Guide',
-      description: 'Authoritative directives, syntax rules, and guidelines for external AI agents',
-      mimeType: 'text/markdown',
-    },
-    {
-      uri: 'cntxt://directives/capabilities',
-      name: 'CNTXT Capabilities & Tools Manifest',
-      description: 'Machine-readable catalog of all CNTXT RPC domains, actions, and MCP tools',
-      mimeType: 'application/json',
-    },
-  ];
+  return Array.from(resourceRegistry.values()).map((r) => r.definition);
 }
 
 export async function handleResourceRead(uri) {
-  if (uri === 'cntxt://directives/agent-guide') {
+  const resource = resourceRegistry.get(uri);
+  if (!resource) {
+    throw new Error(`Resource not found: ${uri}`);
+  }
+  return await resource.handler(uri);
+}
+
+// Register standard CNTXT resources
+registerResource(
+  'cntxt://directives/agent-guide',
+  {
+    name: 'CNTXT AI Agent Integration & Governance Guide',
+    description: 'Authoritative directives, syntax rules, and guidelines for external AI agents',
+    mimeType: 'text/markdown',
+  },
+  async (uri) => {
     const res = await callCntxtGateway('/api/v1/directives', 'GET');
     const text =
       res?.data?.guideMarkdown ||
@@ -665,14 +690,23 @@ export async function handleResourceRead(uri) {
     return {
       contents: [{ uri, mimeType: 'text/markdown', text }],
     };
-  } else if (uri === 'cntxt://directives/capabilities') {
+  }
+);
+
+registerResource(
+  'cntxt://directives/capabilities',
+  {
+    name: 'CNTXT Capabilities & Tools Manifest',
+    description: 'Machine-readable catalog of all CNTXT RPC domains, actions, and MCP tools',
+    mimeType: 'application/json',
+  },
+  async (uri) => {
     const res = await callCntxtGateway('/api/v1/capabilities', 'GET');
     return {
       contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(res, null, 2) }],
     };
   }
-  throw new Error(`Resource not found: ${uri}`);
-}
+);
 
 function sendResponse(id, result) {
   process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result }) + '\n');
@@ -706,7 +740,7 @@ if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}`) {
         sendResponse(id, {
           protocolVersion: '2024-11-05',
           capabilities: { tools: {}, resources: {} },
-          serverInfo: { name: 'cntxt-mcp-server', version: '0.7.8' },
+          serverInfo: { name: 'cntxt-mcp-server', version: mcpPackageVersion },
           instructions:
             'CNTXT AI Agent Directive: All deliverables, plans, briefs, and reviews MUST be wrapped in CNTXT Rich Containers (~~~markdown | id=<slug> tags=deliverable locked=agent status=ready source=@agent title="<Title>"). Never overwrite blocks marked locked=user. Use cntxt_upsert_block for surgical block updates instead of replacing full files. When working in active threads, new deliverables prepend below id=user-inbox and user comments cite blocks via [[#^block-id]].',
         });

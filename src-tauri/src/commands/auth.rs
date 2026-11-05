@@ -188,6 +188,10 @@ pub async fn start_oauth_listener(window: Window, expected_state: String, sessio
         return Err("Unauthorized window origin or token".into());
     }
 
+    if expected_state.trim().is_empty() {
+        return Err("OAuth expected_state cannot be empty".into());
+    }
+
     // Bind to port 1420 (registered in Supabase redirect URL list)
     let listener = match TcpListener::bind("127.0.0.1:1420").await {
         Ok(l) => l,
@@ -256,14 +260,12 @@ pub async fn start_oauth_listener(window: Window, expected_state: String, sessio
                     }
 
                     // CSRF State validation
-                    if !expected_state.is_empty() {
-                        let received_state = map.get("state").and_then(|v| v.as_str()).unwrap_or("");
-                        if received_state != expected_state {
-                            let err_html = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body style=\"background:#090d16;color:#f87171;font-family:sans-serif;padding:40px;text-align:center;\"><h2>Authentication Failed</h2><p>Invalid OAuth state parameter (CSRF protection).</p></body></html>";
-                            let _ = socket.write_all(err_html.as_bytes()).await;
-                            let _ = socket.flush().await;
-                            return Err("OAuth state mismatch: potential CSRF attack detected".into());
-                        }
+                    let received_state = map.get("state").and_then(|v| v.as_str()).unwrap_or("");
+                    if expected_state.is_empty() || received_state.is_empty() || received_state != expected_state {
+                        let err_html = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body style=\"background:#090d16;color:#f87171;font-family:sans-serif;padding:40px;text-align:center;\"><h2>Authentication Failed</h2><p>Invalid OAuth state parameter (CSRF protection).</p></body></html>";
+                        let _ = socket.write_all(err_html.as_bytes()).await;
+                        let _ = socket.flush().await;
+                        return Err("OAuth state mismatch: potential CSRF attack detected".into());
                     }
 
                     if map.contains_key("access_token") || map.contains_key("code") {
@@ -319,14 +321,12 @@ pub async fn start_oauth_listener(window: Window, expected_state: String, sessio
 
                         if let Some(val) = parsed_val {
                             // CSRF State validation on POST path
-                            if !expected_state.is_empty() {
-                                let received_state = val.get("state").and_then(|v| v.as_str()).unwrap_or("");
-                                if received_state != expected_state {
-                                    let err_json = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: 48\r\n\r\n{\"error\":\"Invalid OAuth state parameter (CSRF)\"}";
-                                    let _ = socket.write_all(err_json.as_bytes()).await;
-                                    let _ = socket.flush().await;
-                                    return Err("OAuth state mismatch on POST /auth/token: potential CSRF attack detected".into());
-                                }
+                            let received_state = val.get("state").and_then(|v| v.as_str()).unwrap_or("");
+                            if expected_state.is_empty() || received_state.is_empty() || received_state != expected_state {
+                                let err_json = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: 48\r\n\r\n{\"error\":\"Invalid OAuth state parameter (CSRF)\"}";
+                                let _ = socket.write_all(err_json.as_bytes()).await;
+                                let _ = socket.flush().await;
+                                return Err("OAuth state mismatch on POST /auth/token: potential CSRF attack detected".into());
                             }
                             captured_payload = Some(val.to_string());
                         }

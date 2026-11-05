@@ -1,3 +1,4 @@
+import { recordDiagnostic } from '../../services/diagnosticLogger';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { 
   ChevronUp,
@@ -40,7 +41,10 @@ export const MobileAccessoryBar: React.FC = () => {
       if (stored !== null) {
         setIsExpanded(stored === 'true');
       }
-    }).catch(err => console.warn('[MobileAccessoryBar] Failed to load stored state', err));
+    }).catch(err => {
+      recordDiagnostic('warn', 'MobileAccessoryBar', 'Failed to load stored state', { error: String(err) });
+      console.warn('[MobileAccessoryBar] Failed to load stored state', err);
+    });
 
     bridge.storage.getItem(STORAGE_HEIGHT_KEY).then(storedHeight => {
       if (storedHeight) {
@@ -49,7 +53,10 @@ export const MobileAccessoryBar: React.FC = () => {
           setToolbarHeight(parsed);
         }
       }
-    }).catch(err => console.warn('[MobileAccessoryBar] Failed to load stored height', err));
+    }).catch(err => {
+      recordDiagnostic('warn', 'MobileAccessoryBar', 'Failed to load stored height', { error: String(err) });
+      console.warn('[MobileAccessoryBar] Failed to load stored height', err);
+    });
   }, [bridge.storage]);
 
   useEffect(() => {

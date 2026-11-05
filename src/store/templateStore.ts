@@ -1,3 +1,4 @@
+import { TemplateSchema } from '../contracts/boundarySchemas';
 import { create } from 'zustand';
 import { Template, PersistedTemplateUIState } from '../../contracts/data_shapes';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
@@ -104,7 +105,15 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
       let templates: Template[] = [];
       if (stored) {
         try {
-          templates = JSON.parse(stored);
+          const raw = JSON.parse(stored);
+          if (Array.isArray(raw)) {
+            templates = raw
+              .map((item) => TemplateSchema.safeParse(item))
+              .filter((res): res is { success: true; data: any } => res.success)
+              .map((res) => res.data as Template);
+          } else {
+            templates = [];
+          }
         } catch {
           templates = [];
         }

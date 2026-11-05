@@ -1,11 +1,15 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   getAgentDirectives,
   getCapabilitiesManifest,
   getRawMarkdownGuide,
   getAgentBootstrapPrompt,
   CNTXT_PROTOCOL_VERSION,
+  CNTXT_APP_VERSION,
 } from '../src/services/agentDirectivesService';
+import packageJson from '../package.json';
 
 describe('Agent Directives & Capabilities Discovery (Improvements 2, 4, 5)', () => {
   it('returns valid structured agent directives with Rich Container syntax and examples', () => {
@@ -19,10 +23,11 @@ describe('Agent Directives & Capabilities Discovery (Improvements 2, 4, 5)', () 
     expect(directives.bestPractices.length).toBeGreaterThanOrEqual(4);
   });
 
-  it('generates a complete capabilities manifest containing endpoints, domains, and tools', () => {
-    const manifest = getCapabilitiesManifest('0.7.8');
+  it('generates a complete capabilities manifest dynamically bound to package.json version', () => {
+    const manifest = getCapabilitiesManifest();
     expect(manifest.status).toBe('ok');
-    expect(manifest.version).toBe('0.7.8');
+    expect(manifest.version).toBe(packageJson.version);
+    expect(manifest.version).toBe(CNTXT_APP_VERSION);
     expect(manifest.securityModel.tokenHeader).toBe('X-CNTXT-Token');
 
     // Endpoints
@@ -48,8 +53,8 @@ describe('Agent Directives & Capabilities Discovery (Improvements 2, 4, 5)', () 
   });
 
   it('generates a comprehensive Markdown guide', () => {
-    const md = getRawMarkdownGuide('0.7.8');
-    expect(md).toContain('# CNTXT AI Agent Integration & Governance Protocol (v0.7.8)');
+    const md = getRawMarkdownGuide();
+    expect(md).toContain(`# CNTXT AI Agent Integration & Governance Protocol (v${CNTXT_APP_VERSION})`);
     expect(md).toContain('Mandatory Rich Container Deliverable Wrapping');
     expect(md).toContain('Surgical Block Operations Over Document Rewriting');
     expect(md).toContain('Active Thread Citations & User Inbox');
@@ -61,5 +66,27 @@ describe('Agent Directives & Capabilities Discovery (Improvements 2, 4, 5)', () 
     expect(prompt).toBe(
       'You are connected to CNTXT at http://127.0.0.1:9876 with header X-CNTXT-Token: cntxt_sec_12345. First call GET /api/v1/capabilities to discover all available controls and strictly follow the returned system directives when interacting with CNTXT.'
     );
+  });
+
+  describe('Cross-Surface Parity Verification (Pillar 4 & NEW-03)', () => {
+    it('verifies that Rust gateway directivesSummary aligns with TS agent directives', () => {
+      const gatewayRsPath = path.resolve(__dirname, '../src-tauri/src/commands/gateway.rs');
+      const gatewaySource = fs.readFileSync(gatewayRsPath, 'utf8');
+
+      // Check that gateway.rs contains the core Rich Container directive string
+      expect(gatewaySource).toContain('directivesSummary');
+      expect(gatewaySource).toContain('~~~markdown | id=<slug> tags=deliverable locked=agent status=ready');
+      expect(gatewaySource).toContain('/api/v1/capabilities');
+      expect(gatewaySource).toContain('/api/v1/directives');
+    });
+
+    it('verifies that MCP server instructions align with TS agent directives', () => {
+      const mcpServerPath = path.resolve(__dirname, '../scripts/mcp/cntxt-mcp-server.mjs');
+      const mcpSource = fs.readFileSync(mcpServerPath, 'utf8');
+
+      expect(mcpSource).toContain('instructions:');
+      expect(mcpSource).toContain('~~~markdown | id=<slug> tags=deliverable locked=agent status=ready');
+      expect(mcpSource).toContain('locked=user');
+    });
   });
 });

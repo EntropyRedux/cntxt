@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Play, 
   Edit2, 
@@ -37,6 +37,13 @@ export const ActionCardItem: React.FC<ActionCardItemProps> = ({
   onToggleEnabled
 }) => {
   const [isCopied, setIsCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   const handleCopyToClipboard = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -109,8 +116,16 @@ export const ActionCardItem: React.FC<ActionCardItemProps> = ({
       {/* Middle: Title & 2-line Description/Snippet */}
       <div className="flex-1 min-w-0 mb-2">
         <div 
+          role="button"
+          tabIndex={0}
           onClick={() => onRunAction(action)}
-          className="font-semibold text-xs text-[var(--text-primary)] hover:text-[var(--accent-primary)] transition-colors truncate cursor-pointer"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onRunAction(action);
+            }
+          }}
+          className="font-semibold text-xs text-[var(--text-primary)] hover:text-[var(--accent-primary)] transition-colors truncate cursor-pointer focus:outline-none focus:underline"
           title={`Click to execute ${action.name}`}
         >
           {action.name}

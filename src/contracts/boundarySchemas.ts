@@ -78,6 +78,7 @@ export const TabSchema: z.ZodType<Tab> = z.object({
 }) as unknown as z.ZodType<Tab>;
 
 export const TabCacheEntrySchema = z.object({
+  version: z.number().optional().default(1),
   tabs: z.array(TabSchema),
   activeTabId: z.string().min(1),
   checksum: z.string().min(1),

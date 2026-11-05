@@ -13,6 +13,7 @@ import { RibbonIcon } from './RibbonIcon';
 import { AppUiEvents } from '../../ui-contract/actionContract';
 import { useRuntimeBridge } from '../../adapters';
 import { RibbonItem } from '../../types';
+import { SupportedLanguage } from '../../contracts/data_shapes';
 import { 
   SlidersHorizontal, 
   FileCode2, 

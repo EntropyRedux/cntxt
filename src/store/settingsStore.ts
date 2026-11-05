@@ -146,13 +146,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         const stored = await activeStorage.getItem(STORAGE_KEYS.SETTINGS);
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (parsed.uiDensity === 'comfortable' || parsed.uiDensity === 'compact') {
-            parsed.uiDensity = 'desktop';
-          }
-          if (parsed.activeSidebarTab === 'omni-terminal') {
+          if (parsed && typeof parsed === 'object') {
+            if (parsed.uiDensity === 'comfortable' || parsed.uiDensity === 'compact') {
+              parsed.uiDensity = 'desktop';
+            }
+            if (parsed.activeSidebarTab === 'omni-terminal') {
             parsed.activeSidebarTab = 'explorer';
+            }
+            initialSettings = { ...initialSettings, ...parsed };
           }
-          initialSettings = { ...initialSettings, ...parsed };
         }
       } catch (e) {
         console.warn('Failed to load stored settings:', e);

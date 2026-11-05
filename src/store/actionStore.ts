@@ -1,3 +1,4 @@
+import { ActionSchema } from '../contracts/boundarySchemas';
 import { create } from 'zustand';
 import { Action, ActionCategory, PersistedActionUIState } from '../../contracts/data_shapes';
 import { IStorageBridge } from '../ui-contract/bridgeContract';
@@ -100,7 +101,18 @@ export const useActionStore = create<ActionState>((set, get) => ({
     try {
       const stored = await activeStorage.getItem(STORAGE_KEYS.ACTIONS);
       if (stored) {
-        set({ actions: JSON.parse(stored) });
+        try {
+          const raw = JSON.parse(stored);
+          const validated = Array.isArray(raw)
+            ? raw
+                .map((item) => ActionSchema.safeParse(item))
+                .filter((res): res is { success: true; data: any } => res.success)
+                .map((res) => res.data as Action)
+            : [];
+          set({ actions: validated });
+        } catch {
+          set({ actions: [] });
+        }
       } else {
         set({ actions: [] });
       }

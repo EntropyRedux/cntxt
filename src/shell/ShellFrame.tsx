@@ -1,3 +1,4 @@
+import { recordDiagnostic } from '../services/diagnosticLogger';
 import React, { useState, useEffect, useCallback } from 'react';
 import { ClassicShell } from './ClassicShell';
 import { WindowResizeHandles } from './WindowResizeHandles';
@@ -123,10 +124,12 @@ export const ShellFrame: React.FC = () => {
     const isEnabled = Boolean(settings.enableExperimentalSettings && settings.enableRestGateway);
     if (isEnabled) {
       bridge.gateway.start(settings.restGatewayPort ?? 9876).catch((err) => {
+        recordDiagnostic('warn', 'ShellFrame', 'Failed to auto-start REST gateway', { error: String(err) });
         console.warn('[ShellFrame] Failed to auto-start REST gateway:', err);
       });
     } else {
       bridge.gateway.stop().catch((err: unknown) => {
+        recordDiagnostic('warn', 'ShellFrame', 'Notice while terminating REST gateway', { error: String(err) });
         console.warn('[ShellFrame] Notice while terminating REST gateway:', err);
       });
     }

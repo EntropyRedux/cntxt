@@ -1,3 +1,4 @@
+import { recordDiagnostic } from '../services/diagnosticLogger';
 /**
  * tabSessionCache — localStorage write-through cache for tab state.
  *
@@ -69,7 +70,8 @@ export function writeTabCache(tabs: Tab[], activeTabId: string): void {
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
   } catch (e) {
-    // Quota exceeded or storage unavailable — silently degrade.
+    // Quota exceeded or storage unavailable — record diagnostic and degrade.
+    recordDiagnostic('warn', 'TabCache', 'write failed', { error: String(e) });
     console.warn('[TabCache] write failed:', e);
   }
 }
@@ -87,6 +89,7 @@ export function readTabCache(): { tabs: Tab[]; activeTabId: string } | null {
     const parsed = JSON.parse(raw);
     const validation = TabCacheEntrySchema.safeParse(parsed);
     if (!validation.success) {
+      recordDiagnostic('warn', 'TabCache', 'boundary schema validation failed — discarding invalid cache');
       console.warn('[TabCache] boundary schema validation failed — discarding invalid cache');
       clearTabCache();
       return null;
@@ -95,6 +98,7 @@ export function readTabCache(): { tabs: Tab[]; activeTabId: string } | null {
 
     const expected = computeChecksum(entry.tabs, entry.activeTabId);
     if (expected !== entry.checksum) {
+      recordDiagnostic('warn', 'TabCache', 'checksum mismatch — discarding stale cache');
       console.warn('[TabCache] checksum mismatch — discarding stale cache');
       clearTabCache();
       return null;
