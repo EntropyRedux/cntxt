@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   FORMATTING_CATEGORIES: 'contextpad_formatting_categories',
   FORMATTING_MULTIROW: 'contextpad_formatting_multirow',
   FORMATTING_SIZE: 'contextpad_formatting_size',
+  FORMATTING_TOOLBAR_HEIGHT: 'contextpad_formatting_toolbar_height',
   TABS_META: 'contextpad_tabs_meta',
   ACTIVE_TAB_ID: 'contextpad_active_tab_id',
   TAB_CONTENT_PREFIX: 'cp_tab_',

@@ -587,7 +587,7 @@ export class CodeBlockFooterWidget extends WidgetType {
 
     if (!hasMetadata) {
       return createElement('div', {
-        className: `cm-live-codeblock-footer ${this.isRichContainer ? 'cm-cntxt-container-footer' : ''} select-none h-1.5 w-full`,
+        className: `cm-live-codeblock-footer ${this.isRichContainer ? 'cm-cntxt-container-footer' : ''} select-none h-2 w-full`,
       });
     }
 

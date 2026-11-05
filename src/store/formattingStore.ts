@@ -388,6 +388,7 @@ interface FormattingState {
   isCustomizerOpen: boolean;
   isMultiRowExpanded: boolean;
   buttonSize: FormattingButtonSize;
+  toolbarHeight: number;
 
   // Actions
   initializeFormattingStore: (storage?: IStorageBridge) => Promise<void>;
@@ -396,6 +397,7 @@ interface FormattingState {
   setIsMultiRowExpanded: (expanded: boolean) => void;
   toggleExpandMultiRow: () => void;
   setButtonSize: (size: FormattingButtonSize) => void;
+  setToolbarHeight: (height: number) => void;
   addButton: (buttonData: Omit<MarkdownFormatButton, 'id' | 'order'>) => MarkdownFormatButton;
   addPresetButton: (presetId: string) => void;
   removeButton: (id: string) => void;
@@ -433,6 +435,7 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
   isCustomizerOpen: false,
   isMultiRowExpanded: false,
   buttonSize: 'medium',
+  toolbarHeight: 44,
 
   initializeFormattingStore: async (storage?: IStorageBridge) => {
     if (storage) {
@@ -480,6 +483,13 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
       if (multiRowStored !== null) {
         set({ isMultiRowExpanded: multiRowStored === 'true' });
       }
+      const heightStored = await activeStorage.getItem(STORAGE_KEYS.FORMATTING_TOOLBAR_HEIGHT);
+      if (heightStored) {
+        const parsed = parseInt(heightStored, 10);
+        if (!isNaN(parsed) && parsed >= 40 && parsed <= 320) {
+          set({ toolbarHeight: parsed });
+        }
+      }
       const sizeStored = await activeStorage.getItem(STORAGE_KEYS.FORMATTING_SIZE);
       if (sizeStored === 'small' || sizeStored === 'medium' || sizeStored === 'large') {
         set({ buttonSize: sizeStored as FormattingButtonSize });
@@ -504,6 +514,13 @@ export const useFormattingStore = create<FormattingState>((set, get) => ({
     set({ isMultiRowExpanded: next });
     if (activeStorage) {
       safePersist(activeStorage, STORAGE_KEYS.FORMATTING_MULTIROW, String(next), 'formatting multirow setting');
+    }
+  },
+
+  setToolbarHeight: (height: number) => {
+    set({ toolbarHeight: height });
+    if (activeStorage) {
+      safePersist(activeStorage, STORAGE_KEYS.FORMATTING_TOOLBAR_HEIGHT, String(height), 'formatting toolbar height');
     }
   },
 

@@ -164,5 +164,14 @@ describe('FormattingStore', () => {
     const reallocatedBtn = useFormattingStore.getState().buttons.find(b => b.id === btn.id);
     expect(reallocatedBtn?.category).toBe('CUSTOM');
   });
-});
+  it('updates toolbarHeight for size-adjustable formatting toolbar', () => {
+    const store = useFormattingStore.getState();
+    expect(store.toolbarHeight).toBeDefined();
 
+    store.setToolbarHeight(120);
+    expect(useFormattingStore.getState().toolbarHeight).toBe(120);
+
+    store.setToolbarHeight(44);
+    expect(useFormattingStore.getState().toolbarHeight).toBe(44);
+  });
+});

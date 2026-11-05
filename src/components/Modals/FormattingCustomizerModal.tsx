@@ -231,28 +231,21 @@ export const FormattingCustomizerModal: React.FC = () => {
         {/* Tab 1: Manage Active Buttons (Reorder, Toggle, Remove) */}
         {activeTab === 'manage' && (
           <div className="space-y-3">
-            {/* Multi-row layout option */}
+            {/* Size-adjustable toolbar explanation */}
             <div className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--app-bg)] border border-[var(--border-subtle)] shadow-2xs">
               <div className="flex items-start gap-2.5 min-w-0 pr-2">
                 <div className="p-1.5 rounded-md bg-[var(--accent-container)]/50 text-[var(--accent-primary)] shrink-0 mt-0.5">
                   <ChevronsUpDown className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <label htmlFor="multi-row-toggle" className="text-xs font-semibold text-[var(--text-primary)] cursor-pointer block">
-                    Expand Toolbar into Multiple Rows
-                  </label>
+                  <span className="text-xs font-semibold text-[var(--text-primary)] block">
+                    Size-Adjustable Height & Wrapping
+                  </span>
                   <p className="text-[11px] text-[var(--text-muted)] leading-tight mt-0.5">
-                    Wraps quick formatting buttons into multiple rows on narrow screens so all available buttons are visible without horizontal scrolling.
+                    Drag the top handle on the toolbar up or down to set your preferred height and row wrapping. Double-click the handle to toggle compact mode.
                   </p>
                 </div>
               </div>
-              <input
-                id="multi-row-toggle"
-                type="checkbox"
-                checked={isMultiRowExpanded}
-                onChange={(e) => setIsMultiRowExpanded(e.target.checked)}
-                className="accent-[var(--accent-primary)] rounded w-4 h-4 cursor-pointer shrink-0"
-              />
             </div>
 
             {/* Button Size Config */}

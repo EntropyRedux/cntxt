@@ -36,6 +36,19 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
+- Task 75: Code Block Click Accuracy Hardening & Resizable Markdown Formatting Toolbar (2026-11-05):
+  - Code Block Click Accuracy Hardening (Issue 3):
+    - Eliminated CSS margins on `.cm-line` code block boundaries in `src/index.css` (`.cm-live-codeblock-start`, `.cm-live-codeblock-end`, `.cm-live-codeblock-single` set to `margin-top: 0 !important; margin-bottom: 0 !important;`).
+    - Transferred bottom breathing room into measured widget box (`h-2` in `CodeBlockFooterWidget`), completely eliminating CodeMirror HeightMap margin-collapsing dead-zones and gutter line number vertical drift.
+  - Size-Adjustable Markdown Formatting Toolbar (Improvement 10):
+    - Implemented interactive top drag-to-resize handle (`cursor-ns-resize`) on `MobileAccessoryBar.tsx` supporting smooth mouse and touch vertical dragging.
+    - Added natural `flex-wrap` multi-row wrapping for toolbar heights > 56px, while retaining smooth horizontal scrolling in compact single-row mode.
+    - Added height persistence via `STORAGE_KEYS.FORMATTING_TOOLBAR_HEIGHT` (`contextpad_formatting_toolbar_height`) in `formattingStore.ts`.
+    - Added double-click on handle to toggle between compact single-row (44px) and expanded (120px) height.
+    - Excised legacy `ChevronUp` expand button, "Single Row" button, and multi-row toggle switchers from `MobileAccessoryBar.tsx` and `FormattingCustomizerModal.tsx`.
+  - Verification:
+    - Zero TypeScript errors, zero platform leaks, 100% canonical contract synchronization.
+    - 752/752 unit tests passing cleanly across 64 suites.
 - Task 74: Feature Group B — Modular Ribbon Optimization, Tab & File Bookmarks, and Template/Action Card Grid View (2026-11-05):
   - Modular Ribbon Optimization & Horizontal Wheel Scroll (Improvement 10):
     - Excised redundant built-in ribbon items (`toggle-view`, `command-palette`, `new-doc`, `save-file`).
