@@ -189,9 +189,19 @@ export const AppPanelPlaceholder: React.FC<AppPanelPlaceholderProps> = ({ onClos
       // 4. Host Command Bus RPC Bridge (FG-16)
       if (type === 'CNTXT_RPC_REQUEST' && e.data.request) {
         const sourceWin = e.source as WindowProxy | null;
-        hostCommandBus.handleRequest(e.data.request).then((response) => {
+        if (!sourceWin) return;
+
+        // Pillar 8 Security (RA-01, RA-02): Enforce authenticated panel app identity.
+        // Never trust client-supplied appId or allow panel apps to assert 'internal'.
+        const rawReq = (e.data.request && typeof e.data.request === 'object') ? e.data.request : {};
+        const secureRequest = {
+          ...rawReq,
+          appId: `panel-app:${activeApp.id}`,
+        };
+
+        hostCommandBus.handleRequest(secureRequest).then((response) => {
           try {
-            sourceWin?.postMessage({ type: 'CNTXT_RPC_RESPONSE', response }, '*');
+            sourceWin.postMessage({ type: 'CNTXT_RPC_RESPONSE', response }, '*');
           } catch {
             // Sandboxed iframe cross-origin postMessage ignore
           }

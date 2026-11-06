@@ -47,6 +47,7 @@ import {
 } from '../../../services/editor/cntxtBlockParser';
 import { useTabStore } from '../../../store/tabStore';
 import { useTerminalStore } from '../../../store/terminalStore';
+import { useSettingsStore } from '../../../store/settingsStore';
 import { useActionStore } from '../../../store/actionStore';
 import { useTemplateStore } from '../../../store/templateStore';
 import { useNotificationStore } from '../../../store/notificationStore';
@@ -88,7 +89,7 @@ export class HostCommandBus {
     this.registerDomain('templates', (action, payload) => this.handleTemplatesDomain(action, payload));
     this.registerDomain('actions', (action, payload) => this.handleActionsDomain(action, payload));
     this.registerDomain('notify', (action, payload) => this.handleNotifyDomain(action, payload));
-    this.registerDomain('terminal', (action, payload) => this.handleTerminalDomain(action, payload));
+    this.registerDomain('terminal', (action, payload, appId) => this.handleTerminalDomain(action, payload, appId));
     this.registerDomain('blocks', (action, payload, appId) => this.handleBlocksDomain(action, payload, appId));
     this.registerDomain('directives', (action, payload) => this.handleDirectivesDomain(action, payload));
   }
@@ -733,7 +734,26 @@ export class HostCommandBus {
   // Terminal Domain (FG-17)
   // ==========================================
 
-  private async handleTerminalDomain(action: string, payload: unknown): Promise<unknown> {
+  private async handleTerminalDomain(action: string, payload: unknown, appId?: string): Promise<unknown> {
+    // Pillar 8 Security (RA-01): Only internal host execution can access the terminal domain.
+    // Panel mini-apps and untrusted callers are strictly forbidden from spawning or controlling PTY channels.
+    if (appId !== 'internal') {
+      throw {
+        code: 'FORBIDDEN',
+        message: 'Terminal domain is restricted strictly to internal host execution',
+      };
+    }
+
+    // Pillar 7 (RA-09): Enforce Experimental Settings toggle for Terminal Bus.
+    const settings = useSettingsStore.getState().settings;
+    const isTerminalEnabled = Boolean(settings.enableExperimentalSettings && settings.enableTerminalBus);
+    if (!isTerminalEnabled) {
+      throw {
+        code: 'FEATURE_DISABLED',
+        message: 'Terminal Bus is disabled. Enable it in Settings > Experimental Features.',
+      };
+    }
+
     const terminalStore = useTerminalStore.getState();
 
     switch (action) {

@@ -114,18 +114,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
         shortcut: 'Ctrl+N',
         action: () => createTab()
       },
-      {
-        id: 'cmd-new-terminal-tab',
-        title: 'New Terminal Bus Tab',
-        subtitle: 'Open an interactive terminal shell session',
-        category: 'Commands',
-        icon: 'Terminal',
-        shortcut: 'Ctrl+`',
-        action: () => {
-          openTerminalTab();
-          addNotification('Terminal Tab', 'Opened new Terminal Bus session', 'info');
-        }
-      },
+      ...(settings.enableExperimentalSettings && settings.enableTerminalBus
+        ? [
+            {
+              id: 'cmd-new-terminal-tab',
+              title: 'New Terminal Bus Tab',
+              subtitle: 'Open an interactive terminal shell session',
+              category: 'Commands' as const,
+              icon: 'Terminal',
+              shortcut: 'Ctrl+`',
+              action: () => {
+                openTerminalTab();
+                addNotification('Terminal Tab', 'Opened new Terminal Bus session', 'info');
+              },
+            },
+          ]
+        : []),
       {
         id: 'cmd-new-window',
         title: 'New ContextPad Window',

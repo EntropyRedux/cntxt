@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.60
+Version: v2.61
 Last Updated: 2026-11-06
-Last Updated By: Prod Agent (Task 78 — Native OS Keyring Persistence & Universal User-Home Discovery Sync)
+Last Updated By: Prod Agent (Task 80 — Full Codebase Re-Audit Pass 2 Reconciliation RA-01..RA-09)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,14 +13,14 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 773/773 Live across 65 suites, Rust Gateway & Security Test Suite 14/14 Live)
+    [x] Testing (Vitest 775/775 Live across 65 suites, Rust Gateway & Security Test Suite 15/15 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.8 Release Staged & Pushed)
 
 Current Feature Group: FG-25 Agent Directives, Discovery & Dual-Tier Security Architecture (v0.7.8)
 Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (773/773 unit tests passing across 65 suites in CNTXT, 14 native Rust tests clean)
+Unit Tests: written [x] passing [x] (775/775 unit tests passing across 65 suites in CNTXT, 15 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 
 ━━━ MOCK REGISTRY SNAPSHOT ━━━
@@ -36,6 +36,31 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
+- Task 80: Full Codebase Re-Audit Pass 2 Reconciliation RA-01..RA-09 (2026-11-06):
+  - RA-01 & RA-02 (Terminal Domain & Human Lock Invariants):
+    - Restricted `terminal` domain execution strictly to `appId === 'internal'` in `hostCommandBus.ts:740-745`. External panel apps attempting to invoke terminal commands are rejected with `FORBIDDEN`.
+    - Excised `window.CNTXT.terminal` polyfill from untrusted panel app client SDK injection (`clientSdk.ts`).
+    - Enforced `e.source` origin verification and bound untrusted iframe requests strictly to `panel-app:<id>` in `AppPanelPlaceholder.tsx`. Non-internal apps can never claim `actor: 'user'`, preserving the `locked=user` human protection invariant.
+  - RA-03 & RA-04 (Bearer Token Security & Hermetic Workspace):
+    - Excised hardcoded developer path (`C:\Projects\LocalActive\.localactive\cntxt_gateway.json`) and cwd discovery file writes from `gateway.rs`.
+    - Deleted leaked token file from `.localactive` directory.
+    - Set restrictive `0o600` file permissions on Unix discovery file targets.
+  - RA-05 (Hermetic Native Rust Tests):
+    - Updated `test_sync_gateway_discovery_files` in `gateway.rs` to write strictly to isolated UUID subdirectories in `temp_dir()` and clean up on finish.
+    - Configured `test_init_and_validate_gateway_token` to test against in-memory `GATEWAY_TOKEN` directly, leaving the host OS keyring pristine.
+  - RA-06 (OAuth Provider Token Cleanup):
+    - Added `localStorage.removeItem('cntxt_provider_token')` to `authStorageAdapter.ts:clearStoredAuthSession()` and `supabaseClient.ts:signOutUser()`.
+    - Added validation in `supabaseClient.ts:getSessionProviderToken()` to ensure an active session exists before returning the provider token.
+  - RA-07 (CORS Strict Allowlist & Preflight Reordering):
+    - Implemented `is_valid_cors_origin()` with exact port parsing, blocking prefix spoofing (`http://localhost.evil.com`).
+    - Reordered gateway request handling to validate Host header before handling `OPTIONS` preflight requests.
+    - Added unit test `test_resolve_cors_headers_strict` in Rust suite.
+  - RA-08 (Keyring & Discovery Telemetry):
+    - Replaced silent `let _ =` error swallowing in `persist_gateway_token` and `sync_gateway_discovery_to_paths` with explicit stderr diagnostic logging.
+  - RA-09 (Experimental Terminal Bus Gating):
+    - Enforced `enableExperimentalSettings && enableTerminalBus` in `tabStore.ts:openTerminalTab()`, `CommandPalette.tsx`, and `hostCommandBus.ts:handleTerminalDomain`.
+    - Added regression tests in `tests/hostCommandBus.test.ts`.
+  - Verification: 775/775 Vitest unit tests passing across 65 suites, 15/15 native Rust tests passing, 0 platform leaks, scanner 0 `any` (P3=0).
 - Task 79: Multi-Window Targeted Routing & Code Block Header Visual Alignment (2026-11-06):
   - Multi-Window Event Isolation (`src-tauri/src/lib.rs`, `src/adapters/tauriRuntimeAdapter.ts`):
     - Changed single-instance file opening from broadcast `app.emit("open-files", ...)` to window-targeted `app.emit_to("main", "open-files", ...)`.

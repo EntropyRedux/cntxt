@@ -66,6 +66,7 @@ export const clearStoredAuthSession = (): void => {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
       window.localStorage.removeItem(STORAGE_KEYS.GUEST_MODE);
+      window.localStorage.removeItem('cntxt_provider_token');
     }
   } catch (err: unknown) {
     console.warn('[AuthStorageAdapter] clearStoredAuthSession failed to mutate localStorage:', err);

@@ -122,6 +122,11 @@ export const getSessionProviderToken = async (): Promise<string | null> => {
     if (supabase) {
       const { data } = await supabase.auth.getSession();
       if (data.session?.provider_token) return data.session.provider_token;
+      // Stale token cleanup: if no active Supabase session exists, purge cached provider token
+      if (!data.session && typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem('cntxt_provider_token');
+        return null;
+      }
     }
     if (typeof window !== 'undefined' && window.localStorage) {
       const stored = window.localStorage.getItem('cntxt_provider_token');
@@ -284,6 +289,13 @@ export const signInWithOAuthProvider = async (
  * Sign out user from Supabase session
  */
 export const signOutUser = async (): Promise<{ error: Error | null }> => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.removeItem('cntxt_provider_token');
+    } catch {
+      // ignore
+    }
+  }
   const supabase = getSupabase();
   if (!supabase) return { error: null };
 

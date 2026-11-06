@@ -747,6 +747,17 @@ export const useTabStore = create<TabState>((set, get) => ({
   },
 
   openTerminalTab: (title = 'Terminal', channelId?: string) => {
+    const settings = useSettingsStore.getState().settings;
+    if (!settings.enableExperimentalSettings || !settings.enableTerminalBus) {
+      useNotificationStore
+        .getState()
+        .addNotification(
+          'Terminal Disabled',
+          'Terminal Bus is disabled. Enable it under Settings > Experimental.',
+          'warning'
+        );
+      return '';
+    }
     const { tabs } = get();
     if (channelId) {
       const existing = tabs.find((t) => t.channelId === channelId);

@@ -12,6 +12,7 @@ import { useTabStore } from '../src/store/tabStore';
 import { useNotificationStore } from '../src/store/notificationStore';
 import { useTemplateStore } from '../src/store/templateStore';
 import { useActionStore } from '../src/store/actionStore';
+import { useSettingsStore } from '../src/store/settingsStore';
 import { IRuntimeBridge } from '../src/ui-contract/bridgeContract';
 
 describe('Host Command Bus & RPC Bridge (FG-16)', () => {
@@ -581,14 +582,58 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
     });
   });
 
-  describe('Terminal Domain (FG-17)', () => {
-    it('spawns, lists, sends input, and kills a terminal channel via RPC', async () => {
+  describe('Terminal Domain (FG-17 & RA-01/RA-09 Security)', () => {
+    it('rejects external panel mini-apps from calling terminal domain (RA-01)', async () => {
+      const res = await bus.handleRequest({
+        id: 'req-term-untrusted',
+        domain: 'terminal',
+        action: 'spawn',
+        appId: 'test-agent',
+        payload: {
+          id: 'agent-cli-1',
+          name: 'CLI Agent',
+          command: 'npm',
+          args: ['run', 'lint']
+        }
+      });
+      expect(res.success).toBe(false);
+      expect(res.error?.code).toBe('FORBIDDEN');
+    });
+
+    it('rejects internal callers when experimental terminal bus is disabled (RA-09)', async () => {
+      useSettingsStore.getState().updateSettings({
+        enableExperimentalSettings: false,
+        enableTerminalBus: false,
+      });
+
+      const res = await bus.handleRequest({
+        id: 'req-term-disabled',
+        domain: 'terminal',
+        action: 'spawn',
+        appId: 'internal',
+        payload: {
+          id: 'agent-cli-1',
+          name: 'CLI Agent',
+          command: 'npm',
+          args: ['run', 'lint']
+        }
+      });
+      expect(res.success).toBe(false);
+      expect(res.error?.code).toBe('FEATURE_DISABLED');
+    });
+
+    it('spawns, lists, sends input, and kills a terminal channel via internal RPC when enabled', async () => {
+      useSettingsStore.getState().updateSettings({
+        enableExperimentalSettings: true,
+        enableTerminalBus: true,
+      });
+
       // 1. Spawn channel
       const spawnRes = await bus.handleRequest({
         id: 'req-term-spawn',
         domain: 'terminal',
         action: 'spawn',
-        appId: 'test-agent',
+        appId: 'internal',
         payload: {
           id: 'agent-cli-1',
           name: 'CLI Agent',
@@ -603,7 +648,7 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
         id: 'req-term-list',
         domain: 'terminal',
         action: 'listChannels',
-        appId: 'test-agent'
+        appId: 'internal'
       });
       expect(listRes.success).toBe(true);
       const channels = listRes.data as Array<{ id: string; name: string }>;
@@ -614,7 +659,7 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
         id: 'req-term-input',
         domain: 'terminal',
         action: 'sendInput',
-        appId: 'test-agent',
+        appId: 'internal',
         payload: {
           channelId: 'agent-cli-1',
           data: 'y\n'
@@ -627,7 +672,7 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
         id: 'req-term-kill',
         domain: 'terminal',
         action: 'kill',
-        appId: 'test-agent',
+        appId: 'internal',
         payload: {
           channelId: 'agent-cli-1'
         }
@@ -665,7 +710,7 @@ describe('Host Command Bus & RPC Bridge (FG-16)', () => {
       expect(sdkCode).toContain('window.CNTXT.notify');
       expect(sdkCode).toContain('window.CNTXT.ui');
       expect(sdkCode).toContain('showToast: function');
-      expect(sdkCode).toContain('window.CNTXT.terminal');
+      expect(sdkCode).not.toContain('window.CNTXT.terminal');
       expect(sdkCode).toContain('window.CNTXT.state');
       expect(sdkCode).toContain('window.CNTXT.ready');
     });

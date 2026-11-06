@@ -269,23 +269,6 @@ export function buildClientSdkInjection(appId: string): string {
         }
       };
 
-      window.CNTXT.terminal = {
-        listChannels: function() {
-          return callHost('terminal', 'listChannels');
-        },
-        spawn: function(options) {
-          return callHost('terminal', 'spawn', options);
-        },
-        sendInput: function(channelId, data) {
-          var payload = typeof channelId === 'object' ? channelId : { channelId: channelId, data: data };
-          return callHost('terminal', 'sendInput', payload);
-        },
-        kill: function(channelId) {
-          var payload = typeof channelId === 'object' ? channelId : { channelId: channelId };
-          return callHost('terminal', 'kill', payload);
-        }
-      };
-
       var notifyFn = function(options) {
         var payload = typeof options === 'string' ? { type: 'info', message: options } : (options || {});
         if (payload && !payload.message && payload.title) {

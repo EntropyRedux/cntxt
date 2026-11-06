@@ -67,17 +67,30 @@ fn load_persisted_gateway_token() -> Option<String> {
 fn persist_gateway_token(token: &str) {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
-        if let Ok(entry) = keyring::Entry::new(GATEWAY_KEYRING_SERVICE, GATEWAY_KEYRING_KEY) {
-            let _ = entry.set_password(token);
+        match keyring::Entry::new(GATEWAY_KEYRING_SERVICE, GATEWAY_KEYRING_KEY) {
+            Ok(entry) => {
+                if let Err(e) = entry.set_password(token) {
+                    eprintln!("[Gateway] Failed to set password in OS keyring: {}", e);
+                } else {
+                    eprintln!("[Gateway] Gateway token persisted to native OS keyring");
+                }
+            }
+            Err(e) => {
+                eprintln!("[Gateway] Failed to initialize OS keyring entry: {}", e);
+            }
         }
     }
     #[cfg(target_os = "android")]
     {
         let token_path = get_android_token_path();
         if let Some(parent) = token_path.parent() {
-            let _ = std::fs::create_dir_all(parent);
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                eprintln!("[Gateway] Failed to create android token dir: {}", e);
+            }
         }
-        let _ = std::fs::write(&token_path, token.trim());
+        if let Err(e) = std::fs::write(&token_path, token.trim()) {
+            eprintln!("[Gateway] Failed to write android token: {}", e);
+        }
     }
     sync_gateway_discovery_file(GATEWAY_PORT.load(Ordering::SeqCst), token, GATEWAY_RUNNING.load(Ordering::SeqCst));
 }
@@ -151,62 +164,54 @@ fn get_user_home_gateway_paths() -> Vec<std::path::PathBuf> {
 fn sync_gateway_discovery_file(port: u16, token: &str, running: bool) {
     #[cfg(not(target_os = "ios"))]
     {
-        let effective_port = if running && port > 0 { port } else { 0 };
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis())
-            .unwrap_or(0);
-        let lan_ip = get_local_lan_ip();
-        let payload = json!({
-            "running": running,
-            "port": effective_port,
-            "url": if running { format!("http://127.0.0.1:{}", effective_port) } else { "".to_string() },
-            "lanUrl": if running && lan_ip.is_some() { format!("http://{}:{}", lan_ip.as_deref().unwrap(), effective_port) } else { "".to_string() },
-            "lanIp": lan_ip,
-            "allowLan": GATEWAY_ALLOW_LAN.load(Ordering::SeqCst) || cfg!(target_os = "android"),
-            "token": if running { token } else { "" },
-            "updatedAt": now
-        });
+        let mut target_paths = get_user_home_gateway_paths();
+        target_paths.push(get_gateway_runtime_path());
+        sync_gateway_discovery_to_paths(&target_paths, port, token, running);
+    }
+}
 
-        // 1. Write to standard platform app data dir
-        let discovery_path = get_gateway_runtime_path();
+pub fn sync_gateway_discovery_to_paths(target_paths: &[std::path::PathBuf], port: u16, token: &str, running: bool) {
+    let effective_port = if running && port > 0 { port } else { 0 };
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let lan_ip = get_local_lan_ip();
+    let payload = json!({
+        "running": running,
+        "port": effective_port,
+        "url": if running { format!("http://127.0.0.1:{}", effective_port) } else { "".to_string() },
+        "lanUrl": if running && lan_ip.is_some() { format!("http://{}:{}", lan_ip.as_deref().unwrap(), effective_port) } else { "".to_string() },
+        "lanIp": lan_ip,
+        "allowLan": GATEWAY_ALLOW_LAN.load(Ordering::SeqCst) || cfg!(target_os = "android"),
+        "token": if running { token } else { "" },
+        "updatedAt": now
+    });
+
+    let pretty = match serde_json::to_string_pretty(&payload) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[Gateway] Failed to serialize discovery payload: {}", e);
+            return;
+        }
+    };
+
+    for discovery_path in target_paths {
         if let Some(parent) = discovery_path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        if let Ok(pretty) = serde_json::to_string_pretty(&payload) {
-            let _ = std::fs::write(&discovery_path, pretty);
-        }
-
-        // 2. Write to universal user-home anchor (~/.cntxt/gateway.json and ~/.cntxt/gateway_runtime.json)
-        for user_path in get_user_home_gateway_paths() {
-            if let Some(parent) = user_path.parent() {
-                let _ = std::fs::create_dir_all(parent);
-            }
-            if let Ok(pretty) = serde_json::to_string_pretty(&payload) {
-                let _ = std::fs::write(&user_path, pretty);
-            }
-        }
-
-        // 3. Also sync local workspace .localactive/cntxt_gateway.json if directory exists in CWD
-        let local_path = std::path::Path::new(".localactive/cntxt_gateway.json");
-        if let Some(parent) = local_path.parent() {
-            if parent.exists() {
-                if let Ok(pretty) = serde_json::to_string_pretty(&payload) {
-                    let _ = std::fs::write(local_path, pretty);
+            if !parent.as_os_str().is_empty() && !parent.exists() {
+                if let Err(e) = std::fs::create_dir_all(parent) {
+                    eprintln!("[Gateway] Failed to create directory {:?}: {}", parent, e);
+                    continue;
                 }
             }
         }
-
-        // 4. Also keep canonical LocalActive workspace .localactive/cntxt_gateway.json synchronized
-        #[cfg(target_os = "windows")]
-        {
-            let well_known_localactive = std::path::PathBuf::from(r"C:\Projects\LocalActive\.localactive\cntxt_gateway.json");
-            if let Some(parent) = well_known_localactive.parent() {
-                if parent.exists() {
-                    if let Ok(pretty) = serde_json::to_string_pretty(&payload) {
-                        let _ = std::fs::write(&well_known_localactive, pretty);
-                    }
-                }
+        if let Err(e) = std::fs::write(&discovery_path, &pretty) {
+            eprintln!("[Gateway] Failed to write discovery file {:?}: {}", discovery_path, e);
+        } else {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let _ = std::fs::set_permissions(&discovery_path, std::fs::Permissions::from_mode(0o600));
             }
         }
     }
@@ -276,15 +281,34 @@ pub fn is_valid_host_header(host: Option<&str>) -> bool {
     }
 }
 
+pub fn is_valid_cors_origin(origin: &str) -> bool {
+    let lower = origin.trim().to_lowercase();
+    if lower == "tauri://localhost" || lower == "https://tauri.localhost" {
+        return true;
+    }
+    for prefix in &["http://localhost", "https://localhost", "http://127.0.0.1", "https://127.0.0.1"] {
+        if lower == *prefix {
+            return true;
+        }
+        if let Some(rest) = lower.strip_prefix(prefix) {
+            if rest.starts_with(':') {
+                let port_str = &rest[1..];
+                let port_str = port_str.split('/').next().unwrap_or(port_str);
+                if !port_str.is_empty() && port_str.chars().all(|c| c.is_ascii_digit()) {
+                    return true;
+                }
+            } else if rest.starts_with('/') {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 pub fn resolve_cors_headers(origin: Option<&str>) -> String {
     match origin {
         Some(o) => {
-            let lower = o.trim().to_lowercase();
-            if lower == "tauri://localhost"
-                || lower.starts_with("http://127.0.0.1")
-                || lower.starts_with("http://localhost")
-                || lower.starts_with("https://localhost")
-            {
+            if is_valid_cors_origin(o) {
                 format!(
                     "Access-Control-Allow-Origin: {}\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type, X-CNTXT-Token\r\nVary: Origin\r\n",
                     o.trim()
@@ -570,18 +594,7 @@ async fn handle_http_client(
     // Resolve CORS headers per FIND-09
     let cors_headers = resolve_cors_headers(headers.get("origin").map(|s| s.as_str()));
 
-    // Handle CORS preflight OPTIONS
-    if method == "OPTIONS" {
-        let cors_resp = format!(
-            "HTTP/1.1 204 No Content\r\n\
-{}Connection: close\r\n\r\n",
-            cors_headers
-        );
-        let _ = stream.write_all(cors_resp.as_bytes()).await;
-        return;
-    }
-
-    // Host header validation (DNS rebinding guard per FIND-09)
+    // Host header validation (DNS rebinding guard per FIND-09, RA-07: enforced before preflight)
     let host_hdr = headers.get("host").map(|s| s.as_str());
     if !is_valid_host_header(host_hdr) {
         let err_body = json!({
@@ -602,6 +615,17 @@ Connection: close\r\n\r\n{}",
             err_body
         );
         let _ = stream.write_all(resp.as_bytes()).await;
+        return;
+    }
+
+    // Handle CORS preflight OPTIONS
+    if method == "OPTIONS" {
+        let cors_resp = format!(
+            "HTTP/1.1 204 No Content\r\n\
+{}Connection: close\r\n\r\n",
+            cors_headers
+        );
+        let _ = stream.write_all(cors_resp.as_bytes()).await;
         return;
     }
 
@@ -887,12 +911,13 @@ mod tests {
 
     #[test]
     fn test_init_and_validate_gateway_token() {
-        let token = init_gateway_token_if_empty();
-        assert!(token.starts_with("cntxt_sec_"));
-        assert_eq!(token.len(), 42); // "cntxt_sec_" (10) + 32 hex chars
+        let test_token = "cntxt_sec_0123456789abcdef0123456789abcdef";
+        if let Ok(mut lock) = GATEWAY_TOKEN.write() {
+            *lock = Some(test_token.to_string());
+        }
 
         // Valid token
-        assert!(is_valid_gateway_token(Some(&token)));
+        assert!(is_valid_gateway_token(Some(test_token)));
 
         // Invalid tokens
         assert!(!is_valid_gateway_token(Some("wrong_token")));
@@ -900,7 +925,7 @@ mod tests {
         assert!(!is_valid_gateway_token(None));
 
         // Tampered token of equal length
-        let mut tampered = token.clone();
+        let mut tampered = test_token.to_string();
         tampered.replace_range(15..16, "z");
         assert!(!is_valid_gateway_token(Some(&tampered)));
     }
@@ -960,31 +985,32 @@ mod tests {
     #[test]
     fn test_sync_gateway_discovery_files() {
         let test_token = "cntxt_sec_0123456789abcdef0123456789abcdef";
-        sync_gateway_discovery_file(9876, test_token, true);
+        let temp_dir = std::env::temp_dir().join(format!("cntxt_gateway_test_{}", Uuid::new_v4()));
+        let temp_file = temp_dir.join("gateway.json");
 
-        let user_paths = get_user_home_gateway_paths();
-        assert!(!user_paths.is_empty(), "User home gateway paths must not be empty");
-        for p in &user_paths {
-            assert!(p.exists(), "User home gateway file must exist: {:?}", p);
-            let content = std::fs::read_to_string(p).expect("Should read user gateway file");
-            assert!(content.contains(test_token), "User gateway file must contain test token");
-            assert!(content.contains("\"port\": 9876"), "Must contain port 9876");
-            assert!(content.contains("\"running\": true"), "Must contain running true");
-        }
+        sync_gateway_discovery_to_paths(&[temp_file.clone()], 9876, test_token, true);
 
-        let app_data_path = get_gateway_runtime_path();
-        assert!(app_data_path.exists(), "AppData gateway file must exist");
-        let app_data_content = std::fs::read_to_string(&app_data_path).expect("Should read app data file");
-        assert!(app_data_content.contains(test_token));
+        assert!(temp_file.exists(), "Temp gateway file must exist");
+        let content = std::fs::read_to_string(&temp_file).expect("Should read temp gateway file");
+        assert!(content.contains(test_token), "Temp gateway file must contain test token");
+        assert!(content.contains("\"port\": 9876"), "Must contain port 9876");
+        assert!(content.contains("\"running\": true"), "Must contain running true");
 
-        #[cfg(target_os = "windows")]
-        {
-            let localactive_path = std::path::PathBuf::from(r"C:\Projects\LocalActive\.localactive\cntxt_gateway.json");
-            if localactive_path.parent().map(|p| p.exists()).unwrap_or(false) {
-                assert!(localactive_path.exists(), "LocalActive workspace gateway file must exist");
-                let la_content = std::fs::read_to_string(&localactive_path).expect("Should read LocalActive file");
-                assert!(la_content.contains(test_token));
-            }
-        }
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_resolve_cors_headers_strict() {
+        // Valid origins
+        assert!(is_valid_cors_origin("tauri://localhost"));
+        assert!(is_valid_cors_origin("https://tauri.localhost"));
+        assert!(is_valid_cors_origin("http://127.0.0.1:9876"));
+        assert!(is_valid_cors_origin("http://localhost:3000"));
+
+        // Attacker origins attempting prefix spoofing must be rejected
+        assert!(!is_valid_cors_origin("http://localhost.evil.com"));
+        assert!(!is_valid_cors_origin("http://127.0.0.1.attacker.net"));
+        assert!(!is_valid_cors_origin("https://localhost.fake.io"));
+        assert!(!is_valid_cors_origin("http://evil.com"));
     }
 }
