@@ -22,6 +22,7 @@ import { base64FoldExtension } from '../../extensions/base64FoldExtension';
 import { liveMarkdownExtension, refreshLiveMarkdownEffect } from '../../extensions/liveMarkdown';
 import { createMarkdownHighlighting, createHeadersOnlyHighlighting } from '../../themes/markdownHighlighting';
 import { useActionStore } from '../../store/actionStore';
+import { useActiveBlockStore } from '../../store/activeBlockStore';
 import { lineCounterSelectionExtension } from '../../extensions/lineNumberSelection';
 import { imageDropPasteExtension } from '../../extensions/imageDropPasteExtension';
 import { SupportedLanguage, ViewSettings, Tab } from '../../types';
@@ -369,6 +370,13 @@ const buildEditorExtensions = (
           selectionStartLine,
           selectionEndLine
         });
+
+        // Notify Code Block Builder & Inspector of cursor location (FG-26)
+        useActiveBlockStore.getState().setCursorLocation(
+          currentTabIdRef.current,
+          line.number,
+          update.state.doc.toString()
+        );
       }
     })
   ];

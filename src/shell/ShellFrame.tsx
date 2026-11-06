@@ -382,8 +382,8 @@ export const ShellFrame: React.FC = () => {
     } else if (modifier && e.key.toLowerCase() === 'b') {
       e.preventDefault();
       if (e.shiftKey) {
-        const show = useSettingsStore.getState().settings.showSidebar;
-        useSettingsStore.getState().updateSettings({ showSidebar: !show });
+        useSettingsStore.getState().updateSettings({ showSidebar: true });
+        useSettingsStore.getState().setActiveSidebarTab('code-blocks');
       } else {
         toggleActivityBar();
       }

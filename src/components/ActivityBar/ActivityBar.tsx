@@ -6,7 +6,8 @@ import {
   Zap, 
   Settings,
   User,
-  FolderGit2
+  FolderGit2,
+  Boxes
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useAuthStore } from '../../store/authStore';
@@ -38,6 +39,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ orientation = 'vertica
     { id: 'outline', label: 'Document Outline (Ctrl+Shift+O)', ariaLabel: 'Document Outline', icon: ListTree },
     { id: 'templates', label: 'Templates & Variables (Ctrl+Alt+T)', ariaLabel: 'Templates & Variables', icon: LayoutTemplate },
     { id: 'actions', label: 'Action Scripts & Prompts', ariaLabel: 'Action Scripts', icon: Zap },
+    { id: 'code-blocks', label: 'Code Block Builder (Ctrl+Shift+B)', ariaLabel: 'Code Block Builder', icon: Boxes },
   ];
 
   const handleTabClick = (tabId: ViewSettings['activeSidebarTab']) => {

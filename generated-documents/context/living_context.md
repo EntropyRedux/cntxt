@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.61
-Last Updated: 2026-11-06
-Last Updated By: Prod Agent (Task 80 — Full Codebase Re-Audit Pass 2 Reconciliation RA-01..RA-09)
+Version: v2.62
+Last Updated: 2026-11-07
+Last Updated By: Prod Agent (Task 81 — FG-26 Code Block Builder Rail Panel & First-Class Block Primitives)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -11,17 +11,17 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
+  [x] Feature Implementation (FG-01..FG-26 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 775/775 Live across 65 suites, Rust Gateway & Security Test Suite 15/15 Live)
+    [x] Testing (Vitest 792/792 Live across 66 suites, Rust Gateway & Security Test Suite 15/15 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.8 Release Staged & Pushed)
 
-Current Feature Group: FG-25 Agent Directives, Discovery & Dual-Tier Security Architecture (v0.7.8)
+Current Feature Group: FG-26 Code Block Builder & Primitive Primitives Overhaul (v0.7.8)
 Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (775/775 unit tests passing across 65 suites in CNTXT, 15 native Rust tests clean)
-Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
+Unit Tests: written [x] passing [x] (792/792 unit tests passing across 66 suites in CNTXT, 15 native Rust tests clean)
+Active Plan: /generated-documents/plans/feature_group_FG26_code_block_builder_and_conversation_overhaul_2026-11-07.md
 
 ━━━ MOCK REGISTRY SNAPSHOT ━━━
 * Active Mocks Physically Quarantined in `mocks/`:
@@ -36,6 +36,21 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
+- Task 81: FG-26 Code Block Builder Rail Panel & First-Class Block Primitives Overhaul (2026-11-07):
+  - Architecture & Rail Panel Integration (`src/components/Sidebar/CodeBlockBuilderPanel.tsx`, `ActivityBar.tsx`, `Sidebar.tsx`):
+    - Added dedicated Activity Bar button (`Boxes` icon, `activeSidebarTab: 'code-blocks'`, shortcut `Ctrl+Shift+B`).
+    - Implemented dual-mode UI: default **Block Creator Palette** (6 canonical archetypes: Deliverable, Conversation, Table, Audit, Diagram, Code) and **Active Block Inspector** with live two-way parameter editing.
+  - Active Block Cursor Observer & Headless State (`src/store/activeBlockStore.ts`, `src/components/Editor/Editor.tsx`):
+    - Integrated zero-polling CodeMirror cursor listener dispatching cursor line and AST block containment to `activeBlockStore`.
+    - Automatically flips panel into Active Block Inspector mode when the cursor enters any fenced block.
+  - Two-Way Surgical Block Mutations (`src/components/CodeBlockBuilder/ActiveBlockInspector.tsx`):
+    - Form adjustments (title, status, lock, source, tags) surgically mutate the opening fence header line via `mutateHeaderLineParams` without clobbering text or losing undo history.
+  - Block Archetype Catalog & Presets (`src/services/editor/blockPresetCatalog.ts`):
+    - Added collision-safe fence computation (`computeSafeFence`) and 10 factory presets for plans, verification reports, discussion threads, tables, audit scorecards, flowcharts, sequence diagrams, and code snippets.
+    - Integrated 1-click "Insert at Cursor" and "Wrap Selection in Block".
+  - Rich Container & Highlighting Expansion (`src/services/editor/cntxtBlockParser.ts`, `src/services/codeLanguages.ts`):
+    - Added `conversation`, `thread`, and `audit` to `RICH_CONTAINER_TYPES` and synchronous language mappings, enabling live markdown formatting, interactive tables, and checklists inside conversation and audit blocks.
+  - Verification: 792/792 Vitest unit tests passing across 66 suites (+17 new tests), 15/15 native Rust tests passing, 0 platform leaks, scanner 0 `any` (P3=0).
 - Task 80: Full Codebase Re-Audit Pass 2 Reconciliation RA-01..RA-09 (2026-11-06):
   - RA-01 & RA-02 (Terminal Domain & Human Lock Invariants):
     - Restricted `terminal` domain execution strictly to `appId === 'internal'` in `hostCommandBus.ts:740-745`. External panel apps attempting to invoke terminal commands are rejected with `FORBIDDEN`.

@@ -20,8 +20,10 @@ import {
   Upload,
   Download,
   FolderGit2,
-  Layers
+  Layers,
+  Boxes
 } from 'lucide-react';
+import { CodeBlockBuilderPanel } from './CodeBlockBuilderPanel';
 import { useTemplateStore } from '../../store/templateStore';
 import { useActionStore } from '../../store/actionStore';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -280,6 +282,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isClosed = false }) => {
         return { title: 'Panel App Builder', icon: Layers };
       case 'panel-app':
         return { title: 'Panel App', icon: Sparkles };
+      case 'code-blocks':
+        return { title: 'Code Block Builder', icon: Boxes };
       default:
         return { title: 'Side Panel', icon: Sparkles };
     }
@@ -303,6 +307,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isClosed = false }) => {
         return <AppBuilderPanel onClose={() => toggleSidebar()} />;
       case 'panel-app':
         return <AppPanelPlaceholder onClose={() => toggleSidebar()} />;
+      case 'code-blocks':
+        return <CodeBlockBuilderPanel />;
       default:
         return <TemplateManager />;
     }
