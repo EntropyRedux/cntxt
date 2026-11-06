@@ -1387,6 +1387,11 @@ body {
   line-height: 1.6 !important;
 }
 
+/* First line of code inside the container gets comfortable top breathing room without excess gap */
+.cm-live-codeblock-start + .cm-live-codeblock-mid {
+  padding-top: 6px !important;
+}
+
 .cm-live-codeblock-end {
   background-color: var(--codeblock-container-bg) !important;
   border-left: 1px solid var(--codeblock-container-border) !important;

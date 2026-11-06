@@ -165,7 +165,7 @@ export class CodeBlockHeaderWidget extends WidgetType {
         this.isCollapsed
           ? 'cm-codeblock-header-collapsed rounded-[7px] border-b-transparent shadow-sm'
           : 'rounded-t-[7px]'
-      } select-none flex items-center justify-between px-3 py-1.5 border-b border-[var(--codeblock-header-border)] bg-[var(--codeblock-header-bg)] text-[var(--text-secondary)] w-full cursor-pointer gap-2`,
+      } select-none flex items-center justify-between px-3.5 py-2 border-b border-[var(--codeblock-header-border)] bg-[var(--codeblock-header-bg)] text-[var(--text-secondary)] w-full cursor-pointer gap-2`,
     });
 
     header.addEventListener('click', (e) => {

@@ -141,7 +141,7 @@ pub fn run() {
                 .collect();
 
             if !file_paths.is_empty() {
-                let _ = app.emit("open-files", file_paths);
+                let _ = app.emit_to("main", "open-files", file_paths);
             }
 
             if let Some(window) = app.get_webview_window("main") {

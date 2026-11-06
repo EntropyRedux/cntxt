@@ -350,10 +350,27 @@ export class TauriRuntimeAdapter implements IRuntimeBridge {
       let isUnmounted = false;
       let unlistenFn: (() => void) | null = null;
 
+      try {
+        const currentWin = getCurrentWindow();
+        if (currentWin && typeof currentWin.label === 'string' && currentWin.label !== 'main') {
+          return () => {};
+        }
+      } catch {
+        // Proceed if window label cannot be synchronously inspected in test/mock environments
+      }
+
       // Use direct @tauri-apps/api/event import — works in both dev and production.
       import('@tauri-apps/api/event').then(({ listen }) => {
         if (isUnmounted) return;
         listen<string[]>('open-files', (event) => {
+          try {
+            const win = getCurrentWindow();
+            if (win && typeof win.label === 'string' && win.label !== 'main') {
+              return;
+            }
+          } catch {
+            // Proceed in non-windowed test environments
+          }
           if (Array.isArray(event.payload) && event.payload.length > 0) {
             callback(event.payload);
           }
