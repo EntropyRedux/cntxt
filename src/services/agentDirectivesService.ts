@@ -315,5 +315,5 @@ export function getRawMarkdownGuide(version = CNTXT_APP_VERSION): string {
  * Builds the 1-click bootstrap prompt string for users to paste into their AI agent of choice.
  */
 export function getAgentBootstrapPrompt(baseUrl = 'http://127.0.0.1:9876', token = '<token>'): string {
-  return `You are connected to CNTXT at ${baseUrl} with header X-CNTXT-Token: ${token}. First call GET /api/v1/capabilities to discover all available controls and strictly follow the returned system directives when interacting with CNTXT.`;
+  return `You are connected to CNTXT at ${baseUrl} with header X-CNTXT-Token: ${token} (runtime discovery mirrored at ~/.cntxt/gateway.json). First call GET /api/v1/capabilities to discover all available controls and strictly follow the returned system directives when interacting with CNTXT.`;
 }

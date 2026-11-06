@@ -67,7 +67,7 @@ describe('Agent Directives & Capabilities Discovery (Improvements 2, 4, 5)', () 
   it('generates a clean 1-click bootstrap prompt string', () => {
     const prompt = getAgentBootstrapPrompt('http://127.0.0.1:9876', 'cntxt_sec_12345');
     expect(prompt).toBe(
-      'You are connected to CNTXT at http://127.0.0.1:9876 with header X-CNTXT-Token: cntxt_sec_12345. First call GET /api/v1/capabilities to discover all available controls and strictly follow the returned system directives when interacting with CNTXT.'
+      'You are connected to CNTXT at http://127.0.0.1:9876 with header X-CNTXT-Token: cntxt_sec_12345 (runtime discovery mirrored at ~/.cntxt/gateway.json). First call GET /api/v1/capabilities to discover all available controls and strictly follow the returned system directives when interacting with CNTXT.'
     );
   });
 

@@ -130,6 +130,24 @@ fn get_gateway_runtime_path() -> std::path::PathBuf {
     std::path::PathBuf::from("gateway_runtime.json")
 }
 
+fn get_user_home_gateway_paths() -> Vec<std::path::PathBuf> {
+    let mut paths = Vec::new();
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(userprofile) = std::env::var("USERPROFILE") {
+            let cntxt_dir = std::path::PathBuf::from(&userprofile).join(".cntxt");
+            paths.push(cntxt_dir.join("gateway.json"));
+            paths.push(cntxt_dir.join("gateway_runtime.json"));
+        }
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        let cntxt_dir = std::path::PathBuf::from(&home).join(".cntxt");
+        paths.push(cntxt_dir.join("gateway.json"));
+        paths.push(cntxt_dir.join("gateway_runtime.json"));
+    }
+    paths
+}
+
 fn sync_gateway_discovery_file(port: u16, token: &str, running: bool) {
     #[cfg(not(target_os = "ios"))]
     {
@@ -159,12 +177,35 @@ fn sync_gateway_discovery_file(port: u16, token: &str, running: bool) {
             let _ = std::fs::write(&discovery_path, pretty);
         }
 
-        // 2. Also sync local workspace .localactive/cntxt_gateway.json if directory exists
+        // 2. Write to universal user-home anchor (~/.cntxt/gateway.json and ~/.cntxt/gateway_runtime.json)
+        for user_path in get_user_home_gateway_paths() {
+            if let Some(parent) = user_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            if let Ok(pretty) = serde_json::to_string_pretty(&payload) {
+                let _ = std::fs::write(&user_path, pretty);
+            }
+        }
+
+        // 3. Also sync local workspace .localactive/cntxt_gateway.json if directory exists in CWD
         let local_path = std::path::Path::new(".localactive/cntxt_gateway.json");
         if let Some(parent) = local_path.parent() {
             if parent.exists() {
                 if let Ok(pretty) = serde_json::to_string_pretty(&payload) {
                     let _ = std::fs::write(local_path, pretty);
+                }
+            }
+        }
+
+        // 4. Also keep canonical LocalActive workspace .localactive/cntxt_gateway.json synchronized
+        #[cfg(target_os = "windows")]
+        {
+            let well_known_localactive = std::path::PathBuf::from(r"C:\Projects\LocalActive\.localactive\cntxt_gateway.json");
+            if let Some(parent) = well_known_localactive.parent() {
+                if parent.exists() {
+                    if let Ok(pretty) = serde_json::to_string_pretty(&payload) {
+                        let _ = std::fs::write(&well_known_localactive, pretty);
+                    }
                 }
             }
         }
@@ -914,5 +955,36 @@ mod tests {
 
         let public_client: SocketAddr = "8.8.8.8:12345".parse().unwrap();
         assert!(!is_allowed_client(&public_client));
+    }
+
+    #[test]
+    fn test_sync_gateway_discovery_files() {
+        let test_token = "cntxt_sec_0123456789abcdef0123456789abcdef";
+        sync_gateway_discovery_file(9876, test_token, true);
+
+        let user_paths = get_user_home_gateway_paths();
+        assert!(!user_paths.is_empty(), "User home gateway paths must not be empty");
+        for p in &user_paths {
+            assert!(p.exists(), "User home gateway file must exist: {:?}", p);
+            let content = std::fs::read_to_string(p).expect("Should read user gateway file");
+            assert!(content.contains(test_token), "User gateway file must contain test token");
+            assert!(content.contains("\"port\": 9876"), "Must contain port 9876");
+            assert!(content.contains("\"running\": true"), "Must contain running true");
+        }
+
+        let app_data_path = get_gateway_runtime_path();
+        assert!(app_data_path.exists(), "AppData gateway file must exist");
+        let app_data_content = std::fs::read_to_string(&app_data_path).expect("Should read app data file");
+        assert!(app_data_content.contains(test_token));
+
+        #[cfg(target_os = "windows")]
+        {
+            let localactive_path = std::path::PathBuf::from(r"C:\Projects\LocalActive\.localactive\cntxt_gateway.json");
+            if localactive_path.parent().map(|p| p.exists()).unwrap_or(false) {
+                assert!(localactive_path.exists(), "LocalActive workspace gateway file must exist");
+                let la_content = std::fs::read_to_string(&localactive_path).expect("Should read LocalActive file");
+                assert!(la_content.contains(test_token));
+            }
+        }
     }
 }

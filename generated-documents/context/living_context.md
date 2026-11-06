@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.59
+Version: v2.60
 Last Updated: 2026-11-06
-Last Updated By: Prod Agent (Reconciliation of Round 3 Defect V3-01 in settingsStore)
+Last Updated By: Prod Agent (Task 78 — Native OS Keyring Persistence & Universal User-Home Discovery Sync)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,14 +13,14 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 773/773 Live across 65 suites, Rust Gateway & Security Test Suite 13/13 Live)
+    [x] Testing (Vitest 773/773 Live across 65 suites, Rust Gateway & Security Test Suite 14/14 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.8 Release Staged & Pushed)
 
 Current Feature Group: FG-25 Agent Directives, Discovery & Dual-Tier Security Architecture (v0.7.8)
 Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (773/773 unit tests passing across 65 suites in CNTXT, 13 native Rust tests clean)
+Unit Tests: written [x] passing [x] (773/773 unit tests passing across 65 suites in CNTXT, 14 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 
 ━━━ MOCK REGISTRY SNAPSHOT ━━━
@@ -36,6 +36,18 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
+- Task 78: Native OS Keyring Persistence & Universal User-Home Gateway Auto-Discovery (2026-11-06):
+  - Native Platform OS Keyring (`src-tauri/Cargo.toml`):
+    - Enabled `windows-native`, `apple-native`, and `linux-native-sync-persistent` features for `keyring` crate v3, replacing the volatile in-memory `mock` default.
+    - Verified generic credential persistence (`rest_gateway_token.CNTXT`) directly inside Windows Credential Manager (`cmdkey`). Security tokens are now generated once on initial install and remain 100% persistent across app restarts, reboots, and updates.
+  - Universal User-Home Discovery Synchronization (`src-tauri/src/commands/gateway.rs`):
+    - Added `get_user_home_gateway_paths()` writing active runtime discovery (`url`, `port`, `token`, `running`) to `~/.cntxt/gateway.json` and `~/.cntxt/gateway_runtime.json`.
+    - Maintained synchronization with `%APPDATA%\com.cntxt.desktop\gateway_runtime.json` and canonical workspace `C:\Projects\LocalActive\.localactive\cntxt_gateway.json`.
+    - Added unit test `test_sync_gateway_discovery_files`.
+  - Resilient Agent Directives & MCP Auto-Discovery (`cntxt-mcp-server.mjs`, `agentDirectivesService.ts`):
+    - Updated `cntxt-mcp-server.mjs` candidate config resolution to discover `~/.cntxt/gateway.json`.
+    - Enhanced `getAgentBootstrapPrompt` to include `~/.cntxt/gateway.json` reference for zero-configuration agent auto-connection.
+  - Verification: 773/773 unit tests passing across 65 suites, 14/14 native Rust tests passing, scanner 0 `any` (P3=0).
 - Task 77: Reconciliation of Verification Defects V2-01..V2-03 & V3-01 (2026-11-06):
   - Remediated V2-01 [HIGH]: Action hydration in `actionStore.ts` now preserves all operational fields (`type`, `codeType`, `pipeline`, `selectionBehavior`, `isDefault`, `icon`, `color`, `shortcut`, and `button*`). `ActionOpSchema` and `ActionSelectionBehaviorSchema` added to `boundarySchemas.ts`.
   - Remediated V2-02 [MEDIUM]: Template hydration in `templateStore.ts` preserves `variableDefs`. `TemplateVariableSchema` added to `boundarySchemas.ts`.
