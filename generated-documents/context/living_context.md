@@ -209,10 +209,24 @@ Notes:
     - When a tab is toggled as Active Thread, incoming agent deliverables from MCP (`cntxt_open_deliverable`), REST Gateway (`/api/v1/tabs/open`), or RPC `tabs.create` automatically prepend immediately below `id=user-inbox` via `prependDeliverableToThread`.
     - When no active thread tab exists, deliverables default to creating a new `.cntxt` file in the configured deliverable folder (workspace `.cntxt/deliverables` or custom folder configurable in Settings -> Storage).
     - Automatic Extension Promotion: Documents containing CNTXT pipe blocks (`hasCntxtPipeBlock`) or toggled as Active Thread automatically promote `.md` -> `.cntxt`.
-- Future Roadmap Note — Chronological & Cited-Line Weaved Markdown Export (`.cntxt` -> `.md`):
-  - When a `.cntxt` Active Thread document is exported to standard `.md` (Markdown):
-    1. Agent deliverable blocks (`~~~markdown | ... ts=<ISO-8601>`) chronologically arrange themselves using their `ts=` timestamp tags.
-    2. User comments and responses inside the dedicated user-owned comment block (`id=user-inbox source=@USER`) use their `ts=` timestamps and `link=<blockId>#L<start>-L<end>` citations to weave and insert themselves directly at their cited lines inside the exported Markdown document.
+- Master Strategic Roadmap (Authoritative Future Updates):
+  1. CNTXT Library (Personal & Community):
+     - Personal Library: Private cloud/Git sync for personal templates, custom prompt actions, code block presets, and custom themes across Desktop, Android, and Web.
+     - Community Library: Public hub for discovering, sharing, and 1-click importing community-created workflows, interactive widgets, templates, and agent directives.
+  2. Workflow Builder (Universal Workflow Engine):
+     - Elevation of the current panel App Builder into a universal Workflow Engine.
+     - App Builder becomes a specialized sub-workflow recipe (Schema -> UI Form -> State Binding -> Panel App).
+     - Declarative multi-stage pipelines for document proofreading, Project Odin review/audit QC, data transformations, and chained prompt/script execution.
+     - Multi-surface triggers: Activity Bar, Ribbon bookmarks, Slash Commands (`/run-workflow`), Hotkeys, or external agent MCP calls.
+  3. Code Blocks Builder (First-Class Primitives & Conversation/Audit Optimizations):
+     - Promotion of code blocks from syntax boxes to first-class interactive CNTXT primitives.
+     - Dedicated Activity Bar rail panel (`block-builder`) with primitive picker, visual parameter inspector (`id`, `title`, `locked`, `status`, `tags`), live interactive preview, and 1-click document insertion.
+     - Flagship Primitive: Notion-Like Interactive Tables (drag-to-resize columns, row/col operations, keyboard cell editing, sorting, bidirectional GFM sync).
+     - Conversation & Audit Mode Usability Overhaul:
+       - Active Thread visual indicators, banner, and state differentiation for `.cntxt` files.
+       - Smart Comment Visibility: User responses and notes collapsed in document view by default, surfacing in a conversational side-rail or margin timeline.
+       - Chronological & Cited-Line Weaved Markdown Export: `.cntxt` -> `.md` export engine sorting deliverables by ISO-8601 timestamps and weaving user comments directly beneath their cited line numbers (`link=<blockId>#L<start>-L<end>`).
+       - Audit Mode Optimizations: Structured checklist tables, pass/fail/flag criteria, and 1-click copy cards for external review platforms (e.g., Mercor Studio).
 - Task 63: Feature Group FG-22 — CNTXT Block Parser Engine, Rich Container Rendering & Surgical Block RPC (2026-10-21):
   - Implemented `cntxtBlockParser.ts` supporting pipe (`|`) info strings (`id`, `tags`, `locked`, `status`, `link`, `source`, `title`), `CntxtRelationshipGraph` (`byId`, `byType`, `byTag`, `links`, `linkedFrom`), and 5 surgical block writers (`updateBlockParams`, `updateBlockContent`, `insertBlock`, `removeBlock`, `upsertBlock`).
   - Implemented Two-Tier Rich Container scanner (`findCntxtContainers` in `scanners.ts`), seamless editor canvas styling with unbroken left margin accent rail and scrollbar-aligned floating control popup (`cntxtBlockOverlay.ts`), pure Lucide SVG icons (`codeBlockWidget.ts`), and `blocks.*` RPC/MCP domain (`hostCommandBus.ts`, `cntxt-mcp-server.mjs`, `send-to-cntxt.ps1`).

@@ -18,3 +18,37 @@
 10. ~~Size adjustable markdown formatting toolbar so no need for single row and multi rows switchers...~~ — **[RESOLVED v0.7.6]** Implemented interactive top drag-to-resize handle on `MobileAccessoryBar.tsx` with smooth vertical mouse and touch resizing, natural `flex-wrap` multi-row wrapping, height persistence (`contextpad_formatting_toolbar_height`), and double-click compact/expanded toggle. Excised legacy `ChevronUp`/`ChevronDown` "Single Row" switchers from both the toolbar and `FormattingCustomizerModal.tsx`.
 11. ~~Multi-window event isolation for single-instance file opening~~ — **[RESOLVED v0.7.8]** Updated `src-tauri/src/lib.rs` to route single-instance CLI and file-association drops strictly to the `"main"` window via `app.emit_to("main", "open-files", ...)` and added `getCurrentWindow().label === 'main'` guards in `tauriRuntimeAdapter.ts`, preventing secondary popout webviews from opening duplicate tabs.
 12. ~~Code block header visual alignment and vertical breathing room~~ — **[RESOLVED v0.7.8]** Upgraded `CodeBlockHeaderWidget` padding from `px-3 py-1.5` to `px-3.5 py-2` (perfectly aligning horizontal margins with `.cm-live-codeblock-mid` 14px padding and providing balanced 8px vertical breathing room) and added `.cm-live-codeblock-start + .cm-live-codeblock-mid { padding-top: 6px !important; }` in `src/index.css` for first-line code separation without margin-collapsing HeightMap drift.
+
+---
+
+# Master Strategic Roadmap (Future Updates)
+
+### 1. CNTXT Library (Personal & Community)
+* **Objective:** Expand CNTXT from a local document tool into an extensible, interconnected knowledge and tooling ecosystem.
+* **Architecture:**
+  * **Personal Library:** Encrypted private cloud (Supabase) or Git-synced (GitHub/GitLab) repository syncing user templates, prompt actions, custom code block presets, custom themes, and personal workflows across Desktop, Mobile, and Web.
+  * **Community Library:** Public, curated hub for discovering, sharing, and 1-click installing community-authored workflows, prompt templates, interactive code block widgets, and agent directives.
+  * **Management:** Versioning, 1-click import/export, dependency resolution, and seamless workspace installation.
+
+### 2. Workflow Builder (Universal Workflow Engine)
+* **Objective:** Transform the existing panel "App Builder" into a generalized, multi-stage **Workflow Engine** where App Building is just one specialized workflow recipe.
+* **Architecture:**
+  * **Universal Engine:** Declarative pipeline orchestrator chaining triggers, prompt templates, script sandboxes, user inputs, external MCP/REST tools, and editor mutations.
+  * **App Builder as a Sub-Workflow:** Building an interactive panel app becomes a standard workflow preset (*Schema Definition → UI Generation → State Binding → Panel App Registration*).
+  * **Diverse Workflow Presets:**
+    * Document Review & Proofreading workflows (automated multi-model linting and inline annotations).
+    * Task Ideation & Quality Control workflows (Project Odin review stages, deliverable extraction).
+    * Data Transformation workflows (table parsing, CSV/JSON extraction, SQL formatting).
+  * **Execution Surfaces:** Triggerable via Activity Bar, Modular Ribbon bookmarks, Slash Commands (`/run-workflow`), Hotkeys, or external agent MCP calls.
+
+### 3. Code Blocks Builder (First-Class Primitives & Conversation/Audit Optimizations)
+* **Objective:** Promote code blocks into first-class, interactive CNTXT primitives managed via a dedicated visual rail studio, while overhauling Conversation and Audit modes.
+* **Architecture:**
+  * **Code Block Builder Rail Panel:** Dedicated Activity Bar panel (`block-builder`) featuring a primitive picker, visual parameter inspector (`id`, `title`, `locked`, `status`, `tags`), live interactive preview canvas, and 1-click document insertion.
+  * **Flagship Primitive — Notion-Like Interactive Tables:** Dynamic table widget featuring drag-to-resize columns, context-menu row/column insertion & deletion, keyboard cell editing (`Tab`/`Shift+Tab`/`Enter`), column sorting, and 100% bidirectional synchronization with raw GFM Markdown table syntax.
+  * **Conversation & Audit Mode Usability Overhaul:**
+    * **Active Thread Visual Identity:** Distinct visual styling, banner, and active pulse for `.cntxt` collaborative threads.
+    * **Smart Comment Visibility:** User responses and reviewer comments collapsed/hidden in the main document view by default, surfacing cleanly inside a conversational side-rail or margin timeline.
+    * **Chronological & Cited-Line Weaved Export:** 1-click `.cntxt` → `.md` export engine sorting deliverables by ISO-8601 timestamps and weaving user comments directly beneath their cited line numbers (`link=<blockId>#L<start>-L<end>`).
+    * **Audit Mode Optimizations:** Specialized review blocks with structured checklist tables, pass/fail/flag criteria, and fast-action copy buttons for external QA portals (e.g., Mercor Studio).
+
