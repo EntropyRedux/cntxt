@@ -36,6 +36,14 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
+- Task 79: Multi-Window Targeted Routing & Code Block Header Visual Alignment (2026-11-06):
+  - Multi-Window Event Isolation (`src-tauri/src/lib.rs`, `src/adapters/tauriRuntimeAdapter.ts`):
+    - Changed single-instance file opening from broadcast `app.emit("open-files", ...)` to window-targeted `app.emit_to("main", "open-files", ...)`.
+    - Added `getCurrentWindow().label === 'main'` guards to `onOpenFileRequested` in `tauriRuntimeAdapter.ts` to prevent secondary/popout windows from instantiating duplicate tabs.
+  - Code Block Header Visual Alignment & Breathing Room (`src/extensions/liveMarkdown/widgets/codeBlockWidget.ts`, `src/index.css`):
+    - Upgraded `CodeBlockHeaderWidget` padding from `px-3 py-1.5` to `px-3.5 py-2`, perfectly matching the 14px horizontal padding of `.cm-live-codeblock-mid` and providing 8px vertical breathing room.
+    - Added `.cm-live-codeblock-start + .cm-live-codeblock-mid { padding-top: 6px !important; }` in `src/index.css` for comfortable separation between the header border and the first line of code without introducing margin-collapsing HeightMap drift.
+  - Verification: 773/773 Vitest unit tests passing across 65 suites, 14/14 native Rust tests passing, 0 platform leaks, scanner 0 `any` (P3=0).
 - Task 78: Native OS Keyring Persistence & Universal User-Home Gateway Auto-Discovery (2026-11-06):
   - Native Platform OS Keyring (`src-tauri/Cargo.toml`):
     - Enabled `windows-native`, `apple-native`, and `linux-native-sync-persistent` features for `keyring` crate v3, replacing the volatile in-memory `mock` default.
