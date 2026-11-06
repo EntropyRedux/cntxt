@@ -7,7 +7,7 @@
   "active_role_lock": "prod_agent",
   "last_checkpoint": {
     "timestamp": "2026-11-06T08:55:00.000Z",
-    "git_hash": "HEAD",
+    "git_hash": "ba97a2c",
     "summary": "Task 78: Native OS keyring persistence and universal user-home gateway auto-discovery (~/.cntxt/gateway.json)"
   },
   "audit_status": {
