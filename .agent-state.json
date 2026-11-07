@@ -3,12 +3,12 @@
   "project_name": "CNTXT",
   "version": "0.7.8",
   "active_stage": "STAGE_4_CLOSEOUT_AND_VERSIONING",
-  "active_feature_group": "FG-26 Code Block Builder & Primitive Primitives Overhaul",
+  "active_feature_group": "FG-25 Agent Directives, Discovery & Dual-Tier Security Architecture",
   "active_role_lock": "prod_agent",
   "last_checkpoint": {
-    "timestamp": "2026-11-07T06:33:00.000Z",
-    "git_hash": "b486ac7",
-    "summary": "Task 81: Implement FG-26 Code Block Builder Rail Panel & First-Class Block Primitives"
+    "timestamp": "2026-11-07T14:07:00.000Z",
+    "git_hash": "HEAD",
+    "summary": "Task 82: Revert FG-26 Code Block Builder implementation (plan preserved)"
   },
   "audit_status": {
     "last_audit_type": "FULL_CODEBASE_AUDIT",
@@ -21,9 +21,9 @@
     "quarantine_verified": true
   },
   "verification_status": {
-    "last_run_timestamp": "2026-11-07T06:33:00.000Z",
-    "tests_passing": 792,
-    "tests_total": 792,
+    "last_run_timestamp": "2026-11-07T14:07:00.000Z",
+    "tests_passing": 775,
+    "tests_total": 775,
     "linter_clean": true
   }
 }

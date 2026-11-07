@@ -33,9 +33,6 @@ const RICH_CONTAINER_TYPES = new Set([
   'cntxt',
   'deliverable',
   'agent',
-  'conversation',
-  'thread',
-  'audit',
   'text',
   '',
 ]);

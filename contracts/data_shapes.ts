@@ -150,7 +150,7 @@ export interface ViewSettings extends EditorSettings, FormattingSettings {
   showSidebar: boolean;
   showRibbon?: boolean;
   showMenuBar?: boolean;
-  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'tokens' | 'settings' | 'app-builder' | 'panel-app' | 'code-blocks';
+  activeSidebarTab: 'explorer' | 'outline' | 'templates' | 'actions' | 'tokens' | 'settings' | 'app-builder' | 'panel-app';
   showLivePreview: boolean;
   editorMode: 'raw' | 'rendered';
   enableMarkdownRendering: boolean;
@@ -1106,33 +1106,3 @@ export interface DirectivesGetResult {
   guideMarkdown: string;
 }
 
-// ==========================================
-// 18. Code Block Builder & Archetypes (FG-26)
-// ==========================================
-
-export type CntxtBlockArchetype =
-  | 'deliverable'
-  | 'conversation'
-  | 'table'
-  | 'audit'
-  | 'diagram'
-  | 'code';
-
-export interface CntxtBlockPreset {
-  id: string;
-  name: string;
-  archetype: CntxtBlockArchetype;
-  language: string;
-  description: string;
-  icon: string;
-  defaultParams: Partial<CntxtBlockParams>;
-  defaultContent: string;
-  preferredFence?: '~~~' | '```';
-}
-
-export interface ActiveBlockCursorState {
-  isInsideBlock: boolean;
-  block: CntxtParsedBlock | null;
-  tabId: string | null;
-  cursorLine: number;
-}

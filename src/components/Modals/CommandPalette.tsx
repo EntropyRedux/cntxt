@@ -206,17 +206,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
         }
       },
       {
-        id: 'cmd-code-block-builder',
-        title: 'Open Code Block Builder',
-        subtitle: 'Visual palette & active inspector for CNTXT code block primitives',
-        category: 'Commands',
-        shortcut: 'Ctrl+Shift+B',
-        icon: 'Boxes',
-        action: () => {
-          setActiveSidebarTab('code-blocks');
-        }
-      },
-      {
         id: 'cmd-open-settings',
         title: 'Open Workspace Settings',
         subtitle: 'Configure themes, editor font size, density, and AI parameters',

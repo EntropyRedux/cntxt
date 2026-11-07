@@ -39,10 +39,6 @@ import {
   EditorSetDiagnosticsPayload,
   RestGatewayConfig, CntxtBlockParams, BlocksListPayload, BlocksGetPayload, BlocksUpsertPayload, BlocksUpdateParamsPayload, BlocksRemovePayload,
   DirectivesGetPayload,
-  CntxtBlockArchetype,
-  CntxtBlockPreset,
-  ActiveBlockCursorState,
-  CntxtParsedBlock,
   RibbonItem,
   RibbonItemType,
   MarkdownFormatType,
@@ -860,7 +856,7 @@ export const ViewSettingsSchema = z.object({
   showSidebar: z.boolean().optional(),
   showRibbon: z.boolean().optional(),
   showMenuBar: z.boolean().optional(),
-  activeSidebarTab: z.enum(['explorer', 'outline', 'templates', 'actions', 'tokens', 'settings', 'app-builder', 'panel-app', 'code-blocks']).optional(),
+  activeSidebarTab: z.enum(['explorer', 'outline', 'templates', 'actions', 'tokens', 'settings', 'app-builder', 'panel-app']).optional(),
   showLivePreview: z.boolean().optional(),
   editorMode: z.enum(['raw', 'rendered']).optional(),
   enableMarkdownRendering: z.boolean().optional(),
@@ -905,55 +901,4 @@ export const ViewSettingsSchema = z.object({
 
 export function validateViewSettings(data: unknown) {
   return ViewSettingsSchema.safeParse(data);
-}
-
-// ==========================================
-// 18. Code Block Builder Schemas (FG-26)
-// ==========================================
-
-export const CntxtParsedBlockSchema: z.ZodType<CntxtParsedBlock> = z.object({
-  type: z.string(),
-  fence: z.string(),
-  params: CntxtBlockParamsPartialSchema as z.ZodType<CntxtBlockParams>,
-  content: z.string(),
-  position: z.object({
-    start: z.number(),
-    end: z.number(),
-    startLine: z.number(),
-    endLine: z.number(),
-  }),
-  isCNTXT: z.boolean(),
-  isRichContainer: z.boolean(),
-});
-
-export const CntxtBlockArchetypeSchema = z.enum([
-  'deliverable',
-  'conversation',
-  'table',
-  'audit',
-  'diagram',
-  'code',
-]);
-
-export const CntxtBlockPresetSchema: z.ZodType<CntxtBlockPreset> = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  archetype: CntxtBlockArchetypeSchema,
-  language: z.string(),
-  description: z.string(),
-  icon: z.string(),
-  defaultParams: CntxtBlockParamsPartialSchema,
-  defaultContent: z.string(),
-  preferredFence: z.enum(['~~~', '```']).optional(),
-});
-
-export const ActiveBlockCursorStateSchema = z.object({
-  isInsideBlock: z.boolean(),
-  block: CntxtParsedBlockSchema.nullable(),
-  tabId: z.string().nullable(),
-  cursorLine: z.number(),
-});
-
-export function validateBlockPreset(data: unknown) {
-  return CntxtBlockPresetSchema.safeParse(data);
 }
