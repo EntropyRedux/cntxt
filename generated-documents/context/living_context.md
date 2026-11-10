@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.65
+Version: v2.66
 Last Updated: 2026-11-10
-Last Updated By: Prod Agent (Task 84 — Refine CNTXT Code Blocks: Visual Styling Separation for Governed Code Blocks vs Rich Containers)
+Last Updated By: Prod Agent (Task 84 — Release v0.7.9: FG-27 In-Context Code Block Controls, Read-Only Lock Guard, and Governed Visual Styling)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -15,9 +15,9 @@ Active Stage:
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
     [x] Testing (Vitest 791/791 Live across 66 suites, Rust Gateway & Security Test Suite 15/15 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.7.8 Release Staged & Pushed)
+  [x] Packaging & Release (v0.7.9 Release Staged & Pushed)
 
-Current Feature Group: FG-27 In-Context Code Block Controls & Governed Code Block Visual Polish (v0.7.8)
+Current Feature Group: FG-27 In-Context Code Block Controls & Governed Code Block Visual Polish (v0.7.9)
 Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
 Unit Tests: written [x] passing [x] (791/791 unit tests passing across 66 suites in CNTXT, 15 native Rust tests clean)

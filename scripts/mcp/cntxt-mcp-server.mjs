@@ -16,11 +16,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 
-let mcpPackageVersion = '0.7.8';
+let mcpPackageVersion = '0.7.9';
 try {
   const pkgUrl = new URL('../../package.json', import.meta.url);
   if (fs.existsSync(pkgUrl)) {
-    mcpPackageVersion = JSON.parse(fs.readFileSync(pkgUrl, 'utf8')).version || '0.7.8';
+    mcpPackageVersion = JSON.parse(fs.readFileSync(pkgUrl, 'utf8')).version || '0.7.9';
   }
 } catch {
   // Fallback to static version

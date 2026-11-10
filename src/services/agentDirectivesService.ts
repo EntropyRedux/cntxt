@@ -15,7 +15,7 @@ import {
 } from '../contracts/data_shapes';
 
 export const CNTXT_PROTOCOL_VERSION = '1.0.0';
-export const CNTXT_APP_VERSION = packageJson.version || '0.7.8';
+export const CNTXT_APP_VERSION = packageJson.version || '0.7.9';
 
 export const CNTXT_AGENT_DIRECTIVE: CntxtAgentDirective = {
   version: CNTXT_PROTOCOL_VERSION,

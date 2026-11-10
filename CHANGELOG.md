@@ -5,6 +5,31 @@ All notable changes to the CNTXT project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.9] — 2026-11-10
+
+### In-Context Code Block Controls, Read-Only Lock Guard & Governed Visual Styling (FG-27)
+- **Universal Code Block Lock & Read-Only Filter (`src/extensions/codeBlockLockFilter.ts`)**:
+  - Implemented CodeMirror 6 `transactionFilter` that intercepts all document modification attempts touching code blocks governed by `locked=user` or `locked=agent`.
+  - Rejects text insertions, character deletions, cut operations, and multi-line pastes that cross locked boundaries.
+  - Dispatches throttled toast notifications alerting users and AI agents to unlock the block before editing.
+  - Whitelists programmatic header line mutations (`userEvent: 'set.codeblock.lock'`, `userEvent: 'set.codeblock.params'`).
+- **In-Context Hover Action Cluster (`src/extensions/liveMarkdown/widgets/codeBlockWidget.ts`)**:
+  - Universal Lock/Unlock button on all code block headers (ordinary and CNTXT blocks). Shows active lock badge (`locked=user` / `locked=agent`) when locked, and smoothly fades in on hover when unlocked.
+  - Hover-visible action button cluster: `[Lock]` `[Clear]` `[Copy]` and `[···]` (3-dot menu).
+  - Eliminated fence-row click traps: clicking the header background no longer forces cursor focus onto `linePos` (the opening fence line).
+- **3-Dot Context Menu & In-Context Parameters Popover**:
+  - Added 3-dot dropdown menu (`···`) offering 1-click actions: Copy with Fences, Duplicate Block, Toggle Word Wrap, Convert to Rich Deliverable, Change Language..., Delete Block.
+  - Implemented anchored in-context parameter popover ("⚙️ Configure Parameters...") providing lightweight, in-situ visual editing of `id`, `status`, `locked`, `tags`, `source`, and `title` without side-rail clutter.
+- **Governed Code Block vs. Rich Container Visual Styling Separation**:
+  - Fixed visual degradation bug where adding a pipe `|` to an ordinary code block (`python | locked=user`) inadvertently applied `.cm-cntxt-container-*` (transparent background, border: none, padding: 0).
+  - Explicitly separated Governed Code Blocks from Rich Containers:
+    - Rich Containers (`markdown |`, `cntxt |`, `deliverable |`) retain transparent markdown container layout, pass-through rich formatting, and unbroken continuous left margin accent rail (`.cm-cntxt-left-rail`).
+    - Governed Code Blocks (`python |`, `ts |`, `sql |`, `rust |`, `json |`, etc.) retain 100% solid code block card styling (background, border, rounded corners, padding, syntax highlighting), gaining stateful amber (`cm-codeblock-locked-user`) or blue (`cm-codeblock-locked-agent`) left border accents.
+  - Added subtle hover-visible `+ status` button when a governed code block has no explicit status yet, cycling directly into `draft` on click.
+- **Comprehensive Verification Suite (`tests/codeBlockInContextControls.test.ts`)**:
+  - Added 16 unit and integration tests covering transaction filtering, lock mutators, header widget DOM rendering, cursor positioning, and styling separation.
+  - Vitest test suite updated to 791 / 791 passing tests across 66 suites; 15 / 15 native Rust tests passing.
+
 ## [0.7.8] — 2026-11-06
 
 ### Agent Directives, Capabilities Discovery & Zero-Friction Agent Connection (Improvements 2, 4, 5)
