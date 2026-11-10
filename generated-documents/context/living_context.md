@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.66
+Version: v2.67
 Last Updated: 2026-11-10
-Last Updated By: Prod Agent (Task 84 — Release v0.7.9: FG-27 In-Context Code Block Controls, Read-Only Lock Guard, and Governed Visual Styling)
+Last Updated By: Prod Agent (Task 85 — Visual Refinements for CNTXT Special Blocks: Full Accent Rail, Theme Engine, Subtle Hover Container, AI Badges Trimmed)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,14 +13,14 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 791/791 Live across 66 suites, Rust Gateway & Security Test Suite 15/15 Live)
+    [x] Testing (Vitest 792/792 Live across 66 suites, Rust Gateway & Security Test Suite 15/15 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.9 Release Staged & Pushed)
 
 Current Feature Group: FG-27 In-Context Code Block Controls & Governed Code Block Visual Polish (v0.7.9)
 Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (791/791 unit tests passing across 66 suites in CNTXT, 15 native Rust tests clean)
+Unit Tests: written [x] passing [x] (792/792 unit tests passing across 66 suites in CNTXT, 15 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 
 ━━━ MOCK REGISTRY SNAPSHOT ━━━
@@ -36,6 +36,12 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
+- Task 85: Visual Refinements for CNTXT Special Blocks (2026-11-10):
+  - Line-Anchored Native CSS Left Accent Rail: Spans 100% accurately from the top of the header row down to the end line below the block fences without premature cut-offs, replacing the virtualized JavaScript `lineBlockAt` measurement overlay.
+  - Strict Theme Engine Compliance: All borders, surfaces, accent lines, and pills strictly consume theme CSS variables (`var(--accent-primary, #007ACC)`, `color-mix(...)`, `var(--status-warning)`, `var(--status-info)`), eliminating hardcoded hex colors.
+  - Subtle Header Hover Container: Hovering over the header button row activates a subtle container frame and background tint across the entire block (`.cm-cntxt-container-active-hover`), making container boundaries clearly visible during interaction while preserving seamless transparent canvas when idle.
+  - Trimmed Speculative AI Conversation Artifacts: Excised green `● AI DELIVERABLE` rename, `@agent` badge prefix, speculative `+ status` button, `status=` pill, and inline `[Respond]` button so the core foundations are clean and stable ahead of the AI conversation mode rework.
+  - Verification: 792/792 Vitest unit tests passing across 66 suites, 15/15 Rust tests passing, Vite production build passing.
 - Task 84: Refine CNTXT Code Blocks: Visual Styling Separation for Governed Code Blocks vs Rich Containers (2026-11-10):
   - Fixed visual degradation bug where adding `|` to an ordinary code block (`python | locked=user`) inadvertently applied `.cm-cntxt-container-*` (transparent background, border: none, padding: 0).
   - Explicitly separated Governed Code Blocks from Rich Containers:

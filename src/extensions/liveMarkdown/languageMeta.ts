@@ -36,7 +36,11 @@ export function getLanguageMeta(rawLang: string): LanguageMeta {
       return { name: 'Bash', color: '#10B981', bg: 'rgba(16, 185, 129, 0.15)' };
     case 'md':
     case 'markdown':
-      return { name: 'Markdown', color: '#F472B6', bg: 'rgba(244, 114, 182, 0.15)' };
+      return { 
+        name: 'Markdown', 
+        color: 'var(--accent-primary, #007ACC)', 
+        bg: 'color-mix(in srgb, var(--accent-primary, #007ACC) 14%, transparent)' 
+      };
     case 'mermaid':
       return { name: 'Mermaid Diagram', color: '#EC4899', bg: 'rgba(236, 72, 153, 0.15)' };
     case 'latex':
@@ -64,10 +68,24 @@ export function getLanguageMeta(rawLang: string): LanguageMeta {
     case 'dockerfile':
     case 'docker':
       return { name: 'Docker', color: '#38BDF8', bg: 'rgba(56, 189, 248, 0.15)' };
-    case 'deliverable':
-    case 'agent':
     case 'cntxt':
-      return { name: 'AI Deliverable', color: '#10B981', bg: 'rgba(16, 185, 129, 0.15)' };
+      return { 
+        name: 'CNTXT', 
+        color: 'var(--accent-primary, #007ACC)', 
+        bg: 'color-mix(in srgb, var(--accent-primary, #007ACC) 14%, transparent)' 
+      };
+    case 'deliverable':
+      return { 
+        name: 'Deliverable', 
+        color: 'var(--accent-primary, #007ACC)', 
+        bg: 'color-mix(in srgb, var(--accent-primary, #007ACC) 14%, transparent)' 
+      };
+    case 'agent':
+      return { 
+        name: 'Agent', 
+        color: 'var(--accent-primary, #007ACC)', 
+        bg: 'color-mix(in srgb, var(--accent-primary, #007ACC) 14%, transparent)' 
+      };
     default:
       return { 
         name: lang ? lang.toUpperCase() : 'Code', 

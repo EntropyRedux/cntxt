@@ -7,13 +7,17 @@ import {
   codeBlockCollapseField,
   toggleCodeBlockCollapseEffect,
   setCodeBlockCollapseEffect,
-  clearAllCodeBlockCollapseEffect
+  clearAllCodeBlockCollapseEffect,
+  cntxtBlockHoverField,
+  setCntxtBlockHoverEffect,
 } from './liveMarkdown/collapseState';
 export {
   codeBlockCollapseField,
   toggleCodeBlockCollapseEffect,
   setCodeBlockCollapseEffect,
-  clearAllCodeBlockCollapseEffect
+  clearAllCodeBlockCollapseEffect,
+  cntxtBlockHoverField,
+  setCntxtBlockHoverEffect,
 } from './liveMarkdown/collapseState';
 
 export const refreshLiveMarkdownEffect = StateEffect.define<void>();
@@ -68,6 +72,7 @@ function buildDecorations(state: EditorState): DecorationSet {
     const isDark = currentTheme === 'google-material-3' || currentTheme === 'parchment' || currentTheme === 'github-light' ? false : isDarkTheme();
 
     const collapsedBlocks = state.field(codeBlockCollapseField, false) || new Set<number>();
+    const hoveredBlockStart = state.field(cntxtBlockHoverField, false) ?? null;
 
     // 1. Scan document structures (Two-Tier: Outer CNTXT Rich Containers + Inner Code/Math/Tables)
     const cntxtContainersByLine = findCntxtContainers(doc);
@@ -104,6 +109,13 @@ function buildDecorations(state: EditorState): DecorationSet {
         const { role: cRole, container } = containerEntry;
         const innerLineCount = Math.max(0, container.endLine - container.startLine - 1);
         const isContainerCollapsed = collapsedBlocks.has(container.startLine);
+        const isContainerHovered = hoveredBlockStart === container.startLine;
+        const hoverCls = isContainerHovered ? ' cm-cntxt-container-active-hover' : '';
+        const lockCls = container.params.locked === 'user'
+          ? ' cm-cntxt-locked-user'
+          : container.params.locked === 'agent'
+            ? ' cm-cntxt-locked-agent'
+            : '';
 
         // Check if cursor or active selection is on the opening/closing fence or inside when collapsed
         let isContainerActive = false;
@@ -127,7 +139,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             builder.add(
               line.from,
               line.from,
-              Decoration.line({ class: 'cm-live-codeblock-start cm-cntxt-container-start cm-live-codeblock-collapsed' })
+              Decoration.line({ class: `cm-live-codeblock-start cm-cntxt-container-start cm-live-codeblock-collapsed${lockCls}${hoverCls}` })
             );
             builder.add(
               line.from,
@@ -161,7 +173,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             builder.add(
               line.from,
               line.from,
-              Decoration.line({ class: 'cm-live-codeblock-start cm-cntxt-container-start cm-live-active-row' })
+              Decoration.line({ class: `cm-live-codeblock-start cm-cntxt-container-start cm-live-active-row${lockCls}${hoverCls}` })
             );
             pos = line.to + 1;
             continue;
@@ -170,7 +182,7 @@ function buildDecorations(state: EditorState): DecorationSet {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: 'cm-live-codeblock-start cm-cntxt-container-start' })
+            Decoration.line({ class: `cm-live-codeblock-start cm-cntxt-container-start${lockCls}${hoverCls}` })
           );
           builder.add(
             line.from,
@@ -195,7 +207,7 @@ function buildDecorations(state: EditorState): DecorationSet {
             builder.add(
               line.from,
               line.from,
-              Decoration.line({ class: 'cm-live-codeblock-end cm-cntxt-container-end cm-live-active-row' })
+              Decoration.line({ class: `cm-live-codeblock-end cm-cntxt-container-end cm-live-active-row${lockCls}${hoverCls}` })
             );
             pos = line.to + 1;
             continue;
@@ -204,7 +216,7 @@ function buildDecorations(state: EditorState): DecorationSet {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: 'cm-live-codeblock-end cm-cntxt-container-end' })
+            Decoration.line({ class: `cm-live-codeblock-end cm-cntxt-container-end${lockCls}${hoverCls}` })
           );
           builder.add(
             line.from,
@@ -218,12 +230,7 @@ function buildDecorations(state: EditorState): DecorationSet {
         } else if (cRole === 'mid') {
           // Pass-through! Middle lines of a CNTXT Rich Container fall right through
           // to render Mermaid diagrams, Markdown tables, Math, Headings, and Rich Text!
-          const lockCls = container.params.locked === 'user'
-            ? ' cm-cntxt-locked-user'
-            : container.params.locked === 'agent'
-              ? ' cm-cntxt-locked-agent'
-              : '';
-          containerMidClass = ` cm-cntxt-container-mid${lockCls}`;
+          containerMidClass = ` cm-cntxt-container-mid${lockCls}${hoverCls}`;
         }
       }
 
@@ -1021,7 +1028,8 @@ export const liveMarkdownField = StateField.define<DecorationSet>({
         e.is(refreshLiveMarkdownEffect) || 
         e.is(toggleCodeBlockCollapseEffect) || 
         e.is(setCodeBlockCollapseEffect) || 
-        e.is(clearAllCodeBlockCollapseEffect)
+        e.is(clearAllCodeBlockCollapseEffect) ||
+        e.is(setCntxtBlockHoverEffect)
       )
     ) {
       return buildDecorations(tr.state);
@@ -1058,6 +1066,7 @@ export function liveMarkdownExtension(
   return [
     liveThemeFacet.of(themeName),
     codeBlockCollapseField,
+    cntxtBlockHoverField,
     liveMarkdownField,
     cntxtBlockOverlayPlugin,
     codeBlockLockFilter,

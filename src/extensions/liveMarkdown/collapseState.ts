@@ -59,3 +59,33 @@ export const codeBlockCollapseField = StateField.define<ReadonlySet<number>>({
     return modified ? nextSet : collapsedSet;
   }
 });
+
+export const setCntxtBlockHoverEffect = StateEffect.define<number | null>();
+
+export const cntxtBlockHoverField = StateField.define<number | null>({
+  create() {
+    return null;
+  },
+  update(currentHoveredLine, tr) {
+    let next = currentHoveredLine;
+    if (tr.docChanged && next !== null) {
+      if (next <= tr.startState.doc.lines) {
+        const oldLine = tr.startState.doc.line(next);
+        const newPos = tr.changes.mapPos(oldLine.from);
+        if (newPos <= tr.newDoc.length) {
+          next = tr.newDoc.lineAt(newPos).number;
+        } else {
+          next = null;
+        }
+      } else {
+        next = null;
+      }
+    }
+    for (const effect of tr.effects) {
+      if (effect.is(setCntxtBlockHoverEffect)) {
+        next = effect.value;
+      }
+    }
+    return next;
+  },
+});

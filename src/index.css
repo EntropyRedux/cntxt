@@ -2175,14 +2175,68 @@ footer[data-shell-statusbar],
 .cm-cntxt-container-mid,
 .cm-cntxt-container-end {
   background-color: transparent !important;
-  border: none !important;
-  border-radius: 0 !important;
+  border-left: 2.5px solid color-mix(in srgb, var(--accent-primary, #007ACC) 40%, transparent) !important;
+  border-right: 1px solid transparent !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
   box-shadow: none !important;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
-.cm-cntxt-container-mid {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
+.cm-cntxt-container-start {
+  border-top: 1px solid transparent !important;
+  border-bottom: none !important;
+  border-top-left-radius: 4px !important;
+  border-top-right-radius: 8px !important;
+}
+
+.cm-cntxt-container-end {
+  border-top: none !important;
+  border-bottom: 1px solid transparent !important;
+  border-bottom-left-radius: 4px !important;
+  border-bottom-right-radius: 8px !important;
+  position: relative;
+}
+
+/* Collapsed container state */
+.cm-cntxt-container-start.cm-live-codeblock-collapsed {
+  border-bottom: 1px solid transparent !important;
+  border-bottom-left-radius: 4px !important;
+  border-bottom-right-radius: 8px !important;
+}
+
+/* Lock states for the continuous left accent rail */
+.cm-cntxt-container-start.cm-cntxt-locked-user,
+.cm-cntxt-container-mid.cm-cntxt-locked-user,
+.cm-cntxt-container-end.cm-cntxt-locked-user {
+  border-left-color: var(--status-warning, #F59E0B) !important;
+}
+
+.cm-cntxt-container-start.cm-cntxt-locked-agent,
+.cm-cntxt-container-mid.cm-cntxt-locked-agent,
+.cm-cntxt-container-end.cm-cntxt-locked-agent {
+  border-left-color: var(--status-info, #38BDF8) !important;
+}
+
+/* Subtle Container Frame & Tint on Header Hover */
+.cm-cntxt-container-start.cm-cntxt-container-active-hover,
+.cm-cntxt-container-mid.cm-cntxt-container-active-hover,
+.cm-cntxt-container-end.cm-cntxt-container-active-hover {
+  background-color: color-mix(in srgb, var(--accent-primary, #007ACC) 3.5%, transparent) !important;
+  border-left-color: var(--accent-primary, #007ACC) !important;
+  border-right-color: color-mix(in srgb, var(--accent-primary, #007ACC) 22%, transparent) !important;
+}
+
+.cm-cntxt-container-start.cm-cntxt-container-active-hover {
+  border-top-color: color-mix(in srgb, var(--accent-primary, #007ACC) 22%, transparent) !important;
+}
+
+.cm-cntxt-container-end.cm-cntxt-container-active-hover {
+  border-bottom-color: color-mix(in srgb, var(--accent-primary, #007ACC) 22%, transparent) !important;
+}
+
+.cm-cntxt-container-start.cm-live-codeblock-collapsed.cm-cntxt-container-active-hover {
+  border-bottom-color: color-mix(in srgb, var(--accent-primary, #007ACC) 22%, transparent) !important;
 }
 
 .cm-live-codeblock-header.cm-cntxt-container-header {
@@ -2195,7 +2249,7 @@ footer[data-shell-statusbar],
 }
 
 .cm-live-codeblock-header.cm-cntxt-container-header.cm-codeblock-header-collapsed {
-  border-bottom: 1px solid color-mix(in srgb, var(--text-muted) 18%, transparent) !important;
+  border-bottom: none !important;
 }
 
 /* Governed Code Blocks (e.g. ```python | locked=user, ```typescript | id=helper)
@@ -2224,38 +2278,9 @@ footer[data-shell-statusbar],
   margin-top: 4px;
 }
 
-/* Continuous Unbroken Left Accent Rail (offset 14px left of content column, 1px muted) */
+/* Deprecated absolute left rail (replaced by line-anchored CSS borders on .cm-cntxt-container-*) */
 .cm-cntxt-left-rail {
-  width: 1px;
-  border-radius: 9999px;
-  background-color: var(--accent-primary, #6366F1);
-  background-color: color-mix(in srgb, var(--accent-primary, #6366F1) 42%, transparent);
-  pointer-events: none;
-  transition: top 0.08s ease-out, height 0.08s ease-out;
-}
-
-.cm-cntxt-left-rail::before,
-.cm-cntxt-left-rail::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  width: 5px;
-  height: 1px;
-  border-radius: 9999px;
-  background-color: inherit;
-}
-
-.cm-cntxt-left-rail::before {
-  top: 0;
-}
-
-.cm-cntxt-left-rail::after {
-  bottom: 0;
-}
-
-.cm-cntxt-left-rail.cm-cntxt-rail-locked-user {
-  background-color: var(--status-warning, #F59E0B);
-  background-color: color-mix(in srgb, var(--status-warning, #F59E0B) 45%, transparent);
+  display: none !important;
 }
 
 .cm-cntxt-gov-pill.cm-cntxt-pill-user {

@@ -8,7 +8,12 @@ import {
   mutateHeaderLineParams,
   closeActiveCodeBlockPopover,
 } from '../src/extensions/liveMarkdown/widgets/codeBlockWidget';
-import { liveMarkdownField } from '../src/extensions/liveMarkdown';
+import {
+  liveMarkdownField,
+  codeBlockCollapseField,
+  cntxtBlockHoverField,
+  setCntxtBlockHoverEffect,
+} from '../src/extensions/liveMarkdown';
 import { useNotificationStore } from '../src/store/notificationStore';
 
 describe('FG-27: In-Context Code Block Controls & Lock Guard', () => {
@@ -306,19 +311,63 @@ describe('FG-27: In-Context Code Block Controls & Lock Guard', () => {
       expect(hasTransparentContainerClass).toBe(false);
     });
 
-    it('renders + status button when governed block has no status, and clicking sets status="draft"', () => {
-      const doc = '```python |\nprint("hello")\n```';
+    it('displays clean language badge without speculative AI prefixes, and does not show speculative status pills', () => {
+      const doc = '```markdown |\n# Deliverable\n```';
       const view = new EditorView({ state: EditorState.create({ doc }) });
-      const widget = new CodeBlockHeaderWidget('python |', 'print("hello")', 0, 1, 3, false, 1, false);
+      const widget = new CodeBlockHeaderWidget('markdown |', '# Deliverable', 0, 1, 3, false, 1, true);
       const dom = widget.toDOM(view);
 
+      // Language badge displays clean 'MARKDOWN'
+      const badge = dom.querySelector('.tracking-wider') as HTMLElement;
+      expect(badge?.textContent).toBe('Markdown');
+
+      // Speculative "+ status" button is removed
       const addStatusBtn = Array.from(dom.querySelectorAll('button')).find((b) =>
         b.textContent?.includes('+ status')
       );
-      expect(addStatusBtn).toBeDefined();
+      expect(addStatusBtn).toBeUndefined();
+    });
 
-      addStatusBtn?.click();
-      expect(view.state.doc.line(1).text).toBe('```python | status=draft');
+    it('dispatches setCntxtBlockHoverEffect on header hover, adding cm-cntxt-container-active-hover to all container lines', () => {
+      const doc = '~~~markdown |\n# Title\nLine 1\n~~~';
+      const state = EditorState.create({
+        doc,
+        selection: { anchor: 0 },
+        extensions: [codeBlockCollapseField, cntxtBlockHoverField, liveMarkdownField],
+      });
+
+      const getClasses = (st: EditorState) => {
+        const decos = st.field(liveMarkdownField);
+        const classes: string[] = [];
+        decos.between(0, st.doc.length, (_from, _to, val) => {
+          if (val.spec.class) classes.push(val.spec.class);
+        });
+        return classes;
+      };
+
+      // Initially, no container lines have active hover
+      expect(getClasses(state).some((c) => c.includes('cm-cntxt-container-active-hover'))).toBe(false);
+
+      // Dispatch hover effect for container at line 1
+      const hoveredState = state.update({
+        effects: setCntxtBlockHoverEffect.of(1),
+      }).state;
+
+      const hoveredClasses = getClasses(hoveredState);
+      const startHovered = hoveredClasses.some((c) => c.includes('cm-cntxt-container-start') && c.includes('cm-cntxt-container-active-hover'));
+      const midHovered = hoveredClasses.some((c) => c.includes('cm-cntxt-container-mid') && c.includes('cm-cntxt-container-active-hover'));
+      const endHovered = hoveredClasses.some((c) => c.includes('cm-cntxt-container-end') && c.includes('cm-cntxt-container-active-hover'));
+
+      expect(startHovered).toBe(true);
+      expect(midHovered).toBe(true);
+      expect(endHovered).toBe(true);
+
+      // Dispatch unhover effect
+      const unhoveredState = hoveredState.update({
+        effects: setCntxtBlockHoverEffect.of(null),
+      }).state;
+
+      expect(getClasses(unhoveredState).some((c) => c.includes('cm-cntxt-container-active-hover'))).toBe(false);
     });
   });
 });

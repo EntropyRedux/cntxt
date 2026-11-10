@@ -81,8 +81,8 @@ describe('codeLanguages service (GAP-03)', () => {
   describe('AI Deliverable Code Block Encapsulation & Nested Fences (FG-21)', () => {
     it('resolves getLanguageMeta for deliverable|@agent headers cleanly', () => {
       const meta = getLanguageMeta('deliverable|@agy · FG-21 Plan (04:15)');
-      expect(meta.name).toBe('AI Deliverable');
-      expect(meta.color).toBe('#10B981');
+      expect(meta.name).toBe('Deliverable');
+      expect(meta.color).toBe('var(--accent-primary, #007ACC)');
 
       const mdMeta = getLanguageMeta('markdown|@auditor · Pass 1 Report');
       expect(mdMeta.name).toBe('Markdown');

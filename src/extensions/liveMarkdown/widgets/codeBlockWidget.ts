@@ -6,6 +6,7 @@ import { getActiveBridge } from '../bridgeState';
 import {
   toggleCodeBlockCollapseEffect,
   openCntxtReplyInputEffect,
+  setCntxtBlockHoverEffect,
 } from '../collapseState';
 import {
   parseBlockInfoString,
@@ -749,9 +750,7 @@ export class CodeBlockHeaderWidget extends WidgetType {
     const params = parsed.params;
 
     const meta = getLanguageMeta(
-      isRich && isCntxt && (!parsed.type || parsed.type === 'markdown')
-        ? 'deliverable'
-        : this.language
+      parsed.type || (isRich ? 'markdown' : this.language)
     );
 
     const header = createElement('div', {
@@ -767,6 +766,19 @@ export class CodeBlockHeaderWidget extends WidgetType {
           : 'rounded-t-[7px]'
       } select-none flex items-center justify-between px-3.5 py-2 border-b border-[var(--codeblock-header-border)] bg-[var(--codeblock-header-bg)] text-[var(--text-secondary)] w-full cursor-pointer gap-2`,
     });
+
+    if (isRich && this.startLine !== undefined) {
+      header.addEventListener('mouseenter', () => {
+        view.dispatch({
+          effects: setCntxtBlockHoverEffect.of(this.startLine!),
+        });
+      });
+      header.addEventListener('mouseleave', () => {
+        view.dispatch({
+          effects: setCntxtBlockHoverEffect.of(null),
+        });
+      });
+    }
 
     header.addEventListener('click', (e) => {
       const target = e.target as HTMLElement | null;
@@ -841,10 +853,7 @@ export class CodeBlockHeaderWidget extends WidgetType {
     });
     badge.style.color = meta.color;
     badge.style.backgroundColor = meta.bg;
-    badge.textContent =
-      params.source && params.source.startsWith('@')
-        ? `${params.source} · ${isRich ? 'CNTXT' : meta.name}`
-        : meta.name;
+    badge.textContent = meta.name;
     left.appendChild(badge);
 
     // 3. Collapsed line count pill
@@ -857,85 +866,15 @@ export class CodeBlockHeaderWidget extends WidgetType {
       left.appendChild(lineCountBadge);
     }
 
-    // 4. Fixed Core Header Params: Title (truncates cleanly) + Status Pill (with Lucide icon)
-    // Secondary metadata (`#id`, `tags`, `link`) lives on the closing Footer Rail & Floating Action Bar
-    if (isCntxt) {
-      if (params.label) {
-        const titleSpan = createElement('span', {
-          className:
-            'text-[11px] font-semibold text-[var(--text-primary)] truncate max-w-[220px] min-w-[40px]',
-          title: params.label,
-          textContent: params.label,
-        });
-        left.appendChild(titleSpan);
-      }
-
-      if (params.status) {
-        const statusColors = getStatusColors(params.status);
-        const isDoneStatus = ['approved', 'done', 'complete', 'ready'].includes(
-          params.status.toLowerCase()
-        );
-        const statusPill = createElement('button', {
-          type: 'button',
-          className:
-            'cm-cntxt-gov-pill cm-cntxt-status-pill flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wide shrink-0 cursor-pointer transition-transform active:scale-95',
-          title: `Block Status: ${params.status} (Click to cycle status)`,
-        });
-        statusPill.style.color = statusColors.text;
-        statusPill.style.backgroundColor = statusColors.bg;
-        statusPill.style.border = `1px solid ${statusColors.border}`;
-
-        const statusIcon = createElement('span', {
-          className: 'flex items-center justify-center shrink-0',
-        });
-        statusIcon.innerHTML = isDoneStatus ? LUCIDE_SVGS.checkCircle2 : LUCIDE_SVGS.circleDot;
-        statusPill.appendChild(statusIcon);
-
-        const statusText = createElement('span', {
-          className: 'cm-codeblock-btn-label',
-          textContent: params.status,
-        });
-        statusPill.appendChild(statusText);
-
-        statusPill.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        });
-        statusPill.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const currIdx = STATUS_CYCLE.indexOf((params.status || '').toLowerCase());
-          const nextStatus = STATUS_CYCLE[(currIdx + 1) % STATUS_CYCLE.length];
-          mutateHeaderLineParams(view, this.startLine, (p) => ({
-            ...p,
-            status: nextStatus,
-          }));
-        });
-        left.appendChild(statusPill);
-      } else {
-        // Subtle "+ status" pill appearing on hover when a governed block has no explicit status yet
-        const addStatusBtn = createElement('button', {
-          type: 'button',
-          className:
-            'cm-cntxt-gov-pill cm-codeblock-action-btn cm-codeblock-hover-action opacity-0 group-hover:opacity-100 flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border border-dashed border-[var(--border-subtle)] transition-all cursor-pointer shrink-0',
-          title: 'Set block status (Click to set as draft)',
-          'aria-label': 'Set block status to draft',
-        });
-        addStatusBtn.innerHTML = `${LUCIDE_SVGS.circleDot} <span class="cm-codeblock-btn-label">+ status</span>`;
-        addStatusBtn.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        });
-        addStatusBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          mutateHeaderLineParams(view, this.startLine, (p) => ({
-            ...p,
-            status: 'draft',
-          }));
-        });
-        left.appendChild(addStatusBtn);
-      }
+    // 4. Identity & Optional Custom Title
+    if (isCntxt && params.label) {
+      const titleSpan = createElement('span', {
+        className:
+          'text-[11px] font-semibold text-[var(--text-primary)] truncate max-w-[220px] min-w-[40px]',
+        title: params.label,
+        textContent: params.label,
+      });
+      left.appendChild(titleSpan);
     }
 
     header.appendChild(left);
@@ -1008,44 +947,7 @@ export class CodeBlockHeaderWidget extends WidgetType {
     });
     right.appendChild(lockBtn);
 
-    // 5B. Respond / Comment Button (opens inline citation reply input -> appends to #user-inbox)
-    if (isCntxt && params.id !== 'user-inbox') {
-      const respondBtn = createElement('button', {
-        type: 'button',
-        className:
-          'cm-cntxt-gov-pill cm-codeblock-action-btn cm-codeblock-hover-action opacity-0 group-hover:opacity-100 flex items-center gap-1.5 px-2 py-0.5 rounded text-[10.5px] font-medium text-[var(--accent-primary)] hover:bg-[var(--accent-container)] border border-[var(--border-subtle)] transition-all cursor-pointer shrink-0',
-        title: 'Respond / Comment on highlighted lines (adds cited entry to #user-inbox)',
-        'aria-label': 'Respond or comment on this block',
-      });
-      const respondIcon = createElement('span', {
-        className: 'w-4 h-4 rounded bg-[var(--accent-container)] flex items-center justify-center shrink-0',
-      });
-      respondIcon.innerHTML = LUCIDE_SVGS.messageSquarePlus;
-      respondBtn.appendChild(respondIcon);
-
-      const respondLabel = createElement('span', {
-        className: 'cm-codeblock-btn-label',
-        textContent: 'Respond',
-      });
-      respondBtn.appendChild(respondLabel);
-
-      respondBtn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      });
-      respondBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (this.startLine !== undefined) {
-          view.dispatch({
-            effects: openCntxtReplyInputEffect.of(this.startLine),
-          });
-        }
-      });
-      right.appendChild(respondBtn);
-    }
-
-    // 6. Clear Button (respects `locked=user`, Lucide Trash2 icon, hover visible)
+    // 5. Clear Button (respects `locked=user`, Lucide Trash2 icon, hover visible)
     const clearBtn = createElement('button', {
       type: 'button',
       className: `cm-live-clear-code-btn cm-codeblock-action-btn cm-codeblock-hover-action opacity-0 group-hover:opacity-100 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium ${
