@@ -254,7 +254,10 @@ export function serializeBlockInfoString(
     }
   }
 
-  return parts.length > 0 ? `${cleanType} | ${parts.join(' ')}` : `${cleanType} |`;
+  if (parts.length > 0) {
+    return `${cleanType} | ${parts.join(' ')}`;
+  }
+  return isRichContainerType(cleanType, true) ? `${cleanType} |` : cleanType;
 }
 
 /**

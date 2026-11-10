@@ -44,6 +44,7 @@ import {
   setLiveMarkdownBridge
 } from './liveMarkdown/index';
 import { cntxtBlockOverlayPlugin } from './liveMarkdown/cntxtBlockOverlay';
+import { codeBlockLockFilter } from './codeBlockLockFilter';
 import { parseBlockInfoString } from '../services/editor/cntxtBlockParser';
 
 interface RangeDecoItem {
@@ -1051,5 +1052,6 @@ export function liveMarkdownExtension(
     codeBlockCollapseField,
     liveMarkdownField,
     cntxtBlockOverlayPlugin,
+    codeBlockLockFilter,
   ];
 }
