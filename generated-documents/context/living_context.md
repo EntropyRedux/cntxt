@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.64
+Version: v2.65
 Last Updated: 2026-11-10
-Last Updated By: Prod Agent (Task 83 — Implement FG-27 In-Context Code Block Controls, Hover Actions, Lock Guard & 3-Dot Menu)
+Last Updated By: Prod Agent (Task 84 — Refine CNTXT Code Blocks: Visual Styling Separation for Governed Code Blocks vs Rich Containers)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -13,14 +13,14 @@ Active Stage:
   [ ] Porting & Spec Implementation
   [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
-    [x] Testing (Vitest 775/775 Live across 65 suites, Rust Gateway & Security Test Suite 15/15 Live)
+    [x] Testing (Vitest 791/791 Live across 66 suites, Rust Gateway & Security Test Suite 15/15 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
   [x] Packaging & Release (v0.7.8 Release Staged & Pushed)
 
-Current Feature Group: FG-27 In-Context Code Block Controls (Hover Actions, Read-Only Lock Guard, 3-Dot Menu) (v0.7.8)
+Current Feature Group: FG-27 In-Context Code Block Controls & Governed Code Block Visual Polish (v0.7.8)
 Status: [x] Implemented, Verified, Packaged & Staged
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
-Unit Tests: written [x] passing [x] (787/787 unit tests passing across 66 suites in CNTXT, 15 native Rust tests clean)
+Unit Tests: written [x] passing [x] (791/791 unit tests passing across 66 suites in CNTXT, 15 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
 
 ━━━ MOCK REGISTRY SNAPSHOT ━━━
@@ -36,6 +36,13 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
+- Task 84: Refine CNTXT Code Blocks: Visual Styling Separation for Governed Code Blocks vs Rich Containers (2026-11-10):
+  - Fixed visual degradation bug where adding `|` to an ordinary code block (`python | locked=user`) inadvertently applied `.cm-cntxt-container-*` (transparent background, border: none, padding: 0).
+  - Explicitly separated Governed Code Blocks from Rich Containers:
+    - Rich Containers (`markdown |`, `cntxt |`, `deliverable |`) retain transparent markdown container layout and unbroken continuous left margin accent rail (`.cm-cntxt-left-rail`).
+    - Governed Code Blocks (`python |`, `ts |`, `sql |`, etc.) retain 100% solid code block card styling (background, border, rounded corners, padding, syntax highlighting), gaining stateful amber (`cm-codeblock-locked-user`) or blue (`cm-codeblock-locked-agent`) left border accents.
+  - Added subtle hover-visible `+ status` button when a governed code block has no explicit status yet, cycling directly into `draft` on click.
+  - Added 4 unit & integration tests in `tests/codeBlockInContextControls.test.ts`. All 791 Vitest tests and 15 native Rust tests passing.
 - Task 83: Implement FG-27 In-Context Code Block Controls (2026-11-10):
   - Added universal Lock/Unlock button for all code blocks (ordinary and CNTXT blocks) with true read-only transaction filtering (codeBlockLockFilter.ts).
   - Prevented fence-row click traps: clicking the header bar no longer forces cursor onto linePos (the opening fence).

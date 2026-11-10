@@ -3,12 +3,12 @@
   "project_name": "CNTXT",
   "version": "0.7.8",
   "active_stage": "STAGE_4_CLOSEOUT_AND_VERSIONING",
-  "active_feature_group": "FG-27 In-Context Code Block Controls: Hover Actions, True Read-Only Lock Guard, and 3-Dot Menu",
+  "active_feature_group": "FG-27 In-Context Code Block Controls & Governed Code Block Visual Polish",
   "active_role_lock": "prod_agent",
   "last_checkpoint": {
-    "timestamp": "2026-11-10T08:13:00.000Z",
-    "git_hash": "aafeed3",
-    "summary": "Task 83: Implement FG-27 In-Context Code Block Controls (Hover Actions, Read-Only Lock Guard, 3-Dot Menu)"
+    "timestamp": "2026-11-10T08:54:00.000Z",
+    "git_hash": "HEAD",
+    "summary": "Task 84: Refine CNTXT Code Blocks: Visual Styling Separation for Governed Code Blocks vs Rich Containers"
   },
   "audit_status": {
     "last_audit_type": "FULL_CODEBASE_AUDIT",
@@ -21,9 +21,9 @@
     "quarantine_verified": true
   },
   "verification_status": {
-    "last_run_timestamp": "2026-11-10T08:13:00.000Z",
-    "tests_passing": 787,
-    "tests_total": 787,
+    "last_run_timestamp": "2026-11-10T08:54:00.000Z",
+    "tests_passing": 791,
+    "tests_total": 791,
     "linter_clean": true
   }
 }

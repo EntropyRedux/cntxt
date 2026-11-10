@@ -755,7 +755,13 @@ export class CodeBlockHeaderWidget extends WidgetType {
     );
 
     const header = createElement('div', {
-      className: `cm-live-codeblock-header group relative ${isRich || isCntxt ? 'cm-cntxt-container-header' : ''} ${
+      className: `cm-live-codeblock-header group relative ${
+        isRich
+          ? 'cm-cntxt-container-header'
+          : isCntxt
+            ? 'cm-live-codeblock-header-governed'
+            : ''
+      } ${
         this.isCollapsed
           ? 'cm-codeblock-header-collapsed rounded-[7px] border-b-transparent shadow-sm'
           : 'rounded-t-[7px]'
@@ -906,6 +912,29 @@ export class CodeBlockHeaderWidget extends WidgetType {
           }));
         });
         left.appendChild(statusPill);
+      } else {
+        // Subtle "+ status" pill appearing on hover when a governed block has no explicit status yet
+        const addStatusBtn = createElement('button', {
+          type: 'button',
+          className:
+            'cm-cntxt-gov-pill cm-codeblock-action-btn cm-codeblock-hover-action opacity-0 group-hover:opacity-100 flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover-bg)] border border-dashed border-[var(--border-subtle)] transition-all cursor-pointer shrink-0',
+          title: 'Set block status (Click to set as draft)',
+          'aria-label': 'Set block status to draft',
+        });
+        addStatusBtn.innerHTML = `${LUCIDE_SVGS.circleDot} <span class="cm-codeblock-btn-label">+ status</span>`;
+        addStatusBtn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        addStatusBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          mutateHeaderLineParams(view, this.startLine, (p) => ({
+            ...p,
+            status: 'draft',
+          }));
+        });
+        left.appendChild(addStatusBtn);
       }
     }
 

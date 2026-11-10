@@ -297,7 +297,15 @@ function buildDecorations(state: EditorState): DecorationSet {
         }
 
         // --- Standard Code Block Rendering ---
-        const pipeBlockClass = parsedBlockInfo.isCNTXT ? ` cm-cntxt-container-${role}` : '';
+        // Governed code blocks (e.g. ```python | locked=user) retain full code block card styling (background, border, padding)
+        // rather than inheriting transparent Rich Container styling (.cm-cntxt-container-*).
+        const isGoverned = parsedBlockInfo.isCNTXT && !parsedBlockInfo.isRichContainer;
+        const lockCls = parsedBlockInfo.params.locked === 'user'
+          ? ' cm-codeblock-locked-user'
+          : parsedBlockInfo.params.locked === 'agent'
+            ? ' cm-codeblock-locked-agent'
+            : '';
+        const governedBlockClass = isGoverned ? ` cm-live-codeblock-governed${lockCls}` : '';
         const isCollapsed = collapsedBlocks.has(block.startLine);
         const innerLineCount = Math.max(0, block.endLine - block.startLine - 1);
 
@@ -305,7 +313,7 @@ function buildDecorations(state: EditorState): DecorationSet {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: `cm-live-codeblock-start${parsedBlockInfo.isCNTXT ? ' cm-cntxt-container-start' : ''} cm-live-codeblock-collapsed${containerMidClass}` })
+            Decoration.line({ class: `cm-live-codeblock-start${governedBlockClass} cm-live-codeblock-collapsed${containerMidClass}` })
           );
           builder.add(
             line.from,
@@ -319,7 +327,7 @@ function buildDecorations(state: EditorState): DecorationSet {
                 block.endLine,
                 true,
                 innerLineCount,
-                parsedBlockInfo.isCNTXT
+                parsedBlockInfo.isRichContainer
               )
             })
           );
@@ -339,7 +347,7 @@ function buildDecorations(state: EditorState): DecorationSet {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: `cm-live-codeblock-${role}${pipeBlockClass} cm-live-active-row${containerMidClass}` })
+            Decoration.line({ class: `cm-live-codeblock-${role}${governedBlockClass} cm-live-active-row${containerMidClass}` })
           );
           pos = line.to + 1;
           continue;
@@ -349,7 +357,7 @@ function buildDecorations(state: EditorState): DecorationSet {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: `cm-live-codeblock-start${pipeBlockClass}${containerMidClass}` })
+            Decoration.line({ class: `cm-live-codeblock-start${governedBlockClass}${containerMidClass}` })
           );
           builder.add(
             line.from,
@@ -363,7 +371,7 @@ function buildDecorations(state: EditorState): DecorationSet {
                 block.endLine,
                 false,
                 innerLineCount,
-                parsedBlockInfo.isCNTXT
+                parsedBlockInfo.isRichContainer
               )
             })
           );
@@ -371,26 +379,26 @@ function buildDecorations(state: EditorState): DecorationSet {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: `cm-live-codeblock-mid${pipeBlockClass}${containerMidClass}` })
+            Decoration.line({ class: `cm-live-codeblock-mid${governedBlockClass}${containerMidClass}` })
           );
         } else if (role === 'end') {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: `cm-live-codeblock-end${pipeBlockClass}${containerMidClass}` })
+            Decoration.line({ class: `cm-live-codeblock-end${governedBlockClass}${containerMidClass}` })
           );
           builder.add(
             line.from,
             line.to,
             Decoration.replace({
-              widget: new CodeBlockFooterWidget(parsedBlockInfo.isCNTXT, block.language)
+              widget: new CodeBlockFooterWidget(parsedBlockInfo.isRichContainer, block.language)
             })
           );
         } else if (role === 'single') {
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: `cm-live-codeblock-single${pipeBlockClass}${containerMidClass}` })
+            Decoration.line({ class: `cm-live-codeblock-single${governedBlockClass}${containerMidClass}` })
           );
         }
 

@@ -7,7 +7,7 @@ import {
   toggleCodeBlockCollapseEffect,
   openCntxtReplyInputEffect,
 } from './collapseState';
-import { findCntxtContainers, findCodeBlocks } from './scanners';
+import { findCntxtContainers } from './scanners';
 import {
   parseBlockInfoString,
   appendUserInboxEntry,
@@ -33,11 +33,13 @@ function collectCntxtBlocks(view: EditorView): OverlayBlockDescriptor[] {
   const doc = view.state.doc;
   const collapsedSet = view.state.field(codeBlockCollapseField, false) || new Set<number>();
   const containersByLine = findCntxtContainers(doc);
-  const codeBlocksByLine = findCodeBlocks(doc, containersByLine);
 
   const seenStartLines = new Set<number>();
   const result: OverlayBlockDescriptor[] = [];
 
+  // Only Rich Containers (markdown |, cntxt |, deliverable |) receive the continuous
+  // left margin accent rail (.cm-cntxt-left-rail) and floating viewport controls.
+  // Governed code blocks retain self-contained code block card styling and in-context header controls.
   for (const entry of containersByLine.values()) {
     const c = entry.container;
     if (seenStartLines.has(c.startLine)) continue;
@@ -49,22 +51,6 @@ function collectCntxtBlocks(view: EditorView): OverlayBlockDescriptor[] {
       params: c.params,
       codeContent: c.codeContent,
       isCollapsed: collapsedSet.has(c.startLine),
-    });
-  }
-
-  for (const entry of codeBlocksByLine.values()) {
-    const b = entry.block;
-    if (seenStartLines.has(b.startLine)) continue;
-    const parsed = parseBlockInfoString(b.language);
-    if (!parsed.isCNTXT) continue;
-    seenStartLines.add(b.startLine);
-    result.push({
-      startLine: b.startLine,
-      endLine: b.endLine,
-      language: b.language,
-      params: parsed.params,
-      codeContent: b.codeContent,
-      isCollapsed: collapsedSet.has(b.startLine),
     });
   }
 

@@ -8,6 +8,7 @@ import {
   mutateHeaderLineParams,
   closeActiveCodeBlockPopover,
 } from '../src/extensions/liveMarkdown/widgets/codeBlockWidget';
+import { liveMarkdownField } from '../src/extensions/liveMarkdown';
 import { useNotificationStore } from '../src/store/notificationStore';
 
 describe('FG-27: In-Context Code Block Controls & Lock Guard', () => {
@@ -255,6 +256,69 @@ describe('FG-27: In-Context Code Block Controls & Lock Guard', () => {
       // Previously, clicking header forced cursor to anchor 0 (the opening fence).
       // Now, clicking header does not trap the cursor onto linePos (0).
       expect(view.state.selection.main.anchor).toBe(15);
+    });
+  });
+
+  describe('4. Governed Code Block vs Rich Container Visual Styling Separation', () => {
+    it('applies cm-live-codeblock-header-governed and keeps solid styling on python | locked=user (no cm-cntxt-container-header)', () => {
+      const doc = '```python | locked=user\nprint("hello")\n```';
+      const view = new EditorView({ state: EditorState.create({ doc }) });
+      const widget = new CodeBlockHeaderWidget('python | locked=user', 'print("hello")', 0, 1, 3, false, 1, false);
+      const dom = widget.toDOM(view);
+
+      expect(dom.classList.contains('cm-live-codeblock-header-governed')).toBe(true);
+      expect(dom.classList.contains('cm-cntxt-container-header')).toBe(false);
+    });
+
+    it('applies cm-cntxt-container-header on Rich Containers (markdown | id=deliverable)', () => {
+      const doc = '~~~markdown | id=deliverable\n# Heading\n~~~';
+      const view = new EditorView({ state: EditorState.create({ doc }) });
+      const widget = new CodeBlockHeaderWidget('markdown | id=deliverable', '# Heading', 0, 1, 3, false, 1, true);
+      const dom = widget.toDOM(view);
+
+      expect(dom.classList.contains('cm-cntxt-container-header')).toBe(true);
+      expect(dom.classList.contains('cm-live-codeblock-header-governed')).toBe(false);
+    });
+
+    it('applies cm-live-codeblock-governed and lock classes on lines in liveMarkdownField for governed code blocks', () => {
+      const doc = '```python | locked=user\nprint("hello")\n```';
+      const state = EditorState.create({
+        doc,
+        selection: { anchor: 0 },
+        extensions: [liveMarkdownField],
+      });
+
+      const decos = state.field(liveMarkdownField);
+      const lineClasses: string[] = [];
+      decos.between(0, doc.length, (_from, _to, value) => {
+        if (value.spec.class) {
+          lineClasses.push(value.spec.class);
+        }
+      });
+
+      // Governed code blocks receive cm-live-codeblock-governed and cm-codeblock-locked-user
+      const hasGovernedClass = lineClasses.some((c) => c.includes('cm-live-codeblock-governed'));
+      const hasUserLockClass = lineClasses.some((c) => c.includes('cm-codeblock-locked-user'));
+      const hasTransparentContainerClass = lineClasses.some((c) => c.includes('cm-cntxt-container-mid'));
+
+      expect(hasGovernedClass).toBe(true);
+      expect(hasUserLockClass).toBe(true);
+      expect(hasTransparentContainerClass).toBe(false);
+    });
+
+    it('renders + status button when governed block has no status, and clicking sets status="draft"', () => {
+      const doc = '```python |\nprint("hello")\n```';
+      const view = new EditorView({ state: EditorState.create({ doc }) });
+      const widget = new CodeBlockHeaderWidget('python |', 'print("hello")', 0, 1, 3, false, 1, false);
+      const dom = widget.toDOM(view);
+
+      const addStatusBtn = Array.from(dom.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('+ status')
+      );
+      expect(addStatusBtn).toBeDefined();
+
+      addStatusBtn?.click();
+      expect(view.state.doc.line(1).text).toBe('```python | status=draft');
     });
   });
 });
