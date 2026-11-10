@@ -2252,6 +2252,19 @@ footer[data-shell-statusbar],
   border-bottom: none !important;
 }
 
+/* Invisible hover bridge between header buttons and dropdown/popovers to prevent mouseleave jitter */
+.cm-codeblock-dropdown::before,
+.cm-codeblock-param-popover::before,
+.cm-codeblock-lang-popover::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: transparent;
+}
+
 /* Governed Code Blocks (e.g. ```python | locked=user, ```typescript | id=helper)
    Retain full code block card styling (background, border, padding, syntax highlighting)
    with optional stateful left border accents for user/agent lock */

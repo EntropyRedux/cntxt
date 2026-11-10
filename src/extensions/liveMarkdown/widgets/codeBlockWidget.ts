@@ -367,11 +367,19 @@ function openCodeBlockContextMenu(
   const onDocMouseDown = (e: MouseEvent) => {
     if (!menu.contains(e.target as Node) && !anchorBtn.contains(e.target as Node)) {
       closeActiveCodeBlockPopover();
+      if (!headerEl.contains(e.target as Node)) {
+        view.dispatch({
+          effects: setCntxtBlockHoverEffect.of(null),
+        });
+      }
     }
   };
   const onDocKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       closeActiveCodeBlockPopover();
+      view.dispatch({
+        effects: setCntxtBlockHoverEffect.of(null),
+      });
     }
   };
 
@@ -591,11 +599,19 @@ function openCodeBlockParamPopover(
   const onDocMouseDown = (e: MouseEvent) => {
     if (!popover.contains(e.target as Node) && !anchorBtn.contains(e.target as Node)) {
       closeActiveCodeBlockPopover();
+      if (!headerEl.contains(e.target as Node)) {
+        view.dispatch({
+          effects: setCntxtBlockHoverEffect.of(null),
+        });
+      }
     }
   };
   const onDocKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       closeActiveCodeBlockPopover();
+      view.dispatch({
+        effects: setCntxtBlockHoverEffect.of(null),
+      });
     }
   };
 
@@ -689,11 +705,19 @@ function openLanguagePromptPopover(
   const onDocMouseDown = (e: MouseEvent) => {
     if (!popover.contains(e.target as Node) && !anchorBtn.contains(e.target as Node)) {
       closeActiveCodeBlockPopover();
+      if (!headerEl.contains(e.target as Node)) {
+        view.dispatch({
+          effects: setCntxtBlockHoverEffect.of(null),
+        });
+      }
     }
   };
   const onDocKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       closeActiveCodeBlockPopover();
+      view.dispatch({
+        effects: setCntxtBlockHoverEffect.of(null),
+      });
     } else if (e.key === 'Enter') {
       applyBtn.click();
     }
@@ -773,7 +797,20 @@ export class CodeBlockHeaderWidget extends WidgetType {
           effects: setCntxtBlockHoverEffect.of(this.startLine!),
         });
       });
-      header.addEventListener('mouseleave', () => {
+      header.addEventListener('mouseleave', (e: MouseEvent) => {
+        if (activeCodeBlockPopover) {
+          return;
+        }
+        const rel = e.relatedTarget as HTMLElement | null;
+        if (
+          rel &&
+          (header.contains(rel) ||
+            rel.closest(
+              '.cm-codeblock-dropdown, .cm-codeblock-param-popover, .cm-codeblock-lang-popover'
+            ))
+        ) {
+          return;
+        }
         view.dispatch({
           effects: setCntxtBlockHoverEffect.of(null),
         });
