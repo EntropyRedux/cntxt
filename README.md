@@ -1,22 +1,22 @@
 # CNTXT
 
-**A reimagining of ContextPad** â€” a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
+**A reimagining of ContextPad** — a cross-platform application (Desktop on Windows / Linux / macOS, Web, and Mobile for Android via Tauri v2) for structured writing, prompt engineering, and workflow automation.
 
-**Status:** Production Ready (v0.7.4) â€” Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), Native Model Context Protocol (MCP) Server for external AI agents (Antigravity, Claude, Cursor, Cline, Windsurf), CNTXT Block Parser Engine & Rich Containers with continuous accent rail and floating scrollbar controls, Active Thread `.cntxt` Orchestration with top-pinned user inbox citations (`id=user-inbox`), Large Document Virtualization (>5MB) with master disk splicing, Local Network (LAN) & Localhost REST API Gateway, Automated Cross-Platform Android Signed APK Build Pipeline, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**Status:** Production Ready (v0.7.9) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile), In-Context Code Block Controls & Lock Guard (FG-27), Native Model Context Protocol (MCP) Server for external AI agents (Antigravity, Claude, Cursor, Cline, Windsurf), CNTXT Block Parser Engine & Rich Containers with continuous accent rail and floating scrollbar controls, Active Thread `.cntxt` Orchestration with top-pinned user inbox citations (`id=user-inbox`), Large Document Virtualization (>5MB) with master disk splicing, Local Network (LAN) & Localhost REST API Gateway, Automated Cross-Platform Android Signed APK Build Pipeline, and Authenticode-signed packages. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
-## Downloads (v0.7.4)
+## Downloads (v0.7.9)
 
 ### Windows
 | Package | Format | Architecture | Download Link | Verification / Signature |
 |:---|:---:|:---:|:---:|:---:|
-| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.7.4_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.4/CNTXT_0.7.4_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.7.4_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.4/CNTXT_0.7.4_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
-| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.7.4_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.4/CNTXT_0.7.4_portable.exe) | Standalone (Zero-install executable) |
+| **Standard Setup** | `.exe` (NSIS) | Windows x64 | [Download CNTXT_0.7.9_x64-setup.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.9/CNTXT_0.7.9_x64-setup.exe) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Enterprise Installer** | `.msi` (WiX) | Windows x64 | [Download CNTXT_0.7.9_x64_en-US.msi](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.9/CNTXT_0.7.9_x64_en-US.msi) | Signed (Authenticode SHA256 + RFC 3161) |
+| **Standalone Portable** | `.exe` (Portable) | Windows x64 | [Download CNTXT_0.7.9_portable.exe](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.9/CNTXT_0.7.9_portable.exe) | Standalone (Zero-install executable) |
 
 ### Android
 | Package | Format | Architecture | Download Link | Verification |
 |:---|:---:|:---:|:---:|:---:|
-| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download cntxt-0.7.4-arm64-release-signed.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.4/cntxt-0.7.4-arm64-release-signed.apk) | Signed with Release Keystore (v2 + v3) / Installable via ADB |
+| **Android Release APK** | `.apk` | Android (arm64-v8a) | [Download cntxt-0.7.9-arm64-release-signed.apk](https://github.com/EntropyRedux/cntxt/releases/download/v0.7.9/cntxt-0.7.9-arm64-release-signed.apk) | Signed with Release Keystore (v2 + v3) / Installable via ADB |
 
 ### Linux
 | Package | Format | Architecture | Download Link | Verification |
@@ -26,7 +26,17 @@
 
 ---
 
-## Key Capabilities in v0.7.0
+## Key Capabilities
+
+### In-Context Code Block Controls & Lock Guard (v0.7.9)
+- **Universal Code Block Lock & Read-Only Filter**: CodeMirror 6 `transactionFilter` blocks edits, deletions, and cuts inside blocks governed by `locked=user` or `locked=agent`, guarding critical scripts and AI deliverables with throttled toast alerts.
+- **In-Context Hover Action Cluster**: Hover-visible action button cluster (`[Lock]`, `[Clear]`, `[Copy]`, and `[···]` 3-dot dropdown) positioned directly on code block headers without side-rail clutter.
+- **In-Situ Parameters Configurator**: Direct popover dialog to visually configure `id`, `status`, `locked`, `tags`, `source`, and `title` without opening side panels.
+- **Governed Code Block vs. Rich Container Visual Styling**: Transparent, unbordered Rich Containers (`markdown |`) with continuous left accent rails separated cleanly from solid-card Governed Code Blocks (`python |`, `ts |`) with stateful amber (`locked=user`) and blue (`locked=agent`) left border accents.
+
+### Agent Directives, Capabilities Discovery & Zero-Friction Connection (v0.7.8)
+- **Authoritative Agent Directives Service**: REST (`GET /api/v1/directives`, `GET /api/v1/capabilities`), RPC, and MCP protocol integration providing machine-readable syntax rules and capabilities manifests.
+- **1-Click Agent Bootstrap Prompt**: Single-click prompt copy in Settings connects external AI agents (Antigravity, Claude, Cursor, Cline) instantly.
 
 ### CNTXT Block Parser Engine & Rich Containers
 - **Governance Primitives**: Fully parsed pipe syntax (`~~~markdown | id=... tags=... locked=... status=... link=... source=... ts=... title=...`).
@@ -40,7 +50,7 @@
 
 ### Active Thread `.cntxt` Orchestration & Pinned User Inbox
 - **Active Thread Tab Routing**: Right-click any tab -> "Toggle as Active Thread" to route all incoming agent deliverables directly to the top of that tab.
-- **Inline Citation Reply Input (`id=user-inbox`)**: 1-click `[Respond]` button captures highlighted text and line citations (`#blockId Â· L<start>-L<end>`), automatically writing and appending user feedback into the dedicated user-owned block pinned at the very top of the document.
+- **Inline Citation Reply Input (`id=user-inbox`)**: 1-click `[Respond]` button captures highlighted text and line citations (`#blockId · L<start>-L<end>`), automatically writing and appending user feedback into the dedicated user-owned block pinned at the very top of the document.
 - **Automatic Extension Promotion**: Documents containing CNTXT pipe blocks or toggled as Active Thread automatically promote `.md` -> `.cntxt`.
 
 ### Large Document Virtualization (>5MB)
@@ -77,6 +87,5 @@ npm run lint
 
 ## Architecture & Documentation
 
-- [Living Context Document](generated-documents/context/living_context.md) â€” Current sprint goals, verified architecture invariants, and component boundaries.
-- [Changelog](CHANGELOG.md) â€” Comprehensive release history across all versions.
-
+- [Living Context Document](generated-documents/context/living_context.md) — Current sprint goals, verified architecture invariants, and component boundaries.
+- [Changelog](CHANGELOG.md) — Comprehensive release history across all versions.
