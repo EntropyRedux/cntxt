@@ -384,13 +384,13 @@ function openCodeBlockContextMenu(
   };
 
   setTimeout(() => {
-    document.addEventListener('mousedown', onDocMouseDown, true);
-    document.addEventListener('keydown', onDocKeyDown, true);
+    document.addEventListener('mousedown', onDocMouseDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
+    document.addEventListener('keydown', onDocKeyDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
   }, 10);
 
   activePopoverCleanup = () => {
-    document.removeEventListener('mousedown', onDocMouseDown, true);
-    document.removeEventListener('keydown', onDocKeyDown, true);
+    document.removeEventListener('mousedown', onDocMouseDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
+    document.removeEventListener('keydown', onDocKeyDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
   };
 }
 
@@ -616,14 +616,14 @@ function openCodeBlockParamPopover(
   };
 
   setTimeout(() => {
-    document.addEventListener('mousedown', onDocMouseDown, true);
-    document.addEventListener('keydown', onDocKeyDown, true);
+    document.addEventListener('mousedown', onDocMouseDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
+    document.addEventListener('keydown', onDocKeyDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
     idInput.focus();
   }, 10);
 
   activePopoverCleanup = () => {
-    document.removeEventListener('mousedown', onDocMouseDown, true);
-    document.removeEventListener('keydown', onDocKeyDown, true);
+    document.removeEventListener('mousedown', onDocMouseDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
+    document.removeEventListener('keydown', onDocKeyDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
   };
 }
 
@@ -724,15 +724,15 @@ function openLanguagePromptPopover(
   };
 
   setTimeout(() => {
-    document.addEventListener('mousedown', onDocMouseDown, true);
-    document.addEventListener('keydown', onDocKeyDown, true);
+    document.addEventListener('mousedown', onDocMouseDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
+    document.addEventListener('keydown', onDocKeyDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
     langInput.focus();
     langInput.select();
   }, 10);
 
   activePopoverCleanup = () => {
-    document.removeEventListener('mousedown', onDocMouseDown, true);
-    document.removeEventListener('keydown', onDocKeyDown, true);
+    document.removeEventListener('mousedown', onDocMouseDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
+    document.removeEventListener('keydown', onDocKeyDown, true); // platform-leak-ignore: CodeMirror DOM popover listener
   };
 }
 
