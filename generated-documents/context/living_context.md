@@ -1,7 +1,7 @@
 # LIVING CONTEXT DOCUMENT
-Version: v2.67
-Last Updated: 2026-11-10
-Last Updated By: Prod Agent (Task 85 — Visual Refinements for CNTXT Special Blocks: Full Accent Rail, Theme Engine, Subtle Hover Container, AI Badges Trimmed)
+Version: v2.68
+Last Updated: 2026-11-18
+Last Updated By: Prod Agent (Task 86 — Session Closeout & Release v0.7.9 Publication: GitHub Releases live, Android Signed APK, README package links, clean test verification)
 Project: CNTXT (ContextPad) — Tri-Platform Suite (Web SaaS + Native Desktop + Android Mobile)
 Target Platform(s): Web (Vercel + Supabase Free-Tier) + Desktop (Windows / macOS / Linux via Tauri v2 + Rust) + Mobile (Android via Tauri v2 Mobile runtime)
 Production Stack: React 19 + TypeScript + Vite 6 + Zustand 5 + CodeMirror 6 + Tailwind CSS v4 + Zod 4 + Rust (Tauri v2) + Supabase
@@ -11,14 +11,14 @@ Active Stage:
   [ ] AI Studio — MVP Spec Build
   [ ] AI Studio — Iterations
   [ ] Porting & Spec Implementation
-  [x] Feature Implementation (FG-01..FG-24 Complete & Verified)
+  [x] Feature Implementation (FG-01..FG-27 Complete & Verified)
   [x] Refactor (Syntax Highlighting Granularity & Code Block Aesthetic Overhaul across Desktop + Android + Web)
     [x] Testing (Vitest 792/792 Live across 66 suites, Rust Gateway & Security Test Suite 15/15 Live)
   [x] Tri-Platform Hybrid Architecture Alignment & Web SaaS Readiness (Web Free-Tier SaaS Live, Desktop Native Live, Android Mobile Live)
-  [x] Packaging & Release (v0.7.9 Release Staged & Pushed)
+  [x] Packaging & Release (v0.7.9 Released, Signed, and Published to GitHub Releases)
 
-Current Feature Group: FG-27 In-Context Code Block Controls & Governed Code Block Visual Polish (v0.7.9)
-Status: [x] Implemented, Verified, Packaged & Staged
+Current Feature Group: AI Conversation Mode Foundations & Custom Container Fencing
+Status: [x] v0.7.9 Released & Verified; Ready for Scoping Next Group
 Background Processes: event-driven PTY streaming & debounced file-tailer synchronization (strictly gated behind Settings -> Experimental -> enableExperimentalSettings && enableTerminalBus; disabled by default)
 Unit Tests: written [x] passing [x] (792/792 unit tests passing across 66 suites in CNTXT, 15 native Rust tests clean)
 Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v071_port_2026-10-28.md
@@ -36,6 +36,15 @@ Active Plan: /generated-documents/plans/feature_group_FG24_linux_and_android_v07
 * `TR-020` (Pillar 1 - Tab Cache Discard-on-Invalid): `tabSessionCache.ts` is an ephemeral session cache; invalid or checksum-mismatched caches are discarded rather than migrated to guarantee fresh document state.
 
 Notes:
+- Task 86: Session Closeout & Release v0.7.9 Publication (2026-11-18):
+  - Fixed 3-dot dropdown menu hover exit bug and widget recycling stability (commit `ea43d65`).
+  - Synthesized `send_showcase_doc.mjs` test utility for clean gateway document delivery without shell string mangling (commit `9992467`).
+  - Added `// platform-leak-ignore` annotations to CodeMirror DOM popover listener attachments in `codeBlockWidget.ts` (commit `c0bed8a`).
+  - Packaged and signed Android arm64 release APK (`cntxt-0.7.9-arm64-release-signed.apk`, 30.13 MB) with release keystore (v2 + v3 schemes).
+  - Published GitHub Release `v0.7.9` attaching all 4 signed binaries (Portable .exe, Setup .exe, MSI, Android APK).
+  - Updated `README.md` with live release download links and FG-27 capability documentation (commit `19d1004`).
+  - Verification: 792/792 Vitest unit tests passing across 66 suites, 15/15 native Rust tests passing, `npm run lint` 100% clean (zero type errors, zero platform leaks, contracts 100% synchronized).
+  - Next Feature Scope: AI Conversation Mode Foundations & Custom Container Fencing (addressing inline code rendering and dedicated fencing syntax).
 - Task 85: Visual Refinements for CNTXT Special Blocks (2026-11-10):
   - Line-Anchored Native CSS Left Accent Rail: Spans 100% accurately from the top of the header row down to the end line below the block fences without premature cut-offs, replacing the virtualized JavaScript `lineBlockAt` measurement overlay.
   - Strict Theme Engine Compliance: All borders, surfaces, accent lines, and pills strictly consume theme CSS variables (`var(--accent-primary, #007ACC)`, `color-mix(...)`, `var(--status-warning)`, `var(--status-info)`), eliminating hardcoded hex colors.

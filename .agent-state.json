@@ -2,13 +2,13 @@
   "$schema": "../../../.localactive/schemas/agent-state.schema.json",
   "project_name": "CNTXT",
   "version": "0.7.9",
-  "active_stage": "STAGE_4_CLOSEOUT_AND_VERSIONING",
-  "active_feature_group": "FG-27 In-Context Code Block Controls & Governed Code Block Visual Polish",
+  "active_stage": "STAGE_1_SCOPING_AND_PLAN_AUDIT",
+  "active_feature_group": "AI Conversation Mode Foundations & Custom Container Fencing",
   "active_role_lock": "prod_agent",
   "last_checkpoint": {
-    "timestamp": "2026-11-10T08:58:00.000Z",
-    "git_hash": "daaa826",
-    "summary": "Task 84: Release v0.7.9 — In-Context Code Block Controls, Read-Only Lock Guard, and Governed Visual Styling"
+    "timestamp": "2026-11-18T11:48:30.000Z",
+    "git_hash": "c0bed8a",
+    "summary": "Task 86: Release v0.7.9 published to GitHub Releases, README package links synced, signed Android APK built, lint platform-leak annotations applied"
   },
   "audit_status": {
     "last_audit_type": "FULL_CODEBASE_AUDIT",
@@ -21,7 +21,7 @@
     "quarantine_verified": true
   },
   "verification_status": {
-    "last_run_timestamp": "2026-11-10T09:37:00.000Z",
+    "last_run_timestamp": "2026-11-18T11:47:30.000Z",
     "tests_passing": 792,
     "tests_total": 792,
     "linter_clean": true
